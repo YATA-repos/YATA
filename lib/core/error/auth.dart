@@ -1,4 +1,4 @@
-import 'base.dart';
+import "base.dart";
 
 /// 認証関連のエラーメッセージ定義
 enum AuthError implements LogMessage {
@@ -18,25 +18,25 @@ enum AuthError implements LogMessage {
   String get message {
     switch (this) {
       case AuthError.initializationFailed:
-        return 'Failed to initialize Supabase client: {error}';
+        return "Failed to initialize Supabase client: {error}";
       case AuthError.googleAuthTimeout:
-        return 'Google authentication timed out';
+        return "Google authentication timed out";
       case AuthError.googleAuthFailed:
-        return 'Google authentication failed: {message}';
+        return "Google authentication failed: {message}";
       case AuthError.googleAuthException:
-        return 'Google auth exception: {error}';
+        return "Google auth exception: {error}";
       case AuthError.callbackProcessingFailed:
-        return 'Failed to handle authentication callback: {message}';
+        return "Failed to handle authentication callback: {message}";
       case AuthError.authorizationCodeNotFound:
-        return 'Authorization code not found in callback URL';
+        return "Authorization code not found in callback URL";
       case AuthError.userRetrievalFailed:
-        return 'Failed to retrieve user after authentication';
+        return "Failed to retrieve user after authentication";
       case AuthError.sessionRefreshFailed:
-        return 'Failed to refresh session: {error}';
+        return "Failed to refresh session: {error}";
       case AuthError.signOutFailed:
-        return 'Failed to sign out: {message}';
+        return "Failed to sign out: {message}";
       case AuthError.signOutException:
-        return 'Error during sign out: {error}';
+        return "Error during sign out: {error}";
     }
   }
 
@@ -45,31 +45,31 @@ enum AuthError implements LogMessage {
   String get messageJa {
     switch (this) {
       case AuthError.initializationFailed:
-        return 'Supabaseクライアント初期化失敗: {error}';
+        return "Supabaseクライアント初期化失敗: {error}";
       case AuthError.googleAuthTimeout:
-        return 'Google認証タイムアウト';
+        return "Google認証タイムアウト";
       case AuthError.googleAuthFailed:
-        return 'Google認証失敗: {message}';
+        return "Google認証失敗: {message}";
       case AuthError.googleAuthException:
-        return 'Google認証例外: {error}';
+        return "Google認証例外: {error}";
       case AuthError.callbackProcessingFailed:
-        return '認証コールバック処理失敗: {message}';
+        return "認証コールバック処理失敗: {message}";
       case AuthError.authorizationCodeNotFound:
-        return 'コールバックURLに認証コードが見つかりません';
+        return "コールバックURLに認証コードが見つかりません";
       case AuthError.userRetrievalFailed:
-        return '認証後のユーザー取得に失敗しました';
+        return "認証後のユーザー取得に失敗しました";
       case AuthError.sessionRefreshFailed:
-        return 'セッション更新失敗: {error}';
+        return "セッション更新失敗: {error}";
       case AuthError.signOutFailed:
-        return 'サインアウト失敗: {message}';
+        return "サインアウト失敗: {message}";
       case AuthError.signOutException:
-        return 'サインアウトエラー: {error}';
+        return "サインアウトエラー: {error}";
     }
   }
 
   /// 組み合わせメッセージ（英語 + 日本語）を取得
   @override
-  String get combinedMessage => '$message ($messageJa)';
+  String get combinedMessage => "$message ($messageJa)";
 }
 
 /// 認証関連の情報メッセージ定義
@@ -89,23 +89,23 @@ enum AuthInfo implements LogMessage {
   String get message {
     switch (this) {
       case AuthInfo.clientInitialized:
-        return 'Supabase client initialized successfully';
+        return "Supabase client initialized successfully";
       case AuthInfo.googleAuthStarted:
-        return 'Starting Google OAuth authentication';
+        return "Starting Google OAuth authentication";
       case AuthInfo.googleOAuthResponse:
-        return 'Google OAuth response received: {response}';
+        return "Google OAuth response received: {response}";
       case AuthInfo.callbackProcessing:
-        return 'Processing auth callback: {url}';
+        return "Processing auth callback: {url}";
       case AuthInfo.callbackProcessed:
-        return 'Auth callback processed successfully for user: {userId}';
+        return "Auth callback processed successfully for user: {userId}";
       case AuthInfo.sessionRefreshing:
-        return 'Refreshing auth session';
+        return "Refreshing auth session";
       case AuthInfo.sessionRefreshed:
-        return 'Session refreshed successfully';
+        return "Session refreshed successfully";
       case AuthInfo.userSigningOut:
-        return 'Signing out user';
+        return "Signing out user";
       case AuthInfo.userSignedOut:
-        return 'User signed out successfully';
+        return "User signed out successfully";
     }
   }
 
@@ -114,27 +114,27 @@ enum AuthInfo implements LogMessage {
   String get messageJa {
     switch (this) {
       case AuthInfo.clientInitialized:
-        return 'Supabaseクライアント初期化成功';
+        return "Supabaseクライアント初期化成功";
       case AuthInfo.googleAuthStarted:
-        return 'Google OAuth認証開始';
+        return "Google OAuth認証開始";
       case AuthInfo.googleOAuthResponse:
-        return 'Google OAuth応答受信: {response}';
+        return "Google OAuth応答受信: {response}";
       case AuthInfo.callbackProcessing:
-        return '認証コールバック処理: {url}';
+        return "認証コールバック処理: {url}";
       case AuthInfo.callbackProcessed:
-        return '認証コールバック処理成功 ユーザー: {userId}';
+        return "認証コールバック処理成功 ユーザー: {userId}";
       case AuthInfo.sessionRefreshing:
-        return 'セッション更新中';
+        return "セッション更新中";
       case AuthInfo.sessionRefreshed:
-        return 'セッション更新成功';
+        return "セッション更新成功";
       case AuthInfo.userSigningOut:
-        return 'ユーザーサインアウト';
+        return "ユーザーサインアウト";
       case AuthInfo.userSignedOut:
-        return 'ユーザーサインアウト成功';
+        return "ユーザーサインアウト成功";
     }
   }
 
   /// 組み合わせメッセージ（英語 + 日本語）を取得
   @override
-  String get combinedMessage => '$message ($messageJa)';
+  String get combinedMessage => "$message ($messageJa)";
 }

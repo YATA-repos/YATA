@@ -13,21 +13,21 @@ enum OrderError {
   String get message {
     switch (this) {
       case OrderError.orderNotFound:
-        return 'Order not found';
+        return "Order not found";
       case OrderError.paymentFailed:
-        return 'Payment processing failed';
+        return "Payment processing failed";
       case OrderError.invalidOrderStatus:
-        return 'Invalid order status';
+        return "Invalid order status";
       case OrderError.orderProcessingFailed:
-        return 'Order processing failed';
+        return "Order processing failed";
       case OrderError.orderCancellationFailed:
-        return 'Order cancellation failed';
+        return "Order cancellation failed";
       case OrderError.menuItemNotAvailable:
-        return 'Menu item is not available';
+        return "Menu item is not available";
       case OrderError.orderAlreadyCompleted:
-        return 'Order is already completed';
+        return "Order is already completed";
       case OrderError.invalidCustomerInfo:
-        return 'Invalid customer information';
+        return "Invalid customer information";
     }
   }
 
@@ -35,26 +35,26 @@ enum OrderError {
   String get messageJa {
     switch (this) {
       case OrderError.orderNotFound:
-        return '注文が見つかりません';
+        return "注文が見つかりません";
       case OrderError.paymentFailed:
-        return '決済処理に失敗しました';
+        return "決済処理に失敗しました";
       case OrderError.invalidOrderStatus:
-        return '無効な注文ステータスです';
+        return "無効な注文ステータスです";
       case OrderError.orderProcessingFailed:
-        return '注文処理に失敗しました';
+        return "注文処理に失敗しました";
       case OrderError.orderCancellationFailed:
-        return '注文キャンセルに失敗しました';
+        return "注文キャンセルに失敗しました";
       case OrderError.menuItemNotAvailable:
-        return 'メニューアイテムが利用できません';
+        return "メニューアイテムが利用できません";
       case OrderError.orderAlreadyCompleted:
-        return '注文は既に完了しています';
+        return "注文は既に完了しています";
       case OrderError.invalidCustomerInfo:
-        return '無効な顧客情報です';
+        return "無効な顧客情報です";
     }
   }
 
   /// 組み合わせメッセージ（英語 + 日本語）を取得
-  String get combinedMessage => '$message ($messageJa)';
+  String get combinedMessage => "$message ($messageJa)";
 }
 
 /// 注文関連の警告メッセージ定義
@@ -68,13 +68,13 @@ enum OrderWarning {
   String get message {
     switch (this) {
       case OrderWarning.orderProcessingDelay:
-        return 'Order processing may be delayed';
+        return "Order processing may be delayed";
       case OrderWarning.highOrderVolume:
-        return 'High order volume detected';
+        return "High order volume detected";
       case OrderWarning.kitchenCapacityLow:
-        return 'Kitchen capacity is low';
+        return "Kitchen capacity is low";
       case OrderWarning.estimatedDelayIncreased:
-        return 'Estimated preparation time increased';
+        return "Estimated preparation time increased";
     }
   }
 
@@ -82,16 +82,16 @@ enum OrderWarning {
   String get messageJa {
     switch (this) {
       case OrderWarning.orderProcessingDelay:
-        return '注文処理が遅延する可能性があります';
+        return "注文処理が遅延する可能性があります";
       case OrderWarning.highOrderVolume:
-        return '高い注文量を検出しました';
+        return "高い注文量を検出しました";
       case OrderWarning.kitchenCapacityLow:
-        return 'キッチンの処理能力が低下しています';
+        return "キッチンの処理能力が低下しています";
       case OrderWarning.estimatedDelayIncreased:
-        return '推定調理時間が増加しました';
+        return "推定調理時間が増加しました";
     }
   }
 
   /// 組み合わせメッセージ（英語 + 日本語）を取得
-  String get combinedMessage => '$message ($messageJa)';
+  String get combinedMessage => "$message ($messageJa)";
 }
