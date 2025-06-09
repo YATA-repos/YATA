@@ -50,3 +50,6 @@ __temp/
 
 # dotenv
 .env
+
+# Claude Code
+CLAUDE.md
