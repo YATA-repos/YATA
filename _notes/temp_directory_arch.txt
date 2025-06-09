@@ -12,21 +12,12 @@ lib/
 │   │   │   ├── supabase_provider.dart # Riverpodプロバイダー
 │   │   │   └── supabase_error_handler.dart
 │   │   │
-│   │   ├── offline/                   # オフライン対応
-│   │   │   ├── offline_queue.dart     # 操作キュー
-│   │   │   ├── sync_manager.dart      # 同期マネージャー
-│   │   │   ├── conflict_resolver.dart # 競合解決
-│   │   │   ├── offline_aware_repository.dart
-│   │   │   └── offline_provider.dart
-│   │   │
-│   │   ├── storage/                   # ローカルストレージ
-│   │   │   ├── local_storage.dart     # インターフェース
-│   │   │   ├── hive_storage.dart      # Hive実装
-│   │   │   └── storage_provider.dart
-│   │   │
-│   │   └── network/                   # ネットワーク管理
-│   │       ├── connectivity_service.dart
-│   │       └── network_provider.dart
+│   │   └── offline/                   # オフライン対応
+│   │       ├── offline_queue.dart     # 操作キュー
+│   │       ├── sync_manager.dart      # 同期マネージャー
+│   │       ├── conflict_resolver.dart # 競合解決
+│   │       ├── offline_aware_repository.dart
+│   │       └── offline_provider.dart
 │   │
 │   ├── auth/                          # 認証関連
 │   │   ├── auth_service.dart          # 認証ロジック
