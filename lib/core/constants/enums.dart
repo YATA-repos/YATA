@@ -181,3 +181,64 @@ enum OrderStatus {
     return this == OrderStatus.completed || this == OrderStatus.canceled;
   }
 }
+
+/// ログレベル
+enum LogLevel {
+  debug('debug'),
+  info('info'),
+  warning('warning'),
+  error('error');
+
+  const LogLevel(this.value);
+  final String value;
+
+  @override
+  String toString() => value;
+
+  /// 日本語での表示名を取得
+  String get displayName {
+    switch (this) {
+      case LogLevel.debug:
+        return 'デバッグ';
+      case LogLevel.info:
+        return '情報';
+      case LogLevel.warning:
+        return '警告';
+      case LogLevel.error:
+        return 'エラー';
+    }
+  }
+
+  /// developer.log()で使用する数値レベル
+  int get developerLevel {
+    switch (this) {
+      case LogLevel.debug:
+        return 500;
+      case LogLevel.info:
+        return 800;
+      case LogLevel.warning:
+        return 900;
+      case LogLevel.error:
+        return 1000;
+    }
+  }
+
+  /// リリースビルドで保存するかどうか
+  bool get shouldPersistInRelease {
+    return this == LogLevel.warning || this == LogLevel.error;
+  }
+
+  /// ログレベルの優先度（数値が大きいほど重要）
+  int get priority {
+    switch (this) {
+      case LogLevel.debug:
+        return 1;
+      case LogLevel.info:
+        return 2;
+      case LogLevel.warning:
+        return 3;
+      case LogLevel.error:
+        return 4;
+    }
+  }
+}
