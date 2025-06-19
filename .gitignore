@@ -48,6 +48,8 @@ app.*.map.json
 
 # temp
 __temp/
+.idx/
+.vscode/
 
 # dotenv
 .env
