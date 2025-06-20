@@ -92,7 +92,7 @@ enum UnitType {
   /// 個数
   piece("piece"),
 
-  // TODO: グラム管理が目安であるなら、たまに実際に確認をさせないとだめ？そのための処理？
+  // TODO(dev): グラム管理が目安であるなら、たまに実際に確認をさせないとだめ？そのための処理？
   /// グラム。ただし、運用時に厳密に管理することは困難であるため、目安として使用
   gram("gram");
 
@@ -203,7 +203,7 @@ enum OrderStatus {
     }
   }
 
-  // TODO: ここはFlutterのColorオブジェクトを返すようにする
+  // TODO(ui): ここはFlutterのColorオブジェクトを返すようにする
   /// 注文ステータスに対応する色を取得（Flutter用）
   String get colorName {
     switch (this) {

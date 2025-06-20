@@ -2,11 +2,14 @@ import "package:flutter/material.dart";
 
 // temporary skelton app
 
+/// アプリケーションのエントリーポイント
 void main() {
   runApp(const MyApp());
 }
 
+/// メインアプリケーションウィジェット
 class MyApp extends StatelessWidget {
+  /// コンストラクタ
   const MyApp({super.key});
 
   @override
@@ -20,12 +23,16 @@ class MyApp extends StatelessWidget {
   );
 }
 
+/// ホームページウィジェット
 class MyHomePage extends StatefulWidget {
+  /// コンストラクタ
   const MyHomePage({required this.title, super.key});
 
+  /// ページタイトル
   final String title;
 
   @override
+  /// ステートを作成
   State<MyHomePage> createState() => _MyHomePageState();
 }
 

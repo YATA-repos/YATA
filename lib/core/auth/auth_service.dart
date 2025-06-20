@@ -229,7 +229,9 @@ class SupabaseClientService {
   /// セッションの有効性をチェック
   bool _isSessionValid() {
     final Session? session = currentSession;
-    if (session == null) return false;
+    if (session == null) {
+      return false;
+    }
 
     // セッションの有効期限をチェック
     final DateTime expiresAt = DateTime.fromMillisecondsSinceEpoch(
@@ -306,7 +308,9 @@ class SupabaseClientService {
   /// URLパラメータから指定した値を取得するヘルパーメソッド
   String? _extractParamValue(String url, String paramName) {
     final Uri? uri = Uri.tryParse(url);
-    if (uri == null) return null;
+    if (uri == null) {
+      return null;
+    }
 
     return uri.queryParameters[paramName];
   }
@@ -314,7 +318,10 @@ class SupabaseClientService {
 
 /// Supabaseクライアント関連の汎用例外
 class SupabaseClientException implements Exception {
+  /// コンストラクタ
   const SupabaseClientException(this.message);
+  
+  /// エラーメッセージ
   final String message;
 
   @override
@@ -323,7 +330,10 @@ class SupabaseClientException implements Exception {
 
 /// Supabase認証関連の例外
 class SupabaseAuthException implements Exception {
+  /// コンストラクタ
   const SupabaseAuthException(this.message);
+  
+  /// エラーメッセージ
   final String message;
 
   @override

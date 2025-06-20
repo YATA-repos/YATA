@@ -41,7 +41,9 @@ class LogService {
   ///
   /// [minimumLevel] 出力する最小ログレベル（デフォルト：debug）
   static Future<void> initialize({LogLevel? minimumLevel}) async {
-    if (_initialized) return;
+    if (_initialized) {
+      return;
+    }
 
     try {
       // 最小ログレベルを設定
@@ -286,10 +288,10 @@ class LogService {
     Object? error,
     StackTrace? stackTrace,
   ) {
-    final StringBuffer entry = StringBuffer();
-    entry.writeln(
-      "[$timestamp] [$component] [${level.value.toUpperCase()}] $message",
-    );
+    final StringBuffer entry = StringBuffer()
+      ..writeln(
+        "[$timestamp] [$component] [${level.value.toUpperCase()}] $message",
+      );
 
     if (error != null) {
       entry.writeln("Error: $error");
@@ -371,8 +373,10 @@ class LogService {
         await file.writeAsString(content, mode: FileMode.append);
         return;
       } catch (e) {
-        if (attempt == maxRetries - 1) rethrow;
-        await Future.delayed(Duration(milliseconds: 100 * (attempt + 1)));
+        if (attempt == maxRetries - 1) {
+          rethrow;
+        }
+        await Future<void>.delayed(Duration(milliseconds: 100 * (attempt + 1)));
       }
     }
   }
@@ -449,11 +453,15 @@ class LogService {
   ///
   /// [daysToKeep] 保持する日数（デフォルト：30日）
   static Future<void> cleanupOldLogs({int daysToKeep = 30}) async {
-    if (_logDirectory == null) return;
+    if (_logDirectory == null) {
+      return;
+    }
 
     try {
       final Directory logDir = Directory(_logDirectory!);
-      if (!await logDir.exists()) return;
+      if (!await logDir.exists()) {
+        return;
+      }
 
       final DateTime cutoffDate = DateTime.now().subtract(
         Duration(days: daysToKeep),
