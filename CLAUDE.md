@@ -89,6 +89,7 @@ Project follows layered architecture with direct linear dependencies (no depende
 **UI(Presentation) → Service → Repository** dependency flow.
 
 ```
+
 lib/
 ├── core/                 # Shared core functionality
 │   ├── auth/            # Authentication services
@@ -108,6 +109,7 @@ lib/
     ├── layouts/
     ├── themes/
     └── widgets/
+
 ```
 
 ### Feature Module Structure
@@ -115,6 +117,7 @@ lib/
 Each feature follows the same pattern:
 
 ```
+
 feature_name/
 ├── dto/           # Data Transfer Objects
 ├── models/        # Domain models
@@ -124,6 +127,7 @@ feature_name/
 │   └── widgets/   # Feature-specific widgets
 ├── repositories/  # Data access layer
 └── services/      # Business logic layer
+
 ```
 
 ### Repository Implementation Pattern
@@ -142,6 +146,7 @@ Legacy Python source code: `_old_py_project/src/`
 ### Key Directory Mapping
 
 ```
+
 Python Source              → Flutter Target
 constants/                 → lib/core/constants/
 models/domains/            → lib/features/{feature}/models/
@@ -151,6 +156,7 @@ repositories/bases/        → lib/core/base/
 services/business/         → lib/features/{feature}/services/
 services/platform/         → lib/core/infrastructure/
 utils/                     → lib/core/utils/
+
 ```
 
 ### Migration Priority
@@ -209,6 +215,7 @@ utils/                     → lib/core/utils/
 - No feature branches (simplicity priority)
 - Bug fixes: `fix/(issue-id)` → `dev`
 - Critical fixes: `hotfix/(issue-id)` → `main` (and merge back to `dev`)
+- **After committing changes and ensuring the working tree is clean, push to remote repository**
 
 ### Commit Message Standards
 
@@ -230,14 +237,17 @@ utils/                     → lib/core/utils/
 **Message Format**:
 
 ```
+
 [type] タイトル (1行目)
 
 簡潔な説明 (3行目、1-2行程度)
+
 ```
 
 **Examples**:
 
 ```
+
 feat: ユーザー認証機能を追加
 
 Google OAuthとSupabase認証を統合
@@ -253,6 +263,7 @@ docs: APIドキュメントを更新
 refactor: リポジトリ層のコードを整理
 
 抽象クラスとの分離を明確化
+
 ```
 
 **Merge Strategy**: To be determined
