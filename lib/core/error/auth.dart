@@ -2,15 +2,25 @@ import "base.dart";
 
 /// 認証関連のエラーメッセージ定義
 enum AuthError implements LogMessage {
+  /// Supabaseクライアントの初期化に失敗
   initializationFailed,
+  /// Google認証がタイムアウト
   googleAuthTimeout,
+  /// Google認証に失敗
   googleAuthFailed,
+  /// Google認証で例外が発生
   googleAuthException,
+  /// 認証コールバックの処理に失敗
   callbackProcessingFailed,
+  /// コールバックURLに認証コードが見つからない
   authorizationCodeNotFound,
+  /// 認証後のユーザー情報取得に失敗
   userRetrievalFailed,
+  /// セッションの更新に失敗
   sessionRefreshFailed,
+  /// サインアウトに失敗
   signOutFailed,
+  /// サインアウト時に例外が発生
   signOutException;
 
   /// 英語エラーメッセージを取得
@@ -74,14 +84,23 @@ enum AuthError implements LogMessage {
 
 /// 認証関連の情報メッセージ定義
 enum AuthInfo implements LogMessage {
+  /// Supabaseクライアントが正常に初期化された
   clientInitialized,
+  /// Google認証が開始された
   googleAuthStarted,
+  /// Google OAuthの応答を受信
   googleOAuthResponse,
+  /// 認証コールバックを処理中
   callbackProcessing,
+  /// 認証コールバックの処理が完了
   callbackProcessed,
+  /// セッションを更新中
   sessionRefreshing,
+  /// セッションの更新が完了
   sessionRefreshed,
+  /// ユーザーがサインアウト中
   userSigningOut,
+  /// ユーザーのサインアウトが完了
   userSignedOut;
 
   /// 英語情報メッセージを取得

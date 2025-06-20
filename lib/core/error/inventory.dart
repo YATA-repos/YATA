@@ -1,12 +1,20 @@
 /// 在庫管理関連のエラーメッセージ定義
 enum InventoryError {
+  /// 在庫アイテムが見つからない
   itemNotFound,
+  /// 在庫が不足している
   insufficientStock,
+  /// 期限切れのアイテム
   expiredItem,
+  /// 無効な数量が指定された
   invalidQuantity,
+  /// 在庫レベルの更新に失敗
   stockUpdateFailed,
+  /// 在庫カテゴリが見つからない
   categoryNotFound,
+  /// 重複する在庫アイテム
   duplicateItem,
+  /// 在庫レベルが危険域に達している
   stockLevelCritical;
 
   /// 英語エラーメッセージを取得
@@ -59,9 +67,13 @@ enum InventoryError {
 
 /// 在庫管理関連の警告メッセージ定義
 enum InventoryWarning {
+  /// 在庫レベルが低下している
   stockLevelLow,
+  /// アイテムの期限が近づいている
   expirationSoon,
+  /// 異常な消費パターンを検出
   unusualConsumption,
+  /// アイテムの再注文が必要
   reorderRequired;
 
   /// 英語警告メッセージを取得
