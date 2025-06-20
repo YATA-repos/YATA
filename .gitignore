@@ -50,9 +50,11 @@ app.*.map.json
 __temp/
 .idx/
 .vscode/
+_old_py_project/
+_old_py_docs/
 
 # dotenv
 .env
 
 # Claude Code
-CLAUDE.md
+# CLAUDE.md
