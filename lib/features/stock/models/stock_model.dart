@@ -1,7 +1,12 @@
+import "package:json_annotation/json_annotation.dart";
+
 import "../../../core/base/base.dart";
 import "../../../core/constants/enums.dart";
 
+part "stock_model.g.dart";
+
 /// 在庫取引記録
+@JsonSerializable()
 class StockTransaction extends BaseModel {
   /// コンストラクタ
   StockTransaction({
@@ -43,9 +48,17 @@ class StockTransaction extends BaseModel {
 
   @override
   String get tableName => "stock_transactions";
+
+  /// JSONからインスタンスを作成
+  factory StockTransaction.fromJson(Map<String, dynamic> json) =>
+      _$StockTransactionFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$StockTransactionToJson(this);
 }
 
 /// 仕入れ記録
+@JsonSerializable()
 class Purchase extends BaseModel {
   /// コンストラクタ
   Purchase({
@@ -71,9 +84,17 @@ class Purchase extends BaseModel {
 
   @override
   String get tableName => "purchases";
+
+  /// JSONからインスタンスを作成
+  factory Purchase.fromJson(Map<String, dynamic> json) =>
+      _$PurchaseFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$PurchaseToJson(this);
 }
 
 /// 仕入れ明細
+@JsonSerializable()
 class PurchaseItem extends BaseModel {
   /// コンストラクタ
   PurchaseItem({
@@ -99,9 +120,17 @@ class PurchaseItem extends BaseModel {
 
   @override
   String get tableName => "purchase_items";
+
+  /// JSONからインスタンスを作成
+  factory PurchaseItem.fromJson(Map<String, dynamic> json) =>
+      _$PurchaseItemFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$PurchaseItemToJson(this);
 }
 
 /// 在庫調整
+@JsonSerializable()
 class StockAdjustment extends BaseModel {
   /// コンストラクタ
   StockAdjustment({
@@ -135,4 +164,11 @@ class StockAdjustment extends BaseModel {
 
   @override
   String get tableName => "stock_adjustments";
+
+  /// JSONからインスタンスを作成
+  factory StockAdjustment.fromJson(Map<String, dynamic> json) =>
+      _$StockAdjustmentFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$StockAdjustmentToJson(this);
 }

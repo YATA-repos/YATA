@@ -1,6 +1,11 @@
+import "package:json_annotation/json_annotation.dart";
+
 import "../../../core/base/base.dart";
 
+part "analytics_model.g.dart";
+
 /// 日別集計
+@JsonSerializable()
 class DailySummary extends BaseModel {
   /// コンストラクタ
   DailySummary({
@@ -17,6 +22,10 @@ class DailySummary extends BaseModel {
     super.id,
     super.userId,
   });
+
+  /// JSONからインスタンスを作成
+  factory DailySummary.fromJson(Map<String, dynamic> json) =>
+      _$DailySummaryFromJson(json);
 
   /// 集計日
   DateTime summaryDate;
@@ -50,4 +59,7 @@ class DailySummary extends BaseModel {
 
   @override
   String get tableName => "daily_summaries";
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$DailySummaryToJson(this);
 }

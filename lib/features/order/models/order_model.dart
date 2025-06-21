@@ -1,7 +1,12 @@
+import "package:json_annotation/json_annotation.dart";
+
 import "../../../core/base/base.dart";
 import "../../../core/constants/enums.dart";
 
+part "order_model.g.dart";
+
 /// 注文
+@JsonSerializable()
 class Order extends BaseModel {
   /// コンストラクタ
   Order({
@@ -59,9 +64,16 @@ class Order extends BaseModel {
 
   @override
   String get tableName => "orders";
+
+  /// JSONからインスタンスを作成
+  factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$OrderToJson(this);
 }
 
 /// 注文明細
+@JsonSerializable()
 class OrderItem extends BaseModel {
   /// コンストラクタ
   OrderItem({
@@ -103,4 +115,11 @@ class OrderItem extends BaseModel {
 
   @override
   String get tableName => "order_items";
+
+  /// JSONからインスタンスを作成
+  factory OrderItem.fromJson(Map<String, dynamic> json) =>
+      _$OrderItemFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$OrderItemToJson(this);
 }

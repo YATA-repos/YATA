@@ -1,6 +1,11 @@
+import "package:json_annotation/json_annotation.dart";
+
 import "../../base/base.dart";
 
+part "sync_model.g.dart";
+
 /// 同期記録
+@JsonSerializable()
 class SyncRecord extends BaseModel {
   /// コンストラクタ
   SyncRecord({
@@ -30,4 +35,11 @@ class SyncRecord extends BaseModel {
 
   @override
   String get tableName => "sync_records";
+
+  /// JSONからインスタンスを作成
+  factory SyncRecord.fromJson(Map<String, dynamic> json) =>
+      _$SyncRecordFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$SyncRecordToJson(this);
 }

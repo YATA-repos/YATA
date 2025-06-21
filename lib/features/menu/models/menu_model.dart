@@ -1,6 +1,11 @@
+import "package:json_annotation/json_annotation.dart";
+
 import "../../../core/base/base.dart";
 
+part "menu_model.g.dart";
+
 /// メニューカテゴリ
+@JsonSerializable()
 class MenuCategory extends BaseModel {
   /// コンストラクタ
   MenuCategory({
@@ -26,9 +31,17 @@ class MenuCategory extends BaseModel {
 
   @override
   String get tableName => "menu_categories";
+
+  /// JSONからインスタンスを作成
+  factory MenuCategory.fromJson(Map<String, dynamic> json) =>
+      _$MenuCategoryFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$MenuCategoryToJson(this);
 }
 
 /// メニュー（販売商品）
+@JsonSerializable()
 class MenuItem extends BaseModel {
   /// コンストラクタ
   MenuItem({
@@ -78,9 +91,17 @@ class MenuItem extends BaseModel {
 
   @override
   String get tableName => "menu_items";
+
+  /// JSONからインスタンスを作成
+  factory MenuItem.fromJson(Map<String, dynamic> json) =>
+      _$MenuItemFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$MenuItemToJson(this);
 }
 
 /// メニューオプション（トッピングなど）
+@JsonSerializable()
 class MenuItemOption extends BaseModel {
   /// コンストラクタ
   MenuItemOption({
@@ -118,4 +139,11 @@ class MenuItemOption extends BaseModel {
 
   @override
   String get tableName => "menu_item_options";
+
+  /// JSONからインスタンスを作成
+  factory MenuItemOption.fromJson(Map<String, dynamic> json) =>
+      _$MenuItemOptionFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$MenuItemOptionToJson(this);
 }

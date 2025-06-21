@@ -1,7 +1,12 @@
+import "package:json_annotation/json_annotation.dart";
+
 import "../../../core/base/base.dart";
 import "../../../core/constants/enums.dart";
 
+part "inventory_model.g.dart";
+
 /// 材料マスタ
+@JsonSerializable()
 class Material extends BaseModel {
   /// コンストラクタ
   Material({
@@ -48,6 +53,13 @@ class Material extends BaseModel {
   @override
   String get tableName => "materials";
 
+  /// JSONからインスタンスを作成
+  factory Material.fromJson(Map<String, dynamic> json) =>
+      _$MaterialFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$MaterialToJson(this);
+
   /// 在庫レベルを取得
   StockLevel getStockLevel() {
     if (currentStock <= criticalThreshold) {
@@ -61,6 +73,7 @@ class Material extends BaseModel {
 }
 
 /// 材料カテゴリ
+@JsonSerializable()
 class MaterialCategory extends BaseModel {
   /// コンストラクタ
   MaterialCategory({
@@ -86,9 +99,17 @@ class MaterialCategory extends BaseModel {
 
   @override
   String get tableName => "material_categories";
+
+  /// JSONからインスタンスを作成
+  factory MaterialCategory.fromJson(Map<String, dynamic> json) =>
+      _$MaterialCategoryFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$MaterialCategoryToJson(this);
 }
 
 /// レシピ（メニューと材料の関係）
+@JsonSerializable()
 class Recipe extends BaseModel {
   /// コンストラクタ
   Recipe({
@@ -126,4 +147,10 @@ class Recipe extends BaseModel {
 
   @override
   String get tableName => "recipes";
+
+  /// JSONからインスタンスを作成
+  factory Recipe.fromJson(Map<String, dynamic> json) => _$RecipeFromJson(json);
+
+  /// JSONに変換
+  Map<String, dynamic> toJson() => _$RecipeToJson(this);
 }
