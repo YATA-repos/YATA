@@ -32,9 +32,9 @@ class MenuAvailabilityInfo {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "menu_item_id": menuItemId,
-        "is_available": isAvailable,
-        "missing_materials": missingMaterials,
-        "estimated_servings": estimatedServings,
-      };
+    "menu_item_id": menuItemId,
+    "is_available": isAvailable,
+    "missing_materials": missingMaterials,
+    "estimated_servings": estimatedServings,
+  };
 }

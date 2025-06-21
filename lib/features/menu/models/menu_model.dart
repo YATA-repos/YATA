@@ -17,6 +17,10 @@ class MenuCategory extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory MenuCategory.fromJson(Map<String, dynamic> json) =>
+      _$MenuCategoryFromJson(json);
+
   /// カテゴリ名（メイン料理、サイドメニュー、ドリンク、デザート）
   String name;
 
@@ -32,11 +36,8 @@ class MenuCategory extends BaseModel {
   @override
   String get tableName => "menu_categories";
 
-  /// JSONからインスタンスを作成
-  factory MenuCategory.fromJson(Map<String, dynamic> json) =>
-      _$MenuCategoryFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$MenuCategoryToJson(this);
 }
 
@@ -58,6 +59,10 @@ class MenuItem extends BaseModel {
     super.id,
     super.userId,
   });
+
+  /// JSONからインスタンスを作成
+  factory MenuItem.fromJson(Map<String, dynamic> json) =>
+      _$MenuItemFromJson(json);
 
   /// 商品名
   String name;
@@ -92,11 +97,8 @@ class MenuItem extends BaseModel {
   @override
   String get tableName => "menu_items";
 
-  /// JSONからインスタンスを作成
-  factory MenuItem.fromJson(Map<String, dynamic> json) =>
-      _$MenuItemFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$MenuItemToJson(this);
 }
 
@@ -115,6 +117,10 @@ class MenuItemOption extends BaseModel {
     super.id,
     super.userId,
   });
+
+  /// JSONからインスタンスを作成
+  factory MenuItemOption.fromJson(Map<String, dynamic> json) =>
+      _$MenuItemOptionFromJson(json);
 
   /// メニューID
   String menuItemId;
@@ -140,10 +146,7 @@ class MenuItemOption extends BaseModel {
   @override
   String get tableName => "menu_item_options";
 
-  /// JSONからインスタンスを作成
-  factory MenuItemOption.fromJson(Map<String, dynamic> json) =>
-      _$MenuItemOptionFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$MenuItemOptionToJson(this);
 }

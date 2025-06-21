@@ -6,10 +6,7 @@ part "base_model.g.dart";
 @JsonSerializable()
 abstract class BaseModel {
   /// コンストラクタ
-  BaseModel({
-    this.id,
-    this.userId,
-  });
+  BaseModel({this.id, this.userId});
 
   /// DBテーブル名
   String get tableName;
@@ -19,4 +16,7 @@ abstract class BaseModel {
 
   /// ユーザーID
   String? userId;
+
+  /// JSONに変換
+  Map<String, dynamic> toJson();
 }

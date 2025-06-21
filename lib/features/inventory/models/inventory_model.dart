@@ -23,6 +23,10 @@ class Material extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory Material.fromJson(Map<String, dynamic> json) =>
+      _$MaterialFromJson(json);
+
   /// 材料名
   String name;
 
@@ -53,11 +57,8 @@ class Material extends BaseModel {
   @override
   String get tableName => "materials";
 
-  /// JSONからインスタンスを作成
-  factory Material.fromJson(Map<String, dynamic> json) =>
-      _$MaterialFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$MaterialToJson(this);
 
   /// 在庫レベルを取得
@@ -85,6 +86,10 @@ class MaterialCategory extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory MaterialCategory.fromJson(Map<String, dynamic> json) =>
+      _$MaterialCategoryFromJson(json);
+
   /// カテゴリ名（肉類、野菜、調理済食品、果物）
   String name;
 
@@ -100,11 +105,8 @@ class MaterialCategory extends BaseModel {
   @override
   String get tableName => "material_categories";
 
-  /// JSONからインスタンスを作成
-  factory MaterialCategory.fromJson(Map<String, dynamic> json) =>
-      _$MaterialCategoryFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$MaterialCategoryToJson(this);
 }
 
@@ -123,6 +125,9 @@ class Recipe extends BaseModel {
     super.id,
     super.userId,
   });
+
+  /// JSONからインスタンスを作成
+  factory Recipe.fromJson(Map<String, dynamic> json) => _$RecipeFromJson(json);
 
   /// メニューID
   String menuItemId;
@@ -148,9 +153,7 @@ class Recipe extends BaseModel {
   @override
   String get tableName => "recipes";
 
-  /// JSONからインスタンスを作成
-  factory Recipe.fromJson(Map<String, dynamic> json) => _$RecipeFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$RecipeToJson(this);
 }

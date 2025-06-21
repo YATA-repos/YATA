@@ -36,11 +36,11 @@ class MaterialStockInfo {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "material": material,
-        "stock_level": stockLevel.value,
-        "estimated_usage_days": estimatedUsageDays,
-        "daily_usage_rate": dailyUsageRate,
-      };
+    "material": material,
+    "stock_level": stockLevel.value,
+    "estimated_usage_days": estimatedUsageDays,
+    "daily_usage_rate": dailyUsageRate,
+  };
 }
 
 /// 材料使用量計算結果
@@ -76,9 +76,9 @@ class MaterialUsageCalculation {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "material_id": materialId,
-        "required_amount": requiredAmount,
-        "available_amount": availableAmount,
-        "is_sufficient": isSufficient,
-      };
+    "material_id": materialId,
+    "required_amount": requiredAmount,
+    "available_amount": availableAmount,
+    "is_sufficient": isSufficient,
+  };
 }

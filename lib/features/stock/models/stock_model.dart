@@ -22,6 +22,10 @@ class StockTransaction extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory StockTransaction.fromJson(Map<String, dynamic> json) =>
+      _$StockTransactionFromJson(json);
+
   /// 材料ID
   String materialId;
 
@@ -49,11 +53,8 @@ class StockTransaction extends BaseModel {
   @override
   String get tableName => "stock_transactions";
 
-  /// JSONからインスタンスを作成
-  factory StockTransaction.fromJson(Map<String, dynamic> json) =>
-      _$StockTransactionFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$StockTransactionToJson(this);
 }
 
@@ -70,6 +71,10 @@ class Purchase extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory Purchase.fromJson(Map<String, dynamic> json) =>
+      _$PurchaseFromJson(json);
+
   /// 仕入れ日
   DateTime purchaseDate;
 
@@ -85,11 +90,8 @@ class Purchase extends BaseModel {
   @override
   String get tableName => "purchases";
 
-  /// JSONからインスタンスを作成
-  factory Purchase.fromJson(Map<String, dynamic> json) =>
-      _$PurchaseFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$PurchaseToJson(this);
 }
 
@@ -106,6 +108,10 @@ class PurchaseItem extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory PurchaseItem.fromJson(Map<String, dynamic> json) =>
+      _$PurchaseItemFromJson(json);
+
   /// 仕入れID
   String purchaseId;
 
@@ -121,11 +127,8 @@ class PurchaseItem extends BaseModel {
   @override
   String get tableName => "purchase_items";
 
-  /// JSONからインスタンスを作成
-  factory PurchaseItem.fromJson(Map<String, dynamic> json) =>
-      _$PurchaseItemFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$PurchaseItemToJson(this);
 }
 
@@ -143,6 +146,10 @@ class StockAdjustment extends BaseModel {
     super.id,
     super.userId,
   });
+
+  /// JSONからインスタンスを作成
+  factory StockAdjustment.fromJson(Map<String, dynamic> json) =>
+      _$StockAdjustmentFromJson(json);
 
   /// 材料ID
   String materialId;
@@ -165,10 +172,7 @@ class StockAdjustment extends BaseModel {
   @override
   String get tableName => "stock_adjustments";
 
-  /// JSONからインスタンスを作成
-  factory StockAdjustment.fromJson(Map<String, dynamic> json) =>
-      _$StockAdjustmentFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$StockAdjustmentToJson(this);
 }

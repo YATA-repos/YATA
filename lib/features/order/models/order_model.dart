@@ -26,6 +26,9 @@ class Order extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
+
   /// 合計金額
   int totalAmount;
 
@@ -65,10 +68,8 @@ class Order extends BaseModel {
   @override
   String get tableName => "orders";
 
-  /// JSONからインスタンスを作成
-  factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$OrderToJson(this);
 }
 
@@ -88,6 +89,10 @@ class OrderItem extends BaseModel {
     super.id,
     super.userId,
   });
+
+  /// JSONからインスタンスを作成
+  factory OrderItem.fromJson(Map<String, dynamic> json) =>
+      _$OrderItemFromJson(json);
 
   /// 注文ID
   String orderId;
@@ -116,10 +121,7 @@ class OrderItem extends BaseModel {
   @override
   String get tableName => "order_items";
 
-  /// JSONからインスタンスを作成
-  factory OrderItem.fromJson(Map<String, dynamic> json) =>
-      _$OrderItemFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$OrderItemToJson(this);
 }

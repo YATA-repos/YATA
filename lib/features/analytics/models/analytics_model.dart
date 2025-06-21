@@ -61,5 +61,6 @@ class DailySummary extends BaseModel {
   String get tableName => "daily_summaries";
 
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$DailySummaryToJson(this);
 }

@@ -33,11 +33,11 @@ class CartItemRequest {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "menu_item_id": menuItemId,
-        "quantity": quantity,
-        "selected_options": selectedOptions,
-        "special_request": specialRequest,
-      };
+    "menu_item_id": menuItemId,
+    "quantity": quantity,
+    "selected_options": selectedOptions,
+    "special_request": specialRequest,
+  };
 }
 
 /// 注文確定リクエスト
@@ -76,11 +76,11 @@ class OrderCheckoutRequest {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "payment_method": paymentMethod.value,
-        "customer_name": customerName,
-        "discount_amount": discountAmount,
-        "notes": notes,
-      };
+    "payment_method": paymentMethod.value,
+    "customer_name": customerName,
+    "discount_amount": discountAmount,
+    "notes": notes,
+  };
 }
 
 /// 注文検索リクエスト
@@ -108,10 +108,12 @@ class OrderSearchRequest {
         statusFilter: json["status_filter"] == null
             ? null
             : (json["status_filter"] as List<dynamic>)
-                .map((dynamic status) => OrderStatus.values.firstWhere(
+                  .map(
+                    (dynamic status) => OrderStatus.values.firstWhere(
                       (OrderStatus s) => s.value == status as String,
-                    ))
-                .toList(),
+                    ),
+                  )
+                  .toList(),
         customerName: json["customer_name"] as String?,
         menuItemName: json["menu_item_name"] as String?,
         page: json["page"] as int,
@@ -141,16 +143,16 @@ class OrderSearchRequest {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "date_from": dateFrom?.toIso8601String(),
-        "date_to": dateTo?.toIso8601String(),
-        "status_filter": statusFilter
-            ?.map((OrderStatus status) => status.value)
-            .toList(),
-        "customer_name": customerName,
-        "menu_item_name": menuItemName,
-        "page": page,
-        "limit": limit,
-      };
+    "date_from": dateFrom?.toIso8601String(),
+    "date_to": dateTo?.toIso8601String(),
+    "status_filter": statusFilter
+        ?.map((OrderStatus status) => status.value)
+        .toList(),
+    "customer_name": customerName,
+    "menu_item_name": menuItemName,
+    "page": page,
+    "limit": limit,
+  };
 }
 
 /// 注文金額計算結果
@@ -186,9 +188,9 @@ class OrderCalculationResult {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "subtotal": subtotal,
-        "tax_amount": taxAmount,
-        "discount_amount": discountAmount,
-        "total_amount": totalAmount,
-      };
+    "subtotal": subtotal,
+    "tax_amount": taxAmount,
+    "discount_amount": discountAmount,
+    "total_amount": totalAmount,
+  };
 }

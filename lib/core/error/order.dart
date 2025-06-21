@@ -2,18 +2,25 @@
 enum OrderError {
   /// 注文が見つからない
   orderNotFound,
+
   /// 決済処理に失敗
   paymentFailed,
+
   /// 無効な注文ステータス
   invalidOrderStatus,
+
   /// 注文処理に失敗
   orderProcessingFailed,
+
   /// 注文キャンセルに失敗
   orderCancellationFailed,
+
   /// メニューアイテムが利用不可
   menuItemNotAvailable,
+
   /// 注文は既に完了している
   orderAlreadyCompleted,
+
   /// 無効な顧客情報
   invalidCustomerInfo;
 
@@ -69,10 +76,13 @@ enum OrderError {
 enum OrderWarning {
   /// 注文処理が遅延する可能性
   orderProcessingDelay,
+
   /// 高い注文量を検出
   highOrderVolume,
+
   /// キッチンの処理能力が低下
   kitchenCapacityLow,
+
   /// 推定調理時間が増加
   estimatedDelayIncreased;
 

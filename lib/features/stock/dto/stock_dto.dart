@@ -31,11 +31,11 @@ class StockUpdateRequest {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "material_id": materialId,
-        "new_quantity": newQuantity,
-        "reason": reason,
-        "notes": notes,
-      };
+    "material_id": materialId,
+    "new_quantity": newQuantity,
+    "reason": reason,
+    "notes": notes,
+  };
 }
 
 /// 仕入れリクエスト
@@ -51,8 +51,10 @@ class PurchaseRequest {
   factory PurchaseRequest.fromJson(Map<String, dynamic> json) =>
       PurchaseRequest(
         items: (json["items"] as List<dynamic>)
-            .map((dynamic item) =>
-                PurchaseItemDto.fromJson(item as Map<String, dynamic>))
+            .map(
+              (dynamic item) =>
+                  PurchaseItemDto.fromJson(item as Map<String, dynamic>),
+            )
             .toList(),
         purchaseDate: DateTime.parse(json["purchase_date"] as String),
         notes: json["notes"] as String?,
@@ -69,19 +71,16 @@ class PurchaseRequest {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "items": items.map((PurchaseItemDto item) => item.toJson()).toList(),
-        "purchase_date": purchaseDate.toIso8601String(),
-        "notes": notes,
-      };
+    "items": items.map((PurchaseItemDto item) => item.toJson()).toList(),
+    "purchase_date": purchaseDate.toIso8601String(),
+    "notes": notes,
+  };
 }
 
 /// 仕入れアイテムDTO
 class PurchaseItemDto {
   /// コンストラクタ
-  PurchaseItemDto({
-    required this.materialId,
-    required this.quantity,
-  });
+  PurchaseItemDto({required this.materialId, required this.quantity});
 
   /// JSONからオブジェクトを生成
   factory PurchaseItemDto.fromJson(Map<String, dynamic> json) =>
@@ -98,7 +97,7 @@ class PurchaseItemDto {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "material_id": materialId,
-        "quantity": quantity,
-      };
+    "material_id": materialId,
+    "quantity": quantity,
+  };
 }

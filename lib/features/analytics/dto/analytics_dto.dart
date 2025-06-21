@@ -36,10 +36,10 @@ class DailyStatsResult {
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{
-        "completed_orders": completedOrders,
-        "pending_orders": pendingOrders,
-        "total_revenue": totalRevenue,
-        "average_prep_time_minutes": averagePrepTimeMinutes,
-        "most_popular_item": mostPopularItem,
-      };
+    "completed_orders": completedOrders,
+    "pending_orders": pendingOrders,
+    "total_revenue": totalRevenue,
+    "average_prep_time_minutes": averagePrepTimeMinutes,
+    "most_popular_item": mostPopularItem,
+  };
 }
