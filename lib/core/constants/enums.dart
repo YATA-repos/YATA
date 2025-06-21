@@ -1,4 +1,7 @@
+import "package:json_annotation/json_annotation.dart";
+
 /// 支払い方法
+@JsonEnum()
 enum PaymentMethod {
   /// 現金支払い
   cash("cash"),
@@ -19,6 +22,7 @@ enum PaymentMethod {
 }
 
 /// 取引タイプ
+@JsonEnum()
 enum TransactionType {
   /// 仕入れ・(店側の)購入
   purchase("purchase"),
@@ -56,6 +60,7 @@ enum TransactionType {
 }
 
 /// 参照タイプ
+@JsonEnum()
 enum ReferenceType {
   /// 注文
   order("order"),
@@ -88,6 +93,7 @@ enum ReferenceType {
 }
 
 /// 在庫管理の単位タイプ
+@JsonEnum()
 enum UnitType {
   /// 個数
   piece("piece"),
@@ -128,6 +134,7 @@ enum UnitType {
 }
 
 /// 在庫レベル。あくまで段階を列挙するものであり、具体的な数値は商品によって異なるため、列挙しない。
+@JsonEnum()
 enum StockLevel {
   /// 在庫あり（緑）
   sufficient("sufficient"),
@@ -173,6 +180,7 @@ enum StockLevel {
 }
 
 /// 注文ステータス
+@JsonEnum()
 enum OrderStatus {
   /// 準備中。オーダーが作成され、キッチンが未対応もしくは調理中である状態。
   preparing("preparing"),
@@ -225,6 +233,7 @@ enum OrderStatus {
 }
 
 /// ログレベル
+@JsonEnum()
 enum LogLevel {
   /// デバッグ。リリースには含まない。
   debug("debug"),
