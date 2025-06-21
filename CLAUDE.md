@@ -234,6 +234,16 @@ utils/                     → lib/core/utils/
 
 **Language**: Japanese for all commit messages
 
+**PROHIBITED**:
+
+- English commit messages
+- Write this message:
+
+  ```
+  🤖 Generated with [Claude Code](https://claude.ai/code)
+  Co-Authored-By: Claude <noreply@anthropic.com>" 
+  ```
+
 **Message Format**:
 
 ```
