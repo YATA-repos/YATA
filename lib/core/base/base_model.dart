@@ -1,4 +1,9 @@
+import "package:json_annotation/json_annotation.dart";
+
+part "base_model.g.dart";
+
 /// ベースモデル抽象クラス
+@JsonSerializable()
 abstract class BaseModel {
   /// コンストラクタ
   BaseModel({
