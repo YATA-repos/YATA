@@ -11,8 +11,10 @@ class Config {
 
   /// SupabaseのURL
   static String get supabaseUrl => dotenv.env["SUPABASE_URL"] ?? "";
+
   /// Supabaseの匿名キー
   static String get supabaseAnonKey => dotenv.env["SUPABASE_ANON_KEY"] ?? "";
+
   /// Supabase認証コールバックURL
   static String get supabaseAuthCallbackUrl =>
       dotenv.env["SUPABASE_AUTH_CALLBACK_URL"] ?? "";

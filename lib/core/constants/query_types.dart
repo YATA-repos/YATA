@@ -60,7 +60,6 @@ enum FilterOperator {
   overlaps,
 }
 
-
 /// 論理演算子
 enum LogicalOperator {
   /// AND
@@ -109,10 +108,7 @@ class OrCondition extends LogicalCondition {
 /// 複合論理条件（AND/ORの組み合わせ）
 class ComplexCondition extends LogicalCondition {
   /// コンストラクタ
-  const ComplexCondition({
-    required this.operator,
-    required this.conditions,
-  });
+  const ComplexCondition({required this.operator, required this.conditions});
 
   @override
   final LogicalOperator operator;
@@ -174,9 +170,7 @@ class FilterCondition extends QueryFilter {
   }
 
   /// 条件の文字列表現
-  String get description {
-    return "$column ${operator.name} $value";
-  }
+  String get description => "$column ${operator.name} $value";
 }
 
 /// 高度なクエリ構築ヘルパー
@@ -184,80 +178,147 @@ class QueryConditionBuilder {
   QueryConditionBuilder._();
 
   /// 等価条件を作成
-  static FilterCondition eq(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.eq, value: value);
+  static FilterCondition eq(String column, dynamic value) => FilterCondition(
+    column: column,
+    operator: FilterOperator.eq,
+    value: value,
+  );
 
   /// 不等価条件を作成
-  static FilterCondition neq(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.neq, value: value);
+  static FilterCondition neq(String column, dynamic value) => FilterCondition(
+    column: column,
+    operator: FilterOperator.neq,
+    value: value,
+  );
 
   /// より大きい条件を作成
-  static FilterCondition gt(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.gt, value: value);
+  static FilterCondition gt(String column, dynamic value) => FilterCondition(
+    column: column,
+    operator: FilterOperator.gt,
+    value: value,
+  );
 
   /// 以上条件を作成
-  static FilterCondition gte(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.gte, value: value);
+  static FilterCondition gte(String column, dynamic value) => FilterCondition(
+    column: column,
+    operator: FilterOperator.gte,
+    value: value,
+  );
 
   /// より小さい条件を作成
-  static FilterCondition lt(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.lt, value: value);
+  static FilterCondition lt(String column, dynamic value) => FilterCondition(
+    column: column,
+    operator: FilterOperator.lt,
+    value: value,
+  );
 
   /// 以下条件を作成
-  static FilterCondition lte(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.lte, value: value);
+  static FilterCondition lte(String column, dynamic value) => FilterCondition(
+    column: column,
+    operator: FilterOperator.lte,
+    value: value,
+  );
 
   /// LIKE条件を作成
-  static FilterCondition like(String column, String pattern) =>
-      FilterCondition(column: column, operator: FilterOperator.like, value: pattern);
+  static FilterCondition like(String column, String pattern) => FilterCondition(
+    column: column,
+    operator: FilterOperator.like,
+    value: pattern,
+  );
 
   /// ILIKE条件を作成
   static FilterCondition ilike(String column, String pattern) =>
-      FilterCondition(column: column, operator: FilterOperator.ilike, value: pattern);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.ilike,
+        value: pattern,
+      );
 
   /// IN条件を作成
   static FilterCondition inList(String column, List<dynamic> values) =>
-      FilterCondition(column: column, operator: FilterOperator.inList, value: values);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.inList,
+        value: values,
+      );
 
   /// NOT IN条件を作成
   static FilterCondition notInList(String column, List<dynamic> values) =>
-      FilterCondition(column: column, operator: FilterOperator.notInList, value: values);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.notInList,
+        value: values,
+      );
 
   /// NULL判定条件を作成
-  static FilterCondition isNull(String column) =>
-      FilterCondition(column: column, operator: FilterOperator.isNull, value: null);
+  static FilterCondition isNull(String column) => FilterCondition(
+    column: column,
+    operator: FilterOperator.isNull,
+    value: null,
+  );
 
   /// NOT NULL判定条件を作成
-  static FilterCondition isNotNull(String column) =>
-      FilterCondition(column: column, operator: FilterOperator.isNotNull, value: null);
+  static FilterCondition isNotNull(String column) => FilterCondition(
+    column: column,
+    operator: FilterOperator.isNotNull,
+    value: null,
+  );
 
   /// CONTAINS条件を作成
   static FilterCondition contains(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.contains, value: value);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.contains,
+        value: value,
+      );
 
   /// CONTAINED BY条件を作成
   static FilterCondition containedBy(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.containedBy, value: value);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.containedBy,
+        value: value,
+      );
 
   /// 範囲条件を作成（より大きい）
   static FilterCondition rangeGt(String column, String range) =>
-      FilterCondition(column: column, operator: FilterOperator.rangeGt, value: range);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.rangeGt,
+        value: range,
+      );
 
   /// 範囲条件を作成（以上）
   static FilterCondition rangeGte(String column, String range) =>
-      FilterCondition(column: column, operator: FilterOperator.rangeGte, value: range);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.rangeGte,
+        value: range,
+      );
 
   /// 範囲条件を作成（より小さい）
   static FilterCondition rangeLt(String column, String range) =>
-      FilterCondition(column: column, operator: FilterOperator.rangeLt, value: range);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.rangeLt,
+        value: range,
+      );
 
   /// 範囲条件を作成（以下）
   static FilterCondition rangeLte(String column, String range) =>
-      FilterCondition(column: column, operator: FilterOperator.rangeLte, value: range);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.rangeLte,
+        value: range,
+      );
 
   /// OVERLAPS条件を作成
   static FilterCondition overlaps(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.overlaps, value: value);
+      FilterCondition(
+        column: column,
+        operator: FilterOperator.overlaps,
+        value: value,
+      );
 
   /// AND条件を作成
   static AndCondition and(List<QueryFilter> conditions) =>
@@ -268,8 +329,10 @@ class QueryConditionBuilder {
       OrCondition(conditions);
 
   /// 複合条件を作成
-  static ComplexCondition complex(LogicalOperator operator, List<QueryFilter> conditions) =>
-      ComplexCondition(operator: operator, conditions: conditions);
+  static ComplexCondition complex(
+    LogicalOperator operator,
+    List<QueryFilter> conditions,
+  ) => ComplexCondition(operator: operator, conditions: conditions);
 
   /// 日付範囲条件を作成（便利メソッド）
   static AndCondition dateRange(String column, DateTime from, DateTime to) =>
@@ -279,25 +342,21 @@ class QueryConditionBuilder {
       ]);
 
   /// 文字列部分一致条件を作成（便利メソッド）
-  static FilterCondition search(String column, String term, {bool caseSensitive = false}) =>
-      caseSensitive
-          ? like(column, "%$term%")
-          : ilike(column, "%$term%");
+  static FilterCondition search(
+    String column,
+    String term, {
+    bool caseSensitive = false,
+  }) => caseSensitive ? like(column, "%$term%") : ilike(column, "%$term%");
 
   /// 数値範囲条件を作成（便利メソッド）
   static AndCondition numberRange(String column, num min, num max) =>
-      and(<QueryFilter>[
-        gte(column, min),
-        lte(column, max),
-      ]);
+      and(<QueryFilter>[gte(column, min), lte(column, max)]);
 
   /// 複数条件のOR組み合わせ（便利メソッド）
-  static OrCondition anyOf(List<QueryFilter> conditions) =>
-      or(conditions);
+  static OrCondition anyOf(List<QueryFilter> conditions) => or(conditions);
 
   /// 複数条件のAND組み合わせ（便利メソッド）
-  static AndCondition allOf(List<QueryFilter> conditions) =>
-      and(conditions);
+  static AndCondition allOf(List<QueryFilter> conditions) => and(conditions);
 }
 
 /// クエリビルダー拡張のためのタイプエイリアス
