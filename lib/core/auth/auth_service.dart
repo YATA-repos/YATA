@@ -320,7 +320,7 @@ class SupabaseClientService {
 class SupabaseClientException implements Exception {
   /// コンストラクタ
   const SupabaseClientException(this.message);
-  
+
   /// エラーメッセージ
   final String message;
 
@@ -332,7 +332,7 @@ class SupabaseClientException implements Exception {
 class SupabaseAuthException implements Exception {
   /// コンストラクタ
   const SupabaseAuthException(this.message);
-  
+
   /// エラーメッセージ
   final String message;
 

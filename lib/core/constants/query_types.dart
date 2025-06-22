@@ -131,6 +131,7 @@ class OrderByCondition {
 
 /// クエリ条件の統合型（型安全性向上）
 abstract class QueryFilter {
+  /// コンストラクタ
   const QueryFilter();
 }
 
@@ -160,11 +161,23 @@ class FilterCondition extends QueryFilter {
         return true;
       case FilterOperator.inList:
       case FilterOperator.notInList:
-        return value is List && (value as List).isNotEmpty;
+        return value is List<dynamic> && (value as List<dynamic>).isNotEmpty;
       case FilterOperator.like:
       case FilterOperator.ilike:
         return value is String && (value as String).isNotEmpty;
-      default:
+      case FilterOperator.eq:
+      case FilterOperator.neq:
+      case FilterOperator.gt:
+      case FilterOperator.gte:
+      case FilterOperator.lt:
+      case FilterOperator.lte:
+      case FilterOperator.contains:
+      case FilterOperator.containedBy:
+      case FilterOperator.rangeGt:
+      case FilterOperator.rangeGte:
+      case FilterOperator.rangeLt:
+      case FilterOperator.rangeLte:
+      case FilterOperator.overlaps:
         return value != null;
     }
   }

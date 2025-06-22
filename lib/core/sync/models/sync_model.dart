@@ -18,6 +18,10 @@ class SyncRecord extends BaseModel {
     super.userId,
   });
 
+  /// JSONからインスタンスを作成
+  factory SyncRecord.fromJson(Map<String, dynamic> json) =>
+      _$SyncRecordFromJson(json);
+
   /// 対象テーブル名
   String recordType;
 
@@ -36,10 +40,7 @@ class SyncRecord extends BaseModel {
   @override
   String get tableName => "sync_records";
 
-  /// JSONからインスタンスを作成
-  factory SyncRecord.fromJson(Map<String, dynamic> json) =>
-      _$SyncRecordFromJson(json);
-
   /// JSONに変換
+  @override
   Map<String, dynamic> toJson() => _$SyncRecordToJson(this);
 }
