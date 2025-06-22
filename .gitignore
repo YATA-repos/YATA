@@ -52,6 +52,7 @@ __temp/
 .vscode/
 _old_py_project/
 _old_py_docs/
+docs/
 
 # dotenv
 .env
