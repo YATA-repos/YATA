@@ -12,7 +12,7 @@ typedef PrimaryKeyMap = Map<String, dynamic>;
 
 /// ベースCRUDリポジトリ抽象クラス
 ///
-/// [T] モデル型（BaseModelを継承し、toJsonメソッドを持つ）
+/// [T] モデル型（BaseModelを継承し、toJson/fromJsonメソッドを持つ）
 /// [ID] 単一主キーの型（String, int など）
 abstract class BaseRepository<T extends BaseModel, ID> {
   /// コンストラクタ
@@ -46,7 +46,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   // =================================================================
 
   /// 単一キーを主キーマップに正規化
-  PrimaryKeyMap _normalizeKey(dynamic key) {
+  PrimaryKeyMap _normalizeKey(Object? key) {
     if (key is Map<String, dynamic>) {
       return key;
     }
@@ -67,8 +67,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
         "Finding single entity in table: $tableName",
       );
 
-      PostgrestFilterBuilder<dynamic> query =
-          _table.select() as PostgrestFilterBuilder<dynamic>;
+      PostgrestFilterBuilder<dynamic> query = _table.select();
 
       if (filters != null && filters.isNotEmpty) {
         query = QueryUtils.applyFilters(query, filters);
@@ -101,11 +100,11 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   }
 
   /// クエリに主キー条件を適用
-  PostgrestFilterBuilder<dynamic> _applyPrimaryKey(
-    PostgrestFilterBuilder<dynamic> query,
+  PostgrestFilterBuilder<TQuery> _applyPrimaryKey<TQuery>(
+    PostgrestFilterBuilder<TQuery> query,
     PrimaryKeyMap keyMap,
   ) {
-    PostgrestFilterBuilder<dynamic> result = query;
+    PostgrestFilterBuilder<TQuery> result = query;
 
     for (final String column in primaryKeyColumns) {
       if (!keyMap.containsKey(column)) {
@@ -203,7 +202,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
         "BaseRepository",
         "Getting entity by ID from table: $tableName",
       );
-      final PrimaryKeyMap keyMap = _normalizeKey(id);
+      final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       final Map<String, dynamic>? response = await _applyPrimaryKey(
         _table.select(),
         keyMap,
@@ -235,16 +234,31 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// 主キーマップによってエンティティを取得
   Future<T?> getByPrimaryKey(PrimaryKeyMap keyMap) async {
     try {
+      LogService.debug(
+        "BaseRepository",
+        "Getting entity by primary key from table: $tableName",
+      );
       final Map<String, dynamic>? response = await _applyPrimaryKey(
         _table.select(),
         keyMap,
       ).maybeSingle();
 
       if (response != null) {
+        LogService.debug("BaseRepository", "Entity found in table: $tableName");
         return _fromJson(response);
       }
+      LogService.debug(
+        "BaseRepository",
+        "Entity not found in table: $tableName",
+      );
       return null;
     } catch (e) {
+      LogService.error(
+        "BaseRepository",
+        "Failed to get entity by primary key in table: $tableName",
+        null,
+        e,
+      );
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -259,7 +273,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
         "BaseRepository",
         "Updating entity by ID in table: $tableName",
       );
-      final PrimaryKeyMap keyMap = _normalizeKey(id);
+      final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       final List<Map<String, dynamic>> response = await _applyPrimaryKey(
         _table.update(updates),
         keyMap,
@@ -297,16 +311,34 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     Map<String, dynamic> updates,
   ) async {
     try {
+      LogService.debug(
+        "BaseRepository",
+        "Updating entity by primary key in table: $tableName",
+      );
       final List<Map<String, dynamic>> response = await _applyPrimaryKey(
         _table.update(updates),
         keyMap,
       ).select();
 
       if (response.isNotEmpty) {
+        LogService.info(
+          "BaseRepository",
+          "Entity updated successfully by primary key in table: $tableName",
+        );
         return _fromJson(response[0]);
       }
+      LogService.warning(
+        "BaseRepository",
+        "No entity updated by primary key in table: $tableName",
+      );
       return null;
     } catch (e) {
+      LogService.error(
+        "BaseRepository",
+        "Failed to update entity by primary key in table: $tableName",
+        null,
+        e,
+      );
       throw RepositoryException(
         RepositoryError.updateFailed,
         params: <String, String>{"error": e.toString()},
@@ -321,7 +353,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
         "BaseRepository",
         "Deleting entity by ID from table: $tableName",
       );
-      final PrimaryKeyMap keyMap = _normalizeKey(id);
+      final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       await _applyPrimaryKey(_table.delete(), keyMap);
       LogService.info(
         "BaseRepository",
@@ -344,8 +376,22 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// 主キーマップによってエンティティを削除
   Future<void> deleteByPrimaryKey(PrimaryKeyMap keyMap) async {
     try {
+      LogService.debug(
+        "BaseRepository",
+        "Deleting entity by primary key from table: $tableName",
+      );
       await _applyPrimaryKey(_table.delete(), keyMap);
+      LogService.info(
+        "BaseRepository",
+        "Entity deleted successfully by primary key from table: $tableName",
+      );
     } catch (e) {
+      LogService.error(
+        "BaseRepository",
+        "Failed to delete entity by primary key from table: $tableName",
+        null,
+        e,
+      );
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -354,7 +400,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   }
 
   /// 複数エンティティを一括削除
-  Future<void> bulkDelete(List<dynamic> keys) async {
+  Future<void> bulkDelete(List<ID> keys) async {
     if (keys.isEmpty) {
       return;
     }
@@ -367,9 +413,9 @@ abstract class BaseRepository<T extends BaseModel, ID> {
       // 単一カラム主キーの場合はin演算子を使用
       if (primaryKeyColumns.length == 1) {
         final String pkColumn = primaryKeyColumns[0];
-        final List<dynamic> values = keys.map((dynamic key) {
-          final PrimaryKeyMap normalized = _normalizeKey(key);
-          return normalized[pkColumn];
+        final List<Object> values = keys.map((ID key) {
+          final PrimaryKeyMap normalized = _normalizeKey(key as Object);
+          return normalized[pkColumn] as Object;
         }).toList();
 
         await _table.delete().inFilter(pkColumn, values);
@@ -384,15 +430,15 @@ abstract class BaseRepository<T extends BaseModel, ID> {
           final int end = (i + chunkSize < keys.length)
               ? i + chunkSize
               : keys.length;
-          final List<dynamic> chunk = keys.sublist(i, end);
+          final List<ID> chunk = keys.sublist(i, end);
 
           // 各チャンクを並列削除
           await Future.wait(
-            chunk.map((dynamic key) async {
+            chunk.map((ID key) async {
               if (key is Map<String, dynamic>) {
                 return deleteByPrimaryKey(key);
               } else {
-                return deleteById(key as ID);
+                return deleteById(key);
               }
             }),
           );
@@ -521,7 +567,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
       if (filters != null && filters.isNotEmpty) {
         query =
             QueryUtils.applyFilters(
-                  query as PostgrestFilterBuilder<dynamic>,
+                  query as PostgrestFilterBuilder<List<Map<String, Object?>>>,
                   filters,
                 )
                 as PostgrestTransformBuilder<List<Map<String, dynamic>>>;
@@ -564,8 +610,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
           "BaseRepository",
           "Counting entities with condition in table: $tableName",
         );
-        final PostgrestFilterBuilder<dynamic> baseQuery =
-            _table.select() as PostgrestFilterBuilder<dynamic>;
+        final PostgrestFilterBuilder<dynamic> baseQuery = _table.select();
         final PostgrestFilterBuilder<dynamic> query = QueryUtils.applyFilters(
           baseQuery,
           filters,
