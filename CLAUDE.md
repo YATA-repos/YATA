@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Strictly:**
+
+- **Use Japanese for ALL commit messages, documentation, comments, and answers.**
+
 ## Overview
 
 - **Project Name**: YATA
