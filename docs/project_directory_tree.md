@@ -99,8 +99,20 @@ features/
 ├── menu/                       # メニュー管理機能
 ├── order/                      # 注文管理機能
 └── stock/                      # 在庫機能
+    ├── dto/                    # DTOオブジェクト
+    │   └── stock_dto.dart
+    ├── models/                 # ドメインモデル
+    │   ├── stock_model.dart
+    │   └── stock_model.g.dart
+    ├── presentation/           # UI層（未実装）
+    ├── repositories/           # データアクセス層（実装済み）
+    │   ├── purchase_repository.dart
+    │   ├── purchase_item_repository.dart
+    │   ├── stock_transaction_repository.dart
+    │   └── stock_adjustment_repository.dart
+    └── services/               # ビジネスロジック層（未実装）
 
-各機能内の構造：
+各機能内の共通構造：
 [feature_name]/
 ├── dto/                        # Data Transfer Objects
 │   └── [feature]_dto.dart
@@ -111,7 +123,7 @@ features/
 │   ├── providers/              # 状態管理プロバイダー
 │   ├── screens/                # 画面・ページ
 │   └── widgets/                # 再利用可能ウィジェット
-├── repositories/               # データアクセス層（未実装）
+├── repositories/               # データアクセス層（実装済み）
 └── services/                   # ビジネスロジック層（未実装）
 ```
 
@@ -136,5 +148,21 @@ shared/                         # 共通UI要素
 
 ## 実装状況
 
-- **実装済み**: 基底システム、エラーハンドリング、モデルクラス、DTO
-- **未実装**: UI層（presentation）、サービス層、リポジトリ層、インフラ層
+### 実装済み
+- **基底システム**: `BaseModel`, `BaseRepository`, エラーハンドリング
+- **モデルクラス**: 全機能（analytics、inventory、menu、order、stock）のドメインモデル
+- **DTO**: 全機能のData Transfer Objects
+- **リポジトリ層**: 12個のリポジトリクラスが実装済み
+  - `analytics`: DailySummaryRepository
+  - `inventory`: MaterialRepository, MaterialCategoryRepository, RecipeRepository
+  - `menu`: MenuItemRepository, MenuCategoryRepository
+  - `order`: OrderRepository, OrderItemRepository
+  - `stock`: PurchaseRepository, PurchaseItemRepository, StockTransactionRepository, StockAdjustmentRepository
+- **コア機能**: 認証サービス、同期モデル、ユーティリティ
+
+### 未実装
+- **UI層（presentation）**: プロバイダー、画面、ウィジェット
+- **サービス層**: ビジネスロジック
+- **インフラ層**: Supabase統合、オフライン機能
+- **ルーティング**: アプリケーションナビゲーション
+- **共通UI**: レイアウト、テーマ、共通ウィジェット
