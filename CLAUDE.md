@@ -1,14 +1,19 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、Claude Code (claude.ai/code) がこのリポジトリのコードを扱う際のガイダンスを提供します。これに厳密に従ってください。
 
 **厳格に従うこと:**
 
 - **すべてのコミットメッセージ、ドキュメント、コメント、回答は日本語を使用すること**
+- **自己宣伝やプロモーションを含むコードや、コメント、ドキュメント、コミットメッセージを使用しないこと(例: 「私の素晴らしい機能」、「このコミットメッセージはClaudeによって生成されました」など)**
+- **常に遠慮せず、自らの最大限の能力を発揮して、プロジェクトの品質向上に貢献すること**
+- **質問者・また自らに対して、常に批判的な視点を持ち、改善の余地を探ること**
 
 ## プロジェクト概要
 
 - **プロジェクト名**: YATA (Yet Another Task App)
+- **プロジェクト概要**: レストラン在庫管理システム (Rin Stock Manager) の移植プロジェクト
+- **目的**: Python/Flet から Dart/Flutter への移植
 - **システム種別**: レストラン在庫管理システム
 - **プラットフォーム**: Flutter クロスプラットフォーム
 - **移植元**: Rin Stock Manager (Python/Flet)
@@ -60,7 +65,16 @@ flutter build linux           # Linux
 
 ## アーキテクチャ
 
-### レイヤー構造
+### 概要
+
+このプロジェクトは、一言で表すなら、「**フィーチャーベースの『サービスレイヤー・アーキテクチャ』(Feature-based Service Layer Architecture)**」を採用しています。ただし、このアーキテクチャと類似しているClean Architectureとの明確な違いは、「依存性の逆転は使わず、UI→Service→Repositoryという直線的な依存関係にしている」点です。他にもあなたが理解しやすいように、以下のような言い換えも可能です：
+
+- フィーチャーベース・レイヤードアーキテクチャ (Feature-based Layered Architecture)
+- 実用的なレイヤードアーキテクチャ (Pragmatic Layered Architecture)
+- サービスレイヤー・アーキテクチャ (Service Layer Architecture)
+- 直線的レイヤードアーキテクチャ (Linear Layered Architecture)
+
+### レイヤー構造(依存関係)
 
 ```
 UI Layer (Flutter Widgets/Pages)
@@ -68,10 +82,6 @@ UI Layer (Flutter Widgets/Pages)
 Business Services Layer  
     ↓
 Repository Layer (Data Access)
-    ↓
-Model Layer (Domain Models & DTOs)
-    ↓
-Infrastructure (Supabase)
 ```
 
 ### ディレクトリ構造
@@ -138,7 +148,7 @@ lib/
    - `test:` テスト追加・修正
    - `chore:` その他のメンテナンス作業
 
-### 開発フロー
+### 完全新規における開発フロー
 
 1. 機能ブランチ作成
 2. 実装とテスト
@@ -166,7 +176,6 @@ lib/
 ### Linter 設定
 
 - 厳格な型チェック有効
-- 80文字行制限あり
 - public API にはドキュメントコメント必須
 - 生成ファイル（`*.g.dart`, `*.freezed.dart`）は解析除外
 
@@ -178,3 +187,5 @@ lib/
 - Python の async/await → Dart の Future/Stream
 - Pydantic モデル → json_serializable
 - 複雑なフィルタリングシステムを保持
+- PythonのSupabaseクライアント → DartのSupabase Flutterクライアント
+- 単にコードを移植するのではなく、Dart/Flutterの特性に最適化
