@@ -100,6 +100,7 @@
   - 当日の注文数を取得し、+1した番号を生成
 
 **使用例**:
+
 ```dart
 // 結果例: "20241222-001"
 final orderNumber = await repository.generateNextOrderNumber(userId);
@@ -185,6 +186,7 @@ final orderNumber = await repository.generateNextOrderNumber(userId);
   - 売上金額の降順でソート
 
 **戻り値の形式**:
+
 ```dart
 [
   {

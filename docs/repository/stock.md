@@ -141,6 +141,7 @@
   - 作成日時で降順ソート
 
 **使用例**:
+
 ```dart
 // 特定注文による在庫変動を追跡
 final transactions = await repository.findByReference(
@@ -294,6 +295,7 @@ final consumptions = await transactionRepo.findConsumptionTransactions(
 ## 在庫管理のワークフロー
 
 ### 1. 仕入れ時
+
 ```dart
 // 1. 仕入れ記録作成
 final purchase = await purchaseRepo.create(purchaseData);
@@ -306,12 +308,14 @@ final transactions = await transactionRepo.createBatch(stockTransactions);
 ```
 
 ### 2. 販売時
+
 ```dart
 // 注文処理時に在庫取引記録を作成
 final transactions = await transactionRepo.createBatch(saleTransactions);
 ```
 
 ### 3. 在庫調整時
+
 ```dart
 // 1. 調整記録作成
 final adjustment = await adjustmentRepo.create(adjustmentData);

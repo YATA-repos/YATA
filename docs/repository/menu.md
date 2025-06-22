@@ -52,6 +52,7 @@
   - 大文字小文字を区別しない部分一致検索（ILIKE）
 
 **使用例**:
+
 ```dart
 // 単一キーワード検索
 final items1 = await repository.searchByName("ハンバーガー", userId);

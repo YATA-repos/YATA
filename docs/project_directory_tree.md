@@ -149,6 +149,7 @@ shared/                         # 共通UI要素
 ## 実装状況
 
 ### 実装済み
+
 - **基底システム**: `BaseModel`, `BaseRepository`, エラーハンドリング
 - **モデルクラス**: 全機能（analytics、inventory、menu、order、stock）のドメインモデル
 - **DTO**: 全機能のData Transfer Objects
@@ -161,6 +162,7 @@ shared/                         # 共通UI要素
 - **コア機能**: 認証サービス、同期モデル、ユーティリティ
 
 ### 未実装
+
 - **UI層（presentation）**: プロバイダー、画面、ウィジェット
 - **サービス層**: ビジネスロジック
 - **インフラ層**: Supabase統合、オフライン機能

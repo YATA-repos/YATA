@@ -23,6 +23,7 @@ Repository Layer (Data Access) ← このドキュメントの対象
 **場所**: `lib/core/base/base_repository.dart`
 
 **提供機能**:
+
 - 基本的なCRUD操作
 - フィルタリング・ソート機能
 - ページネーション

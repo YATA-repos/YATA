@@ -30,6 +30,7 @@
   - 該当する集計データを1件取得
 
 **使用例**:
+
 ```dart
 final repository = DailySummaryRepository();
 final today = DateTime.now();
@@ -51,6 +52,7 @@ final summary = await repository.findByDate(today, userId);
   - 日付順（昇順）でソート
 
 **使用例**:
+
 ```dart
 final repository = DailySummaryRepository();
 final lastWeek = DateTime.now().subtract(Duration(days: 7));
