@@ -3,7 +3,7 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "../auth/auth_service.dart";
 import "../constants/query_types.dart";
 import "../error/repository.dart";
-import "../utils/log_service.dart";
+import "../utils/logger_mixin.dart";
 import "../utils/query_utils.dart";
 import "base_model.dart";
 
@@ -14,7 +14,8 @@ typedef PrimaryKeyMap = Map<String, dynamic>;
 ///
 /// [T] モデル型（BaseModelを継承し、toJson/fromJsonメソッドを持つ）
 /// [ID] 単一主キーの型（String, int など）
-abstract class BaseRepository<T extends BaseModel, ID> {
+@loggerComponent
+abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   /// コンストラクタ
   BaseRepository({
     required this.tableName,
@@ -37,6 +38,10 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   ///
   /// 各サブクラスで実装する必要があります
   T Function(Map<String, dynamic> json) get fromJson;
+
+  /// ログコンポーネント名（runtimeTypeから自動取得）
+  @override
+  String get loggerComponent => runtimeType.toString().split("<")[0];
 
   /// 内部用JSONデシリアライゼーションヘルパー
   T _fromJson(Map<String, dynamic> json) => fromJson(json);
@@ -62,10 +67,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// フィルタ条件を使用したエンティティの単一取得
   Future<T?> findOne({List<QueryFilter>? filters}) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Finding single entity in table: $tableName",
-      );
+      logDebug("Finding single entity in table: $tableName");
 
       PostgrestFilterBuilder<dynamic> query = _table.select();
 
@@ -76,22 +78,14 @@ abstract class BaseRepository<T extends BaseModel, ID> {
       final Map<String, dynamic>? response = await query.maybeSingle();
 
       if (response != null) {
-        LogService.debug("BaseRepository", "Entity found in table: $tableName");
+        logDebug("Entity found in table: $tableName");
         return _fromJson(response);
       }
 
-      LogService.debug(
-        "BaseRepository",
-        "Entity not found in table: $tableName",
-      );
+      logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to find single entity in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to find single entity in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -123,34 +117,22 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// エンティティを作成
   Future<T?> create(T entity) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Creating entity in table: $tableName",
-      );
+      logDebug("Creating entity in table: $tableName");
       final Map<String, dynamic> data = entity.toJson();
       final List<Map<String, dynamic>> response = await _table
           .insert(data)
           .select();
 
       if (response.isNotEmpty) {
-        LogService.info(
-          "BaseRepository",
-          "Entity created successfully in table: $tableName",
-        );
+        logInfo("Entity created successfully in table: $tableName");
         return _fromJson(response[0]);
       }
-      LogService.warning(
-        "BaseRepository",
+      logWarning(
         "No response returned from entity creation in table: $tableName",
       );
       return null;
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to create entity in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to create entity in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.insertFailed,
         params: <String, String>{"error": e.toString()},
@@ -165,8 +147,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     }
 
     try {
-      LogService.debug(
-        "BaseRepository",
+      logDebug(
         "Bulk creating ${entities.length} entities in table: $tableName",
       );
       final List<Map<String, dynamic>> dataList = entities
@@ -176,18 +157,10 @@ abstract class BaseRepository<T extends BaseModel, ID> {
           .insert(dataList)
           .select();
 
-      LogService.info(
-        "BaseRepository",
-        "Bulk created ${response.length} entities in table: $tableName",
-      );
+      logInfo("Bulk created ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to bulk create entities in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to bulk create entities in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.insertFailed,
         params: <String, String>{"error": e.toString()},
@@ -198,10 +171,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// IDによってエンティティを取得
   Future<T?> getById(ID id) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Getting entity by ID from table: $tableName",
-      );
+      logDebug("Getting entity by ID from table: $tableName");
       final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       final Map<String, dynamic>? response = await _applyPrimaryKey(
         _table.select(),
@@ -209,21 +179,13 @@ abstract class BaseRepository<T extends BaseModel, ID> {
       ).maybeSingle();
 
       if (response != null) {
-        LogService.debug("BaseRepository", "Entity found in table: $tableName");
+        logDebug("Entity found in table: $tableName");
         return _fromJson(response);
       }
-      LogService.debug(
-        "BaseRepository",
-        "Entity not found in table: $tableName",
-      );
+      logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to get entity by ID in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to get entity by ID in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -234,27 +196,20 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// 主キーマップによってエンティティを取得
   Future<T?> getByPrimaryKey(PrimaryKeyMap keyMap) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Getting entity by primary key from table: $tableName",
-      );
+      logDebug("Getting entity by primary key from table: $tableName");
       final Map<String, dynamic>? response = await _applyPrimaryKey(
         _table.select(),
         keyMap,
       ).maybeSingle();
 
       if (response != null) {
-        LogService.debug("BaseRepository", "Entity found in table: $tableName");
+        logDebug("Entity found in table: $tableName");
         return _fromJson(response);
       }
-      LogService.debug(
-        "BaseRepository",
-        "Entity not found in table: $tableName",
-      );
+      logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
+      logError(
         "Failed to get entity by primary key in table: $tableName",
         null,
         e,
@@ -269,10 +224,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// IDによってエンティティを更新
   Future<T?> updateById(ID id, Map<String, dynamic> updates) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Updating entity by ID in table: $tableName",
-      );
+      logDebug("Updating entity by ID in table: $tableName");
       final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       final List<Map<String, dynamic>> response = await _applyPrimaryKey(
         _table.update(updates),
@@ -280,24 +232,13 @@ abstract class BaseRepository<T extends BaseModel, ID> {
       ).select();
 
       if (response.isNotEmpty) {
-        LogService.info(
-          "BaseRepository",
-          "Entity updated successfully in table: $tableName",
-        );
+        logInfo("Entity updated successfully in table: $tableName");
         return _fromJson(response[0]);
       }
-      LogService.warning(
-        "BaseRepository",
-        "No entity updated in table: $tableName",
-      );
+      logWarning("No entity updated in table: $tableName");
       return null;
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to update entity by ID in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to update entity by ID in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.updateFailed,
         params: <String, String>{"error": e.toString()},
@@ -311,30 +252,22 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     Map<String, dynamic> updates,
   ) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Updating entity by primary key in table: $tableName",
-      );
+      logDebug("Updating entity by primary key in table: $tableName");
       final List<Map<String, dynamic>> response = await _applyPrimaryKey(
         _table.update(updates),
         keyMap,
       ).select();
 
       if (response.isNotEmpty) {
-        LogService.info(
-          "BaseRepository",
+        logInfo(
           "Entity updated successfully by primary key in table: $tableName",
         );
         return _fromJson(response[0]);
       }
-      LogService.warning(
-        "BaseRepository",
-        "No entity updated by primary key in table: $tableName",
-      );
+      logWarning("No entity updated by primary key in table: $tableName");
       return null;
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
+      logError(
         "Failed to update entity by primary key in table: $tableName",
         null,
         e,
@@ -349,23 +282,12 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// IDによってエンティティを削除
   Future<void> deleteById(ID id) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Deleting entity by ID from table: $tableName",
-      );
+      logDebug("Deleting entity by ID from table: $tableName");
       final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       await _applyPrimaryKey(_table.delete(), keyMap);
-      LogService.info(
-        "BaseRepository",
-        "Entity deleted successfully from table: $tableName",
-      );
+      logInfo("Entity deleted successfully from table: $tableName");
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to delete entity by ID from table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to delete entity by ID from table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -376,18 +298,13 @@ abstract class BaseRepository<T extends BaseModel, ID> {
   /// 主キーマップによってエンティティを削除
   Future<void> deleteByPrimaryKey(PrimaryKeyMap keyMap) async {
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Deleting entity by primary key from table: $tableName",
-      );
+      logDebug("Deleting entity by primary key from table: $tableName");
       await _applyPrimaryKey(_table.delete(), keyMap);
-      LogService.info(
-        "BaseRepository",
+      logInfo(
         "Entity deleted successfully by primary key from table: $tableName",
       );
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
+      logError(
         "Failed to delete entity by primary key from table: $tableName",
         null,
         e,
@@ -406,10 +323,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     }
 
     try {
-      LogService.debug(
-        "BaseRepository",
-        "Bulk deleting ${keys.length} entities from table: $tableName",
-      );
+      logDebug("Bulk deleting ${keys.length} entities from table: $tableName");
       // 単一カラム主キーの場合はin演算子を使用
       if (primaryKeyColumns.length == 1) {
         final String pkColumn = primaryKeyColumns[0];
@@ -419,10 +333,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
         }).toList();
 
         await _table.delete().inFilter(pkColumn, values);
-        LogService.info(
-          "BaseRepository",
-          "Bulk deleted ${keys.length} entities from table: $tableName",
-        );
+        logInfo("Bulk deleted ${keys.length} entities from table: $tableName");
       } else {
         // 複合主キーの場合は効率的な削除のためチャンク処理
         const int chunkSize = 100;
@@ -443,14 +354,12 @@ abstract class BaseRepository<T extends BaseModel, ID> {
             }),
           );
         }
-        LogService.info(
-          "BaseRepository",
+        logInfo(
           "Bulk deleted ${keys.length} entities with composite keys from table: $tableName",
         );
       }
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
+      logError(
         "Failed to bulk delete entities from table: $tableName",
         null,
         e,
@@ -508,8 +417,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     }
 
     try {
-      LogService.debug(
-        "BaseRepository",
+      logDebug(
         "Listing entities from table: $tableName (limit: $limit, offset: $offset)",
       );
       final List<Map<String, dynamic>> response = await _table.select().range(
@@ -517,18 +425,10 @@ abstract class BaseRepository<T extends BaseModel, ID> {
         offset + limit - 1,
       );
 
-      LogService.debug(
-        "BaseRepository",
-        "Retrieved ${response.length} entities from table: $tableName",
-      );
+      logDebug("Retrieved ${response.length} entities from table: $tableName");
       return response.map(_fromJson).toList();
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to list entities from table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to list entities from table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -553,8 +453,7 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     }
 
     try {
-      LogService.debug(
-        "BaseRepository",
+      logDebug(
         "Finding entities in table: $tableName (limit: $limit, offset: $offset)",
       );
 
@@ -580,18 +479,10 @@ abstract class BaseRepository<T extends BaseModel, ID> {
 
       final List<Map<String, dynamic>> response = await query;
 
-      LogService.debug(
-        "BaseRepository",
-        "Found ${response.length} entities in table: $tableName",
-      );
+      logDebug("Found ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to find entities in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to find entities in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -606,41 +497,24 @@ abstract class BaseRepository<T extends BaseModel, ID> {
     try {
       if (filters != null && filters.isNotEmpty) {
         // 条件付きカウントの場合
-        LogService.debug(
-          "BaseRepository",
-          "Counting entities with condition in table: $tableName",
-        );
+        logDebug("Counting entities with condition in table: $tableName");
         final PostgrestFilterBuilder<dynamic> baseQuery = _table.select();
         final PostgrestFilterBuilder<dynamic> query = QueryUtils.applyFilters(
           baseQuery,
           filters,
         );
         final PostgrestResponse<dynamic> response = await query.count();
-        LogService.debug(
-          "BaseRepository",
-          "Counted ${response.count} entities in table: $tableName",
-        );
+        logDebug("Counted ${response.count} entities in table: $tableName");
         return response.count;
       } else {
         // 全件カウントの場合
-        LogService.debug(
-          "BaseRepository",
-          "Counting all entities in table: $tableName",
-        );
+        logDebug("Counting all entities in table: $tableName");
         final int response = await _table.count();
-        LogService.debug(
-          "BaseRepository",
-          "Counted $response entities in table: $tableName",
-        );
+        logDebug("Counted $response entities in table: $tableName");
         return response;
       }
     } catch (e) {
-      LogService.error(
-        "BaseRepository",
-        "Failed to count entities in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to count entities in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
