@@ -1,13 +1,15 @@
 import "dart:math" as math;
 
 import "../../../core/constants/enums.dart";
+import "../../../core/utils/logger_mixin.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../models/order_model.dart";
 import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
 /// 調理・キッチン管理サービス
-class KitchenService {
+@loggerComponent
+class KitchenService with LoggerMixin {
   /// コンストラクタ
   KitchenService({
     OrderRepository? orderRepository,
@@ -20,6 +22,10 @@ class KitchenService {
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
   final MenuItemRepository _menuItemRepository;
+
+  /// ログコンポーネント名
+  @override
+  String get loggerComponent => "KitchenService";
 
   /// ステータス別進行中注文を取得
   Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(

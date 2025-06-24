@@ -1,4 +1,5 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/utils/logger_mixin.dart";
 import "../../inventory/repositories/material_repository.dart";
 import "../../inventory/repositories/recipe_repository.dart";
 import "../../menu/repositories/menu_item_repository.dart";
@@ -8,7 +9,8 @@ import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
 /// 注文管理サービス
-class OrderService {
+@loggerComponent
+class OrderService with LoggerMixin {
   /// コンストラクタ
   OrderService({
     OrderRepository? orderRepository,
@@ -27,6 +29,10 @@ class OrderService {
   final MenuItemRepository _menuItemRepository;
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
+
+  /// ログコンポーネント名
+  @override
+  String get loggerComponent => "OrderService";
 
   /// カートを確定して正式注文に変換（戻り値: (Order, 成功フラグ)）
   Future<(Order?, bool)> checkoutCart(

@@ -1,5 +1,6 @@
 import "dart:math" as math;
 
+import "../../../core/utils/logger_mixin.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
 import "../../inventory/repositories/material_repository.dart";
@@ -10,7 +11,8 @@ import "../repositories/menu_category_repository.dart";
 import "../repositories/menu_item_repository.dart";
 
 /// メニュー管理サービス
-class MenuService {
+@loggerComponent
+class MenuService with LoggerMixin {
   /// コンストラクタ
   MenuService({
     MenuItemRepository? menuItemRepository,
@@ -27,6 +29,10 @@ class MenuService {
   final MenuCategoryRepository _menuCategoryRepository;
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
+
+  /// ログコンポーネント名
+  @override
+  String get loggerComponent => "MenuService";
 
   /// メニューカテゴリ一覧を取得
   Future<List<MenuCategory>> getMenuCategories(String userId) async =>

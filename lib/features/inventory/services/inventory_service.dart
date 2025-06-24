@@ -1,6 +1,7 @@
 import "dart:math" as math;
 
 import "../../../core/constants/enums.dart";
+import "../../../core/utils/logger_mixin.dart";
 
 import "../../order/repositories/order_item_repository.dart";
 import "../../stock/dto/stock_dto.dart";
@@ -16,7 +17,8 @@ import "../repositories/material_repository.dart";
 import "../repositories/recipe_repository.dart";
 
 /// 在庫管理サービス
-class InventoryService {
+@loggerComponent
+class InventoryService with LoggerMixin {
   /// コンストラクタ
   InventoryService({
     MaterialRepository? materialRepository,
@@ -48,6 +50,10 @@ class InventoryService {
   final StockAdjustmentRepository _stockAdjustmentRepository;
   final StockTransactionRepository _stockTransactionRepository;
   final OrderItemRepository _orderItemRepository;
+
+  /// ログコンポーネント名
+  @override
+  String get loggerComponent => "InventoryService";
 
   /// 材料を作成
   Future<Material?> createMaterial(Material material, String userId) async {

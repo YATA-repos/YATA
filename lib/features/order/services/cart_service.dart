@@ -1,4 +1,5 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/utils/logger_mixin.dart";
 import "../../inventory/repositories/material_repository.dart";
 import "../../inventory/repositories/recipe_repository.dart";
 import "../../menu/repositories/menu_item_repository.dart";
@@ -8,7 +9,8 @@ import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
 /// カート（下書き注文）管理サービス
-class CartService {
+@loggerComponent
+class CartService with LoggerMixin {
   /// コンストラクタ
   CartService({
     OrderRepository? orderRepository,
@@ -27,6 +29,10 @@ class CartService {
   final MenuItemRepository _menuItemRepository;
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
+
+  /// ログコンポーネント名
+  @override
+  String get loggerComponent => "CartService";
 
   /// アクティブなカート（下書き注文）を取得または作成
   Future<Order?> getOrCreateActiveCart(String userId) async {

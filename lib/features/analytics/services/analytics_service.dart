@@ -1,12 +1,14 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/utils/logger_mixin.dart";
 
 import "../../order/repositories/order_item_repository.dart";
-import "../../order/repositories/order_repository.dart";  
+import "../../order/repositories/order_repository.dart";
 import "../../stock/repositories/stock_transaction_repository.dart";
 import "../dto/analytics_dto.dart";
 
 /// 分析・統計サービス
-class AnalyticsService {
+@loggerComponent
+class AnalyticsService with LoggerMixin {
   /// コンストラクタ
   AnalyticsService({
     OrderRepository? orderRepository,
@@ -19,6 +21,10 @@ class AnalyticsService {
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
   final StockTransactionRepository _stockTransactionRepository;
+
+  /// ログコンポーネント名
+  @override
+  String get loggerComponent => "AnalyticsService";
 
   /// リアルタイム日次統計を取得
   Future<DailyStatsResult> getRealTimeDailyStats(
