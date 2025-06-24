@@ -69,10 +69,11 @@ flutter build linux           # Linux
 
 ### 概要
 
-このプロジェクトは、一言で表すなら、「**フィーチャーベースの『サービスレイヤー・アーキテクチャ』(Feature-based Service Layer Architecture)**」を採用しています。ただし、このアーキテクチャと類似しているClean Architectureとの明確な違いは、「依存性の逆転は使わず、UI→Service→Repositoryという直線的な依存関係にしている」点です。他にもあなたが理解しやすいように、以下のような言い換えも可能です：
+このプロジェクトは、一言で表すなら、「**フィーチャーベースの『サービスレイヤー・アーキテクチャ』(Feature-based Service Layer Architecture)**」を採用しています。ただし、このアーキテクチャと類似しているClean Architectureとの明確な違いは、「依存性の逆転は使わず、UI→Service→Repositoryという直線的な依存関係にしている」点です。
+
+このアーキテクチャについては、以下のような言い換えも可能です：
 
 - フィーチャーベース・レイヤードアーキテクチャ (Feature-based Layered Architecture)
-- 実用的なレイヤードアーキテクチャ (Pragmatic Layered Architecture)
 - サービスレイヤー・アーキテクチャ (Service Layer Architecture)
 - 直線的レイヤードアーキテクチャ (Linear Layered Architecture)
 
