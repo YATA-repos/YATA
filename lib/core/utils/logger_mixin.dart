@@ -24,10 +24,7 @@ const LoggerComponent loggerComponent = LoggerComponent();
 /// 各クラスでloggerComponentを実装することで、適切なコンポーネント名を設定
 mixin LoggerMixin {
   /// ログコンポーネント名
-  ///
-  /// 各クラスで実装必須の抽象getter
-  /// ログ出力時のコンポーネント識別に使用される
-  String get loggerComponent;
+  String get loggerComponent => runtimeType.toString();
 
   /// デバッグレベルログ（開発時のみ）
   ///

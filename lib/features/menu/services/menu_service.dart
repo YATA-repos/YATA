@@ -30,10 +30,6 @@ class MenuService with LoggerMixin {
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
 
-  /// ログコンポーネント名
-  @override
-  String get loggerComponent => "MenuService";
-
   /// メニューカテゴリ一覧を取得
   Future<List<MenuCategory>> getMenuCategories(String userId) async =>
       _menuCategoryRepository.findActiveOrdered(userId);

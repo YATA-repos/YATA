@@ -22,10 +22,6 @@ class AnalyticsService with LoggerMixin {
   final OrderItemRepository _orderItemRepository;
   final StockTransactionRepository _stockTransactionRepository;
 
-  /// ログコンポーネント名
-  @override
-  String get loggerComponent => "AnalyticsService";
-
   /// リアルタイム日次統計を取得
   Future<DailyStatsResult> getRealTimeDailyStats(
     DateTime targetDate,

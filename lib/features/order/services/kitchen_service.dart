@@ -23,10 +23,6 @@ class KitchenService with LoggerMixin {
   final OrderItemRepository _orderItemRepository;
   final MenuItemRepository _menuItemRepository;
 
-  /// ログコンポーネント名
-  @override
-  String get loggerComponent => "KitchenService";
-
   /// ステータス別進行中注文を取得
   Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(
     String userId,

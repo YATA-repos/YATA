@@ -39,10 +39,6 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   /// 各サブクラスで実装する必要があります
   T Function(Map<String, dynamic> json) get fromJson;
 
-  /// ログコンポーネント名（runtimeTypeから自動取得）
-  @override
-  String get loggerComponent => runtimeType.toString().split("<")[0];
-
   /// 内部用JSONデシリアライゼーションヘルパー
   T _fromJson(Map<String, dynamic> json) => fromJson(json);
 

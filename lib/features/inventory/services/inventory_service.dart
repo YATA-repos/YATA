@@ -51,10 +51,6 @@ class InventoryService with LoggerMixin {
   final StockTransactionRepository _stockTransactionRepository;
   final OrderItemRepository _orderItemRepository;
 
-  /// ログコンポーネント名
-  @override
-  String get loggerComponent => "InventoryService";
-
   /// 材料を作成
   Future<Material?> createMaterial(Material material, String userId) async {
     // ユーザーIDを設定

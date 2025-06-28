@@ -30,10 +30,6 @@ class OrderService with LoggerMixin {
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
 
-  /// ログコンポーネント名
-  @override
-  String get loggerComponent => "OrderService";
-
   /// カートを確定して正式注文に変換（戻り値: (Order, 成功フラグ)）
   Future<(Order?, bool)> checkoutCart(
     String cartId,

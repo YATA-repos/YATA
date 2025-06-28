@@ -30,10 +30,6 @@ class CartService with LoggerMixin {
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
 
-  /// ログコンポーネント名
-  @override
-  String get loggerComponent => "CartService";
-
   /// アクティブなカート（下書き注文）を取得または作成
   Future<Order?> getOrCreateActiveCart(String userId) async {
     // 既存のアクティブカートを検索
