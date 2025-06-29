@@ -1,4 +1,4 @@
-import "../base/base_error_msg.dart";
+import "../../base/base_error_msg.dart";
 
 /// リポジトリ関連のエラーメッセージ定義
 enum RepositoryError implements LogMessage {

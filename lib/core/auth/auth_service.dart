@@ -3,7 +3,7 @@ import "dart:async";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 
-import "../error/auth.dart";
+import "../constants/log_enums/auth.dart";
 import "../utils/log_service.dart";
 
 /// Supabaseクライアントを管理するシングルトンサービス

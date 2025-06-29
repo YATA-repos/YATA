@@ -1,4 +1,4 @@
-import "../base/base_error_msg.dart";
+import "../../base/base_error_msg.dart";
 
 /// 在庫管理関連のエラーメッセージ定義
 enum InventoryError implements LogMessage {

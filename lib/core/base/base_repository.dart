@@ -1,8 +1,8 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 
 import "../auth/auth_service.dart";
+import "../constants/log_enums/repository.dart";
 import "../constants/query_types.dart";
-import "../error/repository.dart";
 import "../utils/logger_mixin.dart";
 import "../utils/query_utils.dart";
 import "base_model.dart";
@@ -18,6 +18,8 @@ typedef PrimaryKeyMap = Map<String, dynamic>;
 abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   /// コンストラクタ
   BaseRepository({required this.tableName, this.primaryKeyColumns = const <String>["id"]});
+  @override
+  String get loggerComponent => "BaseRepository<${T.toString()}>";
 
   /// テーブル名
   final String tableName;

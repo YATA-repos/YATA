@@ -1,4 +1,4 @@
-import "../base/base_error_msg.dart";
+import "../../base/base_error_msg.dart";
 
 /// 注文関連のエラーメッセージ定義
 enum OrderError implements LogMessage {
