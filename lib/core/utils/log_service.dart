@@ -7,13 +7,13 @@ import "package:flutter/foundation.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:path_provider/path_provider.dart";
 
+import "../base/base_error_msg.dart";
 import "../constants/enums.dart";
-import "../error/base.dart";
 
 /// 統一ログサービス
 ///
 /// 開発時は全レベルをconsoleに出力し、リリース時はwarning/errorのみをファイルに保存する
-/// ビジネスロジック関連のログは英語・日本語併用可能
+/// 全てのログメッセージは英語で記録される
 class LogService {
   // プライベートコンストラクタ
   LogService._();
@@ -136,29 +136,23 @@ class LogService {
   }
 
   /// デバッグレベルログ（開発時のみ）
-  static void debug(String component, String message, [String? messageJa]) {
-    _log(LogLevel.debug, component, message, messageJa);
+  static void debug(String component, String message) {
+    _log(LogLevel.debug, component, message);
   }
 
   /// 情報レベルログ
-  static void info(String component, String message, [String? messageJa]) {
-    _log(LogLevel.info, component, message, messageJa);
+  static void info(String component, String message) {
+    _log(LogLevel.info, component, message);
   }
 
   /// 警告レベルログ（リリース時もファイル保存）
-  static void warning(String component, String message, [String? messageJa]) {
-    _log(LogLevel.warning, component, message, messageJa);
+  static void warning(String component, String message) {
+    _log(LogLevel.warning, component, message);
   }
 
   /// エラーレベルログ（リリース時もファイル保存）
-  static void error(
-    String component,
-    String message, [
-    String? messageJa,
-    Object? error,
-    StackTrace? stackTrace,
-  ]) {
-    _log(LogLevel.error, component, message, messageJa, error, stackTrace);
+  static void error(String component, String message, [Object? error, StackTrace? stackTrace]) {
+    _log(LogLevel.error, component, message, error, stackTrace);
   }
 
   // --- エラー定義を使った便利メソッド ---
@@ -169,9 +163,7 @@ class LogService {
     LogMessage logMessage, [
     Map<String, String>? params,
   ]) {
-    final String message = params != null
-        ? logMessage.withParams(params)
-        : logMessage.combinedMessage;
+    final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _log(LogLevel.info, component, message);
   }
 
@@ -181,9 +173,7 @@ class LogService {
     LogMessage logMessage, [
     Map<String, String>? params,
   ]) {
-    final String message = params != null
-        ? logMessage.withParams(params)
-        : logMessage.combinedMessage;
+    final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _log(LogLevel.warning, component, message);
   }
 
@@ -195,10 +185,8 @@ class LogService {
     Object? error,
     StackTrace? stackTrace,
   ]) {
-    final String message = params != null
-        ? logMessage.withParams(params)
-        : logMessage.combinedMessage;
-    _log(LogLevel.error, component, message, null, error, stackTrace);
+    final String message = params != null ? logMessage.withParams(params) : logMessage.message;
+    _log(LogLevel.error, component, message, error, stackTrace);
   }
 
   /// 内部ログ処理
@@ -206,7 +194,6 @@ class LogService {
     LogLevel level,
     String component,
     String message, [
-    String? messageJa,
     Object? error,
     StackTrace? stackTrace,
   ]) {
@@ -215,14 +202,12 @@ class LogService {
       return;
     }
 
-    // メッセージフォーマット
-    final String formattedMessage = _formatMessage(message, messageJa);
     final String timestamp = DateTime.now().toIso8601String();
 
     // 開発時は常にconsoleに出力
     if (kDebugMode) {
       developer.log(
-        formattedMessage,
+        message,
         time: DateTime.now(),
         level: level.developerLevel,
         name: component,
@@ -233,7 +218,7 @@ class LogService {
 
     // リリース時はwarning/errorのみファイル保存（バッファリング）
     if (kReleaseMode && level.shouldPersistInRelease && _logDirectory != null) {
-      _addToBuffer(level, component, formattedMessage, timestamp, error, stackTrace);
+      _addToBuffer(level, component, message, timestamp, error, stackTrace);
     }
   }
 
@@ -375,14 +360,6 @@ class LogService {
     } catch (e) {
       developer.log("Failed to rotate log file: ${e.toString()}", level: 900, name: "LogService");
     }
-  }
-
-  /// メッセージフォーマット（英語・日本語併用対応）
-  static String _formatMessage(String message, String? messageJa) {
-    if (messageJa != null && messageJa.isNotEmpty) {
-      return "$message ($messageJa)";
-    }
-    return message;
   }
 
   /// ログファイル統計情報を取得

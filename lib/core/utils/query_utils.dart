@@ -36,18 +36,13 @@ class QueryUtils {
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
-      LogService.error(
-        "QueryUtils",
-        "Unsupported operator: ${condition.operator}",
-        "サポートされていない演算子: ${condition.operator}",
-      );
+      LogService.error("QueryUtils", "Unsupported operator: ${condition.operator}");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
     LogService.debug(
       "QueryUtils",
       "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
-      "フィルタ適用: ${condition.column} ${condition.operator} ${condition.value}",
     );
 
     // NULL判定の特別処理
@@ -65,7 +60,6 @@ class QueryUtils {
         LogService.error(
           "QueryUtils",
           "List type value required for ${condition.operator} operator",
-          "${condition.operator}演算子にはList型の値が必要です",
         );
         throw ArgumentError("${condition.operator}演算子にはList型の値が必要です");
       }
@@ -118,7 +112,6 @@ class QueryUtils {
         LogService.error(
           "QueryUtils",
           "This operator should be handled in preprocessing: ${condition.operator}",
-          "この演算子は事前処理で処理される必要があります: ${condition.operator}",
         );
         throw ArgumentError("この演算子は事前処理で処理される必要があります: ${condition.operator}");
     }
@@ -240,7 +233,7 @@ class QueryUtils {
     }
 
     final String orString = _buildOrConditionString(filterConditions);
-    LogService.debug("QueryUtils", "Applying OR condition: $orString", "OR条件適用: $orString");
+    LogService.debug("QueryUtils", "Applying OR condition: $orString");
     return query.or(orString);
   }
 
@@ -280,11 +273,7 @@ class QueryUtils {
     PostgrestFilterBuilder<dynamic> query,
     List<QueryFilter> filters,
   ) {
-    LogService.debug(
-      "QueryUtils",
-      "Applying ${filters.length} filters with AND combination",
-      "${filters.length}個のフィルタをAND結合で適用",
-    );
+    LogService.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
     PostgrestFilterBuilder<dynamic> result = query;
     for (final QueryFilter filter in filters) {
       result = applyFilter(result, filter);
@@ -300,7 +289,6 @@ class QueryUtils {
     LogService.debug(
       "QueryUtils",
       "Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}",
-      "ソート適用: ${orderBy.column} ${orderBy.ascending ? '昇順' : '降順'}",
     );
     return query.order(orderBy.column, ascending: orderBy.ascending);
   }
@@ -310,11 +298,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
-    LogService.debug(
-      "QueryUtils",
-      "Applying ${orderBys.length} order by conditions",
-      "${orderBys.length}個のソート条件を適用",
-    );
+    LogService.debug("QueryUtils", "Applying ${orderBys.length} order by conditions");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
       result = applyOrderBy(result, orderBy);

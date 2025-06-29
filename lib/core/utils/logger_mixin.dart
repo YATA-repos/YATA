@@ -1,4 +1,4 @@
-import "../error/base.dart";
+import "../base/base_error_msg.dart";
 import "log_service.dart";
 
 /// LoggerComponentアノテーション
@@ -28,36 +28,32 @@ mixin LoggerMixin {
 
   /// デバッグレベルログ（開発時のみ）
   ///
-  /// [message] ログメッセージ（英語）
-  /// [messageJa] オプションの日本語メッセージ
-  void logDebug(String message, [String? messageJa]) {
-    LogService.debug(loggerComponent, message, messageJa);
+  /// [message] ログメッセージ
+  void logDebug(String message) {
+    LogService.debug(loggerComponent, message);
   }
 
   /// 情報レベルログ
   ///
-  /// [message] ログメッセージ（英語）
-  /// [messageJa] オプションの日本語メッセージ
-  void logInfo(String message, [String? messageJa]) {
-    LogService.info(loggerComponent, message, messageJa);
+  /// [message] ログメッセージ
+  void logInfo(String message) {
+    LogService.info(loggerComponent, message);
   }
 
   /// 警告レベルログ（リリース時もファイル保存）
   ///
-  /// [message] ログメッセージ（英語）
-  /// [messageJa] オプションの日本語メッセージ
-  void logWarning(String message, [String? messageJa]) {
-    LogService.warning(loggerComponent, message, messageJa);
+  /// [message] ログメッセージ
+  void logWarning(String message) {
+    LogService.warning(loggerComponent, message);
   }
 
   /// エラーレベルログ（リリース時もファイル保存）
   ///
-  /// [message] ログメッセージ（英語）
-  /// [messageJa] オプションの日本語メッセージ
+  /// [message] ログメッセージ
   /// [error] エラーオブジェクト
   /// [stackTrace] スタックトレース
-  void logError(String message, [String? messageJa, Object? error, StackTrace? stackTrace]) {
-    LogService.error(loggerComponent, message, messageJa, error, stackTrace);
+  void logError(String message, [Object? error, StackTrace? stackTrace]) {
+    LogService.error(loggerComponent, message, error, stackTrace);
   }
 
   // --- 事前定義メッセージを使った便利メソッド ---
