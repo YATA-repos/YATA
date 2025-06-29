@@ -24,8 +24,7 @@ class DailySummary extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory DailySummary.fromJson(Map<String, dynamic> json) =>
-      _$DailySummaryFromJson(json);
+  factory DailySummary.fromJson(Map<String, dynamic> json) => _$DailySummaryFromJson(json);
 
   /// 集計日
   DateTime summaryDate;

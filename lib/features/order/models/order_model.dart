@@ -91,8 +91,7 @@ class OrderItem extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory OrderItem.fromJson(Map<String, dynamic> json) =>
-      _$OrderItemFromJson(json);
+  factory OrderItem.fromJson(Map<String, dynamic> json) => _$OrderItemFromJson(json);
 
   /// 注文ID
   String orderId;

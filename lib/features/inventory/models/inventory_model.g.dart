@@ -14,12 +14,8 @@ Material _$MaterialFromJson(Map<String, dynamic> json) => Material(
   alertThreshold: (json['alertThreshold'] as num).toDouble(),
   criticalThreshold: (json['criticalThreshold'] as num).toDouble(),
   notes: json['notes'] as String?,
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
-      ? null
-      : DateTime.parse(json['updatedAt'] as String),
+  createdAt: json['createdAt'] == null ? null : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null ? null : DateTime.parse(json['updatedAt'] as String),
   id: json['id'] as String?,
   userId: json['userId'] as String?,
 );
@@ -40,29 +36,23 @@ Map<String, dynamic> _$MaterialToJson(Material instance) => <String, dynamic>{
 
 const _$UnitTypeEnumMap = {UnitType.piece: 'piece', UnitType.gram: 'gram'};
 
-MaterialCategory _$MaterialCategoryFromJson(Map<String, dynamic> json) =>
-    MaterialCategory(
-      name: json['name'] as String,
-      displayOrder: (json['displayOrder'] as num).toInt(),
-      createdAt: json['createdAt'] == null
-          ? null
-          : DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] == null
-          ? null
-          : DateTime.parse(json['updatedAt'] as String),
-      id: json['id'] as String?,
-      userId: json['userId'] as String?,
-    );
+MaterialCategory _$MaterialCategoryFromJson(Map<String, dynamic> json) => MaterialCategory(
+  name: json['name'] as String,
+  displayOrder: (json['displayOrder'] as num).toInt(),
+  createdAt: json['createdAt'] == null ? null : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null ? null : DateTime.parse(json['updatedAt'] as String),
+  id: json['id'] as String?,
+  userId: json['userId'] as String?,
+);
 
-Map<String, dynamic> _$MaterialCategoryToJson(MaterialCategory instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'userId': instance.userId,
-      'name': instance.name,
-      'displayOrder': instance.displayOrder,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
-    };
+Map<String, dynamic> _$MaterialCategoryToJson(MaterialCategory instance) => <String, dynamic>{
+  'id': instance.id,
+  'userId': instance.userId,
+  'name': instance.name,
+  'displayOrder': instance.displayOrder,
+  'createdAt': instance.createdAt?.toIso8601String(),
+  'updatedAt': instance.updatedAt?.toIso8601String(),
+};
 
 Recipe _$RecipeFromJson(Map<String, dynamic> json) => Recipe(
   menuItemId: json['menuItemId'] as String,
@@ -70,12 +60,8 @@ Recipe _$RecipeFromJson(Map<String, dynamic> json) => Recipe(
   requiredAmount: (json['requiredAmount'] as num).toDouble(),
   isOptional: json['isOptional'] as bool,
   notes: json['notes'] as String?,
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
-      ? null
-      : DateTime.parse(json['updatedAt'] as String),
+  createdAt: json['createdAt'] == null ? null : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null ? null : DateTime.parse(json['updatedAt'] as String),
   id: json['id'] as String?,
   userId: json['userId'] as String?,
 );

@@ -24,20 +24,15 @@ class KitchenService with LoggerMixin {
   final MenuItemRepository _menuItemRepository;
 
   /// ステータス別進行中注文を取得
-  Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(
-    String userId,
-  ) async {
-    final List<OrderStatus> activeStatuses = <OrderStatus>[
-      OrderStatus.preparing,
-    ];
+  Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(String userId) async {
+    final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.preparing];
     final List<Order> activeOrders = await _orderRepository.findByStatusList(
       activeStatuses,
       userId,
     );
 
     // ステータス別に分類
-    final Map<OrderStatus, List<Order>> ordersByStatus =
-        <OrderStatus, List<Order>>{};
+    final Map<OrderStatus, List<Order>> ordersByStatus = <OrderStatus, List<Order>>{};
     for (final Order order in activeOrders) {
       ordersByStatus[order.status] ??= <Order>[];
       ordersByStatus[order.status]!.add(order);
@@ -48,10 +43,9 @@ class KitchenService with LoggerMixin {
 
   /// 注文キューを取得（調理順序順）
   Future<List<Order>> getOrderQueue(String userId) async {
-    final List<Order> activeOrders = await _orderRepository.findByStatusList(
-      <OrderStatus>[OrderStatus.preparing],
-      userId,
-    );
+    final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
+      OrderStatus.preparing,
+    ], userId);
 
     // 調理開始前の注文を優先順位順に並べる
     final List<Order> notStarted = activeOrders
@@ -88,12 +82,9 @@ class KitchenService with LoggerMixin {
     }
 
     // 調理開始時刻を記録
-    final Order? updatedOrder = await _orderRepository.updateById(
-      orderId,
-      <String, dynamic>{
-        "started_preparing_at": DateTime.now().toIso8601String(),
-      },
-    );
+    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+      "started_preparing_at": DateTime.now().toIso8601String(),
+    });
 
     return updatedOrder;
   }
@@ -114,10 +105,9 @@ class KitchenService with LoggerMixin {
     }
 
     // 調理完了時刻を記録
-    final Order? updatedOrder = await _orderRepository.updateById(
-      orderId,
-      <String, dynamic>{"ready_at": DateTime.now().toIso8601String()},
-    );
+    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+      "ready_at": DateTime.now().toIso8601String(),
+    });
 
     return updatedOrder;
   }
@@ -143,20 +133,16 @@ class KitchenService with LoggerMixin {
     }
 
     // 提供完了
-    final Order? updatedOrder = await _orderRepository
-        .updateById(orderId, <String, dynamic>{
-          "status": OrderStatus.completed.value,
-          "completed_at": DateTime.now().toIso8601String(),
-        });
+    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+      "status": OrderStatus.completed.value,
+      "completed_at": DateTime.now().toIso8601String(),
+    });
 
     return updatedOrder;
   }
 
   /// 完成予定時刻を計算
-  Future<DateTime?> calculateEstimatedCompletionTime(
-    String orderId,
-    String userId,
-  ) async {
+  Future<DateTime?> calculateEstimatedCompletionTime(String orderId, String userId) async {
     final Order? order = await _orderRepository.getById(orderId);
     if (order == null || order.userId != userId) {
       return null;
@@ -167,18 +153,13 @@ class KitchenService with LoggerMixin {
     }
 
     // 注文アイテムの調理時間を計算
-    final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(
-      orderId,
-    );
+    final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
     int totalPrepTime = 0;
 
     for (final OrderItem item in orderItems) {
-      final dynamic menuItem = await _menuItemRepository.getById(
-        item.menuItemId,
-      );
+      final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
       if (menuItem != null) {
-        totalPrepTime +=
-            (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+        totalPrepTime += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
       }
     }
 
@@ -206,25 +187,19 @@ class KitchenService with LoggerMixin {
     }
 
     // ノート欄に調整理由を記録
-    final String adjustmentNote =
-        "Est. time adjusted by $additionalMinutes minutes";
+    final String adjustmentNote = "Est. time adjusted by $additionalMinutes minutes";
     final String currentNotes = order.notes ?? "";
     final String newNotes = "$currentNotes [$adjustmentNote]".trim();
 
-    final Order? updatedOrder = await _orderRepository.updateById(
-      orderId,
-      <String, dynamic>{"notes": newNotes},
-    );
+    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+      "notes": newNotes,
+    });
 
     return updatedOrder;
   }
 
   /// キッチン状況を更新
-  Future<bool> updateKitchenStatus(
-    int activeStaffCount,
-    String? notes,
-    String userId,
-  ) async =>
+  Future<bool> updateKitchenStatus(int activeStaffCount, String? notes, String userId) async =>
       // キッチン状況は別のモデルで管理されることを想定
       // ここでは簡単にログして成功を返す（実装は要件に応じて）
       // TODO(dev): 実際のログフレームワークに置き換える
@@ -233,10 +208,9 @@ class KitchenService with LoggerMixin {
 
   /// キッチンの負荷状況を取得
   Future<Map<String, dynamic>> getKitchenWorkload(String userId) async {
-    final List<Order> activeOrders = await _orderRepository.findByStatusList(
-      <OrderStatus>[OrderStatus.preparing],
-      userId,
-    );
+    final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
+      OrderStatus.preparing,
+    ], userId);
 
     final int notStartedCount = activeOrders
         .where((Order o) => o.startedPreparingAt == null)
@@ -245,9 +219,7 @@ class KitchenService with LoggerMixin {
         .where((Order o) => o.startedPreparingAt != null && o.readyAt == null)
         .length;
     final int readyCount = activeOrders
-        .where(
-          (Order o) => o.readyAt != null && o.status != OrderStatus.completed,
-        )
+        .where((Order o) => o.readyAt != null && o.status != OrderStatus.completed)
         .length;
 
     // 推定総調理時間を計算
@@ -255,15 +227,11 @@ class KitchenService with LoggerMixin {
     for (final Order order in activeOrders) {
       if (order.readyAt == null) {
         // まだ完成していない注文
-        final List<OrderItem> orderItems = await _orderItemRepository
-            .findByOrderId(order.id!);
+        final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
         for (final OrderItem item in orderItems) {
-          final dynamic menuItem = await _menuItemRepository.getById(
-            item.menuItemId,
-          );
+          final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
           if (menuItem != null) {
-            totalEstimatedMinutes +=
-                (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+            totalEstimatedMinutes += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
           }
         }
       }
@@ -287,15 +255,11 @@ class KitchenService with LoggerMixin {
     for (final Order order in queue) {
       if (order.startedPreparingAt == null) {
         // まだ開始していない注文
-        final List<OrderItem> orderItems = await _orderItemRepository
-            .findByOrderId(order.id!);
+        final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
         for (final OrderItem item in orderItems) {
-          final dynamic menuItem = await _menuItemRepository.getById(
-            item.menuItemId,
-          );
+          final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
           if (menuItem != null) {
-            totalWaitTime +=
-                (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+            totalWaitTime += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
           }
         }
       }
@@ -307,28 +271,24 @@ class KitchenService with LoggerMixin {
 
   /// 調理順序を最適化（注文IDリストを返す）
   Future<List<String>> optimizeCookingOrder(String userId) async {
-    final List<Order> notStartedOrders = await _orderRepository
-        .findByStatusList(<OrderStatus>[OrderStatus.preparing], userId);
+    final List<Order> notStartedOrders = await _orderRepository.findByStatusList(<OrderStatus>[
+      OrderStatus.preparing,
+    ], userId);
 
     final List<Order> filteredOrders = notStartedOrders
         .where((Order o) => o.startedPreparingAt == null)
         .toList();
 
     // 最適化アルゴリズム（簡単な例：調理時間の短い順）
-    final List<(String, int, DateTime)> orderPrepTimes =
-        <(String, int, DateTime)>[];
+    final List<(String, int, DateTime)> orderPrepTimes = <(String, int, DateTime)>[];
 
     for (final Order order in filteredOrders) {
-      final List<OrderItem> orderItems = await _orderItemRepository
-          .findByOrderId(order.id!);
+      final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
       int totalTime = 0;
       for (final OrderItem item in orderItems) {
-        final dynamic menuItem = await _menuItemRepository.getById(
-          item.menuItemId,
-        );
+        final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
         if (menuItem != null) {
-          totalTime +=
-              (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+          totalTime += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
         }
       }
 
@@ -341,24 +301,18 @@ class KitchenService with LoggerMixin {
       return timeComparison != 0 ? timeComparison : a.$3.compareTo(b.$3);
     });
 
-    return orderPrepTimes
-        .map(((String, int, DateTime) record) => record.$1)
-        .toList();
+    return orderPrepTimes.map(((String, int, DateTime) record) => record.$1).toList();
   }
 
   /// 全注文の完成予定時刻を予測
   Future<Map<String, DateTime>> predictCompletionTimes(String userId) async {
-    final List<Order> activeOrders = await _orderRepository.findByStatusList(
-      <OrderStatus>[OrderStatus.preparing],
-      userId,
-    );
+    final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
+      OrderStatus.preparing,
+    ], userId);
     final Map<String, DateTime> completionTimes = <String, DateTime>{};
 
     for (final Order order in activeOrders) {
-      final DateTime? estimatedTime = await calculateEstimatedCompletionTime(
-        order.id!,
-        userId,
-      );
+      final DateTime? estimatedTime = await calculateEstimatedCompletionTime(order.id!, userId);
       if (estimatedTime != null) {
         completionTimes[order.id!] = estimatedTime;
       }
@@ -373,8 +327,10 @@ class KitchenService with LoggerMixin {
     String userId,
   ) async {
     // 指定日の完了注文を取得
-    final List<Order> completedOrders = await _orderRepository
-        .findCompletedByDate(targetDate, userId);
+    final List<Order> completedOrders = await _orderRepository.findCompletedByDate(
+      targetDate,
+      userId,
+    );
 
     if (completedOrders.isEmpty) {
       return <String, dynamic>{
@@ -404,8 +360,7 @@ class KitchenService with LoggerMixin {
     double slowestOrder = 0.0;
 
     if (prepTimes.isNotEmpty) {
-      averagePrepTime =
-          prepTimes.reduce((double a, double b) => a + b) / prepTimes.length;
+      averagePrepTime = prepTimes.reduce((double a, double b) => a + b) / prepTimes.length;
       fastestOrder = prepTimes.reduce(math.min);
       slowestOrder = prepTimes.reduce(math.max);
     }
@@ -416,18 +371,14 @@ class KitchenService with LoggerMixin {
       "total_revenue": totalRevenue,
       "fastest_order_minutes": (fastestOrder * 10).round() / 10.0,
       "slowest_order_minutes": (slowestOrder * 10).round() / 10.0,
-      "orders_per_hour": completedOrders.isNotEmpty
-          ? completedOrders.length / 24.0
-          : 0.0,
+      "orders_per_hour": completedOrders.isNotEmpty ? completedOrders.length / 24.0 : 0.0,
     };
   }
 
   /// 実際の調理時間を取得（分）
   double? getActualPrepTimeMinutes(Order order) {
     if (order.startedPreparingAt != null && order.readyAt != null) {
-      final Duration delta = order.readyAt!.difference(
-        order.startedPreparingAt!,
-      );
+      final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
       return delta.inSeconds / 60.0;
     }
     return null;

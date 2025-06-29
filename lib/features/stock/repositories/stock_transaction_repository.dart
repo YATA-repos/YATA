@@ -4,19 +4,16 @@ import "../../../core/constants/query_types.dart";
 import "../models/stock_model.dart";
 
 /// 在庫取引リポジトリ
-class StockTransactionRepository
-    extends BaseRepository<StockTransaction, String> {
+class StockTransactionRepository extends BaseRepository<StockTransaction, String> {
   /// コンストラクタ
   StockTransactionRepository() : super(tableName: "stock_transactions");
 
   @override
-  StockTransaction Function(Map<String, dynamic> json) get fromJson =>
-      StockTransaction.fromJson;
+  StockTransaction Function(Map<String, dynamic> json) get fromJson => StockTransaction.fromJson;
 
   /// 在庫取引を一括作成
-  Future<List<StockTransaction>> createBatch(
-    List<StockTransaction> transactions,
-  ) async => bulkCreate(transactions);
+  Future<List<StockTransaction>> createBatch(List<StockTransaction> transactions) async =>
+      bulkCreate(transactions);
 
   /// 参照タイプ・IDで取引履歴を取得
   Future<List<StockTransaction>> findByReference(
@@ -46,11 +43,7 @@ class StockTransactionRepository
     String userId,
   ) async {
     // 日付を正規化
-    final DateTime dateFromNormalized = DateTime(
-      dateFrom.year,
-      dateFrom.month,
-      dateFrom.day,
-    );
+    final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
     final DateTime dateToNormalized = DateTime(
       dateTo.year,
       dateTo.month,
@@ -64,14 +57,8 @@ class StockTransactionRepository
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("material_id", materialId),
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.gte(
-        "created_at",
-        dateFromNormalized.toIso8601String(),
-      ),
-      QueryConditionBuilder.lte(
-        "created_at",
-        dateToNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.gte("created_at", dateFromNormalized.toIso8601String()),
+      QueryConditionBuilder.lte("created_at", dateToNormalized.toIso8601String()),
     ];
 
     // 作成日時で降順ソート
@@ -89,11 +76,7 @@ class StockTransactionRepository
     String userId,
   ) async {
     // 日付を正規化
-    final DateTime dateFromNormalized = DateTime(
-      dateFrom.year,
-      dateFrom.month,
-      dateFrom.day,
-    );
+    final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
     final DateTime dateToNormalized = DateTime(
       dateTo.year,
       dateTo.month,
@@ -106,14 +89,8 @@ class StockTransactionRepository
 
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.gte(
-        "created_at",
-        dateFromNormalized.toIso8601String(),
-      ),
-      QueryConditionBuilder.lte(
-        "created_at",
-        dateToNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.gte("created_at", dateFromNormalized.toIso8601String()),
+      QueryConditionBuilder.lte("created_at", dateToNormalized.toIso8601String()),
       QueryConditionBuilder.lt("change_amount", 0),
     ];
 

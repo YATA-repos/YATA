@@ -228,8 +228,7 @@ enum OrderStatus {
   bool get isActive => this == OrderStatus.preparing;
 
   /// ステータスが完了しているかどうかを判定
-  bool get isFinished =>
-      this == OrderStatus.completed || this == OrderStatus.canceled;
+  bool get isFinished => this == OrderStatus.completed || this == OrderStatus.canceled;
 }
 
 /// ログレベル
@@ -284,8 +283,7 @@ enum LogLevel {
   }
 
   /// リリースビルドで保存するかどうか
-  bool get shouldPersistInRelease =>
-      this == LogLevel.warning || this == LogLevel.error;
+  bool get shouldPersistInRelease => this == LogLevel.warning || this == LogLevel.error;
 
   /// ログレベルの優先度（数値が大きいほど重要）
   int get priority {

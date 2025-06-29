@@ -8,14 +8,11 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
   OrderItemRepository() : super(tableName: "order_items");
 
   @override
-  OrderItem Function(Map<String, dynamic> json) get fromJson =>
-      OrderItem.fromJson;
+  OrderItem Function(Map<String, dynamic> json) get fromJson => OrderItem.fromJson;
 
   /// 注文IDに紐づく明細一覧を取得
   Future<List<OrderItem>> findByOrderId(String orderId) async {
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("order_id", orderId),
-    ];
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("order_id", orderId)];
 
     // 作成順でソート
     final List<OrderByCondition> orderBy = <OrderByCondition>[
@@ -73,11 +70,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
     String userId,
   ) async {
     // 日付を正規化
-    final DateTime dateFromNormalized = DateTime(
-      dateFrom.year,
-      dateFrom.month,
-      dateFrom.day,
-    );
+    final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
     final DateTime dateToNormalized = DateTime(
       dateTo.year,
       dateTo.month,
@@ -92,14 +85,8 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("menu_item_id", menuItemId),
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.gte(
-        "created_at",
-        dateFromNormalized.toIso8601String(),
-      ),
-      QueryConditionBuilder.lte(
-        "created_at",
-        dateToNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.gte("created_at", dateFromNormalized.toIso8601String()),
+      QueryConditionBuilder.lte("created_at", dateToNormalized.toIso8601String()),
     ];
 
     // 作成日時で降順ソート
@@ -111,20 +98,13 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
   }
 
   /// メニューアイテム別売上集計を取得
-  Future<List<Map<String, dynamic>>> getMenuItemSalesSummary(
-    int days,
-    String userId,
-  ) async {
+  Future<List<Map<String, dynamic>>> getMenuItemSalesSummary(int days, String userId) async {
     // 過去N日間の日付範囲を計算
     final DateTime endDate = DateTime.now();
     final DateTime startDate = endDate.subtract(Duration(days: days));
 
     // 日付を正規化
-    final DateTime startDateNormalized = DateTime(
-      startDate.year,
-      startDate.month,
-      startDate.day,
-    );
+    final DateTime startDateNormalized = DateTime(startDate.year, startDate.month, startDate.day);
     final DateTime endDateNormalized = DateTime(
       endDate.year,
       endDate.month,
@@ -138,28 +118,18 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
     // ユーザーの全注文明細を取得
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.gte(
-        "created_at",
-        startDateNormalized.toIso8601String(),
-      ),
-      QueryConditionBuilder.lte(
-        "created_at",
-        endDateNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.gte("created_at", startDateNormalized.toIso8601String()),
+      QueryConditionBuilder.lte("created_at", endDateNormalized.toIso8601String()),
     ];
 
     final List<OrderItem> filteredItems = await find(filters: filters);
 
     // メニューアイテム別に集計
-    final Map<String, Map<String, int>> salesSummary =
-        <String, Map<String, int>>{};
+    final Map<String, Map<String, int>> salesSummary = <String, Map<String, int>>{};
 
     for (final OrderItem item in filteredItems) {
       final String menuItemId = item.menuItemId;
-      salesSummary[menuItemId] ??= <String, int>{
-        "total_quantity": 0,
-        "total_amount": 0,
-      };
+      salesSummary[menuItemId] ??= <String, int>{"total_quantity": 0, "total_amount": 0};
       salesSummary[menuItemId]!["total_quantity"] =
           salesSummary[menuItemId]!["total_quantity"]! + item.quantity;
       salesSummary[menuItemId]!["total_amount"] =
@@ -168,8 +138,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
 
     // 結果を辞書のリストに変換
     final List<Map<String, dynamic>> result = <Map<String, dynamic>>[];
-    for (final MapEntry<String, Map<String, int>> entry
-        in salesSummary.entries) {
+    for (final MapEntry<String, Map<String, int>> entry in salesSummary.entries) {
       result.add(<String, dynamic>{
         "menu_item_id": entry.key,
         "total_quantity": entry.value["total_quantity"],

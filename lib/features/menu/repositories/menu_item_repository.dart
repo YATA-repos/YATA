@@ -8,17 +8,11 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
   MenuItemRepository() : super(tableName: "menu_items");
 
   @override
-  MenuItem Function(Map<String, dynamic> json) get fromJson =>
-      MenuItem.fromJson;
+  MenuItem Function(Map<String, dynamic> json) get fromJson => MenuItem.fromJson;
 
   /// カテゴリIDでメニューアイテムを取得（None時は全件）
-  Future<List<MenuItem>> findByCategoryId(
-    String? categoryId,
-    String userId,
-  ) async {
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
-    ];
+  Future<List<MenuItem>> findByCategoryId(String? categoryId, String userId) async {
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
 
     if (categoryId != null) {
       filters.add(QueryConditionBuilder.eq("category_id", categoryId));
@@ -50,14 +44,9 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
     // キーワードの正規化
     List<String> keywords;
     if (keyword is String) {
-      keywords = keyword.trim().isNotEmpty
-          ? <String>[keyword.trim()]
-          : <String>[];
+      keywords = keyword.trim().isNotEmpty ? <String>[keyword.trim()] : <String>[];
     } else if (keyword is List<String>) {
-      keywords = keyword
-          .map((String k) => k.trim())
-          .where((String k) => k.isNotEmpty)
-          .toList();
+      keywords = keyword.map((String k) => k.trim()).where((String k) => k.isNotEmpty).toList();
     } else {
       keywords = <String>[];
     }
@@ -66,9 +55,7 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
       return <MenuItem>[];
     }
 
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
-    ];
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
 
     // 複数キーワードの場合はAND条件で検索
     // Supabaseでは複数のilike条件は自動的にANDになる
@@ -84,10 +71,7 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
   }
 
   /// IDリストでメニューアイテムを取得
-  Future<List<MenuItem>> findByIds(
-    List<String> menuItemIds,
-    String userId,
-  ) async {
+  Future<List<MenuItem>> findByIds(List<String> menuItemIds, String userId) async {
     if (menuItemIds.isEmpty) {
       return <MenuItem>[];
     }

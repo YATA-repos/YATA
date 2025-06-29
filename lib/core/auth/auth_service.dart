@@ -27,9 +27,7 @@ class SupabaseClientService {
   /// 初期化されていない場合は自動的に初期化を実行します。
   static SupabaseClient get client {
     if (_client == null) {
-      throw StateError(
-        "Supabase client is not initialized. Call initialize() first.",
-      );
+      throw StateError("Supabase client is not initialized. Call initialize() first.");
     }
     return _client!;
   }
@@ -52,8 +50,7 @@ class SupabaseClientService {
   }
 
   static String get _redirectUrl =>
-      dotenv.env["REDIRECT_URL"] ??
-      "io.supabase.flutterquickstart://login-callback/";
+      dotenv.env["REDIRECT_URL"] ?? "io.supabase.flutterquickstart://login-callback/";
 
   /// Supabaseクライアントの初期化
   ///
@@ -71,10 +68,7 @@ class SupabaseClientService {
       await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
       _client = Supabase.instance.client;
-      LogService.infoWithMessage(
-        "SupabaseClientService",
-        AuthInfo.clientInitialized,
-      );
+      LogService.infoWithMessage("SupabaseClientService", AuthInfo.clientInitialized);
     } catch (e) {
       LogService.errorWithMessage(
         "SupabaseClientService",
@@ -82,9 +76,7 @@ class SupabaseClientService {
         <String, String>{"error": e.toString()},
         e,
       );
-      throw SupabaseClientException(
-        "Failed to initialize Supabase client: ${e.toString()}",
-      );
+      throw SupabaseClientException("Failed to initialize Supabase client: ${e.toString()}");
     }
   }
 
@@ -93,10 +85,7 @@ class SupabaseClientService {
   /// Returns: 認証が開始された場合はtrue
   Future<bool> signInWithGoogle() async {
     try {
-      LogService.infoWithMessage(
-        "SupabaseClientService",
-        AuthInfo.googleAuthStarted,
-      );
+      LogService.infoWithMessage("SupabaseClientService", AuthInfo.googleAuthStarted);
 
       final Completer<bool> completer = Completer<bool>();
       Timer? timeoutTimer;
@@ -104,10 +93,7 @@ class SupabaseClientService {
       // 30秒でタイムアウト
       timeoutTimer = Timer(const Duration(seconds: 30), () {
         if (!completer.isCompleted) {
-          LogService.warningWithMessage(
-            "SupabaseClientService",
-            AuthError.googleAuthTimeout,
-          );
+          LogService.warningWithMessage("SupabaseClientService", AuthError.googleAuthTimeout);
           completer.complete(false);
         }
       });
@@ -145,9 +131,7 @@ class SupabaseClientService {
         <String, String>{"error": e.toString()},
         e,
       );
-      throw SupabaseClientException(
-        "Failed to initiate Google authentication: ${e.toString()}",
-      );
+      throw SupabaseClientException("Failed to initiate Google authentication: ${e.toString()}");
     }
   }
 
@@ -168,10 +152,7 @@ class SupabaseClientService {
       // URLからauthorization codeを抽出
       final String? code = _extractParamValue(callbackUrl, "code");
       if (code == null) {
-        LogService.warningWithMessage(
-          "SupabaseClientService",
-          AuthError.authorizationCodeNotFound,
-        );
+        LogService.warningWithMessage("SupabaseClientService", AuthError.authorizationCodeNotFound);
         throw AuthException("Authorization code not found in callback URL");
       }
 
@@ -182,10 +163,7 @@ class SupabaseClientService {
       // 現在のユーザー情報を取得
       final User? currentUser = client.auth.currentUser;
       if (currentUser == null) {
-        LogService.warningWithMessage(
-          "SupabaseClientService",
-          AuthError.userRetrievalFailed,
-        );
+        LogService.warningWithMessage("SupabaseClientService", AuthError.userRetrievalFailed);
         throw AuthException("Failed to retrieve user after authentication");
       }
 
@@ -201,9 +179,7 @@ class SupabaseClientService {
         AuthError.callbackProcessingFailed,
         <String, String>{"message": e.message},
       );
-      throw SupabaseAuthException(
-        "Failed to handle authentication callback: ${e.message}",
-      );
+      throw SupabaseAuthException("Failed to handle authentication callback: ${e.message}");
     } catch (e) {
       LogService.errorWithMessage(
         "SupabaseClientService",
@@ -211,9 +187,7 @@ class SupabaseClientService {
         <String, String>{"message": e.toString()},
         e,
       );
-      throw SupabaseClientException(
-        "Error processing authentication callback: ${e.toString()}",
-      );
+      throw SupabaseClientException("Error processing authentication callback: ${e.toString()}");
     }
   }
 
@@ -234,15 +208,11 @@ class SupabaseClientService {
     }
 
     // セッションの有効期限をチェック
-    final DateTime expiresAt = DateTime.fromMillisecondsSinceEpoch(
-      session.expiresAt! * 1000,
-    );
+    final DateTime expiresAt = DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000);
     final DateTime now = DateTime.now();
 
     // 5分前にリフレッシュを試行
-    final bool shouldRefresh = expiresAt.isBefore(
-      now.add(const Duration(minutes: 5)),
-    );
+    final bool shouldRefresh = expiresAt.isBefore(now.add(const Duration(minutes: 5)));
 
     if (shouldRefresh) {
       _refreshSessionIfNeeded();
@@ -254,15 +224,9 @@ class SupabaseClientService {
   /// 必要に応じてセッションをリフレッシュ
   Future<void> _refreshSessionIfNeeded() async {
     try {
-      LogService.infoWithMessage(
-        "SupabaseClientService",
-        AuthInfo.sessionRefreshing,
-      );
+      LogService.infoWithMessage("SupabaseClientService", AuthInfo.sessionRefreshing);
       await client.auth.refreshSession();
-      LogService.infoWithMessage(
-        "SupabaseClientService",
-        AuthInfo.sessionRefreshed,
-      );
+      LogService.infoWithMessage("SupabaseClientService", AuthInfo.sessionRefreshed);
     } catch (e) {
       LogService.warningWithMessage(
         "SupabaseClientService",
@@ -275,15 +239,9 @@ class SupabaseClientService {
   /// サインアウト
   Future<void> signOut() async {
     try {
-      LogService.infoWithMessage(
-        "SupabaseClientService",
-        AuthInfo.userSigningOut,
-      );
+      LogService.infoWithMessage("SupabaseClientService", AuthInfo.userSigningOut);
       await client.auth.signOut();
-      LogService.infoWithMessage(
-        "SupabaseClientService",
-        AuthInfo.userSignedOut,
-      );
+      LogService.infoWithMessage("SupabaseClientService", AuthInfo.userSignedOut);
     } on AuthException catch (e) {
       LogService.warningWithMessage(
         "SupabaseClientService",

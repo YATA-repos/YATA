@@ -1,8 +1,6 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
-  errors:
-    lines_longer_than_80_chars: ignore
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
@@ -14,9 +12,11 @@ analyzer:
     strict-inference: true
     strict-raw-types: true
 
+formatter: 
+  page_width: 100
+
 linter:
   rules:
-    # Style rules
     - always_declare_return_types
     - always_put_control_body_on_new_line
     - always_put_required_named_parameters_first
@@ -30,7 +30,6 @@ linter:
     - flutter_style_todos
     - join_return_with_assignment
     - leading_newlines_in_multiline_strings
-    - lines_longer_than_80_chars
     - missing_whitespace_between_adjacent_strings
     - no_default_cases
     - one_member_abstracts

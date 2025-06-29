@@ -56,12 +56,7 @@ mixin LoggerMixin {
   /// [messageJa] オプションの日本語メッセージ
   /// [error] エラーオブジェクト
   /// [stackTrace] スタックトレース
-  void logError(
-    String message, [
-    String? messageJa,
-    Object? error,
-    StackTrace? stackTrace,
-  ]) {
+  void logError(String message, [String? messageJa, Object? error, StackTrace? stackTrace]) {
     LogService.error(loggerComponent, message, messageJa, error, stackTrace);
   }
 
@@ -95,12 +90,6 @@ mixin LoggerMixin {
     Object? error,
     StackTrace? stackTrace,
   ]) {
-    LogService.errorWithMessage(
-      loggerComponent,
-      logMessage,
-      params,
-      error,
-      stackTrace,
-    );
+    LogService.errorWithMessage(loggerComponent, logMessage, params, error, stackTrace);
   }
 }

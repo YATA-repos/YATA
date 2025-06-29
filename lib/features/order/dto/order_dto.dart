@@ -11,13 +11,12 @@ class CartItemRequest {
   });
 
   /// JSONからオブジェクトを生成
-  factory CartItemRequest.fromJson(Map<String, dynamic> json) =>
-      CartItemRequest(
-        menuItemId: json["menu_item_id"] as String,
-        quantity: json["quantity"] as int,
-        selectedOptions: json["selected_options"] as Map<String, String>?,
-        specialRequest: json["special_request"] as String?,
-      );
+  factory CartItemRequest.fromJson(Map<String, dynamic> json) => CartItemRequest(
+    menuItemId: json["menu_item_id"] as String,
+    quantity: json["quantity"] as int,
+    selectedOptions: json["selected_options"] as Map<String, String>?,
+    specialRequest: json["special_request"] as String?,
+  );
 
   /// メニューアイテムID
   String menuItemId;
@@ -51,16 +50,14 @@ class OrderCheckoutRequest {
   });
 
   /// JSONからオブジェクトを生成
-  factory OrderCheckoutRequest.fromJson(Map<String, dynamic> json) =>
-      OrderCheckoutRequest(
-        paymentMethod: PaymentMethod.values.firstWhere(
-          (PaymentMethod method) =>
-              method.value == json["payment_method"] as String,
-        ),
-        customerName: json["customer_name"] as String?,
-        discountAmount: json["discount_amount"] as int,
-        notes: json["notes"] as String?,
-      );
+  factory OrderCheckoutRequest.fromJson(Map<String, dynamic> json) => OrderCheckoutRequest(
+    paymentMethod: PaymentMethod.values.firstWhere(
+      (PaymentMethod method) => method.value == json["payment_method"] as String,
+    ),
+    customerName: json["customer_name"] as String?,
+    discountAmount: json["discount_amount"] as int,
+    notes: json["notes"] as String?,
+  );
 
   /// 支払い方法
   PaymentMethod paymentMethod;
@@ -97,28 +94,22 @@ class OrderSearchRequest {
   });
 
   /// JSONからオブジェクトを生成
-  factory OrderSearchRequest.fromJson(Map<String, dynamic> json) =>
-      OrderSearchRequest(
-        dateFrom: json["date_from"] == null
-            ? null
-            : DateTime.parse(json["date_from"] as String),
-        dateTo: json["date_to"] == null
-            ? null
-            : DateTime.parse(json["date_to"] as String),
-        statusFilter: json["status_filter"] == null
-            ? null
-            : (json["status_filter"] as List<dynamic>)
-                  .map(
-                    (dynamic status) => OrderStatus.values.firstWhere(
-                      (OrderStatus s) => s.value == status as String,
-                    ),
-                  )
-                  .toList(),
-        customerName: json["customer_name"] as String?,
-        menuItemName: json["menu_item_name"] as String?,
-        page: json["page"] as int,
-        limit: json["limit"] as int,
-      );
+  factory OrderSearchRequest.fromJson(Map<String, dynamic> json) => OrderSearchRequest(
+    dateFrom: json["date_from"] == null ? null : DateTime.parse(json["date_from"] as String),
+    dateTo: json["date_to"] == null ? null : DateTime.parse(json["date_to"] as String),
+    statusFilter: json["status_filter"] == null
+        ? null
+        : (json["status_filter"] as List<dynamic>)
+              .map(
+                (dynamic status) =>
+                    OrderStatus.values.firstWhere((OrderStatus s) => s.value == status as String),
+              )
+              .toList(),
+    customerName: json["customer_name"] as String?,
+    menuItemName: json["menu_item_name"] as String?,
+    page: json["page"] as int,
+    limit: json["limit"] as int,
+  );
 
   /// 開始日
   DateTime? dateFrom;
@@ -145,9 +136,7 @@ class OrderSearchRequest {
   Map<String, dynamic> toJson() => <String, dynamic>{
     "date_from": dateFrom?.toIso8601String(),
     "date_to": dateTo?.toIso8601String(),
-    "status_filter": statusFilter
-        ?.map((OrderStatus status) => status.value)
-        .toList(),
+    "status_filter": statusFilter?.map((OrderStatus status) => status.value).toList(),
     "customer_name": customerName,
     "menu_item_name": menuItemName,
     "page": page,
@@ -166,13 +155,12 @@ class OrderCalculationResult {
   });
 
   /// JSONからオブジェクトを生成
-  factory OrderCalculationResult.fromJson(Map<String, dynamic> json) =>
-      OrderCalculationResult(
-        subtotal: json["subtotal"] as int,
-        taxAmount: json["tax_amount"] as int,
-        discountAmount: json["discount_amount"] as int,
-        totalAmount: json["total_amount"] as int,
-      );
+  factory OrderCalculationResult.fromJson(Map<String, dynamic> json) => OrderCalculationResult(
+    subtotal: json["subtotal"] as int,
+    taxAmount: json["tax_amount"] as int,
+    discountAmount: json["discount_amount"] as int,
+    totalAmount: json["total_amount"] as int,
+  );
 
   /// 小計
   int subtotal;

@@ -18,8 +18,7 @@ class MenuCategory extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory MenuCategory.fromJson(Map<String, dynamic> json) =>
-      _$MenuCategoryFromJson(json);
+  factory MenuCategory.fromJson(Map<String, dynamic> json) => _$MenuCategoryFromJson(json);
 
   /// カテゴリ名（メイン料理、サイドメニュー、ドリンク、デザート）
   String name;
@@ -61,8 +60,7 @@ class MenuItem extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory MenuItem.fromJson(Map<String, dynamic> json) =>
-      _$MenuItemFromJson(json);
+  factory MenuItem.fromJson(Map<String, dynamic> json) => _$MenuItemFromJson(json);
 
   /// 商品名
   String name;
@@ -119,8 +117,7 @@ class MenuItemOption extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory MenuItemOption.fromJson(Map<String, dynamic> json) =>
-      _$MenuItemOptionFromJson(json);
+  factory MenuItemOption.fromJson(Map<String, dynamic> json) => _$MenuItemOptionFromJson(json);
 
   /// メニューID
   String menuItemId;

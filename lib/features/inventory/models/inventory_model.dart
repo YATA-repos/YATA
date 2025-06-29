@@ -24,8 +24,7 @@ class Material extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory Material.fromJson(Map<String, dynamic> json) =>
-      _$MaterialFromJson(json);
+  factory Material.fromJson(Map<String, dynamic> json) => _$MaterialFromJson(json);
 
   /// 材料名
   String name;
@@ -87,8 +86,7 @@ class MaterialCategory extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory MaterialCategory.fromJson(Map<String, dynamic> json) =>
-      _$MaterialCategoryFromJson(json);
+  factory MaterialCategory.fromJson(Map<String, dynamic> json) => _$MaterialCategoryFromJson(json);
 
   /// カテゴリ名（肉類、野菜、調理済食品、果物）
   String name;

@@ -30,16 +30,12 @@ class InventoryService with LoggerMixin {
     StockTransactionRepository? stockTransactionRepository,
     OrderItemRepository? orderItemRepository,
   }) : _materialRepository = materialRepository ?? MaterialRepository(),
-       _materialCategoryRepository =
-           materialCategoryRepository ?? MaterialCategoryRepository(),
+       _materialCategoryRepository = materialCategoryRepository ?? MaterialCategoryRepository(),
        _recipeRepository = recipeRepository ?? RecipeRepository(),
        _purchaseRepository = purchaseRepository ?? PurchaseRepository(),
-       _purchaseItemRepository =
-           purchaseItemRepository ?? PurchaseItemRepository(),
-       _stockAdjustmentRepository =
-           stockAdjustmentRepository ?? StockAdjustmentRepository(),
-       _stockTransactionRepository =
-           stockTransactionRepository ?? StockTransactionRepository(),
+       _purchaseItemRepository = purchaseItemRepository ?? PurchaseItemRepository(),
+       _stockAdjustmentRepository = stockAdjustmentRepository ?? StockAdjustmentRepository(),
+       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository(),
        _orderItemRepository = orderItemRepository ?? OrderItemRepository();
 
   final MaterialRepository _materialRepository;
@@ -63,19 +59,15 @@ class InventoryService with LoggerMixin {
       _materialCategoryRepository.findActiveOrdered(userId);
 
   /// カテゴリ別材料一覧を取得
-  Future<List<Material>> getMaterialsByCategory(
-    String? categoryId,
-    String userId,
-  ) async => _materialRepository.findByCategoryId(categoryId, userId);
+  Future<List<Material>> getMaterialsByCategory(String? categoryId, String userId) async =>
+      _materialRepository.findByCategoryId(categoryId, userId);
 
   /// 在庫レベル別アラート材料を取得
-  Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel(
-    String userId,
-  ) async {
-    final List<Material> criticalMaterials = await _materialRepository
-        .findBelowCriticalThreshold(userId);
-    final List<Material> alertMaterials = await _materialRepository
-        .findBelowAlertThreshold(userId);
+  Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel(String userId) async {
+    final List<Material> criticalMaterials = await _materialRepository.findBelowCriticalThreshold(
+      userId,
+    );
+    final List<Material> alertMaterials = await _materialRepository.findBelowAlertThreshold(userId);
 
     // アラートレベルからクリティカルを除外
     final List<Material> alertOnly = alertMaterials
@@ -94,14 +86,9 @@ class InventoryService with LoggerMixin {
       _materialRepository.findBelowCriticalThreshold(userId);
 
   /// 材料在庫を手動更新
-  Future<Material?> updateMaterialStock(
-    StockUpdateRequest request,
-    String userId,
-  ) async {
+  Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId) async {
     // 材料を取得
-    final Material? material = await _materialRepository.getById(
-      request.materialId,
-    );
+    final Material? material = await _materialRepository.getById(request.materialId);
     if (material == null || material.userId != userId) {
       throw Exception("Material not found or access denied");
     }
@@ -144,9 +131,7 @@ class InventoryService with LoggerMixin {
       notes: request.notes,
       userId: userId,
     );
-    final Purchase? createdPurchase = await _purchaseRepository.create(
-      purchase,
-    );
+    final Purchase? createdPurchase = await _purchaseRepository.create(purchase);
 
     if (createdPurchase?.id == null) {
       throw Exception("Failed to create purchase");
@@ -170,9 +155,7 @@ class InventoryService with LoggerMixin {
     final List<StockTransaction> transactions = <StockTransaction>[];
     for (final PurchaseItemDto itemData in request.items) {
       // 材料を取得して在庫更新
-      final Material? material = await _materialRepository.getById(
-        itemData.materialId,
-      );
+      final Material? material = await _materialRepository.getById(itemData.materialId);
       if (material != null && material.userId == userId) {
         material.currentStock += itemData.quantity;
         await _materialRepository.updateById(material.id!, <String, dynamic>{
@@ -203,10 +186,7 @@ class InventoryService with LoggerMixin {
     String userId,
   ) async {
     // 材料一覧を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(
-      categoryId,
-      userId,
-    );
+    final List<Material> materials = await _materialRepository.findByCategoryId(categoryId, userId);
 
     // 各材料の使用可能日数を計算
     final Map<String, int?> usageDays = await bulkCalculateUsageDays(userId);
@@ -214,11 +194,7 @@ class InventoryService with LoggerMixin {
     // MaterialStockInfoに変換
     final List<MaterialStockInfo> stockInfos = <MaterialStockInfo>[];
     for (final Material material in materials) {
-      final double? dailyUsageRate = await calculateMaterialUsageRate(
-        material.id!,
-        30,
-        userId,
-      );
+      final double? dailyUsageRate = await calculateMaterialUsageRate(material.id!, 30, userId);
 
       final MaterialStockInfo stockInfo = MaterialStockInfo(
         material: material,
@@ -233,23 +209,14 @@ class InventoryService with LoggerMixin {
   }
 
   /// 材料の平均使用量を計算（日次）
-  Future<double?> calculateMaterialUsageRate(
-    String materialId,
-    int days,
-    String userId,
-  ) async {
+  Future<double?> calculateMaterialUsageRate(String materialId, int days, String userId) async {
     // 過去N日間の期間を設定
     final DateTime endDate = DateTime.now();
     final DateTime startDate = endDate.subtract(Duration(days: days));
 
     // 期間内の消費取引を取得（負の値のみ）
-    final List<StockTransaction> transactions =
-        await _stockTransactionRepository.findByMaterialAndDateRange(
-          materialId,
-          startDate,
-          endDate,
-          userId,
-        );
+    final List<StockTransaction> transactions = await _stockTransactionRepository
+        .findByMaterialAndDateRange(materialId, startDate, endDate, userId);
 
     // 消費取引のみをフィルタ（負の値）
     final List<StockTransaction> consumptionTransactions = transactions
@@ -271,10 +238,7 @@ class InventoryService with LoggerMixin {
   }
 
   /// 推定使用可能日数を計算
-  Future<int?> calculateEstimatedUsageDays(
-    String materialId,
-    String userId,
-  ) async {
+  Future<int?> calculateEstimatedUsageDays(String materialId, String userId) async {
     // 材料を取得
     final Material? material = await _materialRepository.getById(materialId);
     if (material == null || material.userId != userId) {
@@ -282,11 +246,7 @@ class InventoryService with LoggerMixin {
     }
 
     // 平均使用量を計算（過去30日間）
-    final double? dailyUsage = await calculateMaterialUsageRate(
-      materialId,
-      30,
-      userId,
-    );
+    final double? dailyUsage = await calculateMaterialUsageRate(materialId, 30, userId);
 
     if (dailyUsage == null || dailyUsage <= 0) {
       return null;
@@ -301,19 +261,13 @@ class InventoryService with LoggerMixin {
   /// 全材料の使用可能日数を一括計算
   Future<Map<String, int?>> bulkCalculateUsageDays(String userId) async {
     // 全材料を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(
-      null,
-      userId,
-    );
+    final List<Material> materials = await _materialRepository.findByCategoryId(null, userId);
 
     // 各材料の使用可能日数を計算
     final Map<String, int?> usageDays = <String, int?>{};
     for (final Material material in materials) {
       if (material.id != null) {
-        final int? days = await calculateEstimatedUsageDays(
-          material.id!,
-          userId,
-        );
+        final int? days = await calculateEstimatedUsageDays(material.id!, userId);
         usageDays[material.id!] = days;
       }
     }
@@ -322,20 +276,16 @@ class InventoryService with LoggerMixin {
   }
 
   /// 詳細な在庫アラート情報を取得（レベル別 + 詳細情報付き）
-  Future<Map<String, List<MaterialStockInfo>>> getDetailedStockAlerts(
-    String userId,
-  ) async {
+  Future<Map<String, List<MaterialStockInfo>>> getDetailedStockAlerts(String userId) async {
     // 全材料の在庫情報を取得
-    final List<MaterialStockInfo> allMaterialsInfo =
-        await getMaterialsWithStockInfo(null, userId);
+    final List<MaterialStockInfo> allMaterialsInfo = await getMaterialsWithStockInfo(null, userId);
 
     // レベル別に分類
-    final Map<String, List<MaterialStockInfo>> alerts =
-        <String, List<MaterialStockInfo>>{
-          "critical": <MaterialStockInfo>[],
-          "low": <MaterialStockInfo>[],
-          "sufficient": <MaterialStockInfo>[],
-        };
+    final Map<String, List<MaterialStockInfo>> alerts = <String, List<MaterialStockInfo>>{
+      "critical": <MaterialStockInfo>[],
+      "low": <MaterialStockInfo>[],
+      "sufficient": <MaterialStockInfo>[],
+    };
 
     for (final MaterialStockInfo materialInfo in allMaterialsInfo) {
       if (materialInfo.stockLevel == StockLevel.critical) {
@@ -350,8 +300,7 @@ class InventoryService with LoggerMixin {
     // 各レベル内で材料名でソート
     for (final String level in alerts.keys) {
       alerts[level]!.sort(
-        (MaterialStockInfo a, MaterialStockInfo b) =>
-            a.material.name.compareTo(b.material.name),
+        (MaterialStockInfo a, MaterialStockInfo b) => a.material.name.compareTo(b.material.name),
       );
     }
 
@@ -362,9 +311,7 @@ class InventoryService with LoggerMixin {
   Future<bool> consumeMaterialsForOrder(String orderId, String userId) async {
     try {
       // 注文明細を取得
-      final List<dynamic> orderItems = await _orderItemRepository.findByOrderId(
-        orderId,
-      );
+      final List<dynamic> orderItems = await _orderItemRepository.findByOrderId(orderId);
 
       if (orderItems.isEmpty) {
         return true; // 注文明細がない場合は成功とみなす
@@ -382,8 +329,7 @@ class InventoryService with LoggerMixin {
 
         for (final Recipe recipe in recipes) {
           // 必要量 = レシピの必要量 × 注文数量
-          final double requiredAmount =
-              recipe.requiredAmount * (orderItem.quantity as int);
+          final double requiredAmount = recipe.requiredAmount * (orderItem.quantity as int);
           materialRequirements[recipe.materialId] =
               (materialRequirements[recipe.materialId] ?? 0.0) + requiredAmount;
         }
@@ -392,15 +338,12 @@ class InventoryService with LoggerMixin {
       // 各材料の在庫を減算し、取引を記録
       final List<StockTransaction> transactions = <StockTransaction>[];
 
-      for (final MapEntry<String, double> entry
-          in materialRequirements.entries) {
+      for (final MapEntry<String, double> entry in materialRequirements.entries) {
         final String materialId = entry.key;
         final double requiredAmount = entry.value;
 
         // 材料を取得
-        final Material? material = await _materialRepository.getById(
-          materialId,
-        );
+        final Material? material = await _materialRepository.getById(materialId);
         if (material == null || material.userId != userId) {
           continue;
         }
@@ -442,18 +385,13 @@ class InventoryService with LoggerMixin {
   Future<bool> restoreMaterialsForOrder(String orderId, String userId) async {
     try {
       // 該当注文の消費取引を取得
-      final List<StockTransaction> consumptionTransactions =
-          await _stockTransactionRepository.findByReference(
-            ReferenceType.order,
-            orderId,
-            userId,
-          );
+      final List<StockTransaction> consumptionTransactions = await _stockTransactionRepository
+          .findByReference(ReferenceType.order, orderId, userId);
 
       // 消費取引（負の値）のみを対象
       final List<StockTransaction> consumptionOnly = consumptionTransactions
           .where(
-            (StockTransaction t) =>
-                t.changeAmount < 0 && t.transactionType == TransactionType.sale,
+            (StockTransaction t) => t.changeAmount < 0 && t.transactionType == TransactionType.sale,
           )
           .toList();
 
@@ -466,9 +404,7 @@ class InventoryService with LoggerMixin {
 
       for (final StockTransaction transaction in consumptionOnly) {
         // 材料を取得
-        final Material? material = await _materialRepository.getById(
-          transaction.materialId,
-        );
+        final Material? material = await _materialRepository.getById(transaction.materialId);
         if (material == null || material.userId != userId) {
           continue;
         }
@@ -521,9 +457,7 @@ class InventoryService with LoggerMixin {
 
     // 閾値の妥当性チェック
     if (criticalThreshold > alertThreshold) {
-      throw Exception(
-        "Critical threshold must be less than or equal to alert threshold",
-      );
+      throw Exception("Critical threshold must be less than or equal to alert threshold");
     }
 
     if (criticalThreshold < 0 || alertThreshold < 0) {

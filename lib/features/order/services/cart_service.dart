@@ -33,9 +33,7 @@ class CartService with LoggerMixin {
   /// アクティブなカート（下書き注文）を取得または作成
   Future<Order?> getOrCreateActiveCart(String userId) async {
     // 既存のアクティブカートを検索
-    final Order? existingCart = await _orderRepository.findActiveDraftByUser(
-      userId,
-    );
+    final Order? existingCart = await _orderRepository.findActiveDraftByUser(userId);
 
     if (existingCart != null) {
       return existingCart;
@@ -68,9 +66,7 @@ class CartService with LoggerMixin {
     }
 
     // メニューアイテムの取得
-    final dynamic menuItem = await _menuItemRepository.getById(
-      request.menuItemId,
-    );
+    final dynamic menuItem = await _menuItemRepository.getById(request.menuItemId);
     if (menuItem == null || menuItem.userId != userId) {
       throw Exception("Menu item ${request.menuItemId} not found");
     }
@@ -117,9 +113,7 @@ class CartService with LoggerMixin {
         userId: userId,
       );
 
-      final OrderItem? createdItem = await _orderItemRepository.create(
-        orderItem,
-      );
+      final OrderItem? createdItem = await _orderItemRepository.create(orderItem);
 
       // カート合計を更新
       await _updateCartTotal(cartId);
@@ -145,17 +139,13 @@ class CartService with LoggerMixin {
       throw Exception("Cart $cartId not found or access denied");
     }
 
-    final OrderItem? orderItem = await _orderItemRepository.getById(
-      orderItemId,
-    );
+    final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
     if (orderItem == null || orderItem.orderId != cartId) {
       throw Exception("Order item $orderItemId not found in cart");
     }
 
     // メニューアイテムの取得（価格情報のため）
-    final dynamic menuItem = await _menuItemRepository.getById(
-      orderItem.menuItemId,
-    );
+    final dynamic menuItem = await _menuItemRepository.getById(orderItem.menuItemId);
     if (menuItem == null) {
       throw Exception("Menu item ${orderItem.menuItemId} not found");
     }
@@ -170,10 +160,7 @@ class CartService with LoggerMixin {
     // 数量と小計を更新
     final OrderItem? updatedItem = await _orderItemRepository.updateById(
       orderItemId,
-      <String, dynamic>{
-        "quantity": newQuantity,
-        "subtotal": (menuItem.price as int) * newQuantity,
-      },
+      <String, dynamic>{"quantity": newQuantity, "subtotal": (menuItem.price as int) * newQuantity},
     );
 
     // カート合計を更新
@@ -183,11 +170,7 @@ class CartService with LoggerMixin {
   }
 
   /// カートから商品を削除
-  Future<bool> removeItemFromCart(
-    String cartId,
-    String orderItemId,
-    String userId,
-  ) async {
+  Future<bool> removeItemFromCart(String cartId, String orderItemId, String userId) async {
     // カートの存在確認
     final Order? cart = await _orderRepository.getById(cartId);
     if (cart == null || cart.userId != userId) {
@@ -195,9 +178,7 @@ class CartService with LoggerMixin {
     }
 
     // 注文アイテムの存在確認
-    final OrderItem? orderItem = await _orderItemRepository.getById(
-      orderItemId,
-    );
+    final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
     if (orderItem == null || orderItem.orderId != cartId) {
       throw Exception("Order item $orderItemId not found in cart");
     }
@@ -228,29 +209,19 @@ class CartService with LoggerMixin {
 
     if (success) {
       // カートの合計金額をリセット
-      await _orderRepository.updateById(cartId, <String, dynamic>{
-        "total_amount": 0,
-      });
+      await _orderRepository.updateById(cartId, <String, dynamic>{"total_amount": 0});
     }
 
     return success;
   }
 
   /// カートの金額を計算
-  Future<OrderCalculationResult> calculateCartTotal(
-    String cartId, {
-    int discountAmount = 0,
-  }) async {
+  Future<OrderCalculationResult> calculateCartTotal(String cartId, {int discountAmount = 0}) async {
     // カート内のアイテムを取得
-    final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(
-      cartId,
-    );
+    final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
 
     // 小計の計算
-    final int subtotal = cartItems.fold(
-      0,
-      (int sum, OrderItem item) => sum + item.subtotal,
-    );
+    final int subtotal = cartItems.fold(0, (int sum, OrderItem item) => sum + item.subtotal);
 
     // 税率（8%と仮定）
     const double taxRate = 0.08;
@@ -268,10 +239,7 @@ class CartService with LoggerMixin {
   }
 
   /// カート内全商品の在庫を検証（戻り値: {order_item_id: 在庫充足フラグ}）
-  Future<Map<String, bool>> validateCartStock(
-    String cartId,
-    String userId,
-  ) async {
+  Future<Map<String, bool>> validateCartStock(String cartId, String userId) async {
     // カートの存在確認
     final Order? cart = await _orderRepository.getById(cartId);
     if (cart == null || cart.userId != userId) {
@@ -279,18 +247,12 @@ class CartService with LoggerMixin {
     }
 
     // カート内のアイテムを取得
-    final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(
-      cartId,
-    );
+    final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
 
     final Map<String, bool> stockValidation = <String, bool>{};
 
     for (final OrderItem item in cartItems) {
-      final bool isSufficient = await _checkMenuItemStock(
-        item.menuItemId,
-        item.quantity,
-        userId,
-      );
+      final bool isSufficient = await _checkMenuItemStock(item.menuItemId, item.quantity, userId);
       stockValidation[item.id!] = isSufficient;
     }
 
@@ -298,16 +260,9 @@ class CartService with LoggerMixin {
   }
 
   /// メニューアイテムの在庫充足を確認
-  Future<bool> _checkMenuItemStock(
-    String menuItemId,
-    int quantity,
-    String userId,
-  ) async {
+  Future<bool> _checkMenuItemStock(String menuItemId, int quantity, String userId) async {
     // レシピを取得
-    final List<dynamic> recipes = await _recipeRepository.findByMenuItemId(
-      menuItemId,
-      userId,
-    );
+    final List<dynamic> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
 
     for (final dynamic recipe in recipes) {
       if (recipe.isOptional as bool) {
@@ -315,15 +270,11 @@ class CartService with LoggerMixin {
       }
 
       // 必要な材料量を計算
-      final double requiredAmount =
-          (recipe.requiredAmount as double) * quantity;
+      final double requiredAmount = (recipe.requiredAmount as double) * quantity;
 
       // 材料の在庫を確認
-      final dynamic material = await _materialRepository.getById(
-        recipe.materialId as String,
-      );
-      if (material == null ||
-          (material.currentStock as double) < requiredAmount) {
+      final dynamic material = await _materialRepository.getById(recipe.materialId as String);
+      if (material == null || (material.currentStock as double) < requiredAmount) {
         return false;
       }
     }
@@ -333,15 +284,8 @@ class CartService with LoggerMixin {
 
   /// カートの合計金額を更新
   Future<void> _updateCartTotal(String cartId) async {
-    final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(
-      cartId,
-    );
-    final int totalAmount = cartItems.fold(
-      0,
-      (int sum, OrderItem item) => sum + item.subtotal,
-    );
-    await _orderRepository.updateById(cartId, <String, dynamic>{
-      "total_amount": totalAmount,
-    });
+    final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
+    final int totalAmount = cartItems.fold(0, (int sum, OrderItem item) => sum + item.subtotal);
+    await _orderRepository.updateById(cartId, <String, dynamic>{"total_amount": totalAmount});
   }
 }

@@ -7,28 +7,27 @@ class QueryUtils {
   QueryUtils._();
 
   /// フィルタ演算子をSupabaseメソッド名にマッピング
-  static const Map<FilterOperator, String> _operatorMethodMap =
-      <FilterOperator, String>{
-        FilterOperator.eq: "eq",
-        FilterOperator.neq: "neq",
-        FilterOperator.gt: "gt",
-        FilterOperator.gte: "gte",
-        FilterOperator.lt: "lt",
-        FilterOperator.lte: "lte",
-        FilterOperator.like: "like",
-        FilterOperator.ilike: "ilike",
-        FilterOperator.isNull: "is",
-        FilterOperator.isNotNull: "not.is",
-        FilterOperator.inList: "in",
-        FilterOperator.notInList: "not.in",
-        FilterOperator.contains: "contains",
-        FilterOperator.containedBy: "containedBy",
-        FilterOperator.rangeGt: "rangeGt",
-        FilterOperator.rangeGte: "rangeGte",
-        FilterOperator.rangeLt: "rangeLt",
-        FilterOperator.rangeLte: "rangeLte",
-        FilterOperator.overlaps: "overlaps",
-      };
+  static const Map<FilterOperator, String> _operatorMethodMap = <FilterOperator, String>{
+    FilterOperator.eq: "eq",
+    FilterOperator.neq: "neq",
+    FilterOperator.gt: "gt",
+    FilterOperator.gte: "gte",
+    FilterOperator.lt: "lt",
+    FilterOperator.lte: "lte",
+    FilterOperator.like: "like",
+    FilterOperator.ilike: "ilike",
+    FilterOperator.isNull: "is",
+    FilterOperator.isNotNull: "not.is",
+    FilterOperator.inList: "in",
+    FilterOperator.notInList: "not.in",
+    FilterOperator.contains: "contains",
+    FilterOperator.containedBy: "containedBy",
+    FilterOperator.rangeGt: "rangeGt",
+    FilterOperator.rangeGte: "rangeGte",
+    FilterOperator.rangeLt: "rangeLt",
+    FilterOperator.rangeLte: "rangeLte",
+    FilterOperator.overlaps: "overlaps",
+  };
 
   /// 単一フィルタ条件をクエリに適用
   static PostgrestFilterBuilder<dynamic> _applySingleFilter(
@@ -241,11 +240,7 @@ class QueryUtils {
     }
 
     final String orString = _buildOrConditionString(filterConditions);
-    LogService.debug(
-      "QueryUtils",
-      "Applying OR condition: $orString",
-      "OR条件適用: $orString",
-    );
+    LogService.debug("QueryUtils", "Applying OR condition: $orString", "OR条件適用: $orString");
     return query.or(orString);
   }
 
@@ -329,96 +324,58 @@ class QueryUtils {
 
   /// 簡単なフィルタ条件作成ヘルパー（後方互換性維持）
   /// 新しいコードでは QueryConditionBuilder を推奨します
-  static FilterCondition eq(String column, dynamic value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.eq,
-    value: value,
-  );
+  static FilterCondition eq(String column, dynamic value) =>
+      FilterCondition(column: column, operator: FilterOperator.eq, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（不等号）
-  static FilterCondition neq(String column, dynamic value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.neq,
-    value: value,
-  );
+  static FilterCondition neq(String column, dynamic value) =>
+      FilterCondition(column: column, operator: FilterOperator.neq, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（より大きい）
-  static FilterCondition gt(String column, dynamic value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.gt,
-    value: value,
-  );
+  static FilterCondition gt(String column, dynamic value) =>
+      FilterCondition(column: column, operator: FilterOperator.gt, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（以上）
-  static FilterCondition gte(String column, dynamic value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.gte,
-    value: value,
-  );
+  static FilterCondition gte(String column, dynamic value) =>
+      FilterCondition(column: column, operator: FilterOperator.gte, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（より小さい）
-  static FilterCondition lt(String column, dynamic value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.lt,
-    value: value,
-  );
+  static FilterCondition lt(String column, dynamic value) =>
+      FilterCondition(column: column, operator: FilterOperator.lt, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（以下）
-  static FilterCondition lte(String column, dynamic value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.lte,
-    value: value,
-  );
+  static FilterCondition lte(String column, dynamic value) =>
+      FilterCondition(column: column, operator: FilterOperator.lte, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（部分一致）
-  static FilterCondition like(String column, String value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.like,
-    value: value,
-  );
+  static FilterCondition like(String column, String value) =>
+      FilterCondition(column: column, operator: FilterOperator.like, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（部分一致・大文字小文字区別なし）
-  static FilterCondition ilike(String column, String value) => FilterCondition(
-    column: column,
-    operator: FilterOperator.ilike,
-    value: value,
-  );
+  static FilterCondition ilike(String column, String value) =>
+      FilterCondition(column: column, operator: FilterOperator.ilike, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（配列に含まれる）
   static FilterCondition inList(String column, List<dynamic> values) =>
-      FilterCondition(
-        column: column,
-        operator: FilterOperator.inList,
-        value: values,
-      );
+      FilterCondition(column: column, operator: FilterOperator.inList, value: values);
 
   /// 簡単なフィルタ条件作成ヘルパー（NULL判定）
-  static FilterCondition isNull(String column) => FilterCondition(
-    column: column,
-    operator: FilterOperator.isNull,
-    value: null,
-  );
+  static FilterCondition isNull(String column) =>
+      FilterCondition(column: column, operator: FilterOperator.isNull, value: null);
 
   /// 簡単なフィルタ条件作成ヘルパー（NULL以外判定）
-  static FilterCondition isNotNull(String column) => FilterCondition(
-    column: column,
-    operator: FilterOperator.isNotNull,
-    value: null,
-  );
+  static FilterCondition isNotNull(String column) =>
+      FilterCondition(column: column, operator: FilterOperator.isNotNull, value: null);
 
   /// 簡単なAND条件作成ヘルパー
-  static AndCondition and(List<QueryFilter> conditions) =>
-      AndCondition(conditions);
+  static AndCondition and(List<QueryFilter> conditions) => AndCondition(conditions);
 
   /// 簡単なOR条件作成ヘルパー
-  static OrCondition or(List<QueryFilter> conditions) =>
-      OrCondition(conditions);
+  static OrCondition or(List<QueryFilter> conditions) => OrCondition(conditions);
 
   /// 簡単なソート条件作成ヘルパー（昇順）
-  static OrderByCondition asc(String column) =>
-      OrderByCondition(column: column);
+  static OrderByCondition asc(String column) => OrderByCondition(column: column);
 
   /// 簡単なソート条件作成ヘルパー（降順）
-  static OrderByCondition desc(String column) =>
-      OrderByCondition(column: column, ascending: false);
+  static OrderByCondition desc(String column) => OrderByCondition(column: column, ascending: false);
 }

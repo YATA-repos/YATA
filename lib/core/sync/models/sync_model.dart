@@ -19,8 +19,7 @@ class SyncRecord extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory SyncRecord.fromJson(Map<String, dynamic> json) =>
-      _$SyncRecordFromJson(json);
+  factory SyncRecord.fromJson(Map<String, dynamic> json) => _$SyncRecordFromJson(json);
 
   /// 対象テーブル名
   String recordType;

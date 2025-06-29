@@ -72,11 +72,7 @@ class LogService {
   /// 最小ログレベルを動的に変更
   static void setMinimumLevel(LogLevel level) {
     _minimumLevel = level;
-    _log(
-      LogLevel.info,
-      "LogService",
-      "Minimum log level changed to ${level.value}",
-    );
+    _log(LogLevel.info, "LogService", "Minimum log level changed to ${level.value}");
   }
 
   /// バッファフラッシュタイマーを開始
@@ -237,14 +233,7 @@ class LogService {
 
     // リリース時はwarning/errorのみファイル保存（バッファリング）
     if (kReleaseMode && level.shouldPersistInRelease && _logDirectory != null) {
-      _addToBuffer(
-        level,
-        component,
-        formattedMessage,
-        timestamp,
-        error,
-        stackTrace,
-      );
+      _addToBuffer(level, component, formattedMessage, timestamp, error, stackTrace);
     }
   }
 
@@ -289,9 +278,7 @@ class LogService {
     StackTrace? stackTrace,
   ) {
     final StringBuffer entry = StringBuffer()
-      ..writeln(
-        "[$timestamp] [$component] [${level.value.toUpperCase()}] $message",
-      );
+      ..writeln("[$timestamp] [$component] [${level.value.toUpperCase()}] $message");
 
     if (error != null) {
       entry.writeln("Error: $error");
@@ -321,11 +308,7 @@ class LogService {
         await _writeBufferedEntry(entry);
       }
     } catch (e) {
-      developer.log(
-        "Failed to flush log buffer: ${e.toString()}",
-        level: 900,
-        name: "LogService",
-      );
+      developer.log("Failed to flush log buffer: ${e.toString()}", level: 900, name: "LogService");
     } finally {
       _isFlushInProgress = false;
     }
@@ -363,11 +346,7 @@ class LogService {
   }
 
   /// 再試行付きファイル書き込み
-  static Future<void> _writeWithRetry(
-    File file,
-    String content, {
-    int maxRetries = 3,
-  }) async {
+  static Future<void> _writeWithRetry(File file, String content, {int maxRetries = 3}) async {
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
         await file.writeAsString(content, mode: FileMode.append);
@@ -394,11 +373,7 @@ class LogService {
 
       await file.rename(rotatedFilename);
     } catch (e) {
-      developer.log(
-        "Failed to rotate log file: ${e.toString()}",
-        level: 900,
-        name: "LogService",
-      );
+      developer.log("Failed to rotate log file: ${e.toString()}", level: 900, name: "LogService");
     }
   }
 
@@ -463,9 +438,7 @@ class LogService {
         return;
       }
 
-      final DateTime cutoffDate = DateTime.now().subtract(
-        Duration(days: daysToKeep),
-      );
+      final DateTime cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
       final List<FileSystemEntity> files = await logDir.list().toList();
 
       for (final FileSystemEntity file in files) {
@@ -473,20 +446,12 @@ class LogService {
           final FileStat stat = await file.stat();
           if (stat.modified.isBefore(cutoffDate)) {
             await file.delete();
-            _log(
-              LogLevel.info,
-              "LogService",
-              "Deleted old log file: ${file.path}",
-            );
+            _log(LogLevel.info, "LogService", "Deleted old log file: ${file.path}");
           }
         }
       }
     } catch (e) {
-      _log(
-        LogLevel.warning,
-        "LogService",
-        "Failed to cleanup old logs: ${e.toString()}",
-      );
+      _log(LogLevel.warning, "LogService", "Failed to cleanup old logs: ${e.toString()}");
     }
   }
 }

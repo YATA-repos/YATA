@@ -17,18 +17,10 @@ Order _$OrderFromJson(Map<String, dynamic> json) => Order(
   startedPreparingAt: json['startedPreparingAt'] == null
       ? null
       : DateTime.parse(json['startedPreparingAt'] as String),
-  readyAt: json['readyAt'] == null
-      ? null
-      : DateTime.parse(json['readyAt'] as String),
-  completedAt: json['completedAt'] == null
-      ? null
-      : DateTime.parse(json['completedAt'] as String),
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
-      ? null
-      : DateTime.parse(json['updatedAt'] as String),
+  readyAt: json['readyAt'] == null ? null : DateTime.parse(json['readyAt'] as String),
+  completedAt: json['completedAt'] == null ? null : DateTime.parse(json['completedAt'] as String),
+  createdAt: json['createdAt'] == null ? null : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null ? null : DateTime.parse(json['updatedAt'] as String),
   id: json['id'] as String?,
   userId: json['userId'] as String?,
 );
@@ -72,9 +64,7 @@ OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => OrderItem(
     (k, e) => MapEntry(k, e as String),
   ),
   specialRequest: json['specialRequest'] as String?,
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
+  createdAt: json['createdAt'] == null ? null : DateTime.parse(json['createdAt'] as String),
   id: json['id'] as String?,
   userId: json['userId'] as String?,
 );

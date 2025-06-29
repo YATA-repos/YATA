@@ -8,8 +8,7 @@ class DailySummaryRepository extends BaseRepository<DailySummary, String> {
   DailySummaryRepository() : super(tableName: "daily_summaries");
 
   @override
-  DailySummary Function(Map<String, dynamic> json) get fromJson =>
-      DailySummary.fromJson;
+  DailySummary Function(Map<String, dynamic> json) get fromJson => DailySummary.fromJson;
 
   /// 指定日の集計を取得
   Future<DailySummary?> findByDate(DateTime targetDate, String userId) async {
@@ -23,10 +22,7 @@ class DailySummaryRepository extends BaseRepository<DailySummary, String> {
     // ユーザーIDと日付でフィルタ
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.eq(
-        "summary_date",
-        targetDateNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.eq("summary_date", targetDateNormalized.toIso8601String()),
     ];
 
     final List<DailySummary> results = await find(filters: filters, limit: 1);
@@ -40,11 +36,7 @@ class DailySummaryRepository extends BaseRepository<DailySummary, String> {
     String userId,
   ) async {
     // 開始日を日の開始時刻に、終了日を日の終了時刻に正規化
-    final DateTime dateFromNormalized = DateTime(
-      dateFrom.year,
-      dateFrom.month,
-      dateFrom.day,
-    );
+    final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
     final DateTime dateToNormalized = DateTime(
       dateTo.year,
       dateTo.month,
@@ -58,14 +50,8 @@ class DailySummaryRepository extends BaseRepository<DailySummary, String> {
     // ユーザーIDと日付範囲でフィルタ
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.gte(
-        "summary_date",
-        dateFromNormalized.toIso8601String(),
-      ),
-      QueryConditionBuilder.lte(
-        "summary_date",
-        dateToNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.gte("summary_date", dateFromNormalized.toIso8601String()),
+      QueryConditionBuilder.lte("summary_date", dateToNormalized.toIso8601String()),
     ];
 
     // 日付順でソート

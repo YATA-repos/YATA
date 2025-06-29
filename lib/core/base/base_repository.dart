@@ -17,10 +17,7 @@ typedef PrimaryKeyMap = Map<String, dynamic>;
 @loggerComponent
 abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   /// コンストラクタ
-  BaseRepository({
-    required this.tableName,
-    this.primaryKeyColumns = const <String>["id"],
-  });
+  BaseRepository({required this.tableName, this.primaryKeyColumns = const <String>["id"]});
 
   /// テーブル名
   final String tableName;
@@ -115,17 +112,13 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     try {
       logDebug("Creating entity in table: $tableName");
       final Map<String, dynamic> data = entity.toJson();
-      final List<Map<String, dynamic>> response = await _table
-          .insert(data)
-          .select();
+      final List<Map<String, dynamic>> response = await _table.insert(data).select();
 
       if (response.isNotEmpty) {
         logInfo("Entity created successfully in table: $tableName");
         return _fromJson(response[0]);
       }
-      logWarning(
-        "No response returned from entity creation in table: $tableName",
-      );
+      logWarning("No response returned from entity creation in table: $tableName");
       return null;
     } catch (e) {
       logError("Failed to create entity in table: $tableName", null, e);
@@ -143,15 +136,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
 
     try {
-      logDebug(
-        "Bulk creating ${entities.length} entities in table: $tableName",
-      );
-      final List<Map<String, dynamic>> dataList = entities
-          .map((T e) => e.toJson())
-          .toList();
-      final List<Map<String, dynamic>> response = await _table
-          .insert(dataList)
-          .select();
+      logDebug("Bulk creating ${entities.length} entities in table: $tableName");
+      final List<Map<String, dynamic>> dataList = entities.map((T e) => e.toJson()).toList();
+      final List<Map<String, dynamic>> response = await _table.insert(dataList).select();
 
       logInfo("Bulk created ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
@@ -205,11 +192,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      logError(
-        "Failed to get entity by primary key in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to get entity by primary key in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -243,10 +226,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   }
 
   /// 主キーマップによってエンティティを更新
-  Future<T?> updateByPrimaryKey(
-    PrimaryKeyMap keyMap,
-    Map<String, dynamic> updates,
-  ) async {
+  Future<T?> updateByPrimaryKey(PrimaryKeyMap keyMap, Map<String, dynamic> updates) async {
     try {
       logDebug("Updating entity by primary key in table: $tableName");
       final List<Map<String, dynamic>> response = await _applyPrimaryKey(
@@ -255,19 +235,13 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       ).select();
 
       if (response.isNotEmpty) {
-        logInfo(
-          "Entity updated successfully by primary key in table: $tableName",
-        );
+        logInfo("Entity updated successfully by primary key in table: $tableName");
         return _fromJson(response[0]);
       }
       logWarning("No entity updated by primary key in table: $tableName");
       return null;
     } catch (e) {
-      logError(
-        "Failed to update entity by primary key in table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to update entity by primary key in table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.updateFailed,
         params: <String, String>{"error": e.toString()},
@@ -296,15 +270,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     try {
       logDebug("Deleting entity by primary key from table: $tableName");
       await _applyPrimaryKey(_table.delete(), keyMap);
-      logInfo(
-        "Entity deleted successfully by primary key from table: $tableName",
-      );
+      logInfo("Entity deleted successfully by primary key from table: $tableName");
     } catch (e) {
-      logError(
-        "Failed to delete entity by primary key from table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to delete entity by primary key from table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -334,9 +302,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         // 複合主キーの場合は効率的な削除のためチャンク処理
         const int chunkSize = 100;
         for (int i = 0; i < keys.length; i += chunkSize) {
-          final int end = (i + chunkSize < keys.length)
-              ? i + chunkSize
-              : keys.length;
+          final int end = (i + chunkSize < keys.length) ? i + chunkSize : keys.length;
           final List<ID> chunk = keys.sublist(i, end);
 
           // 各チャンクを並列削除
@@ -350,16 +316,10 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
             }),
           );
         }
-        logInfo(
-          "Bulk deleted ${keys.length} entities with composite keys from table: $tableName",
-        );
+        logInfo("Bulk deleted ${keys.length} entities with composite keys from table: $tableName");
       }
     } catch (e) {
-      logError(
-        "Failed to bulk delete entities from table: $tableName",
-        null,
-        e,
-      );
+      logError("Failed to bulk delete entities from table: $tableName", null, e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -413,9 +373,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
 
     try {
-      logDebug(
-        "Listing entities from table: $tableName (limit: $limit, offset: $offset)",
-      );
+      logDebug("Listing entities from table: $tableName (limit: $limit, offset: $offset)");
       final List<Map<String, dynamic>> response = await _table.select().range(
         offset,
         offset + limit - 1,
@@ -449,14 +407,13 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
 
     try {
-      logDebug(
-        "Finding entities in table: $tableName (limit: $limit, offset: $offset)",
-      );
+      logDebug("Finding entities in table: $tableName (limit: $limit, offset: $offset)");
 
       // ベースクエリを構築
-      PostgrestTransformBuilder<List<Map<String, dynamic>>> query = _table
-          .select()
-          .range(offset, offset + limit - 1);
+      PostgrestTransformBuilder<List<Map<String, dynamic>>> query = _table.select().range(
+        offset,
+        offset + limit - 1,
+      );
 
       // フィルタ条件を適用
       if (filters != null && filters.isNotEmpty) {
@@ -495,10 +452,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         // 条件付きカウントの場合
         logDebug("Counting entities with condition in table: $tableName");
         final PostgrestFilterBuilder<dynamic> baseQuery = _table.select();
-        final PostgrestFilterBuilder<dynamic> query = QueryUtils.applyFilters(
-          baseQuery,
-          filters,
-        );
+        final PostgrestFilterBuilder<dynamic> query = QueryUtils.applyFilters(baseQuery, filters);
         final PostgrestResponse<dynamic> response = await query.count();
         logDebug("Counted ${response.count} entities in table: $tableName");
         return response.count;

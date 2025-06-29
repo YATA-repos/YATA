@@ -9,14 +9,12 @@ class MenuAvailabilityInfo {
   });
 
   /// JSONからオブジェクトを生成
-  factory MenuAvailabilityInfo.fromJson(Map<String, dynamic> json) =>
-      MenuAvailabilityInfo(
-        menuItemId: json["menu_item_id"] as String,
-        isAvailable: json["is_available"] as bool,
-        missingMaterials: (json["missing_materials"] as List<dynamic>)
-            .cast<String>(),
-        estimatedServings: json["estimated_servings"] as int?,
-      );
+  factory MenuAvailabilityInfo.fromJson(Map<String, dynamic> json) => MenuAvailabilityInfo(
+    menuItemId: json["menu_item_id"] as String,
+    isAvailable: json["is_available"] as bool,
+    missingMaterials: (json["missing_materials"] as List<dynamic>).cast<String>(),
+    estimatedServings: json["estimated_servings"] as int?,
+  );
 
   /// メニューアイテムID
   String menuItemId;

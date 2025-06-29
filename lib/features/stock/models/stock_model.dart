@@ -23,8 +23,7 @@ class StockTransaction extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory StockTransaction.fromJson(Map<String, dynamic> json) =>
-      _$StockTransactionFromJson(json);
+  factory StockTransaction.fromJson(Map<String, dynamic> json) => _$StockTransactionFromJson(json);
 
   /// 材料ID
   String materialId;
@@ -72,8 +71,7 @@ class Purchase extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory Purchase.fromJson(Map<String, dynamic> json) =>
-      _$PurchaseFromJson(json);
+  factory Purchase.fromJson(Map<String, dynamic> json) => _$PurchaseFromJson(json);
 
   /// 仕入れ日
   DateTime purchaseDate;
@@ -109,8 +107,7 @@ class PurchaseItem extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory PurchaseItem.fromJson(Map<String, dynamic> json) =>
-      _$PurchaseItemFromJson(json);
+  factory PurchaseItem.fromJson(Map<String, dynamic> json) => _$PurchaseItemFromJson(json);
 
   /// 仕入れID
   String purchaseId;
@@ -148,8 +145,7 @@ class StockAdjustment extends BaseModel {
   });
 
   /// JSONからインスタンスを作成
-  factory StockAdjustment.fromJson(Map<String, dynamic> json) =>
-      _$StockAdjustmentFromJson(json);
+  factory StockAdjustment.fromJson(Map<String, dynamic> json) => _$StockAdjustmentFromJson(json);
 
   /// 材料ID
   String materialId;

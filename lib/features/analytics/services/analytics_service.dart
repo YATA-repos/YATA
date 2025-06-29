@@ -16,24 +16,24 @@ class AnalyticsService with LoggerMixin {
     StockTransactionRepository? stockTransactionRepository,
   }) : _orderRepository = orderRepository ?? OrderRepository(),
        _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
-       _stockTransactionRepository =
-           stockTransactionRepository ?? StockTransactionRepository();
+       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
   final StockTransactionRepository _stockTransactionRepository;
 
   /// リアルタイム日次統計を取得
-  Future<DailyStatsResult> getRealTimeDailyStats(
-    DateTime targetDate,
-    String userId,
-  ) async {
+  Future<DailyStatsResult> getRealTimeDailyStats(DateTime targetDate, String userId) async {
     // 指定日の注文数を取得
-    final Map<OrderStatus, int> statusCounts = await _orderRepository
-        .countByStatusAndDate(targetDate, userId);
+    final Map<OrderStatus, int> statusCounts = await _orderRepository.countByStatusAndDate(
+      targetDate,
+      userId,
+    );
 
     // 完了注文を取得して売上計算
-    final List<dynamic> completedOrders = await _orderRepository
-        .findCompletedByDate(targetDate, userId);
+    final List<dynamic> completedOrders = await _orderRepository.findCompletedByDate(
+      targetDate,
+      userId,
+    );
     final int totalRevenue = completedOrders.fold(
       0,
       (int sum, dynamic order) => sum + (order.totalAmount as int),
@@ -55,11 +55,8 @@ class AnalyticsService with LoggerMixin {
         : null;
 
     // 最人気商品を取得
-    final List<Map<String, dynamic>> popularItems =
-        await getPopularItemsRanking(1, 1, userId);
-    final Map<String, dynamic>? mostPopularItem = popularItems.isNotEmpty
-        ? popularItems[0]
-        : null;
+    final List<Map<String, dynamic>> popularItems = await getPopularItemsRanking(1, 1, userId);
+    final Map<String, dynamic>? mostPopularItem = popularItems.isNotEmpty ? popularItems[0] : null;
 
     return DailyStatsResult(
       completedOrders: statusCounts[OrderStatus.completed] ?? 0,
@@ -81,9 +78,7 @@ class AnalyticsService with LoggerMixin {
         .getMenuItemSalesSummary(days, userId);
 
     // 上位N件を取得
-    final List<Map<String, dynamic>> topItems = salesSummary
-        .take(limit)
-        .toList();
+    final List<Map<String, dynamic>> topItems = salesSummary.take(limit).toList();
 
     // 結果を整形
     final List<Map<String, dynamic>> ranking = <Map<String, dynamic>>[];
@@ -111,19 +106,21 @@ class AnalyticsService with LoggerMixin {
     final DateTime startDate = endDate.subtract(Duration(days: days));
 
     // 完了注文を取得
-    final List<dynamic> completedOrders = await _orderRepository
-        .findOrdersByCompletionTimeRange(startDate, endDate, userId);
+    final List<dynamic> completedOrders = await _orderRepository.findOrdersByCompletionTimeRange(
+      startDate,
+      endDate,
+      userId,
+    );
 
     // 特定メニューアイテムの場合はフィルタ
     if (menuItemId != null) {
       // 該当メニューアイテムを含む注文のみ抽出
       final List<dynamic> filteredOrders = <dynamic>[];
       for (final dynamic order in completedOrders) {
-        final List<dynamic> orderItems = await _orderItemRepository
-            .findByOrderId(order.id as String);
-        final bool hasMenuItem = orderItems.any(
-          (dynamic item) => item.menuItemId == menuItemId,
+        final List<dynamic> orderItems = await _orderItemRepository.findByOrderId(
+          order.id as String,
         );
+        final bool hasMenuItem = orderItems.any((dynamic item) => item.menuItemId == menuItemId);
         if (hasMenuItem) {
           filteredOrders.add(order);
         }
@@ -151,10 +148,7 @@ class AnalyticsService with LoggerMixin {
   }
 
   /// 時間帯別注文分布を取得
-  Future<Map<int, int>> getHourlyOrderDistribution(
-    DateTime targetDate,
-    String userId,
-  ) async {
+  Future<Map<int, int>> getHourlyOrderDistribution(DateTime targetDate, String userId) async {
     // 指定日の全注文を取得
     final List<dynamic> orders = await _orderRepository.findByDateRange(
       targetDate,
@@ -185,11 +179,7 @@ class AnalyticsService with LoggerMixin {
     String userId,
   ) async {
     // 期間内の完了注文を取得
-    final List<dynamic> orders = await _orderRepository.findByDateRange(
-      dateFrom,
-      dateTo,
-      userId,
-    );
+    final List<dynamic> orders = await _orderRepository.findByDateRange(dateFrom, dateTo, userId);
     final List<dynamic> completedOrders = orders
         .where((dynamic order) => order.status == OrderStatus.completed)
         .toList();
@@ -200,9 +190,7 @@ class AnalyticsService with LoggerMixin {
       (int sum, dynamic order) => sum + (order.totalAmount as int),
     );
     final int totalOrders = completedOrders.length;
-    final double averageOrderValue = totalOrders > 0
-        ? totalRevenue / totalOrders
-        : 0.0;
+    final double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
 
     // 日別売上を計算
     final Map<String, int> dailyRevenue = <String, int>{};
@@ -210,8 +198,7 @@ class AnalyticsService with LoggerMixin {
       final String dateKey = order.completedAt != null
           ? (order.completedAt as DateTime).toIso8601String().split("T")[0]
           : (order.orderedAt as DateTime).toIso8601String().split("T")[0];
-      dailyRevenue[dateKey] =
-          (dailyRevenue[dateKey] ?? 0) + (order.totalAmount as int);
+      dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + (order.totalAmount as int);
     }
 
     return <String, dynamic>{
@@ -235,8 +222,12 @@ class AnalyticsService with LoggerMixin {
     final DateTime startDate = endDate.subtract(Duration(days: days));
 
     // 材料の消費取引を取得
-    final List<dynamic> transactions = await _stockTransactionRepository
-        .findByMaterialAndDateRange(materialId, startDate, endDate, userId);
+    final List<dynamic> transactions = await _stockTransactionRepository.findByMaterialAndDateRange(
+      materialId,
+      startDate,
+      endDate,
+      userId,
+    );
 
     // 消費取引のみを抽出（負の値）
     final List<dynamic> consumptionTransactions = transactions
@@ -255,13 +246,10 @@ class AnalyticsService with LoggerMixin {
           ? (tx.createdAt as DateTime).toIso8601String().split("T")[0]
           : DateTime.now().toIso8601String().split("T")[0];
       dailyConsumption[dateKey] =
-          (dailyConsumption[dateKey] ?? 0.0) +
-          (tx.changeAmount as double).abs();
+          (dailyConsumption[dateKey] ?? 0.0) + (tx.changeAmount as double).abs();
     }
 
-    final double averageDailyConsumption = days > 0
-        ? totalConsumed / days
-        : 0.0;
+    final double averageDailyConsumption = days > 0 ? totalConsumed / days : 0.0;
 
     return <String, dynamic>{
       "material_id": materialId,
@@ -284,8 +272,12 @@ class AnalyticsService with LoggerMixin {
     final DateTime startDate = endDate.subtract(Duration(days: days));
 
     // 指定メニューアイテムの注文明細を取得
-    final List<dynamic> orderItems = await _orderItemRepository
-        .findByMenuItemAndDateRange(menuItemId, startDate, endDate, userId);
+    final List<dynamic> orderItems = await _orderItemRepository.findByMenuItemAndDateRange(
+      menuItemId,
+      startDate,
+      endDate,
+      userId,
+    );
 
     // 売上統計を計算
     final int totalQuantity = orderItems.fold(
@@ -296,22 +288,17 @@ class AnalyticsService with LoggerMixin {
       0,
       (int sum, dynamic item) => sum + (item.subtotal as int),
     );
-    final double averagePrice = totalQuantity > 0
-        ? totalRevenue / totalQuantity
-        : 0.0;
+    final double averagePrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0.0;
 
     // 日別売上を計算
-    final Map<String, Map<String, int>> dailySales =
-        <String, Map<String, int>>{};
+    final Map<String, Map<String, int>> dailySales = <String, Map<String, int>>{};
     for (final dynamic item in orderItems) {
       final String dateKey = item.createdAt != null
           ? (item.createdAt as DateTime).toIso8601String().split("T")[0]
           : DateTime.now().toIso8601String().split("T")[0];
       dailySales[dateKey] ??= <String, int>{"quantity": 0, "revenue": 0};
-      dailySales[dateKey]!["quantity"] =
-          dailySales[dateKey]!["quantity"]! + (item.quantity as int);
-      dailySales[dateKey]!["revenue"] =
-          dailySales[dateKey]!["revenue"]! + (item.subtotal as int);
+      dailySales[dateKey]!["quantity"] = dailySales[dateKey]!["quantity"]! + (item.quantity as int);
+      dailySales[dateKey]!["revenue"] = dailySales[dateKey]!["revenue"]! + (item.subtotal as int);
     }
 
     return <String, dynamic>{
@@ -332,23 +319,17 @@ class AnalyticsService with LoggerMixin {
     String userId,
   ) async {
     // 対象日の統計を取得
-    final DailyStatsResult targetStats = await getRealTimeDailyStats(
-      targetDate,
-      userId,
-    );
+    final DailyStatsResult targetStats = await getRealTimeDailyStats(targetDate, userId);
 
     // 比較期間の統計を取得
-    final DateTime comparisonStart = targetDate.subtract(
-      Duration(days: comparisonDays),
-    );
+    final DateTime comparisonStart = targetDate.subtract(Duration(days: comparisonDays));
     final DateTime comparisonEnd = targetDate.subtract(const Duration(days: 1));
 
-    final Map<String, dynamic> comparisonRevenue =
-        await calculateRevenueByDateRange(
-          comparisonStart,
-          comparisonEnd,
-          userId,
-        );
+    final Map<String, dynamic> comparisonRevenue = await calculateRevenueByDateRange(
+      comparisonStart,
+      comparisonEnd,
+      userId,
+    );
 
     // トレンド計算
     final double avgDailyRevenue = comparisonDays > 0
@@ -362,9 +343,7 @@ class AnalyticsService with LoggerMixin {
         ? (comparisonRevenue["total_orders"] as int) / comparisonDays
         : 0.0;
     final double orderTrend = avgDailyOrders > 0
-        ? ((targetStats.completedOrders - avgDailyOrders) /
-              avgDailyOrders *
-              100)
+        ? ((targetStats.completedOrders - avgDailyOrders) / avgDailyOrders * 100)
         : 0.0;
 
     return <String, dynamic>{

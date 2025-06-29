@@ -8,17 +8,11 @@ class MaterialRepository extends BaseRepository<Material, String> {
   MaterialRepository() : super(tableName: "materials");
 
   @override
-  Material Function(Map<String, dynamic> json) get fromJson =>
-      Material.fromJson;
+  Material Function(Map<String, dynamic> json) get fromJson => Material.fromJson;
 
   /// カテゴリIDで材料を取得（None時は全件）
-  Future<List<Material>> findByCategoryId(
-    String? categoryId,
-    String userId,
-  ) async {
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
-    ];
+  Future<List<Material>> findByCategoryId(String? categoryId, String userId) async {
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
 
     if (categoryId != null) {
       filters.add(QueryConditionBuilder.eq("category_id", categoryId));
@@ -30,42 +24,29 @@ class MaterialRepository extends BaseRepository<Material, String> {
   /// アラート閾値を下回る材料を取得
   Future<List<Material>> findBelowAlertThreshold(String userId) async {
     // ユーザーIDでフィルタして全材料を取得
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
-    ];
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
     final List<Material> allMaterials = await find(filters: filters);
 
     // アラート閾値以下の材料をフィルタ
     return allMaterials
-        .where(
-          (Material material) =>
-              material.currentStock <= material.alertThreshold,
-        )
+        .where((Material material) => material.currentStock <= material.alertThreshold)
         .toList();
   }
 
   /// 緊急閾値を下回る材料を取得
   Future<List<Material>> findBelowCriticalThreshold(String userId) async {
     // ユーザーIDでフィルタして全材料を取得
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
-    ];
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
     final List<Material> allMaterials = await find(filters: filters);
 
     // 緊急閾値以下の材料をフィルタ
     return allMaterials
-        .where(
-          (Material material) =>
-              material.currentStock <= material.criticalThreshold,
-        )
+        .where((Material material) => material.currentStock <= material.criticalThreshold)
         .toList();
   }
 
   /// IDリストで材料を取得
-  Future<List<Material>> findByIds(
-    List<String> materialIds,
-    String userId,
-  ) async {
+  Future<List<Material>> findByIds(List<String> materialIds, String userId) async {
     if (materialIds.isEmpty) {
       return <Material>[];
     }
@@ -79,11 +60,7 @@ class MaterialRepository extends BaseRepository<Material, String> {
   }
 
   /// 材料の在庫量を更新
-  Future<Material?> updateStockAmount(
-    String materialId,
-    double newAmount,
-    String userId,
-  ) async {
+  Future<Material?> updateStockAmount(String materialId, double newAmount, String userId) async {
     // 対象材料を取得
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("id", materialId),
@@ -96,9 +73,7 @@ class MaterialRepository extends BaseRepository<Material, String> {
     }
 
     // 在庫量を更新
-    final Map<String, dynamic> updateData = <String, dynamic>{
-      "current_stock": newAmount,
-    };
+    final Map<String, dynamic> updateData = <String, dynamic>{"current_stock": newAmount};
     final Material? updatedMaterial = await updateById(materialId, updateData);
 
     return updatedMaterial;

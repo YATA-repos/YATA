@@ -10,14 +10,13 @@ class DailyStatsResult {
   });
 
   /// JSONからオブジェクトを生成
-  factory DailyStatsResult.fromJson(Map<String, dynamic> json) =>
-      DailyStatsResult(
-        completedOrders: json["completed_orders"] as int,
-        pendingOrders: json["pending_orders"] as int,
-        totalRevenue: json["total_revenue"] as int,
-        averagePrepTimeMinutes: json["average_prep_time_minutes"] as int?,
-        mostPopularItem: json["most_popular_item"] as Map<String, dynamic>?,
-      );
+  factory DailyStatsResult.fromJson(Map<String, dynamic> json) => DailyStatsResult(
+    completedOrders: json["completed_orders"] as int,
+    pendingOrders: json["pending_orders"] as int,
+    totalRevenue: json["total_revenue"] as int,
+    averagePrepTimeMinutes: json["average_prep_time_minutes"] as int?,
+    mostPopularItem: json["most_popular_item"] as Map<String, dynamic>?,
+  );
 
   /// 完了注文数
   int completedOrders;

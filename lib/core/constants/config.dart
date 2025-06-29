@@ -16,6 +16,5 @@ class Config {
   static String get supabaseAnonKey => dotenv.env["SUPABASE_ANON_KEY"] ?? "";
 
   /// Supabase認証コールバックURL
-  static String get supabaseAuthCallbackUrl =>
-      dotenv.env["SUPABASE_AUTH_CALLBACK_URL"] ?? "";
+  static String get supabaseAuthCallbackUrl => dotenv.env["SUPABASE_AUTH_CALLBACK_URL"] ?? "";
 }

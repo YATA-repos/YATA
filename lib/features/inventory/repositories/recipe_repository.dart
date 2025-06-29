@@ -11,10 +11,7 @@ class RecipeRepository extends BaseRepository<Recipe, String> {
   Recipe Function(Map<String, dynamic> json) get fromJson => Recipe.fromJson;
 
   /// メニューアイテムIDでレシピ一覧を取得
-  Future<List<Recipe>> findByMenuItemId(
-    String menuItemId,
-    String userId,
-  ) async {
+  Future<List<Recipe>> findByMenuItemId(String menuItemId, String userId) async {
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("menu_item_id", menuItemId),
       QueryConditionBuilder.eq("user_id", userId),
@@ -24,10 +21,7 @@ class RecipeRepository extends BaseRepository<Recipe, String> {
   }
 
   /// 材料IDを使用するレシピ一覧を取得
-  Future<List<Recipe>> findByMaterialId(
-    String materialId,
-    String userId,
-  ) async {
+  Future<List<Recipe>> findByMaterialId(String materialId, String userId) async {
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("material_id", materialId),
       QueryConditionBuilder.eq("user_id", userId),
@@ -37,10 +31,7 @@ class RecipeRepository extends BaseRepository<Recipe, String> {
   }
 
   /// 複数メニューアイテムのレシピを一括取得
-  Future<List<Recipe>> findByMenuItemIds(
-    List<String> menuItemIds,
-    String userId,
-  ) async {
+  Future<List<Recipe>> findByMenuItemIds(List<String> menuItemIds, String userId) async {
     if (menuItemIds.isEmpty) {
       return <Recipe>[];
     }

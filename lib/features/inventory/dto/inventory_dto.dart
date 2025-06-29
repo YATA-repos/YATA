@@ -12,15 +12,14 @@ class MaterialStockInfo {
   });
 
   /// JSONからオブジェクトを生成
-  factory MaterialStockInfo.fromJson(Map<String, dynamic> json) =>
-      MaterialStockInfo(
-        material: json["material"] as Material,
-        stockLevel: StockLevel.values.firstWhere(
-          (StockLevel level) => level.value == json["stock_level"] as String,
-        ),
-        estimatedUsageDays: json["estimated_usage_days"] as int?,
-        dailyUsageRate: json["daily_usage_rate"] as double?,
-      );
+  factory MaterialStockInfo.fromJson(Map<String, dynamic> json) => MaterialStockInfo(
+    material: json["material"] as Material,
+    stockLevel: StockLevel.values.firstWhere(
+      (StockLevel level) => level.value == json["stock_level"] as String,
+    ),
+    estimatedUsageDays: json["estimated_usage_days"] as int?,
+    dailyUsageRate: json["daily_usage_rate"] as double?,
+  );
 
   /// 材料情報
   Material material;
@@ -54,13 +53,12 @@ class MaterialUsageCalculation {
   });
 
   /// JSONからオブジェクトを生成
-  factory MaterialUsageCalculation.fromJson(Map<String, dynamic> json) =>
-      MaterialUsageCalculation(
-        materialId: json["material_id"] as String,
-        requiredAmount: json["required_amount"] as double,
-        availableAmount: json["available_amount"] as double,
-        isSufficient: json["is_sufficient"] as bool,
-      );
+  factory MaterialUsageCalculation.fromJson(Map<String, dynamic> json) => MaterialUsageCalculation(
+    materialId: json["material_id"] as String,
+    requiredAmount: json["required_amount"] as double,
+    availableAmount: json["available_amount"] as double,
+    isSufficient: json["is_sufficient"] as bool,
+  );
 
   /// 材料ID
   String materialId;

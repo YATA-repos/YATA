@@ -8,8 +8,7 @@ class PurchaseItemRepository extends BaseRepository<PurchaseItem, String> {
   PurchaseItemRepository() : super(tableName: "purchase_items");
 
   @override
-  PurchaseItem Function(Map<String, dynamic> json) get fromJson =>
-      PurchaseItem.fromJson;
+  PurchaseItem Function(Map<String, dynamic> json) get fromJson => PurchaseItem.fromJson;
 
   /// 仕入れIDで明細一覧を取得
   Future<List<PurchaseItem>> findByPurchaseId(String purchaseId) async {
@@ -26,7 +25,6 @@ class PurchaseItemRepository extends BaseRepository<PurchaseItem, String> {
   }
 
   /// 仕入れ明細を一括作成
-  Future<List<PurchaseItem>> createBatch(
-    List<PurchaseItem> purchaseItems,
-  ) async => bulkCreate(purchaseItems);
+  Future<List<PurchaseItem>> createBatch(List<PurchaseItem> purchaseItems) async =>
+      bulkCreate(purchaseItems);
 }

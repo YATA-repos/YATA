@@ -23,26 +23,17 @@ class OrderRepository extends BaseRepository<Order, String> {
       const OrderByCondition(column: "created_at", ascending: false),
     ];
 
-    final List<Order> results = await find(
-      filters: filters,
-      orderBy: orderBy,
-      limit: 1,
-    );
+    final List<Order> results = await find(filters: filters, orderBy: orderBy, limit: 1);
     return results.isNotEmpty ? results[0] : null;
   }
 
   /// 指定ステータスリストの注文一覧を取得
-  Future<List<Order>> findByStatusList(
-    List<OrderStatus> statusList,
-    String userId,
-  ) async {
+  Future<List<Order>> findByStatusList(List<OrderStatus> statusList, String userId) async {
     if (statusList.isEmpty) {
       return <Order>[];
     }
 
-    final List<String> statusValues = statusList
-        .map((OrderStatus status) => status.value)
-        .toList();
+    final List<String> statusValues = statusList.map((OrderStatus status) => status.value).toList();
 
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
@@ -86,17 +77,9 @@ class OrderRepository extends BaseRepository<Order, String> {
   }
 
   /// 期間指定で注文一覧を取得
-  Future<List<Order>> findByDateRange(
-    DateTime dateFrom,
-    DateTime dateTo,
-    String userId,
-  ) async {
+  Future<List<Order>> findByDateRange(DateTime dateFrom, DateTime dateTo, String userId) async {
     // 日付を正規化（日の開始と終了時刻に設定）
-    final DateTime dateFromNormalized = DateTime(
-      dateFrom.year,
-      dateFrom.month,
-      dateFrom.day,
-    );
+    final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
     final DateTime dateToNormalized = DateTime(
       dateTo.year,
       dateTo.month,
@@ -109,14 +92,8 @@ class OrderRepository extends BaseRepository<Order, String> {
 
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
-      QueryConditionBuilder.gte(
-        "ordered_at",
-        dateFromNormalized.toIso8601String(),
-      ),
-      QueryConditionBuilder.lte(
-        "ordered_at",
-        dateToNormalized.toIso8601String(),
-      ),
+      QueryConditionBuilder.gte("ordered_at", dateFromNormalized.toIso8601String()),
+      QueryConditionBuilder.lte("ordered_at", dateToNormalized.toIso8601String()),
     ];
 
     final List<OrderByCondition> orderBy = <OrderByCondition>[
@@ -127,16 +104,9 @@ class OrderRepository extends BaseRepository<Order, String> {
   }
 
   /// 指定日の完了注文を取得
-  Future<List<Order>> findCompletedByDate(
-    DateTime targetDate,
-    String userId,
-  ) async {
+  Future<List<Order>> findCompletedByDate(DateTime targetDate, String userId) async {
     // 日付を正規化（日の開始と終了時刻に設定）
-    final DateTime dateStart = DateTime(
-      targetDate.year,
-      targetDate.month,
-      targetDate.day,
-    );
+    final DateTime dateStart = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final DateTime dateEnd = DateTime(
       targetDate.year,
       targetDate.month,
@@ -163,16 +133,9 @@ class OrderRepository extends BaseRepository<Order, String> {
   }
 
   /// 指定日のステータス別注文数を取得
-  Future<Map<OrderStatus, int>> countByStatusAndDate(
-    DateTime targetDate,
-    String userId,
-  ) async {
+  Future<Map<OrderStatus, int>> countByStatusAndDate(DateTime targetDate, String userId) async {
     // 日付を正規化（日の開始と終了時刻に設定）
-    final DateTime dateStart = DateTime(
-      targetDate.year,
-      targetDate.month,
-      targetDate.day,
-    );
+    final DateTime dateStart = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final DateTime dateEnd = DateTime(
       targetDate.year,
       targetDate.month,
@@ -215,15 +178,7 @@ class OrderRepository extends BaseRepository<Order, String> {
 
     // 今日のユーザー注文を取得
     final DateTime todayStart = DateTime(today.year, today.month, today.day);
-    final DateTime todayEnd = DateTime(
-      today.year,
-      today.month,
-      today.day,
-      23,
-      59,
-      59,
-      999,
-    );
+    final DateTime todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59, 999);
 
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),

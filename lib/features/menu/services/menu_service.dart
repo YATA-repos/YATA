@@ -20,8 +20,7 @@ class MenuService with LoggerMixin {
     MaterialRepository? materialRepository,
     RecipeRepository? recipeRepository,
   }) : _menuItemRepository = menuItemRepository ?? MenuItemRepository(),
-       _menuCategoryRepository =
-           menuCategoryRepository ?? MenuCategoryRepository(),
+       _menuCategoryRepository = menuCategoryRepository ?? MenuCategoryRepository(),
        _materialRepository = materialRepository ?? MaterialRepository(),
        _recipeRepository = recipeRepository ?? RecipeRepository();
 
@@ -35,18 +34,13 @@ class MenuService with LoggerMixin {
       _menuCategoryRepository.findActiveOrdered(userId);
 
   /// カテゴリ別メニューアイテム一覧を取得
-  Future<List<MenuItem>> getMenuItemsByCategory(
-    String? categoryId,
-    String userId,
-  ) async => _menuItemRepository.findByCategoryId(categoryId, userId);
+  Future<List<MenuItem>> getMenuItemsByCategory(String? categoryId, String userId) async =>
+      _menuItemRepository.findByCategoryId(categoryId, userId);
 
   /// メニューアイテムを検索
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
     // まずユーザーのメニューアイテムを取得してから手動検索
-    final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(
-      null,
-      userId,
-    );
+    final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null, userId);
 
     // 手動でキーワード検索（Supabaseの制限回避）
     final List<MenuItem> matchingItems = <MenuItem>[];
@@ -54,9 +48,7 @@ class MenuService with LoggerMixin {
       if (keyword.toLowerCase().isNotEmpty &&
           (item.name.toLowerCase().contains(keyword.toLowerCase()) ||
               (item.description != null &&
-                  item.description!.toLowerCase().contains(
-                    keyword.toLowerCase(),
-                  )))) {
+                  item.description!.toLowerCase().contains(keyword.toLowerCase())))) {
         matchingItems.add(item);
       }
     }
@@ -93,10 +85,7 @@ class MenuService with LoggerMixin {
     }
 
     // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-      menuItemId,
-      userId,
-    );
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
 
     if (recipes.isEmpty) {
       // レシピがない場合は作成可能とみなす
@@ -113,9 +102,7 @@ class MenuService with LoggerMixin {
 
     for (final Recipe recipe in recipes) {
       // 材料を取得
-      final Material? material = await _materialRepository.getById(
-        recipe.materialId,
-      );
+      final Material? material = await _materialRepository.getById(recipe.materialId);
 
       if (material == null || material.userId != userId) {
         continue;
@@ -130,8 +117,7 @@ class MenuService with LoggerMixin {
 
       // 最大作成可能数を計算
       if (!recipe.isOptional && recipe.requiredAmount > 0) {
-        final int possibleServings = (availableAmount / recipe.requiredAmount)
-            .floor();
+        final int possibleServings = (availableAmount / recipe.requiredAmount).floor();
         maxServings = maxServings == double.infinity
             ? possibleServings.toDouble()
             : math.min(maxServings, possibleServings.toDouble());
@@ -142,8 +128,7 @@ class MenuService with LoggerMixin {
       maxServings = quantity.toDouble();
     }
 
-    final bool isAvailable =
-        missingMaterials.isEmpty && maxServings >= quantity;
+    final bool isAvailable = missingMaterials.isEmpty && maxServings >= quantity;
 
     return MenuAvailabilityInfo(
       menuItemId: menuItemId,
@@ -156,10 +141,7 @@ class MenuService with LoggerMixin {
   /// 在庫不足で販売不可なメニューアイテムIDを取得
   Future<List<String>> getUnavailableMenuItems(String userId) async {
     // 全メニューアイテムを取得
-    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(
-      null,
-      userId,
-    );
+    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null, userId);
 
     final List<String> unavailableItems = <String>[];
 
@@ -184,17 +166,11 @@ class MenuService with LoggerMixin {
   }
 
   /// 全メニューアイテムの在庫可否を一括チェック
-  Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(
-    String userId,
-  ) async {
+  Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(String userId) async {
     // 全メニューアイテムを取得
-    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(
-      null,
-      userId,
-    );
+    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null, userId);
 
-    final Map<String, MenuAvailabilityInfo> availabilityInfo =
-        <String, MenuAvailabilityInfo>{};
+    final Map<String, MenuAvailabilityInfo> availabilityInfo = <String, MenuAvailabilityInfo>{};
 
     for (final MenuItem menuItem in menuItems) {
       final MenuAvailabilityInfo availability = await checkMenuAvailability(
@@ -211,10 +187,7 @@ class MenuService with LoggerMixin {
   /// 現在の在庫で作れる最大数を計算
   Future<int> calculateMaxServings(String menuItemId, String userId) async {
     // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-      menuItemId,
-      userId,
-    );
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
 
     if (recipes.isEmpty) {
       // レシピがない場合は無制限とみなす（実際には業務ルールに依存）
@@ -229,17 +202,14 @@ class MenuService with LoggerMixin {
       }
 
       // 材料を取得
-      final Material? material = await _materialRepository.getById(
-        recipe.materialId,
-      );
+      final Material? material = await _materialRepository.getById(recipe.materialId);
 
       if (material == null || material.userId != userId) {
         continue;
       }
 
       if (recipe.requiredAmount > 0) {
-        final int possibleServings =
-            (material.currentStock / recipe.requiredAmount).floor();
+        final int possibleServings = (material.currentStock / recipe.requiredAmount).floor();
         maxServings = maxServings == double.infinity
             ? possibleServings.toDouble()
             : math.min(maxServings, possibleServings.toDouble());
@@ -256,19 +226,13 @@ class MenuService with LoggerMixin {
     String userId,
   ) async {
     // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-      menuItemId,
-      userId,
-    );
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
 
-    final List<MaterialUsageCalculation> calculations =
-        <MaterialUsageCalculation>[];
+    final List<MaterialUsageCalculation> calculations = <MaterialUsageCalculation>[];
 
     for (final Recipe recipe in recipes) {
       // 材料を取得
-      final Material? material = await _materialRepository.getById(
-        recipe.materialId,
-      );
+      final Material? material = await _materialRepository.getById(recipe.materialId);
 
       if (material == null || material.userId != userId) {
         continue;
@@ -304,15 +268,10 @@ class MenuService with LoggerMixin {
     }
 
     // 可否状態を更新
-    final Map<String, dynamic> updateData = <String, dynamic>{
-      "is_available": isAvailable,
-    };
+    final Map<String, dynamic> updateData = <String, dynamic>{"is_available": isAvailable};
 
     // 更新
-    final MenuItem? updatedItem = await _menuItemRepository.updateById(
-      menuItemId,
-      updateData,
-    );
+    final MenuItem? updatedItem = await _menuItemRepository.updateById(menuItemId, updateData);
     return updatedItem;
   }
 
@@ -337,24 +296,21 @@ class MenuService with LoggerMixin {
   }
 
   /// 在庫状況に基づいてメニューの販売可否を自動更新
-  Future<Map<String, bool>> autoUpdateMenuAvailabilityByStock(
-    String userId,
-  ) async {
+  Future<Map<String, bool>> autoUpdateMenuAvailabilityByStock(String userId) async {
     // 全メニューアイテムの在庫状況をチェック
-    final Map<String, MenuAvailabilityInfo> availabilityInfo =
-        await bulkCheckMenuAvailability(userId);
+    final Map<String, MenuAvailabilityInfo> availabilityInfo = await bulkCheckMenuAvailability(
+      userId,
+    );
 
     final Map<String, bool> updates = <String, bool>{};
     final Map<String, bool> results = <String, bool>{};
 
-    for (final MapEntry<String, MenuAvailabilityInfo> entry
-        in availabilityInfo.entries) {
+    for (final MapEntry<String, MenuAvailabilityInfo> entry in availabilityInfo.entries) {
       final String menuItemId = entry.key;
       final MenuAvailabilityInfo info = entry.value;
 
       // 在庫に基づく可否状態を決定
-      final bool shouldBeAvailable =
-          info.isAvailable && (info.estimatedServings ?? 0) > 0;
+      final bool shouldBeAvailable = info.isAvailable && (info.estimatedServings ?? 0) > 0;
 
       // 現在のメニューアイテムを取得して状態比較
       final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
