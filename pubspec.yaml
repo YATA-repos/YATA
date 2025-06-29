@@ -16,11 +16,16 @@ dependencies:
   flutter_riverpod: ^2.6.1
   shared_preferences: ^2.5.3
   path_provider: ^2.1.4
+  json_annotation: ^4.9.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
+  very_good_analysis: ^9.0.0
+  custom_lint: ^0.7.5
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.13
 
 flutter:
   uses-material-design: true

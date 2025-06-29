@@ -1,10 +1,20 @@
+import "package:json_annotation/json_annotation.dart";
+
 /// 支払い方法
+@JsonEnum()
 enum PaymentMethod {
-  cash('cash'),
-  card('card'),
-  other('other');
+  /// 現金支払い
+  cash("cash"),
+
+  /// クレジットカード・デビットカード支払い
+  card("card"),
+
+  /// 電子マネー・QRコード決済など、そのほかの方法
+  other("other");
 
   const PaymentMethod(this.value);
+
+  /// 支払い方法の値
   final String value;
 
   @override
@@ -12,13 +22,23 @@ enum PaymentMethod {
 }
 
 /// 取引タイプ
+@JsonEnum()
 enum TransactionType {
-  purchase('purchase'), // 仕入れ
-  sale('sale'), // 販売
-  adjustment('adjustment'), // 在庫調整
-  waste('waste'); // 廃棄
+  /// 仕入れ・(店側の)購入
+  purchase("purchase"),
+
+  /// 販売
+  sale("sale"),
+
+  /// 在庫の手動調整の誤差を修正するときなど
+  adjustment("adjustment"),
+
+  /// 廃棄
+  waste("waste");
 
   const TransactionType(this.value);
+
+  /// 取引タイプの値
   final String value;
 
   @override
@@ -28,24 +48,32 @@ enum TransactionType {
   String get displayName {
     switch (this) {
       case TransactionType.purchase:
-        return '仕入れ';
+        return "仕入れ";
       case TransactionType.sale:
-        return '販売';
+        return "販売";
       case TransactionType.adjustment:
-        return '在庫調整';
+        return "在庫調整";
       case TransactionType.waste:
-        return '廃棄';
+        return "廃棄";
     }
   }
 }
 
 /// 参照タイプ
+@JsonEnum()
 enum ReferenceType {
-  order('order'), // 注文
-  purchase('purchase'), // 仕入れ
-  adjustment('adjustment'); // 在庫調整
+  /// 注文
+  order("order"),
+
+  /// 仕入れ
+  purchase("purchase"),
+
+  /// 在庫調整
+  adjustment("adjustment");
 
   const ReferenceType(this.value);
+
+  /// 参照タイプの値
   final String value;
 
   @override
@@ -55,21 +83,30 @@ enum ReferenceType {
   String get displayName {
     switch (this) {
       case ReferenceType.order:
-        return '注文';
+        return "注文";
       case ReferenceType.purchase:
-        return '仕入れ';
+        return "仕入れ";
       case ReferenceType.adjustment:
-        return '在庫調整';
+        return "在庫調整";
     }
   }
 }
 
 /// 在庫管理の単位タイプ
+@JsonEnum()
 enum UnitType {
-  piece('piece'), // 個数管理（厳密）
-  gram('gram'); // グラム管理（目安 <- TODO: たまに実際に確認をさせないとだめ？それようの処理？）
+  /// 個数
+  piece("piece"),
+
+  // TODO(dev): グラム管理が目安であるなら、たまに実際に確認をさせないとだめ？そのための処理？
+  /// グラム。ただし、運用時に厳密に管理することは困難であるため、目安として使用
+  gram("gram");
+
+  // ?将来的には液体系、長さ系なども追加する可能性あり <- ただおそらくこれらもgramで統一管理可能ではある。
 
   const UnitType(this.value);
+
+  /// 在庫管理の単位の値
   final String value;
 
   @override
@@ -79,9 +116,9 @@ enum UnitType {
   String get displayName {
     switch (this) {
       case UnitType.piece:
-        return '個数';
+        return "個数";
       case UnitType.gram:
-        return 'グラム';
+        return "グラム";
     }
   }
 
@@ -89,20 +126,28 @@ enum UnitType {
   String get symbol {
     switch (this) {
       case UnitType.piece:
-        return '個';
+        return "個";
       case UnitType.gram:
-        return 'g';
+        return "g";
     }
   }
 }
 
-/// 在庫レベル
+/// 在庫レベル。あくまで段階を列挙するものであり、具体的な数値は商品によって異なるため、列挙しない。
+@JsonEnum()
 enum StockLevel {
-  sufficient('sufficient'), // 在庫あり（緑）
-  low('low'), // 在庫少（黄）
-  critical('critical'); // 緊急（赤）
+  /// 在庫あり（緑）
+  sufficient("sufficient"),
+
+  /// 在庫少（黄）
+  low("low"),
+
+  /// 緊急（赤）
+  critical("critical");
 
   const StockLevel(this.value);
+
+  /// 在庫レベルの値
   final String value;
 
   @override
@@ -112,11 +157,11 @@ enum StockLevel {
   String get displayName {
     switch (this) {
       case StockLevel.sufficient:
-        return '在庫あり';
+        return "在庫あり";
       case StockLevel.low:
-        return '在庫少';
+        return "在庫少";
       case StockLevel.critical:
-        return '緊急';
+        return "緊急";
     }
   }
 
@@ -125,22 +170,30 @@ enum StockLevel {
   String get colorName {
     switch (this) {
       case StockLevel.sufficient:
-        return 'green';
+        return "green";
       case StockLevel.low:
-        return 'yellow';
+        return "yellow";
       case StockLevel.critical:
-        return 'red';
+        return "red";
     }
   }
 }
 
 /// 注文ステータス
+@JsonEnum()
 enum OrderStatus {
-  preparing('preparing'), // 準備中
-  completed('completed'), // 完了
-  canceled('canceled'); // キャンセル
+  /// 準備中。オーダーが作成され、キッチンが未対応もしくは調理中である状態。
+  preparing("preparing"),
+
+  /// 完了。オーダー内の全てのアイテムが提供された状態。
+  completed("completed"),
+
+  /// キャンセル。オーダーがキャンセルされた状態。基本的にはオーダー作成後即座に割り当てられる想定。
+  canceled("canceled");
 
   const OrderStatus(this.value);
+
+  /// 注文ステータスの値
   final String value;
 
   @override
@@ -150,46 +203,52 @@ enum OrderStatus {
   String get displayName {
     switch (this) {
       case OrderStatus.preparing:
-        return '準備中';
+        return "準備中";
       case OrderStatus.completed:
-        return '完了';
+        return "完了";
       case OrderStatus.canceled:
-        return 'キャンセル';
+        return "キャンセル";
     }
   }
 
-  // TODO: ここはFlutterのColorオブジェクトを返すようにする
+  // TODO(ui): ここはFlutterのColorオブジェクトを返すようにする
   /// 注文ステータスに対応する色を取得（Flutter用）
   String get colorName {
     switch (this) {
       case OrderStatus.preparing:
-        return 'blue';
+        return "blue";
       case OrderStatus.completed:
-        return 'green';
+        return "green";
       case OrderStatus.canceled:
-        return 'red';
+        return "red";
     }
   }
 
   /// ステータスがアクティブかどうかを判定
-  bool get isActive {
-    return this == OrderStatus.preparing;
-  }
+  bool get isActive => this == OrderStatus.preparing;
 
   /// ステータスが完了しているかどうかを判定
-  bool get isFinished {
-    return this == OrderStatus.completed || this == OrderStatus.canceled;
-  }
+  bool get isFinished => this == OrderStatus.completed || this == OrderStatus.canceled;
 }
 
 /// ログレベル
+@JsonEnum()
 enum LogLevel {
-  debug('debug'),
-  info('info'),
-  warning('warning'),
-  error('error');
+  /// デバッグ。リリースには含まない。
+  debug("debug"),
+
+  /// 情報。リリースには含まない。
+  info("info"),
+
+  /// 警告。リリースにも含む。
+  warning("warning"),
+
+  /// エラー。リリースにも含む。
+  error("error");
 
   const LogLevel(this.value);
+
+  /// ログレベルの値
   final String value;
 
   @override
@@ -199,13 +258,13 @@ enum LogLevel {
   String get displayName {
     switch (this) {
       case LogLevel.debug:
-        return 'デバッグ';
+        return "デバッグ";
       case LogLevel.info:
-        return '情報';
+        return "情報";
       case LogLevel.warning:
-        return '警告';
+        return "警告";
       case LogLevel.error:
-        return 'エラー';
+        return "エラー";
     }
   }
 
@@ -224,9 +283,7 @@ enum LogLevel {
   }
 
   /// リリースビルドで保存するかどうか
-  bool get shouldPersistInRelease {
-    return this == LogLevel.warning || this == LogLevel.error;
-  }
+  bool get shouldPersistInRelease => this == LogLevel.warning || this == LogLevel.error;
 
   /// ログレベルの優先度（数値が大きいほど重要）
   int get priority {
