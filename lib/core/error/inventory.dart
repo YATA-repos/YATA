@@ -1,5 +1,7 @@
+import "../base/base_error_msg.dart";
+
 /// 在庫管理関連のエラーメッセージ定義
-enum InventoryError {
+enum InventoryError implements LogMessage {
   /// 在庫アイテムが見つからない
   itemNotFound,
 
@@ -24,7 +26,8 @@ enum InventoryError {
   /// 在庫レベルが危険域に達している
   stockLevelCritical;
 
-  /// 英語エラーメッセージを取得
+  /// エラーメッセージを取得
+  @override
   String get message {
     switch (this) {
       case InventoryError.itemNotFound:
@@ -45,35 +48,10 @@ enum InventoryError {
         return "Stock level is critically low";
     }
   }
-
-  /// 日本語エラーメッセージを取得
-  String get messageJa {
-    switch (this) {
-      case InventoryError.itemNotFound:
-        return "在庫アイテムが見つかりません";
-      case InventoryError.insufficientStock:
-        return "在庫不足です";
-      case InventoryError.expiredItem:
-        return "期限切れアイテムです";
-      case InventoryError.invalidQuantity:
-        return "無効な数量が指定されました";
-      case InventoryError.stockUpdateFailed:
-        return "在庫レベル更新に失敗しました";
-      case InventoryError.categoryNotFound:
-        return "在庫カテゴリが見つかりません";
-      case InventoryError.duplicateItem:
-        return "重複する在庫アイテムです";
-      case InventoryError.stockLevelCritical:
-        return "在庫レベルが危険域です";
-    }
-  }
-
-  /// 組み合わせメッセージ（英語 + 日本語）を取得
-  String get combinedMessage => "$message ($messageJa)";
 }
 
 /// 在庫管理関連の警告メッセージ定義
-enum InventoryWarning {
+enum InventoryWarning implements LogMessage {
   /// 在庫レベルが低下している
   stockLevelLow,
 
@@ -86,7 +64,8 @@ enum InventoryWarning {
   /// アイテムの再注文が必要
   reorderRequired;
 
-  /// 英語警告メッセージを取得
+  /// 警告メッセージを取得
+  @override
   String get message {
     switch (this) {
       case InventoryWarning.stockLevelLow:
@@ -99,21 +78,4 @@ enum InventoryWarning {
         return "Reorder required for item";
     }
   }
-
-  /// 日本語警告メッセージを取得
-  String get messageJa {
-    switch (this) {
-      case InventoryWarning.stockLevelLow:
-        return "在庫レベルが低下しています";
-      case InventoryWarning.expirationSoon:
-        return "アイテムの期限が近づいています";
-      case InventoryWarning.unusualConsumption:
-        return "異常な消費パターンを検出しました";
-      case InventoryWarning.reorderRequired:
-        return "アイテムの再注文が必要です";
-    }
-  }
-
-  /// 組み合わせメッセージ（英語 + 日本語）を取得
-  String get combinedMessage => "$message ($messageJa)";
 }

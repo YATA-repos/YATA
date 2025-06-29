@@ -78,7 +78,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      logError("Failed to find single entity in table: $tableName", null, e);
+      logError("Failed to find single entity in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -121,7 +121,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logWarning("No response returned from entity creation in table: $tableName");
       return null;
     } catch (e) {
-      logError("Failed to create entity in table: $tableName", null, e);
+      logError("Failed to create entity in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.insertFailed,
         params: <String, String>{"error": e.toString()},
@@ -143,7 +143,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logInfo("Bulk created ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
     } catch (e) {
-      logError("Failed to bulk create entities in table: $tableName", null, e);
+      logError("Failed to bulk create entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.insertFailed,
         params: <String, String>{"error": e.toString()},
@@ -168,7 +168,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      logError("Failed to get entity by ID in table: $tableName", null, e);
+      logError("Failed to get entity by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -192,7 +192,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Entity not found in table: $tableName");
       return null;
     } catch (e) {
-      logError("Failed to get entity by primary key in table: $tableName", null, e);
+      logError("Failed to get entity by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -217,7 +217,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logWarning("No entity updated in table: $tableName");
       return null;
     } catch (e) {
-      logError("Failed to update entity by ID in table: $tableName", null, e);
+      logError("Failed to update entity by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.updateFailed,
         params: <String, String>{"error": e.toString()},
@@ -241,7 +241,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logWarning("No entity updated by primary key in table: $tableName");
       return null;
     } catch (e) {
-      logError("Failed to update entity by primary key in table: $tableName", null, e);
+      logError("Failed to update entity by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.updateFailed,
         params: <String, String>{"error": e.toString()},
@@ -257,7 +257,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       await _applyPrimaryKey(_table.delete(), keyMap);
       logInfo("Entity deleted successfully from table: $tableName");
     } catch (e) {
-      logError("Failed to delete entity by ID from table: $tableName", null, e);
+      logError("Failed to delete entity by ID from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -272,7 +272,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       await _applyPrimaryKey(_table.delete(), keyMap);
       logInfo("Entity deleted successfully by primary key from table: $tableName");
     } catch (e) {
-      logError("Failed to delete entity by primary key from table: $tableName", null, e);
+      logError("Failed to delete entity by primary key from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -319,7 +319,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         logInfo("Bulk deleted ${keys.length} entities with composite keys from table: $tableName");
       }
     } catch (e) {
-      logError("Failed to bulk delete entities from table: $tableName", null, e);
+      logError("Failed to bulk delete entities from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
         params: <String, String>{"error": e.toString()},
@@ -382,7 +382,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Retrieved ${response.length} entities from table: $tableName");
       return response.map(_fromJson).toList();
     } catch (e) {
-      logError("Failed to list entities from table: $tableName", null, e);
+      logError("Failed to list entities from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -435,7 +435,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Found ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
     } catch (e) {
-      logError("Failed to find entities in table: $tableName", null, e);
+      logError("Failed to find entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -464,7 +464,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         return response;
       }
     } catch (e) {
-      logError("Failed to count entities in table: $tableName", null, e);
+      logError("Failed to count entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
