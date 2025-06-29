@@ -1,5 +1,6 @@
 import "dart:math" as math;
 
+import "../../../core/constants/log_enums/menu.dart";
 import "../../../core/utils/logger_mixin.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
@@ -29,6 +30,9 @@ class MenuService with LoggerMixin {
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
 
+  @override
+  String get loggerComponent => "MenuService";
+
   /// メニューカテゴリ一覧を取得
   Future<List<MenuCategory>> getMenuCategories(String userId) async =>
       _menuCategoryRepository.findActiveOrdered(userId);
@@ -39,21 +43,31 @@ class MenuService with LoggerMixin {
 
   /// メニューアイテムを検索
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
-    // まずユーザーのメニューアイテムを取得してから手動検索
-    final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null, userId);
+    logDebug("Started menu item search: keyword=\"$keyword\"");
 
-    // 手動でキーワード検索（Supabaseの制限回避）
-    final List<MenuItem> matchingItems = <MenuItem>[];
-    for (final MenuItem item in userItems) {
-      if (keyword.toLowerCase().isNotEmpty &&
-          (item.name.toLowerCase().contains(keyword.toLowerCase()) ||
-              (item.description != null &&
-                  item.description!.toLowerCase().contains(keyword.toLowerCase())))) {
-        matchingItems.add(item);
+    try {
+      // まずユーザーのメニューアイテムを取得してから手動検索
+      final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null, userId);
+
+      logDebug("Retrieved ${userItems.length} menu items for search");
+
+      // 手動でキーワード検索（Supabaseの制限回避）
+      final List<MenuItem> matchingItems = <MenuItem>[];
+      for (final MenuItem item in userItems) {
+        if (keyword.toLowerCase().isNotEmpty &&
+            (item.name.toLowerCase().contains(keyword.toLowerCase()) ||
+                (item.description != null &&
+                    item.description!.toLowerCase().contains(keyword.toLowerCase())))) {
+          matchingItems.add(item);
+        }
       }
-    }
 
-    return matchingItems;
+      logDebug("Menu search completed: ${matchingItems.length} items found");
+      return matchingItems;
+    } catch (e, stackTrace) {
+      logErrorMessage(MenuError.searchFailed, null, e, stackTrace);
+      rethrow;
+    }
   }
 
   /// メニューアイテムの在庫可否を詳細チェック
@@ -62,80 +76,103 @@ class MenuService with LoggerMixin {
     int quantity,
     String userId,
   ) async {
-    // メニューアイテムを取得
-    final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
+    logDebug("Checking menu availability: quantity=$quantity");
 
-    if (menuItem == null || menuItem.userId != userId) {
-      return MenuAvailabilityInfo(
-        menuItemId: menuItemId,
-        isAvailable: false,
-        missingMaterials: <String>["Menu item not found"],
-        estimatedServings: 0,
-      );
-    }
+    try {
+      // メニューアイテムを取得
+      final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
 
-    // メニューアイテムが無効になっている場合
-    if (!menuItem.isAvailable) {
-      return MenuAvailabilityInfo(
-        menuItemId: menuItemId,
-        isAvailable: false,
-        missingMaterials: <String>["Menu item disabled"],
-        estimatedServings: 0,
-      );
-    }
-
-    // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
-
-    if (recipes.isEmpty) {
-      // レシピがない場合は作成可能とみなす
-      return MenuAvailabilityInfo(
-        menuItemId: menuItemId,
-        isAvailable: true,
-        missingMaterials: <String>[],
-        estimatedServings: quantity,
-      );
-    }
-
-    final List<String> missingMaterials = <String>[];
-    double maxServings = double.infinity;
-
-    for (final Recipe recipe in recipes) {
-      // 材料を取得
-      final Material? material = await _materialRepository.getById(recipe.materialId);
-
-      if (material == null || material.userId != userId) {
-        continue;
+      if (menuItem == null || menuItem.userId != userId) {
+        logWarningMessage(MenuWarning.menuItemNotFound);
+        return MenuAvailabilityInfo(
+          menuItemId: menuItemId,
+          isAvailable: false,
+          missingMaterials: <String>["Menu item not found"],
+          estimatedServings: 0,
+        );
       }
 
-      final double requiredAmount = recipe.requiredAmount * quantity;
-      final double availableAmount = material.currentStock;
-
-      if (!recipe.isOptional && availableAmount < requiredAmount) {
-        missingMaterials.add(material.name);
+      // メニューアイテムが無効になっている場合
+      if (!menuItem.isAvailable) {
+        logInfoMessage(MenuInfo.menuItemDisabled, <String, String>{"itemName": menuItem.name});
+        return MenuAvailabilityInfo(
+          menuItemId: menuItemId,
+          isAvailable: false,
+          missingMaterials: <String>["Menu item disabled"],
+          estimatedServings: 0,
+        );
       }
 
-      // 最大作成可能数を計算
-      if (!recipe.isOptional && recipe.requiredAmount > 0) {
-        final int possibleServings = (availableAmount / recipe.requiredAmount).floor();
-        maxServings = maxServings == double.infinity
-            ? possibleServings.toDouble()
-            : math.min(maxServings, possibleServings.toDouble());
+      // レシピを取得
+      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+
+      if (recipes.isEmpty) {
+        // レシピがない場合は作成可能とみなす
+        logDebug(MenuDebug.noRecipesFound.message);
+        return MenuAvailabilityInfo(
+          menuItemId: menuItemId,
+          isAvailable: true,
+          missingMaterials: <String>[],
+          estimatedServings: quantity,
+        );
       }
+
+      logDebug("Checking ${recipes.length} recipes for availability");
+
+      final List<String> missingMaterials = <String>[];
+      double maxServings = double.infinity;
+
+      for (final Recipe recipe in recipes) {
+        // 材料を取得
+        final Material? material = await _materialRepository.getById(recipe.materialId);
+
+        if (material == null || material.userId != userId) {
+          continue;
+        }
+
+        final double requiredAmount = recipe.requiredAmount * quantity;
+        final double availableAmount = material.currentStock;
+
+        if (!recipe.isOptional && availableAmount < requiredAmount) {
+          missingMaterials.add(material.name);
+        }
+
+        // 最大作成可能数を計算
+        if (!recipe.isOptional && recipe.requiredAmount > 0) {
+          final int possibleServings = (availableAmount / recipe.requiredAmount).floor();
+          maxServings = maxServings == double.infinity
+              ? possibleServings.toDouble()
+              : math.min(maxServings, possibleServings.toDouble());
+        }
+      }
+
+      if (maxServings == double.infinity) {
+        maxServings = quantity.toDouble();
+      }
+
+      final bool isAvailable = missingMaterials.isEmpty && maxServings >= quantity;
+
+      if (!isAvailable) {
+        logDebug(
+          "Menu item not available: ${menuItem.name}, missing materials: ${missingMaterials.join(", ")}",
+        );
+      } else {
+        logInfoMessage(MenuInfo.menuItemEnabled, <String, String>{
+          "itemName": menuItem.name,
+          "maxServings": maxServings.round().toString(),
+        });
+      }
+
+      return MenuAvailabilityInfo(
+        menuItemId: menuItemId,
+        isAvailable: isAvailable,
+        missingMaterials: missingMaterials,
+        estimatedServings: maxServings.round(),
+      );
+    } catch (e, stackTrace) {
+      logErrorMessage(MenuError.availabilityCheckFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    if (maxServings == double.infinity) {
-      maxServings = quantity.toDouble();
-    }
-
-    final bool isAvailable = missingMaterials.isEmpty && maxServings >= quantity;
-
-    return MenuAvailabilityInfo(
-      menuItemId: menuItemId,
-      isAvailable: isAvailable,
-      missingMaterials: missingMaterials,
-      estimatedServings: maxServings.round(),
-    );
   }
 
   /// 在庫不足で販売不可なメニューアイテムIDを取得
@@ -260,19 +297,39 @@ class MenuService with LoggerMixin {
     bool isAvailable,
     String userId,
   ) async {
-    // メニューアイテムを取得
-    final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
+    logInfoMessage(MenuInfo.toggleAvailabilityStarted, <String, String>{
+      "isAvailable": isAvailable.toString(),
+    });
 
-    if (menuItem == null || menuItem.userId != userId) {
-      throw Exception("Menu item not found or access denied: $menuItemId");
+    try {
+      // メニューアイテムを取得
+      final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
+
+      if (menuItem == null || menuItem.userId != userId) {
+        logWarningMessage(MenuWarning.accessDenied);
+        throw Exception("Menu item not found or access denied: $menuItemId");
+      }
+
+      // 可否状態を更新
+      final Map<String, dynamic> updateData = <String, dynamic>{"is_available": isAvailable};
+
+      // 更新
+      final MenuItem? updatedItem = await _menuItemRepository.updateById(menuItemId, updateData);
+
+      if (updatedItem != null) {
+        logInfoMessage(MenuInfo.toggleAvailabilityCompleted, <String, String>{
+          "itemName": menuItem.name,
+          "status": isAvailable ? "available" : "unavailable",
+        });
+      } else {
+        logDebug("Failed to update menu item availability: ${menuItem.name}");
+      }
+
+      return updatedItem;
+    } catch (e, stackTrace) {
+      logErrorMessage(MenuError.toggleAvailabilityFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    // 可否状態を更新
-    final Map<String, dynamic> updateData = <String, dynamic>{"is_available": isAvailable};
-
-    // 更新
-    final MenuItem? updatedItem = await _menuItemRepository.updateById(menuItemId, updateData);
-    return updatedItem;
   }
 
   /// メニューアイテムの販売可否を一括更新
@@ -297,34 +354,48 @@ class MenuService with LoggerMixin {
 
   /// 在庫状況に基づいてメニューの販売可否を自動更新
   Future<Map<String, bool>> autoUpdateMenuAvailabilityByStock(String userId) async {
-    // 全メニューアイテムの在庫状況をチェック
-    final Map<String, MenuAvailabilityInfo> availabilityInfo = await bulkCheckMenuAvailability(
-      userId,
-    );
+    logInfo("Started auto-updating menu availability by stock");
 
-    final Map<String, bool> updates = <String, bool>{};
-    final Map<String, bool> results = <String, bool>{};
+    try {
+      // 全メニューアイテムの在庫状況をチェック
+      final Map<String, MenuAvailabilityInfo> availabilityInfo = await bulkCheckMenuAvailability(
+        userId,
+      );
 
-    for (final MapEntry<String, MenuAvailabilityInfo> entry in availabilityInfo.entries) {
-      final String menuItemId = entry.key;
-      final MenuAvailabilityInfo info = entry.value;
+      logDebug("Checked availability for ${availabilityInfo.length} menu items");
 
-      // 在庫に基づく可否状態を決定
-      final bool shouldBeAvailable = info.isAvailable && (info.estimatedServings ?? 0) > 0;
+      final Map<String, bool> updates = <String, bool>{};
+      final Map<String, bool> results = <String, bool>{};
 
-      // 現在のメニューアイテムを取得して状態比較
-      final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
+      for (final MapEntry<String, MenuAvailabilityInfo> entry in availabilityInfo.entries) {
+        final String menuItemId = entry.key;
+        final MenuAvailabilityInfo info = entry.value;
 
-      if (menuItem != null && menuItem.isAvailable != shouldBeAvailable) {
-        updates[menuItemId] = shouldBeAvailable;
+        // 在庫に基づく可否状態を決定
+        final bool shouldBeAvailable = info.isAvailable && (info.estimatedServings ?? 0) > 0;
+
+        // 現在のメニューアイテムを取得して状態比較
+        final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
+
+        if (menuItem != null && menuItem.isAvailable != shouldBeAvailable) {
+          updates[menuItemId] = shouldBeAvailable;
+        }
       }
-    }
 
-    // 一括更新
-    if (updates.isNotEmpty) {
-      results.addAll(await bulkUpdateMenuAvailability(updates, userId));
-    }
+      logDebug("Found ${updates.length} menu items requiring availability updates");
 
-    return results;
+      // 一括更新
+      if (updates.isNotEmpty) {
+        results.addAll(await bulkUpdateMenuAvailability(updates, userId));
+        logInfo("Auto-updated menu availability: ${results.length} items updated");
+      } else {
+        logInfo("No menu availability updates required");
+      }
+
+      return results;
+    } catch (e, stackTrace) {
+      logError("Failed to auto-update menu availability by stock", e, stackTrace);
+      rethrow;
+    }
   }
 }

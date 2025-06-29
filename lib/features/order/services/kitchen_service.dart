@@ -1,6 +1,7 @@
 import "dart:math" as math;
 
 import "../../../core/constants/enums.dart";
+import "../../../core/constants/log_enums/kitchen.dart";
 import "../../../core/utils/logger_mixin.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../models/order_model.dart";
@@ -22,6 +23,9 @@ class KitchenService with LoggerMixin {
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
   final MenuItemRepository _menuItemRepository;
+
+  @override
+  String get loggerComponent => "KitchenService";
 
   /// ステータス別進行中注文を取得
   Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(String userId) async {
@@ -68,48 +72,80 @@ class KitchenService with LoggerMixin {
 
   /// 注文の調理を開始
   Future<Order?> startOrderPreparation(String orderId, String userId) async {
-    final Order? order = await _orderRepository.getById(orderId);
-    if (order == null || order.userId != userId) {
-      throw Exception("Order $orderId not found or access denied");
+    logInfoMessage(KitchenInfo.preparationStarted);
+
+    try {
+      final Order? order = await _orderRepository.getById(orderId);
+      if (order == null || order.userId != userId) {
+        logErrorMessage(KitchenError.orderAccessDenied);
+        throw Exception("Order $orderId not found or access denied");
+      }
+
+      if (order.status != OrderStatus.preparing) {
+        logErrorMessage(KitchenError.orderNotInPreparingStatus);
+        throw Exception("Order is not in preparing status");
+      }
+
+      if (order.startedPreparingAt != null) {
+        logWarningMessage(KitchenWarning.preparationAlreadyStarted);
+        throw Exception("Order preparation already started");
+      }
+
+      // 調理開始時刻を記録
+      final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+        "started_preparing_at": DateTime.now().toIso8601String(),
+      });
+
+      if (updatedOrder != null) {
+        logInfoMessage(KitchenInfo.preparationStartedSuccessfully);
+      } else {
+        logWarningMessage(KitchenWarning.preparationStartFailed);
+      }
+
+      return updatedOrder;
+    } catch (e, stackTrace) {
+      logErrorMessage(KitchenError.startPreparationFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    if (order.status != OrderStatus.preparing) {
-      throw Exception("Order is not in preparing status");
-    }
-
-    if (order.startedPreparingAt != null) {
-      throw Exception("Order preparation already started");
-    }
-
-    // 調理開始時刻を記録
-    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
-      "started_preparing_at": DateTime.now().toIso8601String(),
-    });
-
-    return updatedOrder;
   }
 
   /// 注文の調理を完了
   Future<Order?> completeOrderPreparation(String orderId, String userId) async {
-    final Order? order = await _orderRepository.getById(orderId);
-    if (order == null || order.userId != userId) {
-      throw Exception("Order $orderId not found or access denied");
+    logInfoMessage(KitchenInfo.preparationCompletionStarted);
+
+    try {
+      final Order? order = await _orderRepository.getById(orderId);
+      if (order == null || order.userId != userId) {
+        logErrorMessage(KitchenError.orderAccessDenied);
+        throw Exception("Order $orderId not found or access denied");
+      }
+
+      if (order.startedPreparingAt == null) {
+        logErrorMessage(KitchenError.preparationNotStarted);
+        throw Exception("Order preparation not started");
+      }
+
+      if (order.readyAt != null) {
+        logWarningMessage(KitchenWarning.orderAlreadyCompleted);
+        throw Exception("Order already completed");
+      }
+
+      // 調理完了時刻を記録
+      final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+        "ready_at": DateTime.now().toIso8601String(),
+      });
+
+      if (updatedOrder != null) {
+        logInfoMessage(KitchenInfo.preparationCompletedSuccessfully);
+      } else {
+        logWarningMessage(KitchenWarning.preparationCompletionFailed);
+      }
+
+      return updatedOrder;
+    } catch (e, stackTrace) {
+      logErrorMessage(KitchenError.completePreparationFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    if (order.startedPreparingAt == null) {
-      throw Exception("Order preparation not started");
-    }
-
-    if (order.readyAt != null) {
-      throw Exception("Order already completed");
-    }
-
-    // 調理完了時刻を記録
-    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
-      "ready_at": DateTime.now().toIso8601String(),
-    });
-
-    return updatedOrder;
   }
 
   /// 注文を提供準備完了にマーク
@@ -119,26 +155,42 @@ class KitchenService with LoggerMixin {
 
   /// 注文を提供完了
   Future<Order?> deliverOrder(String orderId, String userId) async {
-    final Order? order = await _orderRepository.getById(orderId);
-    if (order == null || order.userId != userId) {
-      throw Exception("Order $orderId not found or access denied");
+    logInfoMessage(KitchenInfo.deliveryStarted);
+
+    try {
+      final Order? order = await _orderRepository.getById(orderId);
+      if (order == null || order.userId != userId) {
+        logErrorMessage(KitchenError.orderAccessDenied);
+        throw Exception("Order $orderId not found or access denied");
+      }
+
+      if (order.readyAt == null) {
+        logErrorMessage(KitchenError.orderNotReadyForDelivery);
+        throw Exception("Order not ready for delivery");
+      }
+
+      if (order.status == OrderStatus.completed) {
+        logWarningMessage(KitchenWarning.orderAlreadyDelivered);
+        throw Exception("Order already delivered");
+      }
+
+      // 提供完了
+      final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+        "status": OrderStatus.completed.value,
+        "completed_at": DateTime.now().toIso8601String(),
+      });
+
+      if (updatedOrder != null) {
+        logInfoMessage(KitchenInfo.deliverySuccessful);
+      } else {
+        logWarningMessage(KitchenWarning.deliveryFailed);
+      }
+
+      return updatedOrder;
+    } catch (e, stackTrace) {
+      logErrorMessage(KitchenError.deliverOrderFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    if (order.readyAt == null) {
-      throw Exception("Order not ready for delivery");
-    }
-
-    if (order.status == OrderStatus.completed) {
-      throw Exception("Order already delivered");
-    }
-
-    // 提供完了
-    final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
-      "status": OrderStatus.completed.value,
-      "completed_at": DateTime.now().toIso8601String(),
-    });
-
-    return updatedOrder;
   }
 
   /// 完成予定時刻を計算

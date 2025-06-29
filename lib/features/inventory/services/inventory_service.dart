@@ -1,6 +1,7 @@
 import "dart:math" as math;
 
 import "../../../core/constants/enums.dart";
+import "../../../core/constants/log_enums/service.dart";
 import "../../../core/utils/logger_mixin.dart";
 
 import "../../order/repositories/order_item_repository.dart";
@@ -44,14 +45,43 @@ class InventoryService with LoggerMixin {
   final PurchaseRepository _purchaseRepository;
   final PurchaseItemRepository _purchaseItemRepository;
   final StockAdjustmentRepository _stockAdjustmentRepository;
+
+  @override
+  String get loggerComponent => "InventoryService";
   final StockTransactionRepository _stockTransactionRepository;
   final OrderItemRepository _orderItemRepository;
 
   /// 材料を作成
   Future<Material?> createMaterial(Material material, String userId) async {
-    // ユーザーIDを設定
-    material.userId = userId;
-    return _materialRepository.create(material);
+    logInfoMessage(ServiceInfo.materialCreationStarted, <String, String>{
+      "materialName": material.name,
+    });
+
+    try {
+      // ユーザーIDを設定
+      material.userId = userId;
+      final Material? createdMaterial = await _materialRepository.create(material);
+
+      if (createdMaterial != null) {
+        logInfoMessage(ServiceInfo.materialCreationSuccessful, <String, String>{
+          "materialName": material.name,
+        });
+      } else {
+        logWarningMessage(ServiceWarning.creationFailed, <String, String>{
+          "entityType": "material: ${material.name}",
+        });
+      }
+
+      return createdMaterial;
+    } catch (e, stackTrace) {
+      logErrorMessage(
+        ServiceError.materialCreationFailed,
+        <String, String>{"materialName": material.name},
+        e,
+        stackTrace,
+      );
+      rethrow;
+    }
   }
 
   /// 材料カテゴリ一覧を取得
@@ -87,97 +117,143 @@ class InventoryService with LoggerMixin {
 
   /// 材料在庫を手動更新
   Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId) async {
-    // 材料を取得
-    final Material? material = await _materialRepository.getById(request.materialId);
-    if (material == null || material.userId != userId) {
-      throw Exception("Material not found or access denied");
-    }
-
-    // 在庫調整を記録
-    final double adjustmentAmount = request.newQuantity - material.currentStock;
-    final StockAdjustment adjustment = StockAdjustment(
-      materialId: request.materialId,
-      adjustmentAmount: adjustmentAmount,
-      notes: request.notes,
-      adjustedAt: DateTime.now(),
-      userId: userId,
-    );
-    await _stockAdjustmentRepository.create(adjustment);
-
-    // 在庫取引を記録
-    final StockTransaction transaction = StockTransaction(
-      materialId: request.materialId,
-      transactionType: TransactionType.adjustment,
-      changeAmount: adjustmentAmount,
-      referenceType: ReferenceType.adjustment,
-      referenceId: adjustment.id,
-      notes: request.reason,
-      userId: userId,
-    );
-    await _stockTransactionRepository.create(transaction);
-
-    // 材料の在庫を更新
-    material.currentStock = request.newQuantity;
-    return _materialRepository.updateById(material.id!, <String, dynamic>{
-      "current_stock": request.newQuantity,
+    logInfoMessage(ServiceInfo.stockUpdateStarted, <String, String>{
+      "newQuantity": request.newQuantity.toString(),
     });
+
+    try {
+      // 材料を取得
+      final Material? material = await _materialRepository.getById(request.materialId);
+      if (material == null || material.userId != userId) {
+        logWarningMessage(ServiceWarning.accessDenied);
+        throw Exception("Material not found or access denied");
+      }
+
+      final double oldStock = material.currentStock;
+      final double adjustmentAmount = request.newQuantity - oldStock;
+
+      logDebug(
+        "Stock adjustment: oldStock=$oldStock, newStock=${request.newQuantity}, adjustment=$adjustmentAmount",
+      );
+
+      // 在庫調整を記録
+      final StockAdjustment adjustment = StockAdjustment(
+        materialId: request.materialId,
+        adjustmentAmount: adjustmentAmount,
+        notes: request.notes,
+        adjustedAt: DateTime.now(),
+        userId: userId,
+      );
+      await _stockAdjustmentRepository.create(adjustment);
+
+      // 在庫取引を記録
+      final StockTransaction transaction = StockTransaction(
+        materialId: request.materialId,
+        transactionType: TransactionType.adjustment,
+        changeAmount: adjustmentAmount,
+        referenceType: ReferenceType.adjustment,
+        referenceId: adjustment.id,
+        notes: request.reason,
+        userId: userId,
+      );
+      await _stockTransactionRepository.create(transaction);
+
+      // 材料の在庫を更新
+      material.currentStock = request.newQuantity;
+      final Material? updatedMaterial = await _materialRepository.updateById(
+        material.id!,
+        <String, dynamic>{"current_stock": request.newQuantity},
+      );
+
+      logInfoMessage(ServiceInfo.stockUpdateSuccessful, <String, String>{
+        "materialName": material.name,
+      });
+      return updatedMaterial;
+    } catch (e, stackTrace) {
+      logErrorMessage(ServiceError.stockUpdateFailed, null, e, stackTrace);
+      rethrow;
+    }
   }
 
   /// 仕入れを記録し、在庫を増加
   Future<String?> recordPurchase(PurchaseRequest request, String userId) async {
-    // 仕入れを作成
-    final Purchase purchase = Purchase(
-      purchaseDate: request.purchaseDate,
-      notes: request.notes,
-      userId: userId,
-    );
-    final Purchase? createdPurchase = await _purchaseRepository.create(purchase);
+    logInfoMessage(ServiceInfo.purchaseRecordingStarted, <String, String>{
+      "itemCount": request.items.length.toString(),
+    });
 
-    if (createdPurchase?.id == null) {
-      throw Exception("Failed to create purchase");
-    }
-
-    // 仕入れ明細を作成
-    final List<PurchaseItem> purchaseItems = <PurchaseItem>[];
-    for (final PurchaseItemDto itemData in request.items) {
-      final PurchaseItem item = PurchaseItem(
-        purchaseId: createdPurchase!.id!,
-        materialId: itemData.materialId,
-        quantity: itemData.quantity,
+    try {
+      // 仕入れを作成
+      final Purchase purchase = Purchase(
+        purchaseDate: request.purchaseDate,
+        notes: request.notes,
         userId: userId,
       );
-      purchaseItems.add(item);
-    }
+      final Purchase? createdPurchase = await _purchaseRepository.create(purchase);
 
-    await _purchaseItemRepository.createBatch(purchaseItems);
+      if (createdPurchase?.id == null) {
+        logWarningMessage(ServiceWarning.purchaseCreationFailed);
+        throw Exception("Failed to create purchase");
+      }
 
-    // 各材料の在庫を増加し、取引を記録
-    final List<StockTransaction> transactions = <StockTransaction>[];
-    for (final PurchaseItemDto itemData in request.items) {
-      // 材料を取得して在庫更新
-      final Material? material = await _materialRepository.getById(itemData.materialId);
-      if (material != null && material.userId == userId) {
-        material.currentStock += itemData.quantity;
-        await _materialRepository.updateById(material.id!, <String, dynamic>{
-          "current_stock": material.currentStock,
-        });
+      logDebug("Purchase record created: ${createdPurchase!.id}");
 
-        // 取引記録を作成
-        final StockTransaction transaction = StockTransaction(
+      // 仕入れ明細を作成
+      final List<PurchaseItem> purchaseItems = <PurchaseItem>[];
+      for (final PurchaseItemDto itemData in request.items) {
+        final PurchaseItem item = PurchaseItem(
+          purchaseId: createdPurchase.id!,
           materialId: itemData.materialId,
-          transactionType: TransactionType.purchase,
-          changeAmount: itemData.quantity,
-          referenceType: ReferenceType.purchase,
-          referenceId: createdPurchase!.id!,
+          quantity: itemData.quantity,
           userId: userId,
         );
-        transactions.add(transaction);
+        purchaseItems.add(item);
       }
+
+      await _purchaseItemRepository.createBatch(purchaseItems);
+      logDebug("Purchase items created: ${purchaseItems.length} items");
+
+      // 各材料の在庫を増加し、取引を記録
+      final List<StockTransaction> transactions = <StockTransaction>[];
+      int updatedMaterials = 0;
+
+      for (final PurchaseItemDto itemData in request.items) {
+        // 材料を取得して在庫更新
+        final Material? material = await _materialRepository.getById(itemData.materialId);
+        if (material != null && material.userId == userId) {
+          final double oldStock = material.currentStock;
+          material.currentStock += itemData.quantity;
+          await _materialRepository.updateById(material.id!, <String, dynamic>{
+            "current_stock": material.currentStock,
+          });
+
+          updatedMaterials++;
+          logDebug(
+            "Material stock increased: ${material.name} from $oldStock to ${material.currentStock}",
+          );
+
+          // 取引記録を作成
+          final StockTransaction transaction = StockTransaction(
+            materialId: itemData.materialId,
+            transactionType: TransactionType.purchase,
+            changeAmount: itemData.quantity,
+            referenceType: ReferenceType.purchase,
+            referenceId: createdPurchase.id!,
+            userId: userId,
+          );
+          transactions.add(transaction);
+        }
+      }
+
+      await _stockTransactionRepository.createBatch(transactions);
+
+      logInfoMessage(ServiceInfo.purchaseRecordingSuccessful, <String, String>{
+        "materialCount": updatedMaterials.toString(),
+      });
+      return createdPurchase.id!;
+    } catch (e, stackTrace) {
+      logErrorMessage(ServiceError.purchaseRecordingFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    await _stockTransactionRepository.createBatch(transactions);
-
-    return createdPurchase!.id!;
   }
 
   /// 材料一覧を在庫レベル・使用可能日数付きで取得
@@ -309,13 +385,18 @@ class InventoryService with LoggerMixin {
 
   /// 注文に対する材料を消費（在庫減算）
   Future<bool> consumeMaterialsForOrder(String orderId, String userId) async {
+    logInfoMessage(ServiceInfo.materialConsumptionStarted);
+
     try {
       // 注文明細を取得
       final List<dynamic> orderItems = await _orderItemRepository.findByOrderId(orderId);
 
       if (orderItems.isEmpty) {
+        logDebug(ServiceDebug.consumptionCompletedSuccessfully.message);
         return true; // 注文明細がない場合は成功とみなす
       }
+
+      logDebug("Processing material consumption for ${orderItems.length} order items");
 
       // 注文明細から必要な材料を計算
       final Map<String, double> materialRequirements = <String, double>{};
@@ -335,8 +416,11 @@ class InventoryService with LoggerMixin {
         }
       }
 
+      logDebug("Material requirements calculated: ${materialRequirements.length} materials needed");
+
       // 各材料の在庫を減算し、取引を記録
       final List<StockTransaction> transactions = <StockTransaction>[];
+      int processedMaterials = 0;
 
       for (final MapEntry<String, double> entry in materialRequirements.entries) {
         final String materialId = entry.key;
@@ -348,9 +432,12 @@ class InventoryService with LoggerMixin {
           continue;
         }
 
+        final double oldStock = material.currentStock;
         // 在庫を減算
         final double newStock = material.currentStock - requiredAmount;
         material.currentStock = math.max(newStock, 0.0); // 負の在庫は0にする
+
+        logDebug("Material consumed: ${material.name} from $oldStock to ${material.currentStock}");
 
         // 材料を更新
         await _materialRepository.updateById(material.id!, <String, dynamic>{
@@ -368,6 +455,7 @@ class InventoryService with LoggerMixin {
           userId: userId,
         );
         transactions.add(transaction);
+        processedMaterials++;
       }
 
       // 取引を一括作成
@@ -375,14 +463,20 @@ class InventoryService with LoggerMixin {
         await _stockTransactionRepository.createBatch(transactions);
       }
 
+      logInfoMessage(ServiceInfo.materialConsumptionSuccessful, <String, String>{
+        "materialCount": processedMaterials.toString(),
+      });
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logErrorMessage(ServiceError.materialConsumptionFailed, null, e, stackTrace);
       return false;
     }
   }
 
   /// 注文キャンセル時の材料を復元（在庫復旧）
   Future<bool> restoreMaterialsForOrder(String orderId, String userId) async {
+    logInfoMessage(ServiceInfo.materialRestorationStarted);
+
     try {
       // 該当注文の消費取引を取得
       final List<StockTransaction> consumptionTransactions = await _stockTransactionRepository
@@ -396,11 +490,15 @@ class InventoryService with LoggerMixin {
           .toList();
 
       if (consumptionOnly.isEmpty) {
+        logDebug(ServiceDebug.restorationCompletedSuccessfully.message);
         return true; // 消費取引がない場合は成功とみなす
       }
 
+      logDebug("Found ${consumptionOnly.length} consumption transactions to restore");
+
       // 復元取引を作成
       final List<StockTransaction> restoreTransactions = <StockTransaction>[];
+      int restoredMaterials = 0;
 
       for (final StockTransaction transaction in consumptionOnly) {
         // 材料を取得
@@ -409,9 +507,12 @@ class InventoryService with LoggerMixin {
           continue;
         }
 
+        final double oldStock = material.currentStock;
         // 在庫を復元（消費量の絶対値を加算）
         final double restoreAmount = transaction.changeAmount.abs();
         material.currentStock += restoreAmount;
+
+        logDebug("Material restored: ${material.name} from $oldStock to ${material.currentStock}");
 
         // 材料を更新
         await _materialRepository.updateById(material.id!, <String, dynamic>{
@@ -429,6 +530,7 @@ class InventoryService with LoggerMixin {
           userId: userId,
         );
         restoreTransactions.add(restoreTransaction);
+        restoredMaterials++;
       }
 
       // 復元取引を一括作成
@@ -436,8 +538,12 @@ class InventoryService with LoggerMixin {
         await _stockTransactionRepository.createBatch(restoreTransactions);
       }
 
+      logInfoMessage(ServiceInfo.materialRestorationSuccessful, <String, String>{
+        "materialCount": restoredMaterials.toString(),
+      });
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logErrorMessage(ServiceError.materialRestorationFailed, null, e, stackTrace);
       return false;
     }
   }

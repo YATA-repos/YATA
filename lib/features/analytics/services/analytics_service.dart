@@ -1,4 +1,5 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/constants/log_enums/analytics.dart";
 import "../../../core/utils/logger_mixin.dart";
 
 import "../../order/repositories/order_item_repository.dart";
@@ -17,54 +18,75 @@ class AnalyticsService with LoggerMixin {
   }) : _orderRepository = orderRepository ?? OrderRepository(),
        _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
        _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
+
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
   final StockTransactionRepository _stockTransactionRepository;
 
+  @override
+  String get loggerComponent => "AnalyticsService";
+
   /// リアルタイム日次統計を取得
   Future<DailyStatsResult> getRealTimeDailyStats(DateTime targetDate, String userId) async {
-    // 指定日の注文数を取得
-    final Map<OrderStatus, int> statusCounts = await _orderRepository.countByStatusAndDate(
-      targetDate,
-      userId,
-    );
+    logInfoMessage(AnalyticsInfo.dailyStatsStarted);
 
-    // 完了注文を取得して売上計算
-    final List<dynamic> completedOrders = await _orderRepository.findCompletedByDate(
-      targetDate,
-      userId,
-    );
-    final int totalRevenue = completedOrders.fold(
-      0,
-      (int sum, dynamic order) => sum + (order.totalAmount as int),
-    );
+    try {
+      // 指定日の注文数を取得
+      final Map<OrderStatus, int> statusCounts = await _orderRepository.countByStatusAndDate(
+        targetDate,
+        userId,
+      );
 
-    // 平均調理時間を計算
-    final List<int> prepTimes = <int>[];
-    for (final dynamic order in completedOrders) {
-      if (order.startedPreparingAt != null && order.readyAt != null) {
-        final Duration delta = (order.readyAt as DateTime).difference(
-          order.startedPreparingAt as DateTime,
-        );
-        prepTimes.add((delta.inSeconds / 60).floor());
+      // 完了注文を取得して売上計算
+      final List<dynamic> completedOrders = await _orderRepository.findCompletedByDate(
+        targetDate,
+        userId,
+      );
+
+      logDebug("Retrieved ${completedOrders.length} completed orders for stats calculation");
+
+      final int totalRevenue = completedOrders.fold(
+        0,
+        (int sum, dynamic order) => sum + (order.totalAmount as int),
+      );
+
+      // 平均調理時間を計算
+      final List<int> prepTimes = <int>[];
+      for (final dynamic order in completedOrders) {
+        if (order.startedPreparingAt != null && order.readyAt != null) {
+          final Duration delta = (order.readyAt as DateTime).difference(
+            order.startedPreparingAt as DateTime,
+          );
+          prepTimes.add((delta.inSeconds / 60).floor());
+        }
       }
+
+      final int? averagePrepTime = prepTimes.isNotEmpty
+          ? (prepTimes.reduce((int a, int b) => a + b) / prepTimes.length).floor()
+          : null;
+
+      // 最人気商品を取得
+      final List<Map<String, dynamic>> popularItems = await getPopularItemsRanking(1, 1, userId);
+      final Map<String, dynamic>? mostPopularItem = popularItems.isNotEmpty
+          ? popularItems[0]
+          : null;
+
+      logInfoMessage(AnalyticsInfo.dailyStatsCompleted, <String, String>{
+        "totalRevenue": totalRevenue.toString(),
+        "totalOrders": completedOrders.length.toString(),
+      });
+
+      return DailyStatsResult(
+        completedOrders: statusCounts[OrderStatus.completed] ?? 0,
+        pendingOrders: statusCounts[OrderStatus.preparing] ?? 0,
+        totalRevenue: totalRevenue,
+        averagePrepTimeMinutes: averagePrepTime,
+        mostPopularItem: mostPopularItem,
+      );
+    } catch (e, stackTrace) {
+      logErrorMessage(AnalyticsError.dailyStatsRetrievalFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    final int? averagePrepTime = prepTimes.isNotEmpty
-        ? (prepTimes.reduce((int a, int b) => a + b) / prepTimes.length).floor()
-        : null;
-
-    // 最人気商品を取得
-    final List<Map<String, dynamic>> popularItems = await getPopularItemsRanking(1, 1, userId);
-    final Map<String, dynamic>? mostPopularItem = popularItems.isNotEmpty ? popularItems[0] : null;
-
-    return DailyStatsResult(
-      completedOrders: statusCounts[OrderStatus.completed] ?? 0,
-      pendingOrders: statusCounts[OrderStatus.preparing] ?? 0,
-      totalRevenue: totalRevenue,
-      averagePrepTimeMinutes: averagePrepTime,
-      mostPopularItem: mostPopularItem,
-    );
   }
 
   /// 人気商品ランキングを取得
@@ -73,26 +95,41 @@ class AnalyticsService with LoggerMixin {
     int limit,
     String userId,
   ) async {
-    // 売上集計を取得
-    final List<Map<String, dynamic>> salesSummary = await _orderItemRepository
-        .getMenuItemSalesSummary(days, userId);
+    logInfoMessage(AnalyticsInfo.popularItemsStarted, <String, String>{
+      "days": days.toString(),
+      "limit": limit.toString(),
+    });
 
-    // 上位N件を取得
-    final List<Map<String, dynamic>> topItems = salesSummary.take(limit).toList();
+    try {
+      // 売上集計を取得
+      final List<Map<String, dynamic>> salesSummary = await _orderItemRepository
+          .getMenuItemSalesSummary(days, userId);
 
-    // 結果を整形
-    final List<Map<String, dynamic>> ranking = <Map<String, dynamic>>[];
-    for (int i = 0; i < topItems.length; i++) {
-      final Map<String, dynamic> item = topItems[i];
-      ranking.add(<String, dynamic>{
-        "rank": i + 1,
-        "menu_item_id": item["menu_item_id"],
-        "total_quantity": item["total_quantity"],
-        "total_amount": item["total_amount"],
+      logDebug("Retrieved sales summary for ${salesSummary.length} menu items");
+
+      // 上位N件を取得
+      final List<Map<String, dynamic>> topItems = salesSummary.take(limit).toList();
+
+      // 結果を整形
+      final List<Map<String, dynamic>> ranking = <Map<String, dynamic>>[];
+      for (int i = 0; i < topItems.length; i++) {
+        final Map<String, dynamic> item = topItems[i];
+        ranking.add(<String, dynamic>{
+          "rank": i + 1,
+          "menu_item_id": item["menu_item_id"],
+          "total_quantity": item["total_quantity"],
+          "total_amount": item["total_amount"],
+        });
+      }
+
+      logInfoMessage(AnalyticsInfo.popularItemsCompleted, <String, String>{
+        "itemCount": ranking.length.toString(),
       });
+      return ranking;
+    } catch (e, stackTrace) {
+      logErrorMessage(AnalyticsError.popularItemsRetrievalFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    return ranking;
   }
 
   /// 平均調理時間を計算
@@ -178,37 +215,51 @@ class AnalyticsService with LoggerMixin {
     DateTime dateTo,
     String userId,
   ) async {
-    // 期間内の完了注文を取得
-    final List<dynamic> orders = await _orderRepository.findByDateRange(dateFrom, dateTo, userId);
-    final List<dynamic> completedOrders = orders
-        .where((dynamic order) => order.status == OrderStatus.completed)
-        .toList();
+    logInfoMessage(AnalyticsInfo.revenueCalculationStarted);
 
-    // 売上計算
-    final int totalRevenue = completedOrders.fold(
-      0,
-      (int sum, dynamic order) => sum + (order.totalAmount as int),
-    );
-    final int totalOrders = completedOrders.length;
-    final double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+    try {
+      // 期間内の完了注文を取得
+      final List<dynamic> orders = await _orderRepository.findByDateRange(dateFrom, dateTo, userId);
+      final List<dynamic> completedOrders = orders
+          .where((dynamic order) => order.status == OrderStatus.completed)
+          .toList();
 
-    // 日別売上を計算
-    final Map<String, int> dailyRevenue = <String, int>{};
-    for (final dynamic order in completedOrders) {
-      final String dateKey = order.completedAt != null
-          ? (order.completedAt as DateTime).toIso8601String().split("T")[0]
-          : (order.orderedAt as DateTime).toIso8601String().split("T")[0];
-      dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + (order.totalAmount as int);
+      logDebug("Found ${completedOrders.length} completed orders in date range");
+
+      // 売上計算
+      final int totalRevenue = completedOrders.fold(
+        0,
+        (int sum, dynamic order) => sum + (order.totalAmount as int),
+      );
+      final int totalOrders = completedOrders.length;
+      final double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+
+      // 日別売上を計算
+      final Map<String, int> dailyRevenue = <String, int>{};
+      for (final dynamic order in completedOrders) {
+        final String dateKey = order.completedAt != null
+            ? (order.completedAt as DateTime).toIso8601String().split("T")[0]
+            : (order.orderedAt as DateTime).toIso8601String().split("T")[0];
+        dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + (order.totalAmount as int);
+      }
+
+      logInfoMessage(AnalyticsInfo.revenueCalculationCompleted, <String, String>{
+        "totalRevenue": totalRevenue.toString(),
+        "totalOrders": totalOrders.toString(),
+      });
+
+      return <String, dynamic>{
+        "total_revenue": totalRevenue,
+        "total_orders": totalOrders,
+        "average_order_value": averageOrderValue,
+        "daily_breakdown": dailyRevenue,
+        "period_start": dateFrom.toIso8601String(),
+        "period_end": dateTo.toIso8601String(),
+      };
+    } catch (e, stackTrace) {
+      logErrorMessage(AnalyticsError.revenueCalculationFailed, null, e, stackTrace);
+      rethrow;
     }
-
-    return <String, dynamic>{
-      "total_revenue": totalRevenue,
-      "total_orders": totalOrders,
-      "average_order_value": averageOrderValue,
-      "daily_breakdown": dailyRevenue,
-      "period_start": dateFrom.toIso8601String(),
-      "period_end": dateTo.toIso8601String(),
-    };
   }
 
   /// 材料消費分析を取得
