@@ -1,8 +1,12 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 このファイルは、Claude Code (claude.ai/code) がこのリポジトリのコードを扱う際のガイダンスを提供します。これに厳密に従ってください。
+
+---
+
+## 1. プロジェクト基本情報
+
+### 1.1 基本指針
 
 **厳格に従いなさい:**
 
@@ -10,9 +14,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **自己宣伝やプロモーションを含むコードや、コメント、ドキュメント、コミットメッセージを使用・挿入しないこと(例: 「私の素晴らしい機能」、「このコミットメッセージはClaudeによって生成されました」など)**
 - **常に遠慮せず、自らの最大限の能力を発揮して、プロジェクトの品質向上に貢献すること**
 - **質問者・また自らに対して、常に批判的な視点を持ち、改善の余地を探ること**
-- **外部への接続や連携はMCP・ツールを使用すること。また、`tools_guide.md`の内容に厳格に従うこと**
+- **`rm -rf` や `git reset --hard` などの危険なコマンドは、絶対に使用しないこと。どうしても実行する必要があるなら、ユーザーに実行を依頼すること**
 
-## プロジェクト概要
+### 1.2 プロジェクト概要
 
 - **プロジェクト名**: YATA (日本語の「屋台(yatai)」から命名)
 - **プロジェクト概要**: 小規模レストラン向けの在庫・注文管理システム
@@ -27,44 +31,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Supabase バックエンド統合
   - クロスプラットフォーム対応
 
-## 開発環境・コマンド
+---
 
-### 依存関係管理
+## 2. 技術仕様
 
-```bash
-flutter pub get                 # 依存関係のインストール
-dart pub global activate build_runner  # build_runner の有効化
-```
+### 2.1 技術スタック
 
-### コード生成・ビルド
+#### 主要依存関係
 
-```bash
-dart run build_runner build           # コード生成（一回のみ）
-dart run build_runner watch          # コード生成（継続監視）
-```
+- **Flutter**: UI フレームワーク
+- **flutter_riverpod**: 状態管理
+- **supabase_flutter**: バックエンド（PostgreSQL）
+- **json_annotation/json_serializable**: JSON シリアライゼーション
+- **uuid**: UUID生成
+- **decimal**: 高精度数値計算
 
-### テスト・品質チェック
+#### 開発依存関係
 
-```bash
-flutter test                    # 全テスト実行
-flutter test --coverage       # カバレッジ付きテスト実行
-dart analyze                   # 静的解析
-dart format lib/ test/         # コードフォーマット
-```
+- **flutter_lints** + **very_good_analysis**: リント設定
+- **build_runner**: コード生成
+- **flutter_test**: テストフレームワーク
 
-### プラットフォーム別ビルド
+### 2.2 アーキテクチャ
 
-```bash
-flutter run                    # 開発実行
-flutter build apk              # Android APK
-flutter build web             # Web
-flutter build windows         # Windows
-flutter build linux           # Linux
-```
-
-## アーキテクチャ
-
-### 概要
+#### 概要
 
 このプロジェクトは、一言で表すなら、「**フィーチャーベースの『サービスレイヤー・アーキテクチャ』(Feature-based Service Layer Architecture)**」を採用しています。ただし、このアーキテクチャと類似しているClean Architectureとの明確な違いは、「依存性の逆転は使わず、UI→Service→Repositoryという直線的な依存関係にしている」点です。
 
@@ -74,9 +64,9 @@ flutter build linux           # Linux
 - サービスレイヤー・アーキテクチャ (Service Layer Architecture)
 - 直線的レイヤードアーキテクチャ (Linear Layered Architecture)
 
-### レイヤー構造(依存関係)
+#### レイヤー構造(依存関係)
 
-```
+```text
 UI Layer (Flutter Widgets/Pages)
     ↓
 Business Services Layer  
@@ -84,58 +74,130 @@ Business Services Layer
 Repository Layer (Data Access)
 ```
 
-### ディレクトリ構造
+#### ディレクトリ構造
 
-```
+```text
 lib/
-├── core/                     # コア機能
-│   ├── auth/                # 認証サービス
-│   ├── base/                # 基底クラス（BaseModel, BaseRepository）
-│   ├── constants/           # 定数・設定
-│   ├── error/               # エラー定義
-│   ├── infrastructure/      # インフラ（Supabase等）
-│   ├── sync/                # 同期機能
-│   └── utils/               # ユーティリティ（ログ、クエリ）
-├── features/                # 機能別ディレクトリ
-│   ├── analytics/           # 分析機能
-│   ├── inventory/           # 在庫管理
+├── main.dart                # アプリケーションエントリーポイント
+├── core/                    # コア機能
+│   ├── auth/               # 認証サービス
+│   ├── base/               # 基底クラス（BaseModel, BaseRepository）
+│   ├── constants/          # 定数・設定
+│   │   └── log_enums/      # ログ関連列挙型
+│   ├── infrastructure/     # インフラ層
+│   │   ├── offline/        # オフライン機能
+│   │   └── supabase/       # Supabase統合
+│   ├── sync/               # 同期機能
+│   │   └── models/         # 同期関連モデル
+│   └── utils/              # ユーティリティ（ログ、クエリ）
+├── features/               # 機能別ディレクトリ
+│   ├── analytics/          # 分析機能
+│   │   ├── dto/            # Data Transfer Objects
+│   │   ├── models/         # ドメインモデル
+│   │   ├── presentation/   # UI（providers, screens, widgets）
+│   │   ├── repositories/   # データアクセス
+│   │   └── services/       # ビジネスロジック
+│   ├── inventory/          # 在庫管理
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
 │   ├── menu/               # メニュー管理
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
 │   ├── order/              # 注文管理
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
 │   └── stock/              # 在庫機能
-│       ├── dto/            # Data Transfer Objects
-│       ├── models/         # ドメインモデル
-│       ├── presentation/   # UI（providers, screens, widgets）
-│       ├── repositories/   # データアクセス
-│       └── services/       # ビジネスロジック
+│       ├── dto/
+│       ├── models/
+│       ├── presentation/
+│       ├── repositories/
+│       └── services/
 ├── routing/                # ルーティング
-├── shared/                 # 共通UI要素
-└── main.dart
+└── shared/                 # 共通UI要素
+    ├── layouts/            # レイアウト
+    ├── themes/             # テーマ
+    └── widgets/            # ウィジェット
 ```
 
-### 重要な基底クラス
+#### 重要な基底クラス
 
 - `BaseModel`: JSON シリアライゼーション機能を持つモデル基底クラス
 - `BaseRepository<T>`: CRUD操作とフィルタリング機能を提供するリポジトリ基底クラス
 - 複雑なフィルタリングシステム（AND/OR クエリサポート）
 
-### DTOに関する注意点
+#### DTOに関する注意点
 
 - このプロジェクトにおけるDTOは、Entityとの変換を前提として**いません**。
 - このプロジェクトにおいて、DTOはデータ転送専用のオブジェクトです。高度なdictのように振る舞うことを目的としています。
 
-### コード生成パターン
+---
+
+## 3. 開発環境
+
+### 3.1 環境構築
+
+#### 依存関係管理
+
+```bash
+flutter pub get                 # 依存関係のインストール
+dart pub global activate build_runner  # build_runner の有効化
+```
+
+#### コード生成・ビルド
+
+```bash
+dart run build_runner build           # コード生成（一回のみ）
+dart run build_runner watch          # コード生成（継続監視）
+```
+
+#### コード生成パターン
 
 - `*.g.dart` ファイルは `json_serializable` で自動生成
 - モデルクラスには `@JsonSerializable()` アノテーション使用
 - 生成ファイルは `.gitignore` に含めず、バージョン管理対象
 
-## Git ワークフロー
+### 3.2 コマンド一覧
 
-### GitHub CLI の使用
+#### テスト・品質チェック
 
-- Issue や PR の作成には GitHub CLI (`gh`) を使用
+```bash
+flutter test                    # 全テスト実行
+flutter test --coverage       # カバレッジ付きテスト実行
+dart analyze                   # 静的解析
+dart format lib/ test/         # コードフォーマット
+```
 
-### コミット・プッシュガイドライン
+#### プラットフォーム別ビルド
+
+```bash
+flutter run                    # 開発実行
+flutter build apk              # Android APK
+flutter build web             # Web
+flutter build windows         # Windows
+flutter build linux           # Linux
+```
+
+---
+
+## 4. 開発ワークフロー
+
+### 4.1 Git ワークフロー
+
+#### GitHub操作に関する重要な指針
+
+- **Githubに関連する操作(PRの作成、レビュー、マージ、Issue関連など)は、MCP経由で行ってください。**
+- **PRには、必ず私(penne-0505)をassignee, reviewerに指定してください。**
+
+#### コミット・プッシュガイドライン
 
 1. **必ずテストとlintを実行してから**コミット
 
@@ -143,7 +205,7 @@ lib/
    dart analyze && dart format
    ```
 
-2. **コミットメッセージは日本語で記述**
+2. **コミットメッセージは英語で記述**
 3. **変更内容に応じた適切なプレフィックス使用**:
    - `feat:` 新機能
    - `fix:` バグ修正
@@ -153,134 +215,151 @@ lib/
    - `test:` テスト追加・修正
    - `chore:` その他のメンテナンス作業
 
-### 完全新規における開発フロー
+#### 開発フロー
 
 1. 機能ブランチ作成
 2. 実装とテスト
 3. `dart analyze` と `flutter test` でチェック
-4. 日本語でコミット
+4. 英語でコミット
 5. プルリクエスト作成（GitHub CLI推奨）
 
-## 技術スタック詳細
+### 4.2 Issue管理
 
-### 主要依存関係
+YATAプロジェクトでは、質の高いIssueの作成と効率的な管理を重視します。
 
-- **Flutter**: UI フレームワーク
-- **flutter_riverpod**: 状態管理
-- **supabase_flutter**: バックエンド（PostgreSQL）
-- **json_annotation/json_serializable**: JSON シリアライゼーション
-- **uuid**: UUID生成
-- **decimal**: 高精度数値計算
+#### 基本方針
 
-### 開発依存関係
+- 問題の背景と現状を詳細に記載
+- 具体的な解決策を明示
+- 受け入れ条件を明確に定義
+- 適切な優先度を設定
 
-- **flutter_lints** + **very_good_analysis**: リント設定
-- **build_runner**: コード生成
-- **flutter_test**: テストフレームワーク
+**詳細なガイドライン**: [`docs/guides/issue_guide.md`](./docs/guides/issue_guide.md) を参照してください。
 
-### Linter 設定
+### 4.3 タスク管理
+
+#### Todoist使用判定基準
+
+以下の条件に該当する場合は、**必ず**`./docs/guides/todoist_guide.md`に従ってTodoistでタスク管理を行うこと：
+
+#### 必須使用場面
+
+- **ユーザーから明示的な指示**: タスク管理、進捗追跡、計画立案を求められた場合
+- **複数ステップの開発作業**: 設計→実装→テスト→ドキュメント→レビューの流れを含む作業
+- **継続的管理が必要**: プロジェクト品質改善、段階的リファクタリング、ドキュメント体系整備
+
+#### 判定フローチャート
+
+```text
+1. ユーザーが明示的にタスク管理を求めた？ → YES: Todoist使用
+2. 作業予想時間が2時間を超える？ → YES: 次へ
+3. 3つ以上のステップが必要？ → YES: 次へ  
+4. 複数ファイル・機能への影響がある？ → YES: 次へ
+5. 継続的フォローアップが必要？ → YES: 次へ
+
+ステップ2-5で2つ以上該当 → Todoist使用
+1つ以下 → Claude Code内TodoWrite使用
+```
+
+#### 使用しない場面
+
+- 単発の質問・説明・コードレビュー
+- 30分以内で完了する軽微な修正
+- 一度限りの調査・技術相談
+
+---
+
+## 5. 品質・ドキュメント
+
+### 5.1 コード品質基準
+
+#### Linter 設定
 
 - 厳格な型チェック有効
 - public API にはドキュメントコメント必須
 - 生成ファイル（`*.g.dart`, `*.freezed.dart`）は解析除外
 
-## Issue作成ガイドライン
+#### 品質チェック手順
 
-このプロジェクトでは、質の高いIssueを作成するために以下のフォーマットを使用すること。
+1. **開発中**: `dart run build_runner watch` でコード生成を継続実行
+2. **コミット前**: 必ず `dart analyze && dart format && flutter test` を実行
+3. **PR作成前**: カバレッジ付きテスト実行で品質確認
 
-### Issue作成の基本方針
+### 5.2 ドキュメント管理
 
-1. **問題の背景と現状を詳細に記載**
-2. **具体的な解決策を明示**
-3. **受け入れ条件を明確に定義**
-4. **適切な優先度を設定**
+#### 基本方針
 
-### Issue作成フォーマット
+YATAプロジェクトでは、技術ドキュメントの品質と一貫性を重視します。ドキュメントは単なるAPIの仕様書ではなく、開発者が**「なぜ（Why）」**から理解し、正しく効果的に活用できるよう導くための**「ガイド」**です。
 
-#### 1. タイトル
+#### ドキュメント種別
 
-- 簡潔で具体的な内容を表現
-- 動詞を含む行動指向のタイトル
-- 例：「README.mdの再構成と内容の更新」「各Feature層のコードレビューと品質向上」
+- **ガイド型** (`docs/guides/`): 手順やベストプラクティス
+- **リファレンス型** (`docs/references/`): API仕様や技術詳細
 
-#### 2. 本文構成
+**詳細なガイドライン**: [`docs/guides/DOCUMENTATION_GUIDE.md`](./docs/guides/DOCUMENTATION_GUIDE.md) を参照してください。
 
-```markdown
-## 問題の概要
+---
 
-現在の状況と問題点を明確に記載。以下の観点を含める：
-- 何が問題なのか
-- なぜ問題なのか
-- 現在の状況の詳細
+## 6. ドキュメント参照
 
-## 現在の状況（必要に応じて）
+### 6.1 ガイドドキュメント（`docs/guides/`）
 
-具体的な現状を箇条書きで記載
+開発手順やベストプラクティスを説明するガイド型ドキュメント：
 
-## 解決すべき内容
+- **[DOCUMENTATION_GUIDE.md](./docs/guides/DOCUMENTATION_GUIDE.md)**: ドキュメント作成ガイドライン
+- **[issue_guide.md](./docs/guides/issue_guide.md)**: Issue作成フォーマットとベストプラクティス
+- **[logger_guide.md](./docs/guides/logger_guide.md)**: ログシステムの使用方法
+- **[todoist_guide.md](./docs/guides/todoist_guide.md)**: Todoistタスク管理ワークフロー
+- **[template_guide.md](./docs/guides/template_guide.md)**: ガイド型ドキュメント作成テンプレート
 
-### 1. カテゴリ別の具体的な作業項目
-- 実装すべき機能
-- 修正すべき問題
-- 改善すべき点
+### 6.2 リファレンスドキュメント（`docs/references/`）
 
-### 2. 技術的な要件
-- アーキテクチャ的な制約
-- パフォーマンス要件
-- 品質基準
+API仕様や技術詳細を記述するリファレンス型ドキュメント：
 
-## 対象ファイル（必要に応じて）
+#### コア機能
 
-影響を受けるファイルのリスト
+- **[base_repository.md](./docs/references/base_repository.md)**: BaseRepositoryクラスの詳細仕様
+- **[log_service.md](./docs/references/log_service.md)**: ログサービスAPI仕様
+- **[logger_mixin.md](./docs/references/logger_mixin.md)**: LoggerMixinの使用方法
+- **[query_utils.md](./docs/references/query_utils.md)**: クエリユーティリティ関数群
+- **[project_directory_tree.md](./docs/references/project_directory_tree.md)**: プロジェクト構造詳細
 
-## 受け入れ条件
+#### Repository層（`docs/references/repository/`）
 
-- [ ] チェックボックス形式で明確な完了条件を記載
-- [ ] 測定可能で検証可能な条件
-- [ ] 品質基準の明示
+- **[README.md](./docs/references/repository/README.md)**: Repository層の概要
+- **[analytics.md](./docs/references/repository/analytics.md)**: 分析機能Repository
+- **[inventory.md](./docs/references/repository/inventory.md)**: 在庫管理Repository  
+- **[menu.md](./docs/references/repository/menu.md)**: メニュー管理Repository
+- **[order.md](./docs/references/repository/order.md)**: 注文管理Repository
+- **[stock.md](./docs/references/repository/stock.md)**: 在庫機能Repository
 
-## 優先度
+#### Service層（`docs/references/service/`）
 
-High/Medium/Low + 理由を記載
-```
+- **[README.md](./docs/references/service/README.md)**: Service層の概要
+- **[analytics.md](./docs/references/service/analytics.md)**: 分析機能Service
+- **[inventory.md](./docs/references/service/inventory.md)**: 在庫管理Service
+- **[menu.md](./docs/references/service/menu.md)**: メニュー管理Service
+- **[order.md](./docs/references/service/order.md)**: 注文管理Service
 
-### 優先度設定ガイドライン
+#### 外部サービス
 
-- **High**: プロジェクトの進行に直接影響する重要な問題
-- **Medium**: 品質向上や将来的な保守性に関わる問題
-- **Low**: 細かい改善や最適化
+- **[Supabase_client_lib_docs.md](./docs/references/supabase_client_document/Supabase_client_lib_docs.md)**: Supabaseクライアント仕様
 
-### Issue作成時の注意点
+#### テンプレート
 
-1. **プロジェクトの文脈を考慮**
-   - レストラン在庫管理システムとしての特性
-   - Flutter/Dartの技術的制約
-   - 移植プロジェクトとしての背景
+- **[template_reference.md](./docs/references/template_reference.md)**: リファレンス型ドキュメント作成テンプレート
 
-2. **具体性を重視**
-   - 抽象的な表現は避ける
-   - 具体的なファイル名やクラス名を含める
-   - 実装方法の提案を含める
+### 6.3 ドキュメント活用のガイドライン
 
-3. **品質基準の明確化**
-   - コードの品質
-   - テストの充実度
-   - ドキュメントの完成度
+- **開発開始時**: プロジェクト理解のため、このCLAUDE.mdから開始
+- **機能実装時**: 該当する機能のService/Repositoryリファレンスを参照
+- **問題発生時**: トラブルシューティングのためガイドドキュメントを確認
+- **新規ドキュメント作成時**: 適切なテンプレートを使用
 
-4. **業界特有の要件**
-   - レストラン業界の特性
-   - ユーザビリティの考慮
-   - アクセシビリティの配慮
+---
 
-### Issue作成のベストプラクティス
+## 重要な指示
 
-- **事前調査の実施**: 現状のコードを十分に理解してから作成
-- **関連Issueの確認**: 重複や依存関係の整理
-- **段階的な作業分割**: 大きな作業は複数のIssueに分割
-- **レビュー可能な単位**: 一つのIssueで完結する作業範囲
-
-このフォーマットに従うことで、プロジェクトの品質向上と効率的な開発進行を実現できます。
-
-## ドキュメンテーション、docs作成ガイドライン
-
-`docs/DOCUMENTATION_GUIDE.md` を参照して、これに従ってください。
+- この文書の内容に従い、プロジェクトの品質向上に最大限貢献してください
+- 不明な点があれば、上記リンク集から関連するドキュメントを参照してください
+- 常に批判的な視点を持ち、改善の機会を見つけてください
