@@ -53,6 +53,10 @@ __temp/
 _old_py_project/
 _old_py_docs/
 docs/
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
 
 # dotenv
 .env
