@@ -2,6 +2,7 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
 import "log_service.dart";
 
+// ! 静的メソッドのためLoggerMixinは使用不可
 class QueryUtils {
   QueryUtils._();
 
@@ -35,12 +36,10 @@ class QueryUtils {
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
-      // ! LoggerMixinが使われていない
       LogService.error("QueryUtils", "Unsupported operator: ${condition.operator}");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
-    // ! LoggerMixinが使われていない
     LogService.debug(
       "QueryUtils",
       "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
@@ -58,7 +57,6 @@ class QueryUtils {
     if (condition.operator == FilterOperator.inList ||
         condition.operator == FilterOperator.notInList) {
       if (condition.value is! List) {
-        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "List type value required for ${condition.operator} operator",
@@ -111,7 +109,7 @@ class QueryUtils {
       case FilterOperator.inList:
       case FilterOperator.notInList:
         // これらは上記で処理済み
-        // ! LoggerMixinが使われていない
+
         LogService.error(
           "QueryUtils",
           "This operator should be handled in preprocessing: ${condition.operator}",
@@ -126,7 +124,6 @@ class QueryUtils {
 
     for (final FilterCondition condition in conditions) {
       if (!_operatorMethodMap.containsKey(condition.operator)) {
-        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "Unsupported operator in OR condition: ${condition.operator}",
@@ -142,7 +139,6 @@ class QueryUtils {
         orParts.add("${condition.column}.not.is.null");
       } else if (condition.operator == FilterOperator.inList) {
         if (condition.value is! List) {
-          // ! LoggerMixinが使われていない
           LogService.error(
             "QueryUtils",
             "List type value required for inList operator",
@@ -155,7 +151,6 @@ class QueryUtils {
         orParts.add("${condition.column}.in.($valueStr)");
       } else if (condition.operator == FilterOperator.notInList) {
         if (condition.value is! List) {
-          // ! LoggerMixinが使われていない
           LogService.error(
             "QueryUtils",
             "List type value required for notInList operator",
@@ -186,7 +181,6 @@ class QueryUtils {
     } else if (condition is ComplexCondition) {
       return _applyComplexCondition(query, condition);
     } else {
-      // ! LoggerMixinが使われていない
       LogService.error(
         "QueryUtils",
         "Unknown logical condition type: ${condition.runtimeType}",
@@ -227,7 +221,6 @@ class QueryUtils {
           }
         }
       } else {
-        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "Unsupported condition type in OR: ${cond.runtimeType}",
@@ -242,7 +235,7 @@ class QueryUtils {
     }
 
     final String orString = _buildOrConditionString(filterConditions);
-    // ! LoggerMixinが使われていない
+
     LogService.debug("QueryUtils", "Applying OR condition: $orString");
     return query.or(orString);
   }
@@ -269,7 +262,6 @@ class QueryUtils {
     } else if (filter is LogicalCondition) {
       return _applyLogicalCondition(query, filter);
     } else {
-      // ! LoggerMixinが使われていない
       LogService.error(
         "QueryUtils",
         "Unsupported filter type: ${filter.runtimeType}",
@@ -284,7 +276,6 @@ class QueryUtils {
     PostgrestFilterBuilder<dynamic> query,
     List<QueryFilter> filters,
   ) {
-    // ! LoggerMixinが使われていない
     LogService.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
     PostgrestFilterBuilder<dynamic> result = query;
     for (final QueryFilter filter in filters) {
@@ -298,7 +289,6 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     OrderByCondition orderBy,
   ) {
-    // ! LoggerMixinが使われていない
     LogService.debug(
       "QueryUtils",
       "Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}",
@@ -311,7 +301,6 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
-    // ! LoggerMixinが使われていない
     LogService.debug("QueryUtils", "Applying ${orderBys.length} order by conditions");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
