@@ -10,11 +10,7 @@ import "base_model.dart";
 /// プライマリキー
 typedef PrimaryKeyMap = Map<String, dynamic>;
 
-// ! documentation stringの書き方が間違ってる
 /// ベースCRUDリポジトリ抽象クラス
-///
-/// [T] モデル型（BaseModelを継承し、toJson/fromJsonメソッドを持つ）
-/// [ID] 単一主キーの型（String, int など）
 abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   BaseRepository({required this.tableName, this.primaryKeyColumns = const <String>["id"]});
 
@@ -52,7 +48,8 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
     // 単一値の場合、主キーカラムが1つであることを確認
     if (primaryKeyColumns.length != 1) {
-      // ! LoggerMixinが使われていない
+      // TODO: この場合用のエラー種を定義する
+      logError("複合主キーを使用する場合は、Map<String, dynamic>形式でキーを指定してください");
       throw ArgumentError("複合主キーにはMap<String, dynamic>形式でキーを指定してください");
     }
 
@@ -373,7 +370,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       return response.count > 0;
       // ? エラーハンドリング詳細化？
     } catch (e) {
-      // ! LoggerMixinが使われていない
+      logError("Failed to check entity existence by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -392,7 +389,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       return response.count > 0;
       // ? エラーハンドリング詳細化？
     } catch (e) {
-      // ! LoggerMixinが使われていない
+      logError("Failed to check entity existence by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -431,13 +428,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
   }
 
-  // ! documentation stringの書き方が間違ってる
-  /// 条件によってエンティティを検索
-  ///
-  /// [filters] フィルタ条件のリスト
-  /// [orderBy] ソート条件のリスト
-  /// [limit] 取得する件数の上限
-  /// [offset] 取得開始位置
+  /// 条件によってエンティティを検索する
   Future<List<T>> find({
     List<QueryFilter>? filters,
     List<OrderByCondition>? orderBy,
@@ -487,10 +478,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
   }
 
-  // ! documentation stringの書き方が間違ってる
-  /// 条件に一致するエンティティの数を取得
-  ///
-  /// [filters] フィルタ条件のリスト
+  /// 条件に一致するエンティティの数を取得する
   Future<int> count({List<QueryFilter>? filters}) async {
     try {
       if (filters != null && filters.isNotEmpty) {
