@@ -2,9 +2,7 @@ import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/menu_model.dart";
 
-/// メニューカテゴリリポジトリ
 class MenuCategoryRepository extends BaseRepository<MenuCategory, String> {
-  /// コンストラクタ
   MenuCategoryRepository() : super(tableName: "menu_categories");
 
   @override

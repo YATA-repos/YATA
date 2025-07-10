@@ -11,7 +11,6 @@ part "base_model.g.dart";
 /// - tableNameゲッター
 @JsonSerializable()
 abstract class BaseModel {
-  /// コンストラクタ
   BaseModel({this.id, this.userId});
 
   /// テーブル名を取得（サブクラスで実装）

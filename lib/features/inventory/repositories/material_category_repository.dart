@@ -4,7 +4,6 @@ import "../models/inventory_model.dart";
 
 /// 材料カテゴリリポジトリ
 class MaterialCategoryRepository extends BaseRepository<MaterialCategory, String> {
-  /// コンストラクタ
   MaterialCategoryRepository() : super(tableName: "material_categories");
 
   @override

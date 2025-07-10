@@ -7,6 +7,7 @@ import "../constants/log_enums/auth.dart";
 import "../utils/log_service.dart";
 import "../utils/logger_mixin.dart";
 
+// * 静的メソッドはLoggerMixinを使用できないため、一部ではLogServiceを直接使用
 class SupabaseClientService with LoggerMixin {
   SupabaseClientService._();
   static SupabaseClientService? _instance;
@@ -245,7 +246,6 @@ class SupabaseClientService with LoggerMixin {
 
 /// Supabaseクライアント関連の汎用例外
 class SupabaseClientException implements Exception {
-  /// コンストラクタ
   const SupabaseClientException(this.message);
 
   /// エラーメッセージ
@@ -257,7 +257,6 @@ class SupabaseClientException implements Exception {
 
 /// Supabase認証関連の例外
 class SupabaseAuthException implements Exception {
-  /// コンストラクタ
   const SupabaseAuthException(this.message);
 
   /// エラーメッセージ

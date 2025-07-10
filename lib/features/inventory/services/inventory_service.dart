@@ -21,7 +21,6 @@ import "../repositories/recipe_repository.dart";
 /// 在庫管理サービス
 
 class InventoryService with LoggerMixin {
-  /// コンストラクタ
   InventoryService({
     MaterialRepository? materialRepository,
     MaterialCategoryRepository? materialCategoryRepository,

@@ -2,9 +2,7 @@ import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/stock_model.dart";
 
-/// 在庫調整リポジトリ
 class StockAdjustmentRepository extends BaseRepository<StockAdjustment, String> {
-  /// コンストラクタ
   StockAdjustmentRepository() : super(tableName: "stock_adjustments");
 
   @override

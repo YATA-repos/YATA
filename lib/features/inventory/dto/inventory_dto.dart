@@ -3,7 +3,6 @@ import "../models/inventory_model.dart";
 
 /// 材料在庫情報（在庫レベル付き）
 class MaterialStockInfo {
-  /// コンストラクタ
   MaterialStockInfo({
     required this.material,
     required this.stockLevel,
@@ -44,7 +43,6 @@ class MaterialStockInfo {
 
 /// 材料使用量計算結果
 class MaterialUsageCalculation {
-  /// コンストラクタ
   MaterialUsageCalculation({
     required this.materialId,
     required this.requiredAmount,

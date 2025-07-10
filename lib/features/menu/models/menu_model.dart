@@ -7,7 +7,6 @@ part "menu_model.g.dart";
 /// メニューカテゴリ
 @JsonSerializable()
 class MenuCategory extends BaseModel {
-  /// コンストラクタ
   MenuCategory({
     required this.name,
     required this.displayOrder,
@@ -43,7 +42,6 @@ class MenuCategory extends BaseModel {
 /// メニュー（販売商品）
 @JsonSerializable()
 class MenuItem extends BaseModel {
-  /// コンストラクタ
   MenuItem({
     required this.name,
     required this.categoryId,
@@ -103,7 +101,6 @@ class MenuItem extends BaseModel {
 /// メニューオプション（トッピングなど）
 @JsonSerializable()
 class MenuItemOption extends BaseModel {
-  /// コンストラクタ
   MenuItemOption({
     required this.menuItemId,
     required this.optionName,

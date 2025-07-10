@@ -2,9 +2,7 @@ import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/stock_model.dart";
 
-/// 仕入れリポジトリ
 class PurchaseRepository extends BaseRepository<Purchase, String> {
-  /// コンストラクタ
   PurchaseRepository() : super(tableName: "purchases");
 
   @override

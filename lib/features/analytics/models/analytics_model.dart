@@ -7,7 +7,6 @@ part "analytics_model.g.dart";
 /// 日別集計
 @JsonSerializable()
 class DailySummary extends BaseModel {
-  /// コンストラクタ
   DailySummary({
     required this.summaryDate,
     required this.totalOrders,

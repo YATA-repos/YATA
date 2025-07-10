@@ -56,7 +56,6 @@ enum RepositoryError implements LogMessage {
 
 /// リポジトリ関連の例外
 class RepositoryException implements Exception {
-  /// コンストラクタ
   const RepositoryException(this.error, {this.params = const <String, String>{}});
 
   /// エラー種別

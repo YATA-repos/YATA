@@ -4,7 +4,6 @@ import "../models/inventory_model.dart";
 
 /// レシピリポジトリ
 class RecipeRepository extends BaseRepository<Recipe, String> {
-  /// コンストラクタ
   RecipeRepository() : super(tableName: "recipes");
 
   @override

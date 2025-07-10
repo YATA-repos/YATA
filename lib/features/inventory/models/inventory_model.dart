@@ -8,7 +8,6 @@ part "inventory_model.g.dart";
 /// 材料マスタ
 @JsonSerializable()
 class Material extends BaseModel {
-  /// コンストラクタ
   Material({
     required this.name,
     required this.categoryId,
@@ -75,7 +74,6 @@ class Material extends BaseModel {
 /// 材料カテゴリ
 @JsonSerializable()
 class MaterialCategory extends BaseModel {
-  /// コンストラクタ
   MaterialCategory({
     required this.name,
     required this.displayOrder,
@@ -111,7 +109,6 @@ class MaterialCategory extends BaseModel {
 /// レシピ（メニューと材料の関係）
 @JsonSerializable()
 class Recipe extends BaseModel {
-  /// コンストラクタ
   Recipe({
     required this.menuItemId,
     required this.materialId,

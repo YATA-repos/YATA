@@ -10,10 +10,7 @@ import "../models/order_model.dart";
 import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
-/// カート（下書き注文）管理サービス
-
 class CartService with LoggerMixin {
-  /// コンストラクタ
   CartService({
     OrderRepository? orderRepository,
     OrderItemRepository? orderItemRepository,

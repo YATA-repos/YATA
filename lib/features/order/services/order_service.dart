@@ -10,10 +10,7 @@ import "../models/order_model.dart";
 import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
-/// 注文管理サービス
-
 class OrderService with LoggerMixin {
-  /// コンストラクタ
   OrderService({
     OrderRepository? orderRepository,
     OrderItemRepository? orderItemRepository,

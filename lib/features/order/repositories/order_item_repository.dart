@@ -4,7 +4,6 @@ import "../models/order_model.dart";
 
 /// 注文明細リポジトリ
 class OrderItemRepository extends BaseRepository<OrderItem, String> {
-  /// コンストラクタ
   OrderItemRepository() : super(tableName: "order_items");
 
   @override

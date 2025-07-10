@@ -2,7 +2,6 @@ import "../../../core/constants/enums.dart";
 
 /// カートアイテム追加/更新リクエスト
 class CartItemRequest {
-  /// コンストラクタ
   CartItemRequest({
     required this.menuItemId,
     required this.quantity,
@@ -41,7 +40,6 @@ class CartItemRequest {
 
 /// 注文確定リクエスト
 class OrderCheckoutRequest {
-  /// コンストラクタ
   OrderCheckoutRequest({
     required this.paymentMethod,
     required this.discountAmount,
@@ -82,7 +80,6 @@ class OrderCheckoutRequest {
 
 /// 注文検索リクエスト
 class OrderSearchRequest {
-  /// コンストラクタ
   OrderSearchRequest({
     required this.page,
     required this.limit,
@@ -146,7 +143,6 @@ class OrderSearchRequest {
 
 /// 注文金額計算結果
 class OrderCalculationResult {
-  /// コンストラクタ
   OrderCalculationResult({
     required this.subtotal,
     required this.taxAmount,

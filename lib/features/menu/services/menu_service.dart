@@ -11,10 +11,7 @@ import "../models/menu_model.dart";
 import "../repositories/menu_category_repository.dart";
 import "../repositories/menu_item_repository.dart";
 
-/// メニュー管理サービス
-
 class MenuService with LoggerMixin {
-  /// コンストラクタ
   MenuService({
     MenuItemRepository? menuItemRepository,
     MenuCategoryRepository? menuCategoryRepository,
@@ -228,6 +225,7 @@ class MenuService with LoggerMixin {
 
     if (recipes.isEmpty) {
       // レシピがない場合は無制限とみなす（実際には業務ルールに依存）
+      // ! ここは要件に応じて調整が必要
       return 999999;
     }
 

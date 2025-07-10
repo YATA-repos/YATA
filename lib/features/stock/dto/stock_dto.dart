@@ -1,6 +1,5 @@
 /// 在庫更新リクエスト
 class StockUpdateRequest {
-  /// コンストラクタ
   StockUpdateRequest({
     required this.materialId,
     required this.newQuantity,
@@ -39,7 +38,6 @@ class StockUpdateRequest {
 
 /// 仕入れリクエスト
 class PurchaseRequest {
-  /// コンストラクタ
   PurchaseRequest({required this.items, required this.purchaseDate, this.notes});
 
   /// JSONからオブジェクトを生成
@@ -70,7 +68,6 @@ class PurchaseRequest {
 
 /// 仕入れアイテムDTO
 class PurchaseItemDto {
-  /// コンストラクタ
   PurchaseItemDto({required this.materialId, required this.quantity});
 
   /// JSONからオブジェクトを生成
