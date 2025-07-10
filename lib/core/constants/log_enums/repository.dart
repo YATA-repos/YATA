@@ -29,7 +29,6 @@ enum RepositoryError implements LogMessage {
   /// データベーストランザクションが失敗
   transactionFailed;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -66,7 +65,6 @@ class RepositoryException implements Exception {
   /// エラーメッセージのパラメータ
   final Map<String, String> params;
 
-  /// エラーメッセージを取得
   String get message => error.withParams(params);
 
   @override

@@ -2,11 +2,10 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
 import "log_service.dart";
 
-/// クエリユーティリティクラス
 class QueryUtils {
   QueryUtils._();
 
-  /// フィルタ演算子をSupabaseメソッド名にマッピング
+  // フィルタ演算子をSupabaseメソッド名にマッピング
   static const Map<FilterOperator, String> _operatorMethodMap = <FilterOperator, String>{
     FilterOperator.eq: "eq",
     FilterOperator.neq: "neq",
@@ -36,16 +35,18 @@ class QueryUtils {
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
+      // ! LoggerMixinが使われていない
       LogService.error("QueryUtils", "Unsupported operator: ${condition.operator}");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
+    // ! LoggerMixinが使われていない
     LogService.debug(
       "QueryUtils",
       "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
     );
 
-    // NULL判定の特別処理
+    // NULL判定
     if (condition.operator == FilterOperator.isNull) {
       return query.isFilter(condition.column, null);
     }
@@ -57,6 +58,7 @@ class QueryUtils {
     if (condition.operator == FilterOperator.inList ||
         condition.operator == FilterOperator.notInList) {
       if (condition.value is! List) {
+        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "List type value required for ${condition.operator} operator",
@@ -109,6 +111,7 @@ class QueryUtils {
       case FilterOperator.inList:
       case FilterOperator.notInList:
         // これらは上記で処理済み
+        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "This operator should be handled in preprocessing: ${condition.operator}",
@@ -123,6 +126,7 @@ class QueryUtils {
 
     for (final FilterCondition condition in conditions) {
       if (!_operatorMethodMap.containsKey(condition.operator)) {
+        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "Unsupported operator in OR condition: ${condition.operator}",
@@ -138,6 +142,7 @@ class QueryUtils {
         orParts.add("${condition.column}.not.is.null");
       } else if (condition.operator == FilterOperator.inList) {
         if (condition.value is! List) {
+          // ! LoggerMixinが使われていない
           LogService.error(
             "QueryUtils",
             "List type value required for inList operator",
@@ -150,6 +155,7 @@ class QueryUtils {
         orParts.add("${condition.column}.in.($valueStr)");
       } else if (condition.operator == FilterOperator.notInList) {
         if (condition.value is! List) {
+          // ! LoggerMixinが使われていない
           LogService.error(
             "QueryUtils",
             "List type value required for notInList operator",
@@ -168,7 +174,7 @@ class QueryUtils {
     return orParts.join(",");
   }
 
-  /// 論理条件をクエリに適用（階層化対応）
+  /// 論理条件をクエリに適用（階層化対応済み）
   static PostgrestFilterBuilder<dynamic> _applyLogicalCondition(
     PostgrestFilterBuilder<dynamic> query,
     LogicalCondition condition,
@@ -180,6 +186,7 @@ class QueryUtils {
     } else if (condition is ComplexCondition) {
       return _applyComplexCondition(query, condition);
     } else {
+      // ! LoggerMixinが使われていない
       LogService.error(
         "QueryUtils",
         "Unknown logical condition type: ${condition.runtimeType}",
@@ -209,16 +216,18 @@ class QueryUtils {
     final List<FilterCondition> filterConditions = <FilterCondition>[];
 
     for (final QueryFilter cond in condition.conditions) {
+      // OR条件内の条件はFilterConditionのみを対象
       if (cond is FilterCondition) {
         filterConditions.add(cond);
       } else if (cond is AndCondition) {
-        // ネストしたAND条件をフラット化
+        // AND条件だった場合はフラット化
         for (final QueryFilter innerCond in cond.conditions) {
           if (innerCond is FilterCondition) {
             filterConditions.add(innerCond);
           }
         }
       } else {
+        // ! LoggerMixinが使われていない
         LogService.error(
           "QueryUtils",
           "Unsupported condition type in OR: ${cond.runtimeType}",
@@ -233,6 +242,7 @@ class QueryUtils {
     }
 
     final String orString = _buildOrConditionString(filterConditions);
+    // ! LoggerMixinが使われていない
     LogService.debug("QueryUtils", "Applying OR condition: $orString");
     return query.or(orString);
   }
@@ -259,6 +269,7 @@ class QueryUtils {
     } else if (filter is LogicalCondition) {
       return _applyLogicalCondition(query, filter);
     } else {
+      // ! LoggerMixinが使われていない
       LogService.error(
         "QueryUtils",
         "Unsupported filter type: ${filter.runtimeType}",
@@ -273,6 +284,7 @@ class QueryUtils {
     PostgrestFilterBuilder<dynamic> query,
     List<QueryFilter> filters,
   ) {
+    // ! LoggerMixinが使われていない
     LogService.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
     PostgrestFilterBuilder<dynamic> result = query;
     for (final QueryFilter filter in filters) {
@@ -286,6 +298,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     OrderByCondition orderBy,
   ) {
+    // ! LoggerMixinが使われていない
     LogService.debug(
       "QueryUtils",
       "Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}",
@@ -298,6 +311,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
+    // ! LoggerMixinが使われていない
     LogService.debug("QueryUtils", "Applying ${orderBys.length} order by conditions");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
@@ -306,60 +320,76 @@ class QueryUtils {
     return result;
   }
 
-  /// 簡単なフィルタ条件作成ヘルパー（後方互換性維持）
-  /// 新しいコードでは QueryConditionBuilder を推奨します
+  // ! 以下のヘルパーの使用状況調査 & 使ってなかったら削除する
+
+  /// 後方互換性維持のためのヘルパー
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition eq(String column, dynamic value) =>
       FilterCondition(column: column, operator: FilterOperator.eq, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（不等号）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition neq(String column, dynamic value) =>
       FilterCondition(column: column, operator: FilterOperator.neq, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（より大きい）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition gt(String column, dynamic value) =>
       FilterCondition(column: column, operator: FilterOperator.gt, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（以上）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition gte(String column, dynamic value) =>
       FilterCondition(column: column, operator: FilterOperator.gte, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（より小さい）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition lt(String column, dynamic value) =>
       FilterCondition(column: column, operator: FilterOperator.lt, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（以下）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition lte(String column, dynamic value) =>
       FilterCondition(column: column, operator: FilterOperator.lte, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（部分一致）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition like(String column, String value) =>
       FilterCondition(column: column, operator: FilterOperator.like, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（部分一致・大文字小文字区別なし）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition ilike(String column, String value) =>
       FilterCondition(column: column, operator: FilterOperator.ilike, value: value);
 
   /// 簡単なフィルタ条件作成ヘルパー（配列に含まれる）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition inList(String column, List<dynamic> values) =>
       FilterCondition(column: column, operator: FilterOperator.inList, value: values);
 
   /// 簡単なフィルタ条件作成ヘルパー（NULL判定）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition isNull(String column) =>
       FilterCondition(column: column, operator: FilterOperator.isNull, value: null);
 
   /// 簡単なフィルタ条件作成ヘルパー（NULL以外判定）
+  @Deprecated("Use FilterCondition methods instead")
   static FilterCondition isNotNull(String column) =>
       FilterCondition(column: column, operator: FilterOperator.isNotNull, value: null);
 
   /// 簡単なAND条件作成ヘルパー
+  @Deprecated("Use FilterCondition methods instead")
   static AndCondition and(List<QueryFilter> conditions) => AndCondition(conditions);
 
   /// 簡単なOR条件作成ヘルパー
+  @Deprecated("Use FilterCondition methods instead")
   static OrCondition or(List<QueryFilter> conditions) => OrCondition(conditions);
 
   /// 簡単なソート条件作成ヘルパー（昇順）
+  @Deprecated("Use FilterCondition methods instead")
   static OrderByCondition asc(String column) => OrderByCondition(column: column);
 
   /// 簡単なソート条件作成ヘルパー（降順）
+  @Deprecated("Use FilterCondition methods instead")
   static OrderByCondition desc(String column) => OrderByCondition(column: column, ascending: false);
 }

@@ -1,6 +1,5 @@
 import "package:json_annotation/json_annotation.dart";
 
-/// 支払い方法
 @JsonEnum()
 enum PaymentMethod {
   /// 現金支払い
@@ -14,14 +13,12 @@ enum PaymentMethod {
 
   const PaymentMethod(this.value);
 
-  /// 支払い方法の値
   final String value;
 
   @override
   String toString() => value;
 }
 
-/// 取引タイプ
 @JsonEnum()
 enum TransactionType {
   /// 仕入れ・(店側の)購入
@@ -38,13 +35,12 @@ enum TransactionType {
 
   const TransactionType(this.value);
 
-  /// 取引タイプの値
   final String value;
 
   @override
   String toString() => value;
 
-  /// 日本語での表示名を取得
+  /// 日本語での表示名
   String get displayName {
     switch (this) {
       case TransactionType.purchase:
@@ -59,7 +55,6 @@ enum TransactionType {
   }
 }
 
-/// 参照タイプ
 @JsonEnum()
 enum ReferenceType {
   /// 注文
@@ -73,13 +68,12 @@ enum ReferenceType {
 
   const ReferenceType(this.value);
 
-  /// 参照タイプの値
   final String value;
 
   @override
   String toString() => value;
 
-  /// 日本語での表示名を取得
+  /// 日本語での表示名
   String get displayName {
     switch (this) {
       case ReferenceType.order:
@@ -92,27 +86,25 @@ enum ReferenceType {
   }
 }
 
-/// 在庫管理の単位タイプ
 @JsonEnum()
 enum UnitType {
   /// 個数
   piece("piece"),
 
   // TODO(dev): グラム管理が目安であるなら、たまに実際に確認をさせないとだめ？そのための処理？
-  /// グラム。ただし、運用時に厳密に管理することは困難であるため、目安として使用
+  /// グラム、重量。ただし、運用時に厳密に管理することは困難であるため、目安として使用
   gram("gram");
 
-  // ?将来的には液体系、長さ系なども追加する可能性あり <- ただおそらくこれらもgramで統一管理可能ではある。
+  // ?将来的には液体系、長さ系なども追加する可能性? <- ただおそらくこれらもgramで統一管理可能ではある。
 
   const UnitType(this.value);
 
-  /// 在庫管理の単位の値
   final String value;
 
   @override
   String toString() => value;
 
-  /// 日本語での表示名を取得
+  /// 日本語での表示名
   String get displayName {
     switch (this) {
       case UnitType.piece:
@@ -133,7 +125,6 @@ enum UnitType {
   }
 }
 
-/// 在庫レベル。あくまで段階を列挙するものであり、具体的な数値は商品によって異なるため、列挙しない。
 @JsonEnum()
 enum StockLevel {
   /// 在庫あり（緑）
@@ -147,13 +138,12 @@ enum StockLevel {
 
   const StockLevel(this.value);
 
-  /// 在庫レベルの値
   final String value;
 
   @override
   String toString() => value;
 
-  /// 日本語での表示名を取得
+  /// 日本語での表示名
   String get displayName {
     switch (this) {
       case StockLevel.sufficient:
@@ -193,13 +183,12 @@ enum OrderStatus {
 
   const OrderStatus(this.value);
 
-  /// 注文ステータスの値
   final String value;
 
   @override
   String toString() => value;
 
-  /// 日本語での表示名を取得
+  /// 日本語での表示名
   String get displayName {
     switch (this) {
       case OrderStatus.preparing:
@@ -211,8 +200,8 @@ enum OrderStatus {
     }
   }
 
-  // TODO(ui): ここはFlutterのColorオブジェクトを返すようにする
   /// 注文ステータスに対応する色を取得（Flutter用）
+  /// 実際のColorオブジェクトは呼び出し側で定義する
   String get colorName {
     switch (this) {
       case OrderStatus.preparing:
@@ -248,13 +237,12 @@ enum LogLevel {
 
   const LogLevel(this.value);
 
-  /// ログレベルの値
   final String value;
 
   @override
   String toString() => value;
 
-  /// 日本語での表示名を取得
+  /// 日本語での表示名
   String get displayName {
     switch (this) {
       case LogLevel.debug:

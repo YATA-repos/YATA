@@ -7,38 +7,37 @@ import "../utils/logger_mixin.dart";
 import "../utils/query_utils.dart";
 import "base_model.dart";
 
-/// 主キーマップ型定義
+/// プライマリキー
 typedef PrimaryKeyMap = Map<String, dynamic>;
 
+// ! documentation stringの書き方が間違ってる
 /// ベースCRUDリポジトリ抽象クラス
 ///
 /// [T] モデル型（BaseModelを継承し、toJson/fromJsonメソッドを持つ）
 /// [ID] 単一主キーの型（String, int など）
-@loggerComponent
 abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
-  /// コンストラクタ
   BaseRepository({required this.tableName, this.primaryKeyColumns = const <String>["id"]});
-  @override
-  String get loggerComponent => "BaseRepository<${T.toString()}>";
 
-  /// テーブル名
   final String tableName;
 
   /// 主キーカラム名のリスト（複合主キー対応）
   final List<String> primaryKeyColumns;
 
-  /// Supabaseクライアントを取得
-  SupabaseClient get _client => SupabaseClientService.client;
-
-  /// テーブルクエリビルダーを取得
-  SupabaseQueryBuilder get _table => _client.from(tableName);
-
   /// JSONからモデルインスタンスを作成するファクトリ関数
   ///
-  /// 各サブクラスで実装する必要があります
-  T Function(Map<String, dynamic> json) get fromJson;
+  /// サブクラスで実装し、対応するモデルのfromJsonメソッドを呼び出します。
+  /// これにより、シリアライゼーション処理をモデル側に完全に集約できます。
+  T fromJson(Map<String, dynamic> json);
+
+  /// Supabaseクライアント取得
+  SupabaseClient get _client => SupabaseClientService.client;
+
+  /// クエリビルダー取得
+  SupabaseQueryBuilder get _table => _client.from(tableName);
 
   /// 内部用JSONデシリアライゼーションヘルパー
+  ///
+  /// モデル側のfromJsonメソッドを呼び出します。
   T _fromJson(Map<String, dynamic> json) => fromJson(json);
 
   // =================================================================
@@ -53,6 +52,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
     // 単一値の場合、主キーカラムが1つであることを確認
     if (primaryKeyColumns.length != 1) {
+      // ! LoggerMixinが使われていない
       throw ArgumentError("複合主キーにはMap<String, dynamic>形式でキーを指定してください");
     }
 
@@ -79,7 +79,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
       logDebug("Entity not found in table: $tableName");
       return null;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to find single entity in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -99,6 +101,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       if (!keyMap.containsKey(column)) {
         throw ArgumentError("主キーカラム '$column' がキーマップに見つかりません");
       }
+
       result = result.eq(column, keyMap[column] as Object);
     }
 
@@ -117,12 +120,16 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final List<Map<String, dynamic>> response = await _table.insert(data).select();
 
       if (response.isNotEmpty) {
+        // * 事前定義するべきか検討
         logInfo("Entity created successfully in table: $tableName");
         return _fromJson(response[0]);
       }
+      // * 事前定義するべきか検討
       logWarning("No response returned from entity creation in table: $tableName");
       return null;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to create entity in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.insertFailed,
@@ -142,9 +149,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final List<Map<String, dynamic>> dataList = entities.map((T e) => e.toJson()).toList();
       final List<Map<String, dynamic>> response = await _table.insert(dataList).select();
 
+      // * 事前定義するべきか検討
       logInfo("Bulk created ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to bulk create entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.insertFailed,
@@ -169,7 +179,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       }
       logDebug("Entity not found in table: $tableName");
       return null;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to get entity by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -193,7 +205,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       }
       logDebug("Entity not found in table: $tableName");
       return null;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to get entity by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -216,9 +230,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         logInfo("Entity updated successfully in table: $tableName");
         return _fromJson(response[0]);
       }
+      // * 事前定義するべきか検討
       logWarning("No entity updated in table: $tableName");
       return null;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to update entity by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.updateFailed,
@@ -237,12 +254,16 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       ).select();
 
       if (response.isNotEmpty) {
+        // * 事前定義するべきか検討
         logInfo("Entity updated successfully by primary key in table: $tableName");
         return _fromJson(response[0]);
       }
+      // * 事前定義するべきか検討
       logWarning("No entity updated by primary key in table: $tableName");
       return null;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to update entity by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.updateFailed,
@@ -257,8 +278,11 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Deleting entity by ID from table: $tableName");
       final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
       await _applyPrimaryKey(_table.delete(), keyMap);
+      // * 事前定義するべきか検討
       logInfo("Entity deleted successfully from table: $tableName");
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to delete entity by ID from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
@@ -272,8 +296,11 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     try {
       logDebug("Deleting entity by primary key from table: $tableName");
       await _applyPrimaryKey(_table.delete(), keyMap);
+      // * 事前定義するべきか検討
       logInfo("Entity deleted successfully by primary key from table: $tableName");
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to delete entity by primary key from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
@@ -293,12 +320,14 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       // 単一カラム主キーの場合はin演算子を使用
       if (primaryKeyColumns.length == 1) {
         final String pkColumn = primaryKeyColumns[0];
+        // 主キーカラムを正規化して値のリストを作成
         final List<Object> values = keys.map((ID key) {
           final PrimaryKeyMap normalized = _normalizeKey(key as Object);
           return normalized[pkColumn] as Object;
         }).toList();
 
         await _table.delete().inFilter(pkColumn, values);
+        // * 事前定義するべきか検討
         logInfo("Bulk deleted ${keys.length} entities from table: $tableName");
       } else {
         // 複合主キーの場合は効率的な削除のためチャンク処理
@@ -318,9 +347,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
             }),
           );
         }
+        // * 事前定義するべきか検討
         logInfo("Bulk deleted ${keys.length} entities with composite keys from table: $tableName");
       }
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to bulk delete entities from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
@@ -336,10 +368,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final PostgrestResponse<dynamic> response = await _applyPrimaryKey(
         _table.select(primaryKeyColumns.join(", ")),
         keyMap,
-      ).limit(1).count();
+      ).limit(1).count(); // ? `limit(1)`のカウントでいいんだっけ?existsみたいなの無かった？
 
       return response.count > 0;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // ! LoggerMixinが使われていない
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -353,10 +387,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final PostgrestResponse<dynamic> response = await _applyPrimaryKey(
         _table.select(primaryKeyColumns.join(", ")),
         keyMap,
-      ).limit(1).count();
+      ).limit(1).count(); // ? existsByIdと同様の疑問
 
       return response.count > 0;
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // ! LoggerMixinが使われていない
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
         params: <String, String>{"error": e.toString()},
@@ -376,6 +412,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
     try {
       logDebug("Listing entities from table: $tableName (limit: $limit, offset: $offset)");
+      // クエリビルダーを使用してデータを取得
       final List<Map<String, dynamic>> response = await _table.select().range(
         offset,
         offset + limit - 1,
@@ -383,7 +420,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
       logDebug("Retrieved ${response.length} entities from table: $tableName");
       return response.map(_fromJson).toList();
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to list entities from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -392,6 +431,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
   }
 
+  // ! documentation stringの書き方が間違ってる
   /// 条件によってエンティティを検索
   ///
   /// [filters] フィルタ条件のリスト
@@ -436,7 +476,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
       logDebug("Found ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to find entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -445,6 +487,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     }
   }
 
+  // ! documentation stringの書き方が間違ってる
   /// 条件に一致するエンティティの数を取得
   ///
   /// [filters] フィルタ条件のリスト
@@ -465,7 +508,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         logDebug("Counted $response entities in table: $tableName");
         return response;
       }
+      // ? エラーハンドリング詳細化？
     } catch (e) {
+      // * 事前定義するべきか検討
       logError("Failed to count entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,

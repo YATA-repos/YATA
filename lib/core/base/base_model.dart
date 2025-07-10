@@ -2,21 +2,27 @@ import "package:json_annotation/json_annotation.dart";
 
 part "base_model.g.dart";
 
-/// ベースモデル抽象クラス
+/// すべてのモデルクラスの基底クラス
+///
+/// すべてのモデルクラスは、このクラスを継承し、
+/// 以下の実装を行う必要があります：
+/// - fromJsonファクトリーコンストラクタ
+/// - toJsonメソッド
+/// - tableNameゲッター
 @JsonSerializable()
 abstract class BaseModel {
   /// コンストラクタ
   BaseModel({this.id, this.userId});
 
-  /// DBテーブル名
+  /// テーブル名を取得（サブクラスで実装）
   String get tableName;
 
-  /// ID
+  /// プライマリキー
   String? id;
 
   /// ユーザーID
   String? userId;
 
-  /// JSONに変換
+  /// JSONシリアライゼーション（サブクラスで実装）
   Map<String, dynamic> toJson();
 }
