@@ -2,13 +2,11 @@ import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/stock_model.dart";
 
-/// 仕入れリポジトリ
 class PurchaseRepository extends BaseRepository<Purchase, String> {
-  /// コンストラクタ
   PurchaseRepository() : super(tableName: "purchases");
 
   @override
-  Purchase Function(Map<String, dynamic> json) get fromJson => Purchase.fromJson;
+  Purchase fromJson(Map<String, dynamic> json) => Purchase.fromJson(json);
 
   /// 最近の仕入れ一覧を取得
   Future<List<Purchase>> findRecent(int days, String userId) async {

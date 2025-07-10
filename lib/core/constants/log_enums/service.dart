@@ -47,7 +47,6 @@ enum ServiceInfo implements LogMessage {
   /// 材料復元成功
   materialRestorationSuccessful;
 
-  /// 情報メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -123,7 +122,6 @@ enum ServiceDebug implements LogMessage {
   /// 消費完了確認
   consumptionCompletedSuccessfully;
 
-  /// デバッグメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -175,7 +173,6 @@ enum ServiceWarning implements LogMessage {
   /// 購入作成失敗
   purchaseCreationFailed;
 
-  /// 警告メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -215,7 +212,6 @@ enum ServiceError implements LogMessage {
   /// 材料復元失敗
   materialRestorationFailed;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {

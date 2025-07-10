@@ -26,7 +26,6 @@ enum InventoryError implements LogMessage {
   /// 在庫レベルが危険域に達している
   stockLevelCritical;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -64,7 +63,6 @@ enum InventoryWarning implements LogMessage {
   /// アイテムの再注文が必要
   reorderRequired;
 
-  /// 警告メッセージを取得
   @override
   String get message {
     switch (this) {

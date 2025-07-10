@@ -8,7 +8,6 @@ part "stock_model.g.dart";
 /// 在庫取引記録
 @JsonSerializable()
 class StockTransaction extends BaseModel {
-  /// コンストラクタ
   StockTransaction({
     required this.materialId,
     required this.transactionType,
@@ -60,7 +59,6 @@ class StockTransaction extends BaseModel {
 /// 仕入れ記録
 @JsonSerializable()
 class Purchase extends BaseModel {
-  /// コンストラクタ
   Purchase({
     required this.purchaseDate,
     this.notes,
@@ -96,7 +94,6 @@ class Purchase extends BaseModel {
 /// 仕入れ明細
 @JsonSerializable()
 class PurchaseItem extends BaseModel {
-  /// コンストラクタ
   PurchaseItem({
     required this.purchaseId,
     required this.materialId,
@@ -132,7 +129,6 @@ class PurchaseItem extends BaseModel {
 /// 在庫調整
 @JsonSerializable()
 class StockAdjustment extends BaseModel {
-  /// コンストラクタ
   StockAdjustment({
     required this.materialId,
     required this.adjustmentAmount,

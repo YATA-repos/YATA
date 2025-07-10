@@ -1,6 +1,5 @@
 /// メニュー在庫可否情報
 class MenuAvailabilityInfo {
-  /// コンストラクタ
   MenuAvailabilityInfo({
     required this.menuItemId,
     required this.isAvailable,

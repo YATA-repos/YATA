@@ -3,13 +3,11 @@ import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/stock_model.dart";
 
-/// 在庫取引リポジトリ
 class StockTransactionRepository extends BaseRepository<StockTransaction, String> {
-  /// コンストラクタ
   StockTransactionRepository() : super(tableName: "stock_transactions");
 
   @override
-  StockTransaction Function(Map<String, dynamic> json) get fromJson => StockTransaction.fromJson;
+  StockTransaction fromJson(Map<String, dynamic> json) => StockTransaction.fromJson(json);
 
   /// 在庫取引を一括作成
   Future<List<StockTransaction>> createBatch(List<StockTransaction> transactions) async =>

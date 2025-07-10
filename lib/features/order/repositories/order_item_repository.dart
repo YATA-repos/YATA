@@ -4,11 +4,10 @@ import "../models/order_model.dart";
 
 /// 注文明細リポジトリ
 class OrderItemRepository extends BaseRepository<OrderItem, String> {
-  /// コンストラクタ
   OrderItemRepository() : super(tableName: "order_items");
 
   @override
-  OrderItem Function(Map<String, dynamic> json) get fromJson => OrderItem.fromJson;
+  OrderItem fromJson(Map<String, dynamic> json) => OrderItem.fromJson(json);
 
   /// 注文IDに紐づく明細一覧を取得
   Future<List<OrderItem>> findByOrderId(String orderId) async {

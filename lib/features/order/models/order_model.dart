@@ -8,7 +8,6 @@ part "order_model.g.dart";
 /// 注文
 @JsonSerializable()
 class Order extends BaseModel {
-  /// コンストラクタ
   Order({
     required this.totalAmount,
     required this.status,
@@ -76,7 +75,6 @@ class Order extends BaseModel {
 /// 注文明細
 @JsonSerializable()
 class OrderItem extends BaseModel {
-  /// コンストラクタ
   OrderItem({
     required this.orderId,
     required this.menuItemId,

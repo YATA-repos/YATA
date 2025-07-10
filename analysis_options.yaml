@@ -27,7 +27,6 @@ linter:
     - conditional_uri_does_not_exist
     - directives_ordering
     - do_not_use_environment
-    - flutter_style_todos
     - join_return_with_assignment
     - leading_newlines_in_multiline_strings
     - missing_whitespace_between_adjacent_strings
@@ -40,7 +39,6 @@ linter:
     - prefer_final_in_for_each
     - prefer_final_locals
     - prefer_relative_imports
-    - public_member_api_docs
     - require_trailing_commas
     - sort_child_properties_last
     - sort_constructors_first

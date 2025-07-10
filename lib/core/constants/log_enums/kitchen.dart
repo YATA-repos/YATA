@@ -20,7 +20,6 @@ enum KitchenInfo implements LogMessage {
   /// 配達成功
   deliverySuccessful;
 
-  /// 情報メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -60,7 +59,6 @@ enum KitchenWarning implements LogMessage {
   /// 配達失敗
   deliveryFailed;
 
-  /// 警告メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -103,7 +101,6 @@ enum KitchenError implements LogMessage {
   /// 配達失敗
   deliverOrderFailed;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {

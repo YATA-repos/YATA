@@ -1,7 +1,7 @@
 ---
 applyTo: '**'
 ---
-# CLAUDE.md
+# AIエージェント向けガイドライン
 
 This file provides guidance to AI agents when working with code in this repository.
 
@@ -9,12 +9,73 @@ This file provides guidance to AI agents when working with code in this reposito
 
 **厳格に従いなさい:**
 
-- **すべてのコミットメッセージ、ドキュメント、コメント、回答は日本語を使用すること**
-- **自己宣伝やプロモーションを含むコードや、コメント、ドキュメント、コミットメッセージを使用・挿入しないこと(例: 「私の素晴らしい機能」、「このコミットメッセージはClaudeによって生成されました」など)**
-- **常に遠慮せず、自らの最大限の能力を発揮して、プロジェクトの品質向上に貢献すること**
-- **質問者・また自らに対して、常に批判的な視点を持ち、改善の余地を探ること**
+- **すべてのドキュメントとコメント、回答は日本語を使用してください。**
+- **Pull Request、Issue、Commit Messageは英語で記述してください。**
+- **`rm -rf ~/` や `git reset --hard` などの危険なコマンドは、絶対に使用しないでください。どうしても実行する必要があるなら、ユーザーに実行を依頼してください。**
 
-## プロジェクト概要
+## 基本的な開発フロー
+
+1. 機能ブランチ作成(`git checkout -b feature/branch-name`)
+2. 実装
+3. テスト
+4. 言語ごとのスタイルに従って、静的解析
+5. 言語ごとのスタイルに従って、フォーマット
+6. コミット(指示がない場合実行しないこと)
+7. Pull Request作成
+
+## Git Workflow Guidelines
+
+1. コミットメッセージは英語で記述し、以下の形式に従うこと:
+   - `feat:` 新機能追加
+   - `fix:` バグ修正
+   - `refactor:` リファクタリング
+   - `docs:` ドキュメント更新
+   - `style:` コードスタイル修正・フォーマット
+   - `test:` テスト追加・修正
+   - `perf:` パフォーマンス改善
+   - `build:` ビルドシステムや外部依存関係の変更
+   - `ci:` CI設定の変更
+   - `chore:` その他のメンテナンス作業
+2. コミット前に自動で言語ごとのフォーマットと静的解析が実行されるように、`.pre-commit-config.yaml` を設定すること。
+3. 感想は含めないこと。コミットメッセージは事実ベースで簡潔に記述すること。
+4. コミットやIsssueの解決の遂行、Pull Requestの作成時などは必ず、現在のブランチが適切な`feature`系ブランチもしくは`dev`ブランチであることを確認すること。もし現在のブランチが適切でない場合は、`git checkout` で適切なブランチに切り替えること。
+5. **明確に指示が無い限り、コミットは行わないこと。**
+
+## Github Workflow Guidelines
+
+### Github原則
+
+- 全てのGithubの操作は、`gh`で使用できる、CLIを使用して行うこと。
+
+### Pull Request Guidelines
+
+- Pull Requestは必ず英語で記述し、以下の内容を含めること:
+  - 変更の概要
+  - 影響を受ける機能やファイル
+  - テスト結果
+- Pull Requestのタイトルは、コミットメッセージと同様に、適切なプレフィックスを使用すること。
+
+### Issue Guidelines
+
+- 大規模な変更や修正が想定される場合は、事前にIssueを作成し、内容を共有すること。
+- 英語で記述し、以下の内容を含めること:
+  - (問題/バグ/機能追加)の背景
+  - 具体的な(解決策/機能追加)の提案
+  - 受け入れ条件
+  - 優先度(P0, P1, P2, P3, P4)
+  - 想定される実装難易度(Easy, Medium, Hard)
+
+## external tools Guidelines
+
+### GitHub CLI (`gh`) Guidelines
+
+- GitHub CLI (`gh`) を使用して、Pull Requestの作成、Issueの管理、PRレビューなどを行うこと。
+
+---
+
+## 1. プロジェクト基本情報
+
+### プロジェクト概要
 
 - **プロジェクト名**: YATA (日本語の「屋台(yatai)」から命名)
 - **プロジェクト概要**: 小規模レストラン向けの在庫・注文管理システム
@@ -29,44 +90,30 @@ This file provides guidance to AI agents when working with code in this reposito
   - Supabase バックエンド統合
   - クロスプラットフォーム対応
 
-## 開発環境・コマンド
+---
 
-### 依存関係管理
+## 2. 技術仕様
 
-```bash
-flutter pub get                 # 依存関係のインストール
-dart pub global activate build_runner  # build_runner の有効化
-```
+### 2.1 技術スタック
 
-### コード生成・ビルド
+#### 主要依存関係
 
-```bash
-dart run build_runner build           # コード生成（一回のみ）
-dart run build_runner watch          # コード生成（継続監視）
-```
+- **Flutter**: UI フレームワーク
+- **flutter_riverpod**: 状態管理
+- **supabase_flutter**: バックエンド（PostgreSQL）
+- **json_annotation/json_serializable**: JSON シリアライゼーション
+- **uuid**: UUID生成
+- **decimal**: 高精度数値計算
 
-### テスト・品質チェック
+#### 開発依存関係
 
-```bash
-flutter test                    # 全テスト実行
-flutter test --coverage       # カバレッジ付きテスト実行
-dart analyze                   # 静的解析
-dart format lib/ test/         # コードフォーマット
-```
+- **flutter_lints** + **very_good_analysis**: リント設定
+- **build_runner**: コード生成
+- **flutter_test**: テストフレームワーク
 
-### プラットフォーム別ビルド
+### 2.2 アーキテクチャ
 
-```bash
-flutter run                    # 開発実行
-flutter build apk              # Android APK
-flutter build web             # Web
-flutter build windows         # Windows
-flutter build linux           # Linux
-```
-
-## アーキテクチャ
-
-### 概要
+#### 概要
 
 このプロジェクトは、一言で表すなら、「**フィーチャーベースの『サービスレイヤー・アーキテクチャ』(Feature-based Service Layer Architecture)**」を採用しています。ただし、このアーキテクチャと類似しているClean Architectureとの明確な違いは、「依存性の逆転は使わず、UI→Service→Repositoryという直線的な依存関係にしている」点です。
 
@@ -76,9 +123,9 @@ flutter build linux           # Linux
 - サービスレイヤー・アーキテクチャ (Service Layer Architecture)
 - 直線的レイヤードアーキテクチャ (Linear Layered Architecture)
 
-### レイヤー構造(依存関係)
+#### レイヤー構造(依存関係)
 
-```
+```text
 UI Layer (Flutter Widgets/Pages)
     ↓
 Business Services Layer  
@@ -86,203 +133,67 @@ Business Services Layer
 Repository Layer (Data Access)
 ```
 
-### ディレクトリ構造
+#### ディレクトリ構造
 
-```
+```text
 lib/
-├── core/                     # コア機能
-│   ├── auth/                # 認証サービス
-│   ├── base/                # 基底クラス（BaseModel, BaseRepository）
-│   ├── constants/           # 定数・設定
-│   ├── error/               # エラー定義
-│   ├── infrastructure/      # インフラ（Supabase等）
-│   ├── sync/                # 同期機能
-│   └── utils/               # ユーティリティ（ログ、クエリ）
-├── features/                # 機能別ディレクトリ
-│   ├── analytics/           # 分析機能
-│   ├── inventory/           # 在庫管理
+├── main.dart                # アプリケーションエントリーポイント
+├── core/                    # コア機能
+│   ├── auth/               # 認証サービス
+│   ├── base/               # 基底クラス（BaseModel, BaseRepository）
+│   ├── constants/          # 定数・設定
+│   │   └── log_enums/      # ログ関連列挙型
+│   ├── infrastructure/     # インフラ層
+│   │   ├── offline/        # オフライン機能
+│   │   └── supabase/       # Supabase統合
+│   ├── sync/               # 同期機能
+│   │   └── models/         # 同期関連モデル
+│   └── utils/              # ユーティリティ（ログ、クエリ）
+├── features/               # 機能別ディレクトリ
+│   ├── analytics/          # 分析機能
+│   │   ├── dto/            # Data Transfer Objects
+│   │   ├── models/         # ドメインモデル
+│   │   ├── presentation/   # UI（providers, screens, widgets）
+│   │   ├── repositories/   # データアクセス
+│   │   └── services/       # ビジネスロジック
+│   ├── inventory/          # 在庫管理
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
 │   ├── menu/               # メニュー管理
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
 │   ├── order/              # 注文管理
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
 │   └── stock/              # 在庫機能
-│       ├── dto/            # Data Transfer Objects
-│       ├── models/         # ドメインモデル
-│       ├── presentation/   # UI（providers, screens, widgets）
-│       ├── repositories/   # データアクセス
-│       └── services/       # ビジネスロジック
+│       ├── dto/
+│       ├── models/
+│       ├── presentation/
+│       ├── repositories/
+│       └── services/
 ├── routing/                # ルーティング
-├── shared/                 # 共通UI要素
-└── main.dart
+└── shared/                 # 共通UI要素
+    ├── layouts/            # レイアウト
+    ├── themes/             # テーマ
+    └── widgets/            # ウィジェット
 ```
 
-### 重要な基底クラス
+#### 重要な基底クラス
 
 - `BaseModel`: JSON シリアライゼーション機能を持つモデル基底クラス
 - `BaseRepository<T>`: CRUD操作とフィルタリング機能を提供するリポジトリ基底クラス
 - 複雑なフィルタリングシステム（AND/OR クエリサポート）
 
-### DTOに関する注意点
+#### DTOに関する注意点
 
 - このプロジェクトにおけるDTOは、Entityとの変換を前提として**いません**。
 - このプロジェクトにおいて、DTOはデータ転送専用のオブジェクトです。高度なdictのように振る舞うことを目的としています。
-
-### コード生成パターン
-
-- `*.g.dart` ファイルは `json_serializable` で自動生成
-- モデルクラスには `@JsonSerializable()` アノテーション使用
-- 生成ファイルは `.gitignore` に含めず、バージョン管理対象
-
-## Git ワークフロー
-
-### GitHub CLI の使用
-
-- Issue や PR の作成には GitHub CLI (`gh`) を使用
-
-### コミット・プッシュガイドライン
-
-1. **必ずテストとlintを実行してから**コミット
-
-   ```bash
-   dart analyze && dart format
-   ```
-
-2. **コミットメッセージは日本語で記述**
-3. **変更内容に応じた適切なプレフィックス使用**:
-   - `feat:` 新機能
-   - `fix:` バグ修正
-   - `refactor:` リファクタリング
-   - `docs:` ドキュメント更新
-   - `style:` コードスタイル修正
-   - `test:` テスト追加・修正
-   - `chore:` その他のメンテナンス作業
-
-### 完全新規における開発フロー
-
-1. 機能ブランチ作成
-2. 実装とテスト
-3. `dart analyze` と `flutter test` でチェック
-4. 日本語でコミット
-5. プルリクエスト作成（GitHub CLI推奨）
-
-## 技術スタック詳細
-
-### 主要依存関係
-
-- **Flutter**: UI フレームワーク
-- **flutter_riverpod**: 状態管理
-- **supabase_flutter**: バックエンド（PostgreSQL）
-- **json_annotation/json_serializable**: JSON シリアライゼーション
-- **uuid**: UUID生成
-- **decimal**: 高精度数値計算
-
-### 開発依存関係
-
-- **flutter_lints** + **very_good_analysis**: リント設定
-- **build_runner**: コード生成
-- **flutter_test**: テストフレームワーク
-
-### Linter 設定
-
-- 厳格な型チェック有効
-- public API にはドキュメントコメント必須
-- 生成ファイル（`*.g.dart`, `*.freezed.dart`）は解析除外
-
-## Issue作成ガイドライン
-
-このプロジェクトでは、質の高いIssueを作成するために以下のフォーマットを使用すること。
-
-### Issue作成の基本方針
-
-1. **問題の背景と現状を詳細に記載**
-2. **具体的な解決策を明示**
-3. **受け入れ条件を明確に定義**
-4. **適切な優先度を設定**
-
-### Issue作成フォーマット
-
-#### 1. タイトル
-
-- 簡潔で具体的な内容を表現
-- 動詞を含む行動指向のタイトル
-- 例：「README.mdの再構成と内容の更新」「各Feature層のコードレビューと品質向上」
-
-#### 2. 本文構成
-
-```markdown
-## 問題の概要
-
-現在の状況と問題点を明確に記載。以下の観点を含める：
-- 何が問題なのか
-- なぜ問題なのか
-- 現在の状況の詳細
-
-## 現在の状況（必要に応じて）
-
-具体的な現状を箇条書きで記載
-
-## 解決すべき内容
-
-### 1. カテゴリ別の具体的な作業項目
-- 実装すべき機能
-- 修正すべき問題
-- 改善すべき点
-
-### 2. 技術的な要件
-- アーキテクチャ的な制約
-- パフォーマンス要件
-- 品質基準
-
-## 対象ファイル（必要に応じて）
-
-影響を受けるファイルのリスト
-
-## 受け入れ条件
-
-- [ ] チェックボックス形式で明確な完了条件を記載
-- [ ] 測定可能で検証可能な条件
-- [ ] 品質基準の明示
-
-## 優先度
-
-High/Medium/Low + 理由を記載
-```
-
-### 優先度設定ガイドライン
-
-- **High**: プロジェクトの進行に直接影響する重要な問題
-- **Medium**: 品質向上や将来的な保守性に関わる問題
-- **Low**: 細かい改善や最適化
-
-### Issue作成時の注意点
-
-1. **プロジェクトの文脈を考慮**
-   - レストラン在庫管理システムとしての特性
-   - Flutter/Dartの技術的制約
-   - 移植プロジェクトとしての背景
-
-2. **具体性を重視**
-   - 抽象的な表現は避ける
-   - 具体的なファイル名やクラス名を含める
-   - 実装方法の提案を含める
-
-3. **品質基準の明確化**
-   - コードの品質
-   - テストの充実度
-   - ドキュメントの完成度
-
-4. **業界特有の要件**
-   - レストラン業界の特性
-   - ユーザビリティの考慮
-   - アクセシビリティの配慮
-
-### Issue作成のベストプラクティス
-
-- **事前調査の実施**: 現状のコードを十分に理解してから作成
-- **関連Issueの確認**: 重複や依存関係の整理
-- **段階的な作業分割**: 大きな作業は複数のIssueに分割
-- **レビュー可能な単位**: 一つのIssueで完結する作業範囲
-
-このフォーマットに従うことで、プロジェクトの品質向上と効率的な開発進行を実現できます。
-
-## ドキュメンテーション、docs作成ガイドライン
-
-`docs/DOCUMENTATION_GUIDE.md` を参照して、これに従ってください。

@@ -15,7 +15,6 @@ import "../constants/enums.dart";
 /// 開発時は全レベルをconsoleに出力し、リリース時はwarning/errorのみをファイルに保存する
 /// 全てのログメッセージは英語で記録される
 class LogService {
-  // プライベートコンストラクタ
   LogService._();
   static LogService? _instance;
   static bool _initialized = false;
@@ -23,30 +22,25 @@ class LogService {
   static LogLevel _minimumLevel = LogLevel.debug;
   static const int _maxFileSize = 10 * 1024 * 1024; // 10MB
   static const int _bufferSize = 100;
-  static const int _flushInterval = 5; // seconds
+  static const int _flushInterval = 5; // sec
 
   static final Queue<String> _logBuffer = Queue<String>();
   static Timer? _flushTimer;
   static bool _isFlushInProgress = false;
 
-  /// シングルトンインスタンスを取得
+  /// シングルトン
   static LogService get instance {
     _instance ??= LogService._();
     return _instance!;
   }
 
-  /// ログサービスの初期化
-  ///
-  /// アプリケーション起動時に一度だけ呼び出してください。
-  ///
-  /// [minimumLevel] 出力する最小ログレベル（デフォルト：debug）
+  /// ログサービスを初期化する
   static Future<void> initialize({LogLevel? minimumLevel}) async {
     if (_initialized) {
       return;
     }
 
     try {
-      // 最小ログレベルを設定
       if (minimumLevel != null) {
         _minimumLevel = minimumLevel;
       }
@@ -54,7 +48,7 @@ class LogService {
       // リリースビルドの場合はログディレクトリを設定
       if (kReleaseMode) {
         await _setupLogDirectory();
-        // バッファフラッシュタイマーを開始
+        // バッファフラッシュ用のタイマーを開始
         _startFlushTimer();
       }
 
@@ -69,32 +63,35 @@ class LogService {
     }
   }
 
-  /// 最小ログレベルを動的に変更
+  // 最小ログレベルを動的に変更するためのメソッド
   static void setMinimumLevel(LogLevel level) {
     _minimumLevel = level;
     _log(LogLevel.info, "LogService", "Minimum log level changed to ${level.value}");
   }
 
-  /// バッファフラッシュタイマーを開始
+  /// バッファフラッシュタイマーを開始する用のメソッド
   static void _startFlushTimer() {
+    // 既存のタイマーがあればキャンセル
     _flushTimer?.cancel();
+    // 新しいタイマーを開始
     _flushTimer = Timer.periodic(Duration(seconds: _flushInterval), (_) {
       flushBuffer();
     });
   }
 
-  /// ログサービスの終了処理
+  // ログサービスの終了処理
   static Future<void> dispose() async {
     _flushTimer?.cancel();
     await flushBuffer();
     _initialized = false;
   }
 
-  /// プラットフォーム別ログディレクトリを設定
+  // プラットフォーム別ログディレクトリを設定
   static Future<void> _setupLogDirectory() async {
     try {
       String? envPath;
 
+      // ? これって適切なの
       // プラットフォーム別環境変数から取得
       if (Platform.isAndroid) {
         envPath = dotenv.env["LOG_PATH_ANDROID"];
@@ -111,10 +108,9 @@ class LogService {
       Directory logDir;
 
       if (envPath != null && envPath.isNotEmpty) {
-        // 環境変数で指定されたパスを使用
         logDir = Directory(envPath);
       } else {
-        // デフォルトのアプリケーションディレクトリを使用
+        // 環境変数から取得できない場合デフォルトを使用
         final Directory appDir = await getApplicationDocumentsDirectory();
         logDir = Directory("${appDir.path}/logs");
       }
@@ -135,7 +131,7 @@ class LogService {
     }
   }
 
-  /// デバッグレベルログ（開発時のみ）
+  /// デバッグレベルログ
   static void debug(String component, String message) {
     _log(LogLevel.debug, component, message);
   }
@@ -155,7 +151,7 @@ class LogService {
     _log(LogLevel.error, component, message, error, stackTrace);
   }
 
-  // --- エラー定義を使った便利メソッド ---
+  // =================== ヘルパー ======================
 
   /// 情報レベルログ（事前定義メッセージ使用）
   static void infoWithMessage(
@@ -163,6 +159,7 @@ class LogService {
     LogMessage logMessage, [
     Map<String, String>? params,
   ]) {
+    // 情報メッセージのパラメータが指定されている場合は置換
     final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _log(LogLevel.info, component, message);
   }
@@ -173,6 +170,7 @@ class LogService {
     LogMessage logMessage, [
     Map<String, String>? params,
   ]) {
+    // 警告メッセージのパラメータが指定されている場合は置換
     final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _log(LogLevel.warning, component, message);
   }
@@ -185,6 +183,7 @@ class LogService {
     Object? error,
     StackTrace? stackTrace,
   ]) {
+    // エラーメッセージのパラメータが指定されている場合は置換
     final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _log(LogLevel.error, component, message, error, stackTrace);
   }
@@ -216,7 +215,7 @@ class LogService {
       );
     }
 
-    // リリース時はwarning/errorのみファイル保存（バッファリング）
+    // リリース時はwarning/errorのみファイル保存(バッファ)
     if (kReleaseMode && level.shouldPersistInRelease && _logDirectory != null) {
       _addToBuffer(level, component, message, timestamp, error, stackTrace);
     }
@@ -319,7 +318,7 @@ class LogService {
         }
       }
 
-      // ファイルに追記（再試行ロジック付き）
+      // ファイルに追記
       await _writeWithRetry(file, entry);
     } catch (e) {
       developer.log(
@@ -401,9 +400,7 @@ class LogService {
     }
   }
 
-  /// ログファイルのクリーンアップ（古いファイルを削除）
-  ///
-  /// [daysToKeep] 保持する日数（デフォルト：30日）
+  /// 古いログファイルをクリーンアップする
   static Future<void> cleanupOldLogs({int daysToKeep = 30}) async {
     if (_logDirectory == null) {
       return;
@@ -415,9 +412,12 @@ class LogService {
         return;
       }
 
+      // 切り捨て日を計算
       final DateTime cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+      // ディレクトリ内のログファイルを取得
       final List<FileSystemEntity> files = await logDir.list().toList();
 
+      // 古いログファイルを削除
       for (final FileSystemEntity file in files) {
         if (file is File && file.path.endsWith(".log")) {
           final FileStat stat = await file.stat();

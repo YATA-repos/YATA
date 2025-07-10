@@ -4,11 +4,10 @@ import "../models/inventory_model.dart";
 
 /// レシピリポジトリ
 class RecipeRepository extends BaseRepository<Recipe, String> {
-  /// コンストラクタ
   RecipeRepository() : super(tableName: "recipes");
 
   @override
-  Recipe Function(Map<String, dynamic> json) get fromJson => Recipe.fromJson;
+  Recipe fromJson(Map<String, dynamic> json) => Recipe.fromJson(json);
 
   /// メニューアイテムIDでレシピ一覧を取得
   Future<List<Recipe>> findByMenuItemId(String menuItemId, String userId) async {

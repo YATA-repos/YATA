@@ -14,7 +14,6 @@ enum MenuInfo implements LogMessage {
   /// メニュー有効化
   menuItemEnabled;
 
-  /// 情報メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -56,7 +55,6 @@ enum MenuDebug implements LogMessage {
   /// 更新失敗警告
   updateFailed;
 
-  /// デバッグメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -91,7 +89,6 @@ enum MenuWarning implements LogMessage {
   /// 更新失敗
   updateFailed;
 
-  /// 警告メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -116,7 +113,6 @@ enum MenuError implements LogMessage {
   /// 可否切り替え失敗
   toggleAvailabilityFailed;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {

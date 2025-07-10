@@ -26,7 +26,6 @@ enum AnalyticsInfo implements LogMessage {
   /// メニュー可否自動更新完了
   autoUpdateCompleted;
 
-  /// 情報メッセージを取得
   @override
   String get message {
     switch (this) {
@@ -70,7 +69,6 @@ enum AnalyticsDebug implements LogMessage {
   /// 更新不要
   noUpdatesRequired;
 
-  /// デバッグメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -104,7 +102,6 @@ enum AnalyticsError implements LogMessage {
   /// メニュー可否自動更新失敗
   autoUpdateFailed;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {

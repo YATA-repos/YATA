@@ -32,7 +32,6 @@ enum AuthError implements LogMessage {
   /// サインアウト時に例外が発生
   signOutException;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -89,7 +88,6 @@ enum AuthInfo implements LogMessage {
   /// ユーザーのサインアウトが完了
   userSignedOut;
 
-  /// 情報メッセージを取得
   @override
   String get message {
     switch (this) {

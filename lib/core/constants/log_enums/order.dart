@@ -26,7 +26,6 @@ enum OrderError implements LogMessage {
   /// 無効な顧客情報
   invalidCustomerInfo;
 
-  /// エラーメッセージを取得
   @override
   String get message {
     switch (this) {
@@ -64,7 +63,6 @@ enum OrderWarning implements LogMessage {
   /// 推定調理時間が増加
   estimatedDelayIncreased;
 
-  /// 警告メッセージを取得
   @override
   String get message {
     switch (this) {

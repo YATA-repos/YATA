@@ -5,11 +5,10 @@ import "../models/order_model.dart";
 
 /// 注文リポジトリ
 class OrderRepository extends BaseRepository<Order, String> {
-  /// コンストラクタ
   OrderRepository() : super(tableName: "orders");
 
   @override
-  Order Function(Map<String, dynamic> json) get fromJson => Order.fromJson;
+  Order fromJson(Map<String, dynamic> json) => Order.fromJson(json);
 
   /// ユーザーのアクティブな下書き注文（カート）を取得
   Future<Order?> findActiveDraftByUser(String userId) async {

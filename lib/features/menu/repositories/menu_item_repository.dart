@@ -2,13 +2,11 @@ import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/menu_model.dart";
 
-/// メニューアイテムリポジトリ
 class MenuItemRepository extends BaseRepository<MenuItem, String> {
-  /// コンストラクタ
   MenuItemRepository() : super(tableName: "menu_items");
 
   @override
-  MenuItem Function(Map<String, dynamic> json) get fromJson => MenuItem.fromJson;
+  MenuItem fromJson(Map<String, dynamic> json) => MenuItem.fromJson(json);
 
   /// カテゴリIDでメニューアイテムを取得（None時は全件）
   Future<List<MenuItem>> findByCategoryId(String? categoryId, String userId) async {
