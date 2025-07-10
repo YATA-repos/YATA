@@ -8,7 +8,7 @@ class MaterialCategoryRepository extends BaseRepository<MaterialCategory, String
   MaterialCategoryRepository() : super(tableName: "material_categories");
 
   @override
-  MaterialCategory Function(Map<String, dynamic> json) get fromJson => MaterialCategory.fromJson;
+  MaterialCategory fromJson(Map<String, dynamic> json) => MaterialCategory.fromJson(json);
 
   /// アクティブなカテゴリ一覧を表示順で取得
   Future<List<MaterialCategory>> findActiveOrdered(String userId) async {

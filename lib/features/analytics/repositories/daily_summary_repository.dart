@@ -2,17 +2,15 @@ import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/analytics_model.dart";
 
-/// 日別集計リポジトリ
 class DailySummaryRepository extends BaseRepository<DailySummary, String> {
-  /// コンストラクタ
   DailySummaryRepository() : super(tableName: "daily_summaries");
 
   @override
-  DailySummary Function(Map<String, dynamic> json) get fromJson => DailySummary.fromJson;
+  DailySummary fromJson(Map<String, dynamic> json) => DailySummary.fromJson(json);
 
   /// 指定日の集計を取得
   Future<DailySummary?> findByDate(DateTime targetDate, String userId) async {
-    // 日付を日の開始時刻に正規化（時分秒をゼロに）
+    // 日付を日の開始時刻に正規化（h,m,sをゼロに）
     final DateTime targetDateNormalized = DateTime(
       targetDate.year,
       targetDate.month,

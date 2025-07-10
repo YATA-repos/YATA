@@ -8,7 +8,7 @@ class PurchaseRepository extends BaseRepository<Purchase, String> {
   PurchaseRepository() : super(tableName: "purchases");
 
   @override
-  Purchase Function(Map<String, dynamic> json) get fromJson => Purchase.fromJson;
+  Purchase fromJson(Map<String, dynamic> json) => Purchase.fromJson(json);
 
   /// 最近の仕入れ一覧を取得
   Future<List<Purchase>> findRecent(int days, String userId) async {

@@ -12,7 +12,7 @@ import "../repositories/menu_category_repository.dart";
 import "../repositories/menu_item_repository.dart";
 
 /// メニュー管理サービス
-@loggerComponent
+
 class MenuService with LoggerMixin {
   /// コンストラクタ
   MenuService({

@@ -8,7 +8,7 @@ class StockAdjustmentRepository extends BaseRepository<StockAdjustment, String> 
   StockAdjustmentRepository() : super(tableName: "stock_adjustments");
 
   @override
-  StockAdjustment Function(Map<String, dynamic> json) get fromJson => StockAdjustment.fromJson;
+  StockAdjustment fromJson(Map<String, dynamic> json) => StockAdjustment.fromJson(json);
 
   /// 材料IDで調整履歴を取得
   Future<List<StockAdjustment>> findByMaterialId(String materialId, String userId) async {

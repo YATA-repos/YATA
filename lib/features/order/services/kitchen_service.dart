@@ -3,13 +3,14 @@ import "dart:math" as math;
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/kitchen.dart";
 import "../../../core/utils/logger_mixin.dart";
+import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../models/order_model.dart";
 import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
 /// 調理・キッチン管理サービス
-@loggerComponent
+
 class KitchenService with LoggerMixin {
   /// コンストラクタ
   KitchenService({
@@ -209,9 +210,9 @@ class KitchenService with LoggerMixin {
     int totalPrepTime = 0;
 
     for (final OrderItem item in orderItems) {
-      final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
+      final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
       if (menuItem != null) {
-        totalPrepTime += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+        totalPrepTime += menuItem.estimatedPrepTimeMinutes * item.quantity;
       }
     }
 
@@ -281,9 +282,9 @@ class KitchenService with LoggerMixin {
         // まだ完成していない注文
         final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
         for (final OrderItem item in orderItems) {
-          final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
+          final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
           if (menuItem != null) {
-            totalEstimatedMinutes += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+            totalEstimatedMinutes += menuItem.estimatedPrepTimeMinutes * item.quantity;
           }
         }
       }
@@ -309,9 +310,9 @@ class KitchenService with LoggerMixin {
         // まだ開始していない注文
         final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
         for (final OrderItem item in orderItems) {
-          final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
+          final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
           if (menuItem != null) {
-            totalWaitTime += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+            totalWaitTime += menuItem.estimatedPrepTimeMinutes * item.quantity;
           }
         }
       }
@@ -338,9 +339,9 @@ class KitchenService with LoggerMixin {
       final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
       int totalTime = 0;
       for (final OrderItem item in orderItems) {
-        final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
+        final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
         if (menuItem != null) {
-          totalTime += (menuItem.estimatedPrepTimeMinutes as int) * item.quantity;
+          totalTime += menuItem.estimatedPrepTimeMinutes * item.quantity;
         }
       }
 

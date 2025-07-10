@@ -1,7 +1,9 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/utils/logger_mixin.dart";
+import "../../inventory/models/inventory_model.dart";
 import "../../inventory/repositories/material_repository.dart";
 import "../../inventory/repositories/recipe_repository.dart";
+import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
@@ -9,7 +11,7 @@ import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
 /// カート（下書き注文）管理サービス
-@loggerComponent
+
 class CartService with LoggerMixin {
   /// コンストラクタ
   CartService({
@@ -89,7 +91,7 @@ class CartService with LoggerMixin {
       }
 
       // メニューアイテムの取得
-      final dynamic menuItem = await _menuItemRepository.getById(request.menuItemId);
+      final MenuItem? menuItem = await _menuItemRepository.getById(request.menuItemId);
       if (menuItem == null || menuItem.userId != userId) {
         logError("Menu item access denied or menu item not found");
         throw Exception("Menu item ${request.menuItemId} not found");
@@ -137,8 +139,8 @@ class CartService with LoggerMixin {
           orderId: cartId,
           menuItemId: request.menuItemId,
           quantity: request.quantity,
-          unitPrice: menuItem.price as int,
-          subtotal: (menuItem.price as int) * request.quantity,
+          unitPrice: menuItem.price,
+          subtotal: menuItem.price * request.quantity,
           selectedOptions: request.selectedOptions,
           specialRequest: request.specialRequest,
           createdAt: DateTime.now(),
@@ -188,7 +190,7 @@ class CartService with LoggerMixin {
       }
 
       // メニューアイテムの取得（価格情報のため）
-      final dynamic menuItem = await _menuItemRepository.getById(orderItem.menuItemId);
+      final MenuItem? menuItem = await _menuItemRepository.getById(orderItem.menuItemId);
       if (menuItem == null) {
         logError("Menu item not found for order item");
         throw Exception("Menu item ${orderItem.menuItemId} not found");
@@ -209,10 +211,7 @@ class CartService with LoggerMixin {
       // 数量と小計を更新
       final OrderItem? updatedItem = await _orderItemRepository.updateById(
         orderItemId,
-        <String, dynamic>{
-          "quantity": newQuantity,
-          "subtotal": (menuItem.price as int) * newQuantity,
-        },
+        <String, dynamic>{"quantity": newQuantity, "subtotal": menuItem.price * newQuantity},
       );
 
       // カート合計を更新
@@ -367,19 +366,19 @@ class CartService with LoggerMixin {
   /// メニューアイテムの在庫充足を確認
   Future<bool> _checkMenuItemStock(String menuItemId, int quantity, String userId) async {
     // レシピを取得
-    final List<dynamic> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
 
-    for (final dynamic recipe in recipes) {
-      if (recipe.isOptional as bool) {
+    for (final Recipe recipe in recipes) {
+      if (recipe.isOptional) {
         continue;
       }
 
       // 必要な材料量を計算
-      final double requiredAmount = (recipe.requiredAmount as double) * quantity;
+      final double requiredAmount = recipe.requiredAmount * quantity;
 
       // 材料の在庫を確認
-      final dynamic material = await _materialRepository.getById(recipe.materialId as String);
-      if (material == null || (material.currentStock as double) < requiredAmount) {
+      final Material? material = await _materialRepository.getById(recipe.materialId);
+      if (material == null || material.currentStock < requiredAmount) {
         return false;
       }
     }

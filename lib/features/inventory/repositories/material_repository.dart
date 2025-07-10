@@ -4,11 +4,10 @@ import "../models/inventory_model.dart";
 
 /// 材料リポジトリ
 class MaterialRepository extends BaseRepository<Material, String> {
-  /// コンストラクタ
   MaterialRepository() : super(tableName: "materials");
 
   @override
-  Material Function(Map<String, dynamic> json) get fromJson => Material.fromJson;
+  Material fromJson(Map<String, dynamic> json) => Material.fromJson(json);
 
   /// カテゴリIDで材料を取得（None時は全件）
   Future<List<Material>> findByCategoryId(String? categoryId, String userId) async {

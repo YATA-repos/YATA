@@ -9,7 +9,7 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
   StockTransactionRepository() : super(tableName: "stock_transactions");
 
   @override
-  StockTransaction Function(Map<String, dynamic> json) get fromJson => StockTransaction.fromJson;
+  StockTransaction fromJson(Map<String, dynamic> json) => StockTransaction.fromJson(json);
 
   /// 在庫取引を一括作成
   Future<List<StockTransaction>> createBatch(List<StockTransaction> transactions) async =>

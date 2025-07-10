@@ -1,6 +1,4 @@
-/// 日次統計結果
 class DailyStatsResult {
-  /// コンストラクタ
   DailyStatsResult({
     required this.completedOrders,
     required this.pendingOrders,
@@ -9,7 +7,7 @@ class DailyStatsResult {
     this.mostPopularItem,
   });
 
-  /// JSONからオブジェクトを生成
+  // JSONからオブジェクト生成
   factory DailyStatsResult.fromJson(Map<String, dynamic> json) => DailyStatsResult(
     completedOrders: json["completed_orders"] as int,
     pendingOrders: json["pending_orders"] as int,
@@ -33,7 +31,7 @@ class DailyStatsResult {
   /// 最も人気のある商品情報
   Map<String, dynamic>? mostPopularItem;
 
-  /// オブジェクトをJSONに変換
+  /// オブジェクトをJSON変換
   Map<String, dynamic> toJson() => <String, dynamic>{
     "completed_orders": completedOrders,
     "pending_orders": pendingOrders,

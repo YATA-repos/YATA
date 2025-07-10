@@ -4,6 +4,7 @@ import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
 import "../../../core/utils/logger_mixin.dart";
 
+import "../../order/models/order_model.dart";
 import "../../order/repositories/order_item_repository.dart";
 import "../../stock/dto/stock_dto.dart";
 import "../../stock/models/stock_model.dart";
@@ -18,7 +19,7 @@ import "../repositories/material_repository.dart";
 import "../repositories/recipe_repository.dart";
 
 /// 在庫管理サービス
-@loggerComponent
+
 class InventoryService with LoggerMixin {
   /// コンストラクタ
   InventoryService({
@@ -389,7 +390,7 @@ class InventoryService with LoggerMixin {
 
     try {
       // 注文明細を取得
-      final List<dynamic> orderItems = await _orderItemRepository.findByOrderId(orderId);
+      final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
 
       if (orderItems.isEmpty) {
         logDebug(ServiceDebug.consumptionCompletedSuccessfully.message);
@@ -401,16 +402,16 @@ class InventoryService with LoggerMixin {
       // 注文明細から必要な材料を計算
       final Map<String, double> materialRequirements = <String, double>{};
 
-      for (final dynamic orderItem in orderItems) {
+      for (final OrderItem orderItem in orderItems) {
         // メニューアイテムのレシピを取得
         final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-          orderItem.menuItemId as String,
+          orderItem.menuItemId,
           userId,
         );
 
         for (final Recipe recipe in recipes) {
           // 必要量 = レシピの必要量 × 注文数量
-          final double requiredAmount = recipe.requiredAmount * (orderItem.quantity as int);
+          final double requiredAmount = recipe.requiredAmount * orderItem.quantity;
           materialRequirements[recipe.materialId] =
               (materialRequirements[recipe.materialId] ?? 0.0) + requiredAmount;
         }

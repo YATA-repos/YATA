@@ -8,7 +8,7 @@ class MenuCategoryRepository extends BaseRepository<MenuCategory, String> {
   MenuCategoryRepository() : super(tableName: "menu_categories");
 
   @override
-  MenuCategory Function(Map<String, dynamic> json) get fromJson => MenuCategory.fromJson;
+  MenuCategory fromJson(Map<String, dynamic> json) => MenuCategory.fromJson(json);
 
   /// アクティブなカテゴリ一覧を表示順で取得
   Future<List<MenuCategory>> findActiveOrdered(String userId) async {

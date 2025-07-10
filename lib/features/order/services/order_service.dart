@@ -1,7 +1,9 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/utils/logger_mixin.dart";
+import "../../inventory/models/inventory_model.dart";
 import "../../inventory/repositories/material_repository.dart";
 import "../../inventory/repositories/recipe_repository.dart";
+import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
@@ -9,7 +11,7 @@ import "../repositories/order_item_repository.dart";
 import "../repositories/order_repository.dart";
 
 /// 注文管理サービス
-@loggerComponent
+
 class OrderService with LoggerMixin {
   /// コンストラクタ
   OrderService({
@@ -209,11 +211,9 @@ class OrderService with LoggerMixin {
           bool hasMatchingItem = false;
 
           for (final OrderItem item in items) {
-            final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
+            final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
             if (menuItem != null &&
-                request.menuItemName!.toLowerCase().contains(
-                  (menuItem.name as String).toLowerCase(),
-                )) {
+                request.menuItemName!.toLowerCase().contains(menuItem.name.toLowerCase())) {
               hasMatchingItem = true;
               break;
             }
@@ -279,7 +279,7 @@ class OrderService with LoggerMixin {
       // メニューアイテム情報も含める
       final List<Map<String, dynamic>> itemsWithMenu = <Map<String, dynamic>>[];
       for (final OrderItem item in orderItems) {
-        final dynamic menuItem = await _menuItemRepository.getById(item.menuItemId);
+        final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
         itemsWithMenu.add(<String, dynamic>{"order_item": item, "menu_item": menuItem});
       }
 
@@ -299,19 +299,19 @@ class OrderService with LoggerMixin {
   /// メニューアイテムの在庫充足を確認
   Future<bool> _checkMenuItemStock(String menuItemId, int quantity, String userId) async {
     // レシピを取得
-    final List<dynamic> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
 
-    for (final dynamic recipe in recipes) {
-      if (recipe.isOptional as bool) {
+    for (final Recipe recipe in recipes) {
+      if (recipe.isOptional) {
         continue;
       }
 
       // 必要な材料量を計算
-      final double requiredAmount = (recipe.requiredAmount as double) * quantity;
+      final double requiredAmount = recipe.requiredAmount * quantity;
 
       // 材料の在庫を確認
-      final dynamic material = await _materialRepository.getById(recipe.materialId as String);
-      if (material == null || (material.currentStock as double) < requiredAmount) {
+      final Material? material = await _materialRepository.getById(recipe.materialId);
+      if (material == null || material.currentStock < requiredAmount) {
         return false;
       }
     }
@@ -345,15 +345,15 @@ class OrderService with LoggerMixin {
 
     // 必要な材料量を集計
     for (final OrderItem item in orderItems) {
-      final List<dynamic> recipes = await _recipeRepository.findByMenuItemId(
+      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
         item.menuItemId,
         userId,
       );
-      for (final dynamic recipe in recipes) {
-        if (!(recipe.isOptional as bool)) {
-          final double requiredAmount = (recipe.requiredAmount as double) * item.quantity;
-          materialConsumption[recipe.materialId as String] =
-              (materialConsumption[recipe.materialId as String] ?? 0.0) + requiredAmount;
+      for (final Recipe recipe in recipes) {
+        if (!recipe.isOptional) {
+          final double requiredAmount = recipe.requiredAmount * item.quantity;
+          materialConsumption[recipe.materialId] =
+              (materialConsumption[recipe.materialId] ?? 0.0) + requiredAmount;
         }
       }
     }
@@ -363,9 +363,9 @@ class OrderService with LoggerMixin {
       final String materialId = entry.key;
       final double consumedAmount = entry.value;
 
-      final dynamic material = await _materialRepository.getById(materialId);
+      final Material? material = await _materialRepository.getById(materialId);
       if (material != null) {
-        final double newStock = (material.currentStock as double) - consumedAmount;
+        final double newStock = material.currentStock - consumedAmount;
         await _materialRepository.updateStockAmount(materialId, newStock, userId);
       }
     }
@@ -377,15 +377,15 @@ class OrderService with LoggerMixin {
 
     // 復元する材料量を集計
     for (final OrderItem item in orderItems) {
-      final List<dynamic> recipes = await _recipeRepository.findByMenuItemId(
+      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
         item.menuItemId,
         userId,
       );
-      for (final dynamic recipe in recipes) {
-        if (!(recipe.isOptional as bool)) {
-          final double restoredAmount = (recipe.requiredAmount as double) * item.quantity;
-          materialRestoration[recipe.materialId as String] =
-              (materialRestoration[recipe.materialId as String] ?? 0.0) + restoredAmount;
+      for (final Recipe recipe in recipes) {
+        if (!recipe.isOptional) {
+          final double restoredAmount = recipe.requiredAmount * item.quantity;
+          materialRestoration[recipe.materialId] =
+              (materialRestoration[recipe.materialId] ?? 0.0) + restoredAmount;
         }
       }
     }
@@ -395,9 +395,9 @@ class OrderService with LoggerMixin {
       final String materialId = entry.key;
       final double restoredAmount = entry.value;
 
-      final dynamic material = await _materialRepository.getById(materialId);
+      final Material? material = await _materialRepository.getById(materialId);
       if (material != null) {
-        final double newStock = (material.currentStock as double) + restoredAmount;
+        final double newStock = material.currentStock + restoredAmount;
         await _materialRepository.updateStockAmount(materialId, newStock, userId);
       }
     }
