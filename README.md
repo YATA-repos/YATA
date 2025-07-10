@@ -4,8 +4,9 @@
 
 **開発中**: このプロジェクトは現在開発中であり、機能は未完成です。フィードバックやコントリビューションは大歓迎です！
 
-[![GitBook](https://img.shields.io/badge/docs-GitBook-blue)](https://pennes-organization.gitbook.io/yata-dev-documents/)
-[![License](https://img.shields.io/github/license/pennes-organization/yata)]
+[![GitBook](https://img.shields.io/badge/docs-GitBook-blue)](https://pennes-organization.gitbook.io/yata-docs)
+![License](https://img.shields.io/github/license/YATA-repos/YATA)
+![Build Status](https://img.shields.io/github/actions/workflow/status/YATA-repos/YATA/flutter.yml?branch=main)
 
 ## 概要
 
@@ -13,10 +14,10 @@ YATA（日本語の「屋台」から命名）は、小規模レストラン事�
 
 ## 主要機能(予定)
 
-- **在庫追跡**:
+- **在庫追跡**: 商品・原材料の在庫管理
 - **注文管理**: 下書き→アクティブ→完了の状態管理による注文処理
 - **分析機能**: 日次summaryとビジネス洞察の自動生成
-- **オフラインサポート**: 操作queueと再接続時同期
+- **オフラインサポート**: 操作キューと再接続時同期
 
 ## プロジェクト固有の設計思想
 
