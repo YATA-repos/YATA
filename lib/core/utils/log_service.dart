@@ -34,12 +34,7 @@ class LogService {
     return _instance!;
   }
 
-  // ! documentation stringの書き方が間違ってる
-  /// ログサービスの初期化
-  ///
-  /// アプリケーション起動時に一度だけ呼び出してください。
-  ///
-  /// [minimumLevel] 出力する最小ログレベル（デフォルト：debug）
+  /// ログサービスを初期化する
   static Future<void> initialize({LogLevel? minimumLevel}) async {
     if (_initialized) {
       return;
@@ -405,10 +400,7 @@ class LogService {
     }
   }
 
-  // ! documentation stringの書き方が間違ってる
-  /// ログファイルのクリーンアップ（古いファイルを削除）
-  ///
-  /// [daysToKeep] 保持する日数（デフォルト：30日）
+  /// 古いログファイルをクリーンアップする
   static Future<void> cleanupOldLogs({int daysToKeep = 30}) async {
     if (_logDirectory == null) {
       return;

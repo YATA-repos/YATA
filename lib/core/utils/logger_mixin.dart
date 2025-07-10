@@ -20,12 +20,7 @@ mixin LoggerMixin {
     LogService.warning(loggerComponent, message);
   }
 
-  // ! documentation stringの書き方が間違ってる
-  /// エラーレベルログ（リリース時もファイル保存）
-  ///
-  /// [message] ログメッセージ
-  /// [error] エラーオブジェクト
-  /// [stackTrace] スタックトレース
+  /// エラーレベルログを出力
   void logError(String message, [Object? error, StackTrace? stackTrace]) {
     LogService.error(loggerComponent, message, error, stackTrace);
   }
