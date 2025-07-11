@@ -1,21 +1,13 @@
 import "package:flutter/material.dart";
 import "app_colors.dart";
 
-/// YATAアプリケーションのテーマ設定
-///
-/// UIシステムデータガイドに基づいて定義されたテーマシステム
 class AppTheme {
   AppTheme._();
-
-  // ==========================================================================
-  // Light Theme (ライトテーマ)
-  // ==========================================================================
 
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
 
-    // カラースキーム
     colorScheme: const ColorScheme.light(
       primary: AppColors.primary,
       secondary: AppColors.secondary,
@@ -31,10 +23,8 @@ class AppTheme {
       shadow: Colors.black26,
     ),
 
-    // スカッフォールド
     scaffoldBackgroundColor: AppColors.background,
 
-    // アプリバー
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.background,
       foregroundColor: AppColors.foreground,
@@ -47,7 +37,6 @@ class AppTheme {
       ),
     ),
 
-    // カード
     cardTheme: const CardThemeData(
       color: AppColors.card,
       shadowColor: Colors.black12,
@@ -55,7 +44,6 @@ class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
     ),
 
-    // ボタン
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
@@ -84,7 +72,6 @@ class AppTheme {
       ),
     ),
 
-    // 入力フィールド
     inputDecorationTheme: const InputDecorationTheme(
       filled: true,
       fillColor: AppColors.background,
@@ -112,10 +99,8 @@ class AppTheme {
       hintStyle: TextStyle(color: AppColors.mutedForeground),
     ),
 
-    // 分割線
     dividerTheme: const DividerThemeData(color: AppColors.border, thickness: 1),
 
-    // タブバー
     tabBarTheme: const TabBarThemeData(
       labelColor: AppColors.foreground,
       unselectedLabelColor: AppColors.mutedForeground,
@@ -123,7 +108,6 @@ class AppTheme {
       indicatorSize: TabBarIndicatorSize.label,
     ),
 
-    // ボトムナビゲーション
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: AppColors.background,
       selectedItemColor: AppColors.primary,
@@ -132,7 +116,6 @@ class AppTheme {
       elevation: 8,
     ),
 
-    // ダイアログ
     dialogTheme: const DialogThemeData(
       backgroundColor: AppColors.background,
       titleTextStyle: TextStyle(
@@ -144,14 +127,12 @@ class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
     ),
 
-    // スナックバー
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: AppColors.foreground,
       contentTextStyle: TextStyle(color: AppColors.background),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(4))),
     ),
 
-    // ListTile
     listTileTheme: const ListTileThemeData(
       titleTextStyle: TextStyle(
         color: AppColors.foreground,
@@ -165,23 +146,19 @@ class AppTheme {
       ),
     ),
 
-    // Chip
     chipTheme: const ChipThemeData(
       backgroundColor: AppColors.muted,
       labelStyle: TextStyle(color: AppColors.foreground),
       side: BorderSide(color: AppColors.border),
     ),
 
-    // Icon
     iconTheme: const IconThemeData(color: AppColors.foreground, size: 24),
 
-    // Badge
     badgeTheme: const BadgeThemeData(
       backgroundColor: AppColors.danger,
       textColor: AppColors.dangerForeground,
     ),
 
-    // テキストテーマ
     textTheme: const TextTheme(
       displayLarge: TextStyle(color: AppColors.foreground),
       displayMedium: TextStyle(color: AppColors.foreground),
@@ -201,15 +178,10 @@ class AppTheme {
     ),
   );
 
-  // ==========================================================================
-  // Dark Theme (ダークテーマ)
-  // ==========================================================================
-
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
 
-    // カラースキーム
     colorScheme: const ColorScheme.dark(
       primary: AppColors.primary,
       onPrimary: AppColors.primaryForeground,
@@ -227,10 +199,8 @@ class AppTheme {
       shadow: Colors.black54,
     ),
 
-    // スカッフォールド
     scaffoldBackgroundColor: AppColors.darkBackground,
 
-    // アプリバー
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.darkBackground,
       foregroundColor: AppColors.darkForeground,
@@ -243,7 +213,6 @@ class AppTheme {
       ),
     ),
 
-    // カード
     cardTheme: const CardThemeData(
       color: AppColors.darkCard,
       shadowColor: Colors.black54,
@@ -251,7 +220,6 @@ class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
     ),
 
-    // ボタン
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
@@ -280,7 +248,6 @@ class AppTheme {
       ),
     ),
 
-    // 入力フィールド
     inputDecorationTheme: const InputDecorationTheme(
       filled: true,
       fillColor: AppColors.darkBackground,
@@ -308,10 +275,8 @@ class AppTheme {
       hintStyle: TextStyle(color: AppColors.darkMutedForeground),
     ),
 
-    // 分割線
     dividerTheme: const DividerThemeData(color: AppColors.darkBorder, thickness: 1),
 
-    // タブバー
     tabBarTheme: const TabBarThemeData(
       labelColor: AppColors.darkForeground,
       unselectedLabelColor: AppColors.darkMutedForeground,
@@ -319,7 +284,6 @@ class AppTheme {
       indicatorSize: TabBarIndicatorSize.label,
     ),
 
-    // ボトムナビゲーション
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: AppColors.darkBackground,
       selectedItemColor: AppColors.primary,
@@ -328,7 +292,6 @@ class AppTheme {
       elevation: 8,
     ),
 
-    // ダイアログ
     dialogTheme: const DialogThemeData(
       backgroundColor: AppColors.darkCard,
       titleTextStyle: TextStyle(
@@ -340,14 +303,12 @@ class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
     ),
 
-    // スナックバー
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: AppColors.darkForeground,
       contentTextStyle: TextStyle(color: AppColors.darkBackground),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(4))),
     ),
 
-    // ListTile
     listTileTheme: const ListTileThemeData(
       titleTextStyle: TextStyle(
         color: AppColors.darkForeground,
@@ -361,23 +322,19 @@ class AppTheme {
       ),
     ),
 
-    // Chip
     chipTheme: const ChipThemeData(
       backgroundColor: AppColors.darkMuted,
       labelStyle: TextStyle(color: AppColors.darkForeground),
       side: BorderSide(color: AppColors.darkBorder),
     ),
 
-    // Icon
     iconTheme: const IconThemeData(color: AppColors.darkForeground, size: 24),
 
-    // Badge
     badgeTheme: const BadgeThemeData(
       backgroundColor: AppColors.danger,
       textColor: AppColors.dangerForeground,
     ),
 
-    // テキストテーマ
     textTheme: const TextTheme(
       displayLarge: TextStyle(color: AppColors.darkForeground),
       displayMedium: TextStyle(color: AppColors.darkForeground),
