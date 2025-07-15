@@ -1,11 +1,14 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
+import "package:flutter_dotenv/flutter_dotenv.dart";
+import "package:flutter_localizations/flutter_localizations.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 // ignore: implementation_imports
 import "package:go_router/src/router.dart";
 
+import "core/auth/auth_service.dart";
+import "core/utils/log_service.dart";
 import "core/utils/logger_mixin.dart";
-import "routing/providers/router_provider.dart";
 import "shared/themes/app_theme.dart";
 
 /// アプリケーションのエントリーポイント
@@ -13,8 +16,25 @@ void main() async {
   // Flutter エンジンの初期化を確実に行う
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 環境変数の読み込み
+  await dotenv.load();
+
+  // ログサービスの初期化
+  await LogService.initialize();
+
+  final _ErrorHandler tempLogger = _ErrorHandler()
+    ..logInfo("Starting YATA application...")
+    ..logInfo("Flutter binding initialized.")
+    ..logInfo("Environment variables loaded.")
+    ..logInfo("Log service initialized.");
+
+  // Supabaseの初期化
+  await SupabaseClientService.initialize();
+  tempLogger.logInfo("Supabase client initialized.");
+
   // エラーハンドリングの設定
   _setupErrorHandling();
+  tempLogger.logInfo("Error handling setup completed.");
 
   // アプリケーションを起動
   runApp(
@@ -45,6 +65,11 @@ class YataApp extends ConsumerWidget {
       routerConfig: router,
 
       // ローカライゼーション設定（将来的な多言語対応）
+      localizationsDelegates: const <LocalizationsDelegate<Object>>[
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       supportedLocales: const <Locale>[
         Locale("ja", "JP"), // 日本語
         Locale("en", "US"), // 英語

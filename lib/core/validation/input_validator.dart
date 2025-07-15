@@ -146,15 +146,11 @@ class InputValidator {
     }
 
     if (minDate != null && dateValue.isBefore(minDate)) {
-      return ValidationResult.error(
-        "$fieldNameは${minDate.toString().substring(0, 10)}以降を入力してください",
-      );
+      return ValidationResult.error("$fieldNameは${minDate.toString().substring(0, 10)}以降を入力してください");
     }
 
     if (maxDate != null && dateValue.isAfter(maxDate)) {
-      return ValidationResult.error(
-        "$fieldNameは${maxDate.toString().substring(0, 10)}以前を入力してください",
-      );
+      return ValidationResult.error("$fieldNameは${maxDate.toString().substring(0, 10)}以前を入力してください");
     }
 
     return ValidationResult.success();

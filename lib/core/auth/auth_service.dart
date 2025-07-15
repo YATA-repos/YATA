@@ -1,5 +1,7 @@
 import "dart:async";
+import "dart:io";
 
+import "package:flutter/foundation.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:mutex/mutex.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
@@ -8,6 +10,7 @@ import "../constants/log_enums/auth.dart";
 import "../utils/log_service.dart";
 import "../utils/logger_mixin.dart";
 import "../utils/stream_manager_mixin.dart";
+import "local_auth_server.dart";
 
 // * 静的メソッドはLoggerMixinを使用できないため、一部ではLogServiceを直接使用
 class SupabaseClientService with LoggerMixin, StreamManagerMixin {
@@ -20,6 +23,7 @@ class SupabaseClientService with LoggerMixin, StreamManagerMixin {
   bool _isRefreshing = false;
   Completer<void>? _refreshCompleter;
   Timer? _sessionMonitorTimer;
+  LocalAuthServer? _localAuthServer;
 
   // シングルトンインスタンスの取得
   static SupabaseClientService get instance {
@@ -52,9 +56,6 @@ class SupabaseClientService with LoggerMixin, StreamManagerMixin {
     return key;
   }
 
-  static String get _redirectUrl =>
-      dotenv.env["REDIRECT_URL"] ?? "io.supabase.flutterquickstart://login-callback/";
-
   /// Supabaseクライアントの初期化
   ///
   /// アプリケーション起動時に一度だけ呼び出してください。
@@ -64,9 +65,6 @@ class SupabaseClientService with LoggerMixin, StreamManagerMixin {
     }
 
     try {
-      // .envの読み込み
-      await dotenv.load();
-
       // Supabaseクライアントの初期化
       await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
@@ -91,51 +89,61 @@ class SupabaseClientService with LoggerMixin, StreamManagerMixin {
   ///
   /// Returns: 認証が開始された場合は`true`
   Future<bool> signInWithGoogle() async {
+    final Completer<bool> completer = Completer<bool>();
     try {
       logInfoMessage(AuthInfo.googleAuthStarted);
 
-      final Completer<bool> completer = Completer<bool>();
-      Timer? timeoutTimer;
-
-      // 30秒でタイムアウト
-      timeoutTimer = Timer(const Duration(seconds: 30), () {
-        if (!completer.isCompleted) {
-          logWarningMessage(AuthError.googleAuthTimeout);
-          completer.complete(false);
-        }
-      });
+      // Linuxの場合、ローカルサーバーを起動してコールバックを待つ
+      if (Platform.isLinux) {
+        _localAuthServer = LocalAuthServer(
+          onAuthSuccess: () {
+            if (!completer.isCompleted) {
+              completer.complete(true);
+            }
+          },
+          onAuthFailure: (String error) {
+            if (!completer.isCompleted) {
+              logWarningMessage(AuthError.googleAuthFailed, <String, String>{"error": error});
+              completer.complete(false);
+            }
+          },
+        );
+        await _localAuthServer!.start();
+      }
 
       // プロバイダgoogle指定でOAuthを開始
       final bool response = await client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: _redirectUrl,
+        redirectTo: kIsWeb ? null : "http://localhost:3000/",
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
 
-      timeoutTimer.cancel();
-
-      // 認証が成功したらCompleterを完了
-      if (!completer.isCompleted) {
-        final bool success = response;
-        logInfoMessage(AuthInfo.googleOAuthResponse, <String, String>{
-          "response": success.toString(),
-        });
-        completer.complete(success);
+      // Web以外のプラットフォームで、かつローカルサーバーを使用していない場合
+      if (!Platform.isLinux && !kIsWeb) {
+        return response;
       }
 
-      return await completer.future;
-      // 認証エラー発生時
+      // Linuxの場合、ローカルサーバーからの結果を待つ
+      if (Platform.isLinux) {
+        return await completer.future;
+      }
+
+      return response;
+
+      // 認証失敗の場合
     } on AuthException catch (e) {
       logWarningMessage(AuthError.googleAuthFailed, <String, String>{"message": e.message});
-      throw SupabaseAuthException("Google authentication failed: ${e.message}");
+      await _localAuthServer?.stop();
+      return false;
       // その他の例外発生時
     } catch (e) {
       logErrorMessage(AuthError.googleAuthException, <String, String>{"error": e.toString()}, e);
-      throw SupabaseClientException("Failed to initiate Google authentication: ${e.toString()}");
+      await _localAuthServer?.stop();
+      return false;
     }
   }
 
-  /// 認証コールバックからセッションを復元
+  /// URLからセッションを取得
   ///
   /// [callbackUrl] OAuth認証後のコールバックURL
   /// Returns: 認証されたユーザー情報、失敗時はnull
@@ -290,6 +298,22 @@ class SupabaseClientService with LoggerMixin, StreamManagerMixin {
     } catch (e) {
       logErrorMessage(AuthError.signOutException, <String, String>{"error": e.toString()}, e);
       throw SupabaseClientException("Error during sign out: ${e.toString()}");
+    } finally {
+      await _localAuthServer?.stop();
+    }
+  }
+
+  /// 現在のセッションをリフレッシュ
+  Future<void> refreshSession() async {
+    await _sessionRefreshMutex.acquire();
+    try {
+      // リフレッシュ処理
+      await client.auth.refreshSession();
+    } catch (e) {
+      logErrorMessage(AuthError.sessionRefreshFailed, <String, String>{"error": e.toString()}, e);
+      throw SupabaseClientException("Failed to refresh session: ${e.toString()}");
+    } finally {
+      _sessionRefreshMutex.release();
     }
   }
 

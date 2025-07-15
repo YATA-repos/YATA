@@ -45,12 +45,10 @@ class LogService {
         _minimumLevel = minimumLevel;
       }
 
-      // リリースビルドの場合はログディレクトリを設定
-      if (kReleaseMode) {
-        await _setupLogDirectory();
-        // バッファフラッシュ用のタイマーを開始
-        _startFlushTimer();
-      }
+      // デバッグ時もリリース時もログディレクトリを設定
+      await _setupLogDirectory();
+      // バッファフラッシュ用のタイマーを開始
+      _startFlushTimer();
 
       _initialized = true;
       _log(LogLevel.info, "LogService", "Log service initialized successfully");
@@ -91,18 +89,22 @@ class LogService {
     try {
       String? envPath;
 
-      // ? これって適切なの
-      // プラットフォーム別環境変数から取得
-      if (Platform.isAndroid) {
-        envPath = dotenv.env["LOG_PATH_ANDROID"];
-      } else if (Platform.isIOS) {
-        envPath = dotenv.env["LOG_PATH_IOS"];
-      } else if (Platform.isWindows) {
-        envPath = dotenv.env["LOG_PATH_WINDOWS"];
-      } else if (Platform.isMacOS) {
-        envPath = dotenv.env["LOG_PATH_MACOS"];
-      } else if (Platform.isLinux) {
-        envPath = dotenv.env["LOG_PATH_LINUX"];
+      // デバッグ時とリリース時で異なる環境変数を使用
+      if (kDebugMode) {
+        envPath = dotenv.env["DEBUG_LOG_DIR"];
+      } else {
+        // リリース時はプラットフォーム別環境変数から取得
+        if (Platform.isAndroid) {
+          envPath = dotenv.env["LOG_PATH_ANDROID"];
+        } else if (Platform.isIOS) {
+          envPath = dotenv.env["LOG_PATH_IOS"];
+        } else if (Platform.isWindows) {
+          envPath = dotenv.env["LOG_PATH_WINDOWS"];
+        } else if (Platform.isMacOS) {
+          envPath = dotenv.env["LOG_PATH_MACOS"];
+        } else if (Platform.isLinux) {
+          envPath = dotenv.env["LOG_PATH_LINUX"];
+        }
       }
 
       Directory logDir;
@@ -215,9 +217,11 @@ class LogService {
       );
     }
 
-    // リリース時はwarning/errorのみファイル保存(バッファ)
-    if (kReleaseMode && level.shouldPersistInRelease && _logDirectory != null) {
-      _addToBuffer(level, component, message, timestamp, error, stackTrace);
+    // デバッグ時は全レベル、リリース時はwarning/errorのみファイル保存(バッファ)
+    if (_logDirectory != null) {
+      if (kDebugMode || (kReleaseMode && level.shouldPersistInRelease)) {
+        _addToBuffer(level, component, message, timestamp, error, stackTrace);
+      }
     }
   }
 
