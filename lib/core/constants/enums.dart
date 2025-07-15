@@ -172,14 +172,29 @@ enum StockLevel {
 /// 注文ステータス
 @JsonEnum()
 enum OrderStatus {
+  /// 待機中。注文が受け付けられ、まだ確認されていない状態。
+  pending("pending"),
+
+  /// 確認済み。注文が確認され、処理が開始される状態。
+  confirmed("confirmed"),
+
   /// 準備中。オーダーが作成され、キッチンが未対応もしくは調理中である状態。
   preparing("preparing"),
+
+  /// 準備完了。調理が完了し、提供準備ができた状態。
+  ready("ready"),
+
+  /// 配達済み。顧客に提供された状態。
+  delivered("delivered"),
 
   /// 完了。オーダー内の全てのアイテムが提供された状態。
   completed("completed"),
 
   /// キャンセル。オーダーがキャンセルされた状態。基本的にはオーダー作成後即座に割り当てられる想定。
-  canceled("canceled");
+  canceled("canceled"),
+
+  /// 返金済み。キャンセルされた注文で返金が完了した状態。
+  refunded("refunded");
 
   const OrderStatus(this.value);
 
@@ -191,12 +206,22 @@ enum OrderStatus {
   /// 日本語での表示名
   String get displayName {
     switch (this) {
+      case OrderStatus.pending:
+        return "待機中";
+      case OrderStatus.confirmed:
+        return "確認済み";
       case OrderStatus.preparing:
         return "準備中";
+      case OrderStatus.ready:
+        return "準備完了";
+      case OrderStatus.delivered:
+        return "配達済み";
       case OrderStatus.completed:
         return "完了";
       case OrderStatus.canceled:
         return "キャンセル";
+      case OrderStatus.refunded:
+        return "返金済み";
     }
   }
 
@@ -204,20 +229,44 @@ enum OrderStatus {
   /// 実際のColorオブジェクトは呼び出し側で定義する
   String get colorName {
     switch (this) {
-      case OrderStatus.preparing:
+      case OrderStatus.pending:
+        return "gray";
+      case OrderStatus.confirmed:
         return "blue";
+      case OrderStatus.preparing:
+        return "orange";
+      case OrderStatus.ready:
+        return "green";
+      case OrderStatus.delivered:
+        return "purple";
       case OrderStatus.completed:
         return "green";
       case OrderStatus.canceled:
         return "red";
+      case OrderStatus.refunded:
+        return "gray";
     }
   }
 
   /// ステータスがアクティブかどうかを判定
-  bool get isActive => this == OrderStatus.preparing;
+  bool get isActive =>
+      this == OrderStatus.pending ||
+      this == OrderStatus.confirmed ||
+      this == OrderStatus.preparing ||
+      this == OrderStatus.ready;
 
   /// ステータスが完了しているかどうかを判定
-  bool get isFinished => this == OrderStatus.completed || this == OrderStatus.canceled;
+  bool get isFinished =>
+      this == OrderStatus.delivered ||
+      this == OrderStatus.completed ||
+      this == OrderStatus.canceled ||
+      this == OrderStatus.refunded;
+
+  /// ステータスが処理中かどうかを判定
+  bool get isProcessing => this == OrderStatus.confirmed || this == OrderStatus.preparing;
+
+  /// ステータスが顧客に表示すべきかどうかを判定
+  bool get isVisibleToCustomer => this != OrderStatus.refunded;
 }
 
 /// ログレベル
