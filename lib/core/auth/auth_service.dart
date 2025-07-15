@@ -1,17 +1,25 @@
 import "dart:async";
 
 import "package:flutter_dotenv/flutter_dotenv.dart";
+import "package:mutex/mutex.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 
 import "../constants/log_enums/auth.dart";
 import "../utils/log_service.dart";
 import "../utils/logger_mixin.dart";
+import "../utils/stream_manager_mixin.dart";
 
 // * 静的メソッドはLoggerMixinを使用できないため、一部ではLogServiceを直接使用
-class SupabaseClientService with LoggerMixin {
+class SupabaseClientService with LoggerMixin, StreamManagerMixin {
   SupabaseClientService._();
   static SupabaseClientService? _instance;
   static SupabaseClient? _client;
+
+  // セッション更新の排他制御用Mutex
+  final Mutex _sessionRefreshMutex = Mutex();
+  bool _isRefreshing = false;
+  Completer<void>? _refreshCompleter;
+  Timer? _sessionMonitorTimer;
 
   // シングルトンインスタンスの取得
   static SupabaseClientService get instance {
@@ -63,6 +71,9 @@ class SupabaseClientService with LoggerMixin {
       await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
       _client = Supabase.instance.client;
+
+      // セッション監視を開始
+      instance._startSessionMonitoring();
 
       LogService.infoWithMessage("SupabaseClientService", AuthInfo.clientInitialized);
     } catch (e) {
@@ -177,46 +188,98 @@ class SupabaseClientService with LoggerMixin {
   // セッション情報を取得
   Session? get currentSession => client.auth.currentSession;
 
-  // セッションの有効性チェック
+  // セッションの有効性チェック（同期処理）
   bool _isSessionValid() {
     final Session? session = currentSession;
     if (session == null) {
       return false;
     }
 
-    // セッションの有効期限をチェック
+    final DateTime expiresAt = DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000);
+    return expiresAt.isAfter(DateTime.now());
+  }
+
+  // セッション更新が必要かチェック（同期処理）
+  bool _shouldRefreshSession() {
+    final Session? session = currentSession;
+    if (session == null) {
+      return false;
+    }
+
     final DateTime expiresAt = DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000);
     final DateTime now = DateTime.now();
 
-    // 5分前にリフレッシュのチェックを
-    final bool shouldRefresh = expiresAt.isBefore(now.add(const Duration(minutes: 5)));
-
-    if (shouldRefresh) {
-      _refreshSessionIfNeeded();
-    }
-
-    return expiresAt.isAfter(now);
+    // 5分前にリフレッシュ
+    return expiresAt.isBefore(now.add(const Duration(minutes: 5)));
   }
 
-  /// 必要に応じてセッションをリフレッシュ
-  Future<void> _refreshSessionIfNeeded() async {
+  /// セッション更新処理（非同期・競合状態を回避）
+  Future<void> refreshSessionIfNeeded() async {
+    await _sessionRefreshMutex.acquire();
     try {
-      logInfoMessage(AuthInfo.sessionRefreshing);
+      // リフレッシュが不要な場合は何もしない
+      if (!_shouldRefreshSession()) {
+        return;
+      }
 
-      // セッションのリフレッシュ
-      await client.auth.refreshSession();
+      // 既にリフレッシュ中の場合は、その完了を待つ
+      if (_isRefreshing && _refreshCompleter != null) {
+        return _refreshCompleter!.future;
+      }
 
-      logInfoMessage(AuthInfo.sessionRefreshed);
-      // 例外発生時は何もしないが、logは残す
-    } catch (e) {
-      logWarningMessage(AuthError.sessionRefreshFailed, <String, String>{"error": e.toString()});
+      // リフレッシュ開始
+      _isRefreshing = true;
+      _refreshCompleter = Completer<void>();
+
+      try {
+        logInfoMessage(AuthInfo.sessionRefreshing);
+        await client.auth.refreshSession();
+        logInfoMessage(AuthInfo.sessionRefreshed);
+
+        // 成功時にCompleterを完了
+        _refreshCompleter!.complete();
+      } catch (e) {
+        logErrorMessage(AuthError.sessionRefreshFailed, <String, String>{"error": e.toString()}, e);
+
+        // エラー時にCompleterを完了（エラーとして）
+        _refreshCompleter!.completeError(e);
+        rethrow;
+      } finally {
+        _isRefreshing = false;
+        _refreshCompleter = null;
+      }
+    } finally {
+      _sessionRefreshMutex.release();
     }
+  }
+
+  /// 定期的なセッション監視を開始
+  void _startSessionMonitoring() {
+    _sessionMonitorTimer?.cancel();
+    _sessionMonitorTimer = Timer.periodic(const Duration(minutes: 1), (Timer timer) {
+      if (_shouldRefreshSession()) {
+        refreshSessionIfNeeded();
+      }
+    });
+  }
+
+  /// セッション監視を停止
+  void _stopSessionMonitoring() {
+    _sessionMonitorTimer?.cancel();
+    _sessionMonitorTimer = null;
   }
 
   /// サインアウト
   Future<void> signOut() async {
     try {
       logInfoMessage(AuthInfo.userSigningOut);
+
+      // セッション監視を停止
+      _stopSessionMonitoring();
+
+      // すべてのStreamリソースを破棄
+      disposeStreams();
+
       await client.auth.signOut();
       logInfoMessage(AuthInfo.userSignedOut);
       // 認証失敗の場合
