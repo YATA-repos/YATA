@@ -1,7 +1,9 @@
 import "dart:math" as math;
 
+import "../../../core/constants/exceptions.dart";
 import "../../../core/constants/log_enums/menu.dart";
 import "../../../core/utils/logger_mixin.dart";
+import "../../../core/validation/input_validator.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
 import "../../inventory/repositories/material_repository.dart";
@@ -40,6 +42,18 @@ class MenuService with LoggerMixin {
 
   /// メニューアイテムを検索
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
+    // 入力検証
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(keyword, required: true, maxLength: 100, fieldName: "検索キーワード"),
+      InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
+    ];
+
+    // 検証エラーがある場合は例外を投げる
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
     logDebug("Started menu item search: keyword=\"$keyword\"");
 
     try {
@@ -73,6 +87,19 @@ class MenuService with LoggerMixin {
     int quantity,
     String userId,
   ) async {
+    // 入力検証
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(menuItemId, required: true, fieldName: "メニューアイテムID"),
+      InputValidator.validateNumber(quantity, required: true, min: 1, max: 1000, fieldName: "数量"),
+      InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
+    ];
+
+    // 検証エラーがある場合は例外を投げる
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
     logDebug("Checking menu availability: quantity=$quantity");
 
     try {
@@ -295,6 +322,18 @@ class MenuService with LoggerMixin {
     bool isAvailable,
     String userId,
   ) async {
+    // 入力検証
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(menuItemId, required: true, fieldName: "メニューアイテムID"),
+      InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
+    ];
+
+    // 検証エラーがある場合は例外を投げる
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
     logInfoMessage(MenuInfo.toggleAvailabilityStarted, <String, String>{
       "isAvailable": isAvailable.toString(),
     });
