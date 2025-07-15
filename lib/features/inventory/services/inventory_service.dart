@@ -34,7 +34,7 @@ class InventoryService with LoggerMixin {
   String get loggerComponent => "InventoryService";
 
   // ===== 材料管理関連メソッド =====
-  
+
   /// 材料を作成
   Future<Material?> createMaterial(Material material, String userId) async =>
       _materialManagementService.createMaterial(material, userId);
@@ -53,13 +53,12 @@ class InventoryService with LoggerMixin {
     double alertThreshold,
     double criticalThreshold,
     String userId,
-  ) async =>
-      _materialManagementService.updateMaterialThresholds(
-        materialId,
-        alertThreshold,
-        criticalThreshold,
-        userId,
-      );
+  ) async => _materialManagementService.updateMaterialThresholds(
+    materialId,
+    alertThreshold,
+    criticalThreshold,
+    userId,
+  );
 
   // ===== 在庫レベル・アラート関連メソッド =====
 
@@ -78,7 +77,8 @@ class InventoryService with LoggerMixin {
   ) async {
     // 使用量分析データを取得
     final Map<String, int?> usageDays = await _usageAnalysisService.bulkCalculateUsageDays(userId);
-    final Map<String, double?> dailyUsageRates = await _usageAnalysisService.bulkCalculateDailyUsageRates(userId);
+    final Map<String, double?> dailyUsageRates = await _usageAnalysisService
+        .bulkCalculateDailyUsageRates(userId);
 
     // 在庫レベルサービスで情報を組み立て
     return _stockLevelService.getMaterialsWithStockInfo(
@@ -93,7 +93,8 @@ class InventoryService with LoggerMixin {
   Future<Map<String, List<MaterialStockInfo>>> getDetailedStockAlerts(String userId) async {
     // 使用量分析データを取得
     final Map<String, int?> usageDays = await _usageAnalysisService.bulkCalculateUsageDays(userId);
-    final Map<String, double?> dailyUsageRates = await _usageAnalysisService.bulkCalculateDailyUsageRates(userId);
+    final Map<String, double?> dailyUsageRates = await _usageAnalysisService
+        .bulkCalculateDailyUsageRates(userId);
 
     // 在庫レベルサービスで詳細アラート情報を取得
     return _stockLevelService.getDetailedStockAlerts(
