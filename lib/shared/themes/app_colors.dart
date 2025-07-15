@@ -46,4 +46,20 @@ class AppColors {
   static const Color darkMutedForeground = Color(0xFF94A3B8);
   static const Color darkBorder = Color(0xFF334155);
   static const Color darkInput = Color(0xFF334155);
+
+  // 業務固有カラーエイリアス
+  static const Color complete = success; // 完了・確定
+  static const Color completeForeground = successForeground;
+  static const Color edit = primary; // 編集・詳細
+  static const Color editForeground = primaryForeground;
+  static const Color cooking = warning; // 調理中・注意
+  static const Color cookingForeground = warningForeground;
+  static const Color cancel = danger; // 削除・キャンセル
+  static const Color cancelForeground = dangerForeground;
+
+  // 在庫状態用
+  static const Color inStock = success; // 在庫あり
+  static const Color lowStock = warning; // 在庫少
+  static const Color outOfStock = danger; // 在庫切れ
+  static const Color stockInfo = secondary; // 在庫情報
 }
