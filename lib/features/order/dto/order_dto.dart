@@ -88,6 +88,7 @@ class OrderSearchRequest {
     this.statusFilter,
     this.customerName,
     this.menuItemName,
+    this.searchQuery,
   });
 
   /// JSONからオブジェクトを生成
@@ -104,6 +105,7 @@ class OrderSearchRequest {
               .toList(),
     customerName: json["customer_name"] as String?,
     menuItemName: json["menu_item_name"] as String?,
+    searchQuery: json["search_query"] as String?,
     page: json["page"] as int,
     limit: json["limit"] as int,
   );
@@ -123,6 +125,9 @@ class OrderSearchRequest {
   /// メニューアイテム名
   String? menuItemName;
 
+  /// 検索クエリ（顧客名や注文番号など）
+  String? searchQuery;
+
   /// ページ番号
   int page;
 
@@ -136,6 +141,7 @@ class OrderSearchRequest {
     "status_filter": statusFilter?.map((OrderStatus status) => status.value).toList(),
     "customer_name": customerName,
     "menu_item_name": menuItemName,
+    "search_query": searchQuery,
     "page": page,
     "limit": limit,
   };

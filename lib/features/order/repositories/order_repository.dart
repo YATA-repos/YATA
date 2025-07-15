@@ -213,4 +213,28 @@ class OrderRepository extends BaseRepository<Order, String> {
 
     return find(filters: filters, orderBy: orderBy);
   }
+
+  /// アクティブな注文を取得
+  Future<List<Order>> findActiveOrders(String userId) async {
+    final List<OrderStatus> activeStatuses = <OrderStatus>[
+      OrderStatus.pending,
+      OrderStatus.confirmed,
+      OrderStatus.preparing,
+      OrderStatus.ready,
+    ];
+
+    return findByStatusList(activeStatuses, userId);
+  }
+
+  /// 最近の注文を取得
+  Future<List<Order>> findRecentOrders(String userId, {int limit = 10}) async {
+    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
+
+    // 注文日時で降順
+    final List<OrderByCondition> orderBy = <OrderByCondition>[
+      const OrderByCondition(column: "ordered_at", ascending: false),
+    ];
+
+    return find(filters: filters, orderBy: orderBy, limit: limit);
+  }
 }

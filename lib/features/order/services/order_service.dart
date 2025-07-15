@@ -6,9 +6,8 @@ import "order_management_service.dart";
 /// 注文サービス統合クラス
 /// OrderManagementServiceを使用
 class OrderService with LoggerMixin {
-  OrderService({
-    OrderManagementService? orderManagementService,
-  }) : _orderManagementService = orderManagementService ?? OrderManagementService();
+  OrderService({OrderManagementService? orderManagementService})
+    : _orderManagementService = orderManagementService ?? OrderManagementService();
 
   final OrderManagementService _orderManagementService;
 

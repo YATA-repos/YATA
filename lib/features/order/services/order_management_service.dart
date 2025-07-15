@@ -1,5 +1,7 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/constants/exceptions.dart";
 import "../../../core/utils/logger_mixin.dart";
+import "../../../core/validation/input_validator.dart";
 import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../dto/order_dto.dart";
@@ -41,6 +43,26 @@ class OrderManagementService with LoggerMixin {
     logInfo("Started cart checkout process");
 
     try {
+      // 入力検証
+      final List<ValidationResult> validationResults = <ValidationResult>[
+        InputValidator.validateString(cartId, required: true, fieldName: "カートID"),
+        InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
+        InputValidator.validateString(
+          request.customerName,
+          required: false,
+          maxLength: 100,
+          fieldName: "顧客名",
+        ),
+        InputValidator.validateNumber(request.discountAmount, min: 0, fieldName: "割引金額"),
+      ];
+
+      final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+      if (errors.isNotEmpty) {
+        final List<String> errorMessages = InputValidator.getErrorMessages(errors);
+        logError("Validation failed for checkout: ${errorMessages.join(', ')}");
+        throw ValidationException(errorMessages);
+      }
+
       // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
