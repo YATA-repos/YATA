@@ -1,10 +1,12 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 
 import "../auth/auth_service.dart";
+import "../constants/exceptions.dart";
 import "../constants/log_enums/repository.dart";
 import "../constants/query_types.dart";
 import "../utils/logger_mixin.dart";
 import "../utils/query_utils.dart";
+import "../utils/type_validator.dart";
 import "base_model.dart";
 
 /// プライマリキー
@@ -40,15 +42,20 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   // 内部ヘルパーメソッド
   // =================================================================
 
-  /// 単一キーを主キーマップに正規化
-  PrimaryKeyMap _normalizeKey(Object? key) {
+  /// 単一キーを主キーマップに正規化（型安全）
+  PrimaryKeyMap _normalizeKey(dynamic key) {
+    // 型検証を最初に実行
+    if (!TypeValidator.isValidIdType(key)) {
+      logError("Invalid ID type provided: ${key.runtimeType}");
+      throw InvalidIdTypeException(key.runtimeType, <Type>[String, int, Map]);
+    }
+
     if (key is Map<String, dynamic>) {
       return key;
     }
 
     // 単一値の場合、主キーカラムが1つであることを確認
     if (primaryKeyColumns.length != 1) {
-      // TODO: この場合用のエラー種を定義する
       logError("複合主キーを使用する場合は、Map<String, dynamic>形式でキーを指定してください");
       throw ArgumentError("複合主キーにはMap<String, dynamic>形式でキーを指定してください");
     }
@@ -99,7 +106,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         throw ArgumentError("主キーカラム '$column' がキーマップに見つかりません");
       }
 
-      result = result.eq(column, keyMap[column] as Object);
+      final dynamic value = keyMap[column];
+      if (value is String || value is int || value is double || value is bool) {
+        result = result.eq(column, value as Object);
+      } else {
+        throw ArgumentError("主キーカラム '$column' の値が無効な型です: ${value.runtimeType}");
+      }
     }
 
     return result;
@@ -164,7 +176,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   Future<T?> getById(ID id) async {
     try {
       logDebug("Getting entity by ID from table: $tableName");
-      final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
+      final PrimaryKeyMap keyMap = _normalizeKey(id);
       final Map<String, dynamic>? response = await _applyPrimaryKey(
         _table.select(),
         keyMap,
@@ -176,9 +188,14 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       }
       logDebug("Entity not found in table: $tableName");
       return null;
-      // ? エラーハンドリング詳細化？
     } catch (e) {
-      // * 事前定義するべきか検討
+      if (e is InvalidIdTypeException) {
+        logError("Type error in getById: invalid id type", e);
+        throw RepositoryException(
+          RepositoryError.invalidQueryParameters,
+          params: <String, String>{"error": "Invalid ID type: ${id.runtimeType}"},
+        );
+      }
       logError("Failed to get entity by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -217,7 +234,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   Future<T?> updateById(ID id, Map<String, dynamic> updates) async {
     try {
       logDebug("Updating entity by ID in table: $tableName");
-      final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
+      final PrimaryKeyMap keyMap = _normalizeKey(id);
       final List<Map<String, dynamic>> response = await _applyPrimaryKey(
         _table.update(updates),
         keyMap,
@@ -227,12 +244,16 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         logInfo("Entity updated successfully in table: $tableName");
         return _fromJson(response[0]);
       }
-      // * 事前定義するべきか検討
       logWarning("No entity updated in table: $tableName");
       return null;
-      // ? エラーハンドリング詳細化？
     } catch (e) {
-      // * 事前定義するべきか検討
+      if (e is InvalidIdTypeException) {
+        logError("Type error in updateById: invalid id type", e);
+        throw RepositoryException(
+          RepositoryError.invalidQueryParameters,
+          params: <String, String>{"error": "Invalid ID type: ${id.runtimeType}"},
+        );
+      }
       logError("Failed to update entity by ID in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.updateFailed,
@@ -273,13 +294,17 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   Future<void> deleteById(ID id) async {
     try {
       logDebug("Deleting entity by ID from table: $tableName");
-      final PrimaryKeyMap keyMap = _normalizeKey(id as Object);
+      final PrimaryKeyMap keyMap = _normalizeKey(id);
       await _applyPrimaryKey(_table.delete(), keyMap);
-      // * 事前定義するべきか検討
       logInfo("Entity deleted successfully from table: $tableName");
-      // ? エラーハンドリング詳細化？
     } catch (e) {
-      // * 事前定義するべきか検討
+      if (e is InvalidIdTypeException) {
+        logError("Type error in deleteById: invalid id type", e);
+        throw RepositoryException(
+          RepositoryError.invalidQueryParameters,
+          params: <String, String>{"error": "Invalid ID type: ${id.runtimeType}"},
+        );
+      }
       logError("Failed to delete entity by ID from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
@@ -319,8 +344,13 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         final String pkColumn = primaryKeyColumns[0];
         // 主キーカラムを正規化して値のリストを作成
         final List<Object> values = keys.map((ID key) {
-          final PrimaryKeyMap normalized = _normalizeKey(key as Object);
-          return normalized[pkColumn] as Object;
+          final PrimaryKeyMap normalized = _normalizeKey(key);
+          final dynamic value = normalized[pkColumn];
+          if (value is String || value is int || value is double || value is bool) {
+            return value as Object;
+          } else {
+            throw ArgumentError("主キーカラム '$pkColumn' の値が無効な型です: ${value.runtimeType}");
+          }
         }).toList();
 
         await _table.delete().inFilter(pkColumn, values);
