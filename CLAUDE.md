@@ -17,7 +17,7 @@
   - 分析機能
   - メニュー管理
 - **特徴**:
-  - オフラインサポート
+  - オフラインサポート(予定)
   - Supabase バックエンド統合
   - クロスプラットフォーム対応
 
@@ -40,7 +40,7 @@
 
 - **flutter_lints** + **very_good_analysis**: リント設定
 - **build_runner**: コード生成
-- **flutter_test**: テストフレームワーク
+- **flutter_test**: テストフレームワーク(テストは未実装)
 
 ### 2.2 アーキテクチャ
 
@@ -118,13 +118,28 @@ lib/
     └── widgets/            # ウィジェット
 ```
 
-#### 重要な基底クラス
-
-- `BaseModel`: JSON シリアライゼーション機能を持つモデル基底クラス
-- `BaseRepository<T>`: CRUD操作とフィルタリング機能を提供するリポジトリ基底クラス
-- 複雑なフィルタリングシステム（AND/OR クエリサポート）
-
 #### DTOに関する注意点
 
 - このプロジェクトにおけるDTOは、Entityとの変換を前提として**いません**。
 - このプロジェクトにおいて、DTOはデータ転送専用のオブジェクトです。高度なdictのように振る舞うことを目的としています。
+
+## 3. 整備済みドキュメント
+
+- **[./docs/](./docs/)**: ドキュメント全体
+  - **[./docs/guides/](./docs/guides/)**: 開発手順・ベストプラクティス
+    - [./docs/guides/template_guide.md](./docs/guides/template_guide.md): ガイドドキュメント作成用のテンプレート
+    - [./docs/guides/issue_guide.md](./docs/guides/issue_guide.md): Issue作成ガイド
+    - [./docs/guides/query_system_guide.md](./docs/guides/query_system_guide.md): クエリシステム(QueryUtils)ガイド
+    - [./docs/guides/logger_guide.md](./docs/guides/logger_guide.md): Logger(LoggerMixin)使用ガイド
+  - **[./docs/references/](./docs/references/)**: API仕様・技術詳細
+    - [./docs/references/repository/](./docs/references/repository/): 各feature別リポジトリの詳細
+    - [./docs/references/service/](./docs/references/service/): 各feature別サービスの詳細
+    - [./docs/references/logger_mixin.md](./docs/references/logger_mixin.md): LoggerMixinの詳細
+    - [./docs/references/query_utils.md](./docs/references/query_utils.md): QueryUtilsの詳細
+    - [./docs/references/log_service.md](./docs/references/log_service.md): LogServiceの詳細
+    - [./docs/references/base_repository.md](./docs/references/base_repository.md): BaseRepositoryの詳細
+    - [./docs/references/coding_standards.md](./docs/references/coding_standards.md): コーディング規約
+    - [./docs/references/project_directory_tree.md](./docs/references/project_directory_tree.md): プロジェクトディレクトリツリーの詳細
+    - [./docs/references/project_philosophy.md](./docs/references/project_philosophy.md): プロジェクト実装上の哲学
+    - [./docs/references/template_reference.md](./docs/references/template_reference.md): リファレンス系ドキュメント作成用のテンプレート
+  - [./DOCUMENTATION_GUIDE.md](./docs/DOCUMENTATION_GUIDE.md): ドキュメント全体の作成におけるガイドライン
