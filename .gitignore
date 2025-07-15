@@ -47,7 +47,7 @@ app.*.map.json
 /android/app/release
 
 # temp
-__temp/
+_temp/
 .idx/
 .vscode/
 _old_py_project/
