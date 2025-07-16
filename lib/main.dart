@@ -39,47 +39,16 @@ void main() async {
   // アプリケーションを起動
   runApp(
     // Riverpod の ProviderScope でラップ
-    ProviderScope(child: const YataApp()),
+    // ProviderScope(child: const YataApp()),
+    YataApp(),
   );
 }
 
-/// アプリケーションのメインクラス
-class YataApp extends ConsumerWidget {
+class YataApp extends StatelessWidget {
   const YataApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // GoRouter の取得
-    final GoRouter router = ref.watch(appRouterProvider);
-
-    return MaterialApp.router(
-      // アプリケーション基本設定
-      title: "YATA - 小規模レストラン管理システム",
-      debugShowCheckedModeBanner: false,
-
-      // テーマ設定
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-
-      // ルーティング設定
-      routerConfig: router,
-
-      // ローカライゼーション設定（将来的な多言語対応）
-      localizationsDelegates: const <LocalizationsDelegate<Object>>[
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const <Locale>[
-        Locale("ja", "JP"), // 日本語
-        Locale("en", "US"), // 英語
-      ],
-      locale: const Locale("ja", "JP"),
-
-      // パフォーマンス設定
-      builder: (BuildContext context, Widget? child) => _AppBuilder(child: child),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(body: Center(child: Text("Hello YATA")));
 }
 
 /// アプリケーションビルダー
