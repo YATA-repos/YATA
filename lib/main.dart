@@ -1,19 +1,17 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
-import "package:flutter_localizations/flutter_localizations.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
-// ignore: implementation_imports
-import "package:go_router/src/router.dart";
 
 import "core/auth/auth_service.dart";
 import "core/utils/log_service.dart";
 import "core/utils/logger_mixin.dart";
 import "shared/themes/app_theme.dart";
+import "shared/widgets/custom_app_bar.dart";
+import "core/constants/constants.dart";
 
-/// アプリケーションのエントリーポイント
 void main() async {
-  // Flutter エンジンの初期化を確実に行う
+  // Flutterの初期化を確実に行う
   WidgetsFlutterBinding.ensureInitialized();
 
   // 環境変数の読み込み
@@ -22,38 +20,34 @@ void main() async {
   // ログサービスの初期化
   await LogService.initialize();
 
-  final _ErrorHandler tempLogger = _ErrorHandler()
-    ..logInfo("Starting YATA application...")
-    ..logInfo("Flutter binding initialized.")
-    ..logInfo("Environment variables loaded.")
-    ..logInfo("Log service initialized.");
-
   // Supabaseの初期化
   await SupabaseClientService.initialize();
-  tempLogger.logInfo("Supabase client initialized.");
 
   // エラーハンドリングの設定
   _setupErrorHandling();
-  tempLogger.logInfo("Error handling setup completed.");
 
-  // アプリケーションを起動
-  runApp(
-    // Riverpod の ProviderScope でラップ
-    // ProviderScope(child: const YataApp()),
-    YataApp(),
-  );
+  // 起動
+  runApp(const ProviderScope(child: YataApp()));
 }
 
-class YataApp extends StatelessWidget {
+class YataApp extends ConsumerWidget {
   const YataApp({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Text("Hello YATA")));
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
+    title: AppStrings.titleApp,
+    theme: AppTheme.lightTheme,
+    darkTheme: AppTheme.darkTheme,
+    home: const Scaffold(
+      appBar: CustomAppBar(title: AppStrings.titleApp),
+      body: Center(child: Text(AppStrings.titleApp)),
+    ),
+    builder: (BuildContext context, Widget? child) => _AppBuilder(child: child),
+    debugShowCheckedModeBanner: false,
+  );
 }
 
-/// アプリケーションビルダー
-///
-/// 全画面共通の設定やラッパーを提供します。
+/// 全画面共通の設定やラッパー
 class _AppBuilder extends StatelessWidget {
   const _AppBuilder({required this.child});
 
@@ -61,7 +55,7 @@ class _AppBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
-    // テキストスケーリングの制限（アクセシビリティ対応）
+    // テキストスケーリングの制限
     minScaleFactor: 0.8,
     maxScaleFactor: 1.5,
     child: child ?? const SizedBox.shrink(),
@@ -72,13 +66,12 @@ class _AppBuilder extends StatelessWidget {
 void _setupErrorHandling() {
   final _ErrorHandler errorHandler = _ErrorHandler();
 
-  // Flutter フレームワークのエラーハンドリング
+  // Flutterのハンドリング
   FlutterError.onError = (FlutterErrorDetails details) {
-    // デバッグモードでは詳細を出力
+    // debugとreleaseでハンドリングを分岐
     if (kDebugMode) {
       FlutterError.presentError(details);
     } else {
-      // リリースモードではログに記録
       errorHandler.logError(
         "Flutter framework error: ${details.exception}",
         details.exception,
@@ -87,7 +80,7 @@ void _setupErrorHandling() {
     }
   };
 
-  // プラットフォーム（Dart）のエラーハンドリング
+  // dartのハンドリング
   PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
     if (kDebugMode) {
       errorHandler.logError("Platform error: $error", error, stack);
