@@ -3,30 +3,30 @@ import "package:flutter/material.dart";
 class AppLayout {
   AppLayout._();
 
-  static const double spacing1 = 4.0;
-  static const double spacing2 = 8.0;
-  static const double spacing3 = 12.0;
-  static const double spacing4 = 16.0;
-  static const double spacing5 = 20.0;
-  static const double spacing6 = 24.0;
-  static const double spacing8 = 32.0;
-  static const double spacing10 = 40.0;
-  static const double spacing12 = 48.0;
-  static const double spacing16 = 64.0;
+  static const double spacing4 = 4.0;
+  static const double spacing8 = 8.0;
+  static const double spacing12 = 12.0;
+  static const double spacing16 = 16.0;
+  static const double spacing20 = 20.0;
+  static const double spacing24 = 24.0;
+  static const double spacing32 = 32.0;
+  static const double spacing40 = 40.0;
+  static const double spacing48 = 48.0;
+  static const double spacing64 = 64.0;
 
-  static const EdgeInsets padding1 = EdgeInsets.all(spacing1);
-  static const EdgeInsets padding2 = EdgeInsets.all(spacing2);
-  static const EdgeInsets padding3 = EdgeInsets.all(spacing3);
   static const EdgeInsets padding4 = EdgeInsets.all(spacing4);
-  static const EdgeInsets padding5 = EdgeInsets.all(spacing5);
-  static const EdgeInsets padding6 = EdgeInsets.all(spacing6);
   static const EdgeInsets padding8 = EdgeInsets.all(spacing8);
-  static const EdgeInsets paddingHorizontal2 = EdgeInsets.symmetric(horizontal: spacing2);
-  static const EdgeInsets paddingHorizontal4 = EdgeInsets.symmetric(horizontal: spacing4);
-  static const EdgeInsets paddingHorizontal6 = EdgeInsets.symmetric(horizontal: spacing6);
-  static const EdgeInsets paddingVertical2 = EdgeInsets.symmetric(vertical: spacing2);
-  static const EdgeInsets paddingVertical4 = EdgeInsets.symmetric(vertical: spacing4);
-  static const EdgeInsets paddingVertical6 = EdgeInsets.symmetric(vertical: spacing6);
+  static const EdgeInsets padding12 = EdgeInsets.all(spacing12);
+  static const EdgeInsets padding16 = EdgeInsets.all(spacing16);
+  static const EdgeInsets padding20 = EdgeInsets.all(spacing20);
+  static const EdgeInsets padding24 = EdgeInsets.all(spacing24);
+  static const EdgeInsets padding32 = EdgeInsets.all(spacing32);
+  static const EdgeInsets paddingHorizontal8 = EdgeInsets.symmetric(horizontal: spacing8);
+  static const EdgeInsets paddingHorizontal16 = EdgeInsets.symmetric(horizontal: spacing16);
+  static const EdgeInsets paddingHorizontal24 = EdgeInsets.symmetric(horizontal: spacing24);
+  static const EdgeInsets paddingVertical8 = EdgeInsets.symmetric(vertical: spacing8);
+  static const EdgeInsets paddingVertical16 = EdgeInsets.symmetric(vertical: spacing16);
+  static const EdgeInsets paddingVertical24 = EdgeInsets.symmetric(vertical: spacing24);
 
   static const BorderRadius radiusSm = BorderRadius.all(Radius.circular(2));
   static const BorderRadius radius = BorderRadius.all(Radius.circular(4));
@@ -114,11 +114,11 @@ class AppLayout {
 
   static EdgeInsets getResponsivePadding(double screenWidth) {
     if (screenWidth < breakpointMobile) {
-      return padding4;
+      return padding16;
     } else if (screenWidth < breakpointTablet) {
-      return padding6;
+      return padding24;
     } else {
-      return padding8;
+      return padding32;
     }
   }
 
