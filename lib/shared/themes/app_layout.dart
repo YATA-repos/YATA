@@ -3,60 +3,81 @@ import "package:flutter/material.dart";
 class AppLayout {
   AppLayout._();
 
-  static const double spacing4 = 4.0;
-  static const double spacing8 = 8.0;
-  static const double spacing12 = 12.0;
-  static const double spacing16 = 16.0;
-  static const double spacing20 = 20.0;
-  static const double spacing24 = 24.0;
-  static const double spacing32 = 32.0;
-  static const double spacing40 = 40.0;
-  static const double spacing48 = 48.0;
-  static const double spacing64 = 64.0;
+  static const double spacing2Xs = 4.0;
+  static const double spacingXs = 8.0;
+  static const double spacingSm = 20.0;
+  static const double spacing = 32.0;
+  static const double spacingMd = 40.0;
+  static const double spacingLg = 48.0;
+  static const double spacingXl = 56.0;
+  static const double spacing2Xl = 64.0;
 
-  static const EdgeInsets padding4 = EdgeInsets.all(spacing4);
-  static const EdgeInsets padding8 = EdgeInsets.all(spacing8);
-  static const EdgeInsets padding12 = EdgeInsets.all(spacing12);
-  static const EdgeInsets padding16 = EdgeInsets.all(spacing16);
-  static const EdgeInsets padding20 = EdgeInsets.all(spacing20);
-  static const EdgeInsets padding24 = EdgeInsets.all(spacing24);
-  static const EdgeInsets padding32 = EdgeInsets.all(spacing32);
-  static const EdgeInsets paddingHorizontal8 = EdgeInsets.symmetric(horizontal: spacing8);
-  static const EdgeInsets paddingHorizontal16 = EdgeInsets.symmetric(horizontal: spacing16);
-  static const EdgeInsets paddingHorizontal24 = EdgeInsets.symmetric(horizontal: spacing24);
-  static const EdgeInsets paddingVertical8 = EdgeInsets.symmetric(vertical: spacing8);
-  static const EdgeInsets paddingVertical16 = EdgeInsets.symmetric(vertical: spacing16);
-  static const EdgeInsets paddingVertical24 = EdgeInsets.symmetric(vertical: spacing24);
+  static const EdgeInsets padding2Xs = EdgeInsets.all(spacing2Xs);
+  static const EdgeInsets paddingXs = EdgeInsets.all(spacingXs);
+  static const EdgeInsets paddingSm = EdgeInsets.all(spacingSm);
+  static const EdgeInsets padding = EdgeInsets.all(spacing);
+  static const EdgeInsets paddingMd = EdgeInsets.all(spacingMd);
+  static const EdgeInsets paddingLg = EdgeInsets.all(spacingLg);
+  static const EdgeInsets paddingXl = EdgeInsets.all(spacingXl);
+  static const EdgeInsets padding2Xl = EdgeInsets.all(spacing2Xl);
+  static const EdgeInsets paddingHorizontalXs = EdgeInsets.symmetric(horizontal: spacingXs);
+  static const EdgeInsets paddingHorizontalSm = EdgeInsets.symmetric(horizontal: spacingSm);
+  static const EdgeInsets paddingHorizontal = EdgeInsets.symmetric(horizontal: spacing);
+  static const EdgeInsets paddingHorizontalMd = EdgeInsets.symmetric(horizontal: spacingMd);
+  static const EdgeInsets paddingVerticalXs = EdgeInsets.symmetric(vertical: spacingXs);
+  static const EdgeInsets paddingVerticalSm = EdgeInsets.symmetric(vertical: spacingSm);
+  static const EdgeInsets paddingVertical = EdgeInsets.symmetric(vertical: spacing);
+  static const EdgeInsets paddingVerticalMd = EdgeInsets.symmetric(vertical: spacingMd);
 
-  static const BorderRadius radiusSm = BorderRadius.all(Radius.circular(2));
-  static const BorderRadius radius = BorderRadius.all(Radius.circular(4));
-  static const BorderRadius radiusMd = BorderRadius.all(Radius.circular(6));
-  static const BorderRadius radiusLg = BorderRadius.all(Radius.circular(8));
-  static const BorderRadius radiusXl = BorderRadius.all(Radius.circular(12));
-  static const BorderRadius radius2xl = BorderRadius.all(Radius.circular(16));
+  static const BorderRadius radius2Xs = BorderRadius.all(Radius.circular(4));
+  static const BorderRadius radiusXs = BorderRadius.all(Radius.circular(8));
+  static const BorderRadius radiusSm = BorderRadius.all(Radius.circular(16));
+  static const BorderRadius radius = BorderRadius.all(Radius.circular(32));
+  static const BorderRadius radiusMd = BorderRadius.all(Radius.circular(40));
+  static const BorderRadius radiusLg = BorderRadius.all(Radius.circular(48));
+  static const BorderRadius radiusXl = BorderRadius.all(Radius.circular(56));
+  static const BorderRadius radius2Xl = BorderRadius.all(Radius.circular(64));
   static const BorderRadius radiusFull = BorderRadius.all(Radius.circular(9999));
 
-  static const double elevationSm = 1.0;
-  static const double elevation = 2.0;
-  static const double elevationMd = 4.0;
-  static const double elevationLg = 8.0;
-  static const double elevationXl = 12.0;
+  static const double elevation2Xs = 1.0;
+  static const double elevationXs = 2.0;
+  static const double elevationSm = 4.0;
+  static const double elevation = 8.0;
+  static const double elevationMd = 10.0;
+  static const double elevationLg = 12.0;
+  static const double elevationXl = 14.0;
+  static const double elevation2Xl = 16.0;
 
-  static const double buttonHeightSm = 36.0;
+  static const double buttonHeight2Xs = 24.0;
+  static const double buttonHeightXs = 28.0;
+  static const double buttonHeightSm = 32.0;
   static const double buttonHeight = 40.0;
-  static const double buttonHeightLg = 44.0;
-  static const double iconButtonSize = 40.0;
+  static const double buttonHeightMd = 44.0;
+  static const double buttonHeightLg = 48.0;
+  static const double buttonHeightXl = 52.0;
+  static const double buttonHeight2Xl = 56.0;
+  
+  static const double appBarHeightSm = 48.0;
+  static const double appBarHeight = 56.0;
+  static const double appBarHeightLg = 64.0;
+
   static const double iconButtonSizeSm = 32.0;
+  static const double iconButtonSize = 40.0;
+  static const double iconButtonSizeMd = 44.0;
   static const double iconButtonSizeLg = 48.0;
-  static const double inputHeight = 48.0;
+  
   static const double inputHeightSm = 40.0;
+  static const double inputHeight = 48.0;
   static const double inputHeightLg = 56.0;
 
-  static const double iconSizeSm = 16.0;
-  static const double iconSize = 20.0;
-  static const double iconSizeMd = 24.0;
-  static const double iconSizeLg = 32.0;
-  static const double iconSizeXl = 40.0;
+  static const double iconSize2Xs = 4.0;
+  static const double iconSizeXs = 8.0;
+  static const double iconSizeSm = 20.0;
+  static const double iconSize = 32.0;
+  static const double iconSizeMd = 40.0;
+  static const double iconSizeLg = 48.0;
+  static const double iconSizeXl = 56.0;
+  static const double iconSize2Xl = 64.0;
 
   static const int gridMobile = 1;
   static const int gridTablet = 2;
@@ -75,7 +96,6 @@ class AppLayout {
   static const double containerXl = 1280.0;
   static const double containerMax = 1536.0;
 
-  static const double appBarHeight = 56.0;
   static const double bottomNavigationHeight = 60.0;
   static const double tabBarHeight = 48.0;
   static const double fabSize = 56.0;
@@ -114,11 +134,11 @@ class AppLayout {
 
   static EdgeInsets getResponsivePadding(double screenWidth) {
     if (screenWidth < breakpointMobile) {
-      return padding16;
+      return paddingSm;
     } else if (screenWidth < breakpointTablet) {
-      return padding24;
+      return paddingMd;
     } else {
-      return padding32;
+      return padding;
     }
   }
 
