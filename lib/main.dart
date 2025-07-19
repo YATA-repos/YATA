@@ -4,24 +4,24 @@ import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "core/auth/auth_service.dart";
+import "core/constants/constants.dart";
 import "core/utils/log_service.dart";
 import "core/utils/logger_mixin.dart";
-import "shared/themes/app_theme.dart";
+import './shared/themes/themes.dart';
 import "shared/widgets/custom_app_bar.dart";
-import "core/constants/constants.dart";
 
 void main() async {
   // Flutterの初期化を確実に行う
   WidgetsFlutterBinding.ensureInitialized();
 
   // 環境変数の読み込み
-  await dotenv.load();
+  // await dotenv.load();
 
   // ログサービスの初期化
   await LogService.initialize();
 
   // Supabaseの初期化
-  await SupabaseClientService.initialize();
+  // await SupabaseClientService.initialize();
 
   // エラーハンドリングの設定
   _setupErrorHandling();
@@ -39,8 +39,8 @@ class YataApp extends ConsumerWidget {
     theme: AppTheme.lightTheme,
     darkTheme: AppTheme.darkTheme,
     home: const Scaffold(
-      appBar: CustomAppBar(title: AppStrings.titleApp),
-      body: Center(child: Text(AppStrings.titleApp)),
+      appBar: CustomAppBar(),
+      body: Center(child: Text(AppStrings.titleApp, style: AppTextStyles.textTitle)),
     ),
     builder: (BuildContext context, Widget? child) => _AppBuilder(child: child),
     debugShowCheckedModeBanner: false,
