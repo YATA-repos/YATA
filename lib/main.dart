@@ -1,14 +1,12 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:lucide_icons/lucide_icons.dart";
 
-import "core/auth/auth_service.dart";
+import "./shared/themes/themes.dart";
 import "core/constants/constants.dart";
 import "core/utils/log_service.dart";
 import "core/utils/logger_mixin.dart";
-import './shared/themes/themes.dart';
-import "shared/widgets/custom_app_bar.dart";
 
 void main() async {
   // Flutterの初期化を確実に行う
@@ -38,28 +36,90 @@ class YataApp extends ConsumerWidget {
     title: AppStrings.titleApp,
     theme: AppTheme.lightTheme,
     darkTheme: AppTheme.darkTheme,
-    home: const Scaffold(
-      appBar: CustomAppBar(),
-      body: Center(child: Text(AppStrings.titleApp, style: AppTextStyles.textTitle)),
+    home: Scaffold(
+      appBar: AppBar(
+        title: AppBarTitle(),
+        centerTitle: false,
+        actions: <Widget>[
+          CustomNavigation(),
+        ]
+      ),
+      body: Center(child: Text(AppStrings.titleApp)),
     ),
-    builder: (BuildContext context, Widget? child) => _AppBuilder(child: child),
     debugShowCheckedModeBanner: false,
   );
 }
 
-/// 全画面共通の設定やラッパー
-class _AppBuilder extends StatelessWidget {
-  const _AppBuilder({required this.child});
-
-  final Widget? child;
+class AppBarTitle extends StatelessWidget {
+  const AppBarTitle({
+    super.key,
+  });
 
   @override
-  Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
-    // テキストスケーリングの制限
-    minScaleFactor: 0.8,
-    maxScaleFactor: 1.5,
-    child: child ?? const SizedBox.shrink(),
-  );
+  Widget build(BuildContext context) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const Icon(LucideIcons.coffee),
+        AppLayout.hSpacerSmall,
+        Text(
+          AppStrings.titleApp,
+          style: Theme.of(context).textTheme.headlineSmall
+        ),
+      ],
+    );
+}
+
+class CustomNavigation extends StatelessWidget {
+  const CustomNavigation({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        CustomNavItem(
+          icon: LucideIcons.home, 
+          label: AppStrings.navHome
+        ),
+        AppLayout.hSpacerSmall,
+        CustomNavItem(
+          icon: LucideIcons.history, 
+          label: AppStrings.navOrderHistory
+        ),
+        AppLayout.hSpacerSmall,
+        CustomNavItem(
+          icon: LucideIcons.barChart4, 
+          label: AppStrings.navAnalytics
+        ),
+      ],
+    );
+}
+
+class CustomNavItem extends StatelessWidget {
+  const CustomNavItem({
+    required this.icon, required this.label, super.key,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Column(
+      children: <Widget>[
+        Container(
+          margin: AppLayout.marginSmall,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(icon),
+              AppLayout.hSpacerSmall,
+              Text(label),
+            ],
+          ),
+        ),
+      ]
+    );
 }
 
 /// エラーハンドリングの設定

@@ -2,82 +2,84 @@ import "package:flutter/material.dart";
 
 class AppLayout {
   AppLayout._();
+  // `v`=vertical, `h`=horizontal
 
-  static const double spacing2Xs = 4.0;
-  static const double spacingXs = 8.0;
-  static const double spacingSm = 20.0;
-  static const double spacing = 32.0;
-  static const double spacingMd = 40.0;
-  static const double spacingLg = 48.0;
-  static const double spacingXl = 56.0;
-  static const double spacing2Xl = 64.0;
+  static const SizedBox vSpacerTiny = SizedBox(height: 4.0);
+  static const SizedBox vSpacerSmall = SizedBox(height: 8.0);
+  static const SizedBox vSpacerDefault = SizedBox(height: 16.0);
+  static const SizedBox vSpacerMedium = SizedBox(height: 24.0);
+  static const SizedBox vSpacerLarge = SizedBox(height: 32.0);
+  static const SizedBox vSpacerHuge = SizedBox(height: 64.0);
 
-  static const EdgeInsets padding2Xs = EdgeInsets.all(spacing2Xs);
-  static const EdgeInsets paddingXs = EdgeInsets.all(spacingXs);
-  static const EdgeInsets paddingSm = EdgeInsets.all(spacingSm);
-  static const EdgeInsets padding = EdgeInsets.all(spacing);
-  static const EdgeInsets paddingMd = EdgeInsets.all(spacingMd);
-  static const EdgeInsets paddingLg = EdgeInsets.all(spacingLg);
-  static const EdgeInsets paddingXl = EdgeInsets.all(spacingXl);
-  static const EdgeInsets padding2Xl = EdgeInsets.all(spacing2Xl);
-  static const EdgeInsets paddingHorizontalXs = EdgeInsets.symmetric(horizontal: spacingXs);
-  static const EdgeInsets paddingHorizontalSm = EdgeInsets.symmetric(horizontal: spacingSm);
-  static const EdgeInsets paddingHorizontal = EdgeInsets.symmetric(horizontal: spacing);
-  static const EdgeInsets paddingHorizontalMd = EdgeInsets.symmetric(horizontal: spacingMd);
-  static const EdgeInsets paddingVerticalXs = EdgeInsets.symmetric(vertical: spacingXs);
-  static const EdgeInsets paddingVerticalSm = EdgeInsets.symmetric(vertical: spacingSm);
-  static const EdgeInsets paddingVertical = EdgeInsets.symmetric(vertical: spacing);
-  static const EdgeInsets paddingVerticalMd = EdgeInsets.symmetric(vertical: spacingMd);
+  static const SizedBox hSpacerTiny = SizedBox(width: 4.0);
+  static const SizedBox hSpacerSmall = SizedBox(width: 8.0);
+  static const SizedBox hSpacerDefault = SizedBox(width: 16.0);
+  static const SizedBox hSpacerMedium = SizedBox(width: 24.0);
+  static const SizedBox hSpacerLarge = SizedBox(width: 32.0);
+  static const SizedBox hSpacerHuge = SizedBox(width: 64.0);
 
-  static const BorderRadius radius2Xs = BorderRadius.all(Radius.circular(4));
-  static const BorderRadius radiusXs = BorderRadius.all(Radius.circular(8));
-  static const BorderRadius radiusSm = BorderRadius.all(Radius.circular(16));
-  static const BorderRadius radius = BorderRadius.all(Radius.circular(32));
-  static const BorderRadius radiusMd = BorderRadius.all(Radius.circular(40));
-  static const BorderRadius radiusLg = BorderRadius.all(Radius.circular(48));
-  static const BorderRadius radiusXl = BorderRadius.all(Radius.circular(56));
-  static const BorderRadius radius2Xl = BorderRadius.all(Radius.circular(64));
-  static const BorderRadius radiusFull = BorderRadius.all(Radius.circular(9999));
+  static const EdgeInsets paddingTiny = EdgeInsets.all(4.0);
+  static const EdgeInsets paddingSmall = EdgeInsets.all(8.0);
+  static const EdgeInsets paddingDefault = EdgeInsets.all(16.0);
+  static const EdgeInsets paddingMedium = EdgeInsets.all(24.0);
+  static const EdgeInsets paddingLarge = EdgeInsets.all(32.0);
+  static const EdgeInsets paddingHuge = EdgeInsets.all(64.0);
 
-  static const double elevation2Xs = 1.0;
-  static const double elevationXs = 2.0;
-  static const double elevationSm = 4.0;
-  static const double elevation = 8.0;
-  static const double elevationMd = 10.0;
-  static const double elevationLg = 12.0;
-  static const double elevationXl = 14.0;
-  static const double elevation2Xl = 16.0;
+  static const EdgeInsets marginTiny = paddingTiny;
+  static const EdgeInsets marginSmall = paddingSmall;
+  static const EdgeInsets marginDefault = paddingDefault;
+  static const EdgeInsets marginMedium = paddingMedium;
+  static const EdgeInsets marginLarge = paddingLarge;
+  static const EdgeInsets marginHuge = paddingHuge;
 
-  static const double buttonHeight2Xs = 24.0;
-  static const double buttonHeightXs = 28.0;
-  static const double buttonHeightSm = 32.0;
-  static const double buttonHeight = 40.0;
-  static const double buttonHeightMd = 44.0;
-  static const double buttonHeightLg = 48.0;
-  static const double buttonHeightXl = 52.0;
-  static const double buttonHeight2Xl = 56.0;
-  
-  static const double appBarHeightSm = 48.0;
-  static const double appBarHeight = 56.0;
-  static const double appBarHeightLg = 64.0;
+  static const EdgeInsets hBigPaddingTiny = EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0);
+  static const EdgeInsets hBigPaddingSmall = EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0);
+  static const EdgeInsets hBigPaddingDefault = EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0);
+  static const EdgeInsets hBigPaddingMedium = EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0);
+  static const EdgeInsets hBigPaddingLarge = EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0);
+  static const EdgeInsets hBigPaddingHuge = EdgeInsets.symmetric(horizontal: 64.0, vertical: 32.0);
 
-  static const double iconButtonSizeSm = 32.0;
-  static const double iconButtonSize = 40.0;
-  static const double iconButtonSizeMd = 44.0;
-  static const double iconButtonSizeLg = 48.0;
-  
-  static const double inputHeightSm = 40.0;
-  static const double inputHeight = 48.0;
-  static const double inputHeightLg = 56.0;
+  static const EdgeInsets hBigMarginTiny = hBigPaddingTiny;
+  static const EdgeInsets hBigMarginSmall = hBigPaddingSmall;
+  static const EdgeInsets hBigMarginDefault = hBigPaddingDefault;
+  static const EdgeInsets hBigMarginMedium = hBigPaddingMedium;
+  static const EdgeInsets hBigMarginLarge = hBigPaddingLarge;
+  static const EdgeInsets hBigMarginHuge = hBigPaddingHuge;
 
-  static const double iconSize2Xs = 4.0;
-  static const double iconSizeXs = 8.0;
-  static const double iconSizeSm = 20.0;
-  static const double iconSize = 32.0;
-  static const double iconSizeMd = 40.0;
-  static const double iconSizeLg = 48.0;
-  static const double iconSizeXl = 56.0;
-  static const double iconSize2Xl = 64.0;
+  static const EdgeInsets vBigPaddingTiny = EdgeInsets.symmetric(horizontal: 2.0, vertical: 4.0);
+  static const EdgeInsets vBigPaddingSmall = EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0);
+  static const EdgeInsets vBigPaddingDefault = EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0);
+  static const EdgeInsets vBigPaddingMedium = EdgeInsets.symmetric(horizontal: 12.0, vertical: 24.0);
+  static const EdgeInsets vBigPaddingLarge = EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0);
+  static const EdgeInsets vBigPaddingHuge = EdgeInsets.symmetric(horizontal: 32.0, vertical: 64.0);
+
+  static const EdgeInsets vBigMarginTiny = vBigPaddingTiny;
+  static const EdgeInsets vBigMarginSmall = vBigPaddingSmall;
+  static const EdgeInsets vBigMarginDefault = vBigPaddingDefault;
+  static const EdgeInsets vBigMarginMedium = vBigPaddingMedium;
+  static const EdgeInsets vBigMarginLarge = vBigPaddingLarge;
+  static const EdgeInsets vBigMarginHuge = vBigPaddingHuge;
+
+  static const BorderRadius borderRadiusTiny = BorderRadius.all(Radius.circular(4.0));
+  static const BorderRadius borderRadiusSmall = BorderRadius.all(Radius.circular(6.0));
+  static const BorderRadius borderRadiusDefault = BorderRadius.all(Radius.circular(12.0));
+  static const BorderRadius borderRadiusMedium = BorderRadius.all(Radius.circular(20.0));
+  static const BorderRadius borderRadiusLarge = BorderRadius.all(Radius.circular(28.0));
+  static const BorderRadius borderRadiusHuge = BorderRadius.all(Radius.circular(40.0));
+
+  static const double widthTiny = 4.0;
+  static const double widthSmall = 8.0;
+  static const double widthDefault = 16.0;
+  static const double widthMedium = 24.0;
+  static const double widthLarge = 32.0;
+  static const double widthHuge = 64.0;
+
+  static const double heightTiny = 4.0;
+  static const double heightSmall = 8.0;
+  static const double heightDefault = 16.0;
+  static const double heightMedium = 24.0;
+  static const double heightLarge = 32.0;
+  static const double heightHuge = 64.0;
 
   static const int gridMobile = 1;
   static const int gridTablet = 2;
@@ -89,61 +91,4 @@ class AppLayout {
   static const double breakpointTablet = 768.0;
   static const double breakpointDesktop = 1024.0;
   static const double breakpointWide = 1280.0;
-
-  static const double containerSm = 640.0;
-  static const double containerMd = 768.0;
-  static const double containerLg = 1024.0;
-  static const double containerXl = 1280.0;
-  static const double containerMax = 1536.0;
-
-  static const double bottomNavigationHeight = 60.0;
-  static const double tabBarHeight = 48.0;
-  static const double fabSize = 56.0;
-  static const double fabSizeSm = 40.0;
-
-  static const double listTileMinHeight = 56.0;
-  static const double cardMinHeight = 80.0;
-  static const double statsCardHeight = 120.0;
-  static const double menuCardHeight = 160.0;
-
-  static int getGridColumns(double screenWidth) {
-    if (screenWidth < breakpointMobile) {
-      return gridMobile;
-    } else if (screenWidth < breakpointTablet) {
-      return gridTablet;
-    } else if (screenWidth < breakpointDesktop) {
-      return gridDesktop;
-    } else {
-      return gridWide;
-    }
-  }
-
-  static double getContainerWidth(double screenWidth) {
-    if (screenWidth < breakpointMobile) {
-      return screenWidth;
-    } else if (screenWidth < breakpointTablet) {
-      return containerSm;
-    } else if (screenWidth < breakpointDesktop) {
-      return containerMd;
-    } else if (screenWidth < breakpointWide) {
-      return containerLg;
-    } else {
-      return containerXl;
-    }
-  }
-
-  static EdgeInsets getResponsivePadding(double screenWidth) {
-    if (screenWidth < breakpointMobile) {
-      return paddingSm;
-    } else if (screenWidth < breakpointTablet) {
-      return paddingMd;
-    } else {
-      return padding;
-    }
-  }
-
-  static bool isMobile(double screenWidth) => screenWidth < breakpointMobile;
-  static bool isTablet(double screenWidth) =>
-      screenWidth >= breakpointMobile && screenWidth < breakpointDesktop;
-  static bool isDesktop(double screenWidth) => screenWidth >= breakpointDesktop;
 }
