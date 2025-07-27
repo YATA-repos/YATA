@@ -23,6 +23,7 @@ dependencies:
   lucide_icons: ^0.257.0
   shelf: ^1.4.2
   shelf_router: ^1.1.0
+  gotrue: ^2.13.0
   # intl: ^0.20.2
 
 dev_dependencies:
