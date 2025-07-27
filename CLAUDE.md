@@ -1,16 +1,22 @@
 # CLAUDE.md
 
-このファイルは、Claude Code (claude.ai/code) がこのリポジトリのコードを扱う際のガイダンスを提供します。`~/.claude/`にある基本ルールと併せて、これにも厳密に従い、積極的に参考にしてください。
+このファイルは、Claude Code (claude.ai/code) がこのリポジトリのコードを扱う際のガイダンスを提供します。積極的に活用してください。
 
 ---
+
+## 0. 原則
+
+- **日本語で応答すること。**
+- **ファイルの存在確認・ディレクトリ構造の確認は、必ず`tree`コマンドを使用すること。gitからこのような情報を取得することを禁止する。**
+- **中立的立場を維持し、自らが作成したコード、およびユーザーに対しても批判的思考をもって常に改善を試みること。**
 
 ## 1. プロジェクト基本情報
 
 ### プロジェクト概要
 
 - **プロジェクト名**: YATA (日本語の「屋台(yatai)」から命名)
-- **プロジェクト概要**: 小規模レストラン向けの在庫・注文管理システム
-- **プラットフォーム**: Flutter クロスプラットフォーム（主要ターゲットプラットフォーム: Android,Web）
+- **プロジェクト概要**: 小規模レストラン・飲食系屋台・露店向けの在庫・注文管理システム
+- **プラットフォーム**: Flutter クロスプラットフォーム（主要ターゲットプラットフォーム: Android,Windows）
 - **主要機能**:
   - 在庫追跡
   - 注文管理
@@ -29,18 +35,16 @@
 
 #### 主要依存関係
 
-- **Flutter**: UI フレームワーク
-- **flutter_riverpod**: 状態管理
-- **supabase_flutter**: バックエンド（PostgreSQL）
-- **json_annotation/json_serializable**: JSON シリアライゼーション
-- **uuid**: UUID生成
-- **decimal**: 高精度数値計算
+- **Flutter**
+- **Riverpod(flutter_riverpod)**
+- **Supabase(supabase_flutter)**
+- **json_annotation/json_serializable**
+- **decimal**
 
 #### 開発依存関係
 
-- **flutter_lints** + **very_good_analysis**: リント設定
-- **build_runner**: コード生成
-- **flutter_test**: テストフレームワーク(テストは未実装)
+- **flutter_lints** + **very_good_analysis**
+- **build_runner**
 
 ### 2.2 アーキテクチャ
 
@@ -77,9 +81,8 @@ lib/
 │   ├── infrastructure/     # インフラ層
 │   │   ├── offline/        # オフライン機能
 │   │   └── supabase/       # Supabase統合
-│   ├── sync/               # 同期機能
-│   │   └── models/         # 同期関連モデル
-│   └── utils/              # ユーティリティ（ログ、クエリ）
+│   ├── utils/              # ユーティリティ（ログ、クエリ）
+│   └── validation/         # 入力バリデーションなど
 ├── features/               # 機能別ディレクトリ
 │   ├── analytics/          # 分析機能
 │   │   ├── dto/            # Data Transfer Objects
@@ -114,6 +117,7 @@ lib/
 ├── routing/                # ルーティング
 └── shared/                 # 共通UI要素
     ├── layouts/            # レイアウト
+    ├── providers/          # プロバイダ
     ├── themes/             # テーマ
     └── widgets/            # ウィジェット
 ```
@@ -122,24 +126,3 @@ lib/
 
 - このプロジェクトにおけるDTOは、Entityとの変換を前提として**いません**。
 - このプロジェクトにおいて、DTOはデータ転送専用のオブジェクトです。高度なdictのように振る舞うことを目的としています。
-
-## 3. 整備済みドキュメント
-
-- **[./docs/](./docs/)**: ドキュメント全体
-  - **[./docs/guides/](./docs/guides/)**: 開発手順・ベストプラクティス
-    - [./docs/guides/template_guide.md](./docs/guides/template_guide.md): ガイドドキュメント作成用のテンプレート
-    - [./docs/guides/issue_guide.md](./docs/guides/issue_guide.md): Issue作成ガイド
-    - [./docs/guides/query_system_guide.md](./docs/guides/query_system_guide.md): クエリシステム(QueryUtils)ガイド
-    - [./docs/guides/logger_guide.md](./docs/guides/logger_guide.md): Logger(LoggerMixin)使用ガイド
-  - **[./docs/references/](./docs/references/)**: API仕様・技術詳細
-    - [./docs/references/repository/](./docs/references/repository/): 各feature別リポジトリの詳細
-    - [./docs/references/service/](./docs/references/service/): 各feature別サービスの詳細
-    - [./docs/references/logger_mixin.md](./docs/references/logger_mixin.md): LoggerMixinの詳細
-    - [./docs/references/query_utils.md](./docs/references/query_utils.md): QueryUtilsの詳細
-    - [./docs/references/log_service.md](./docs/references/log_service.md): LogServiceの詳細
-    - [./docs/references/base_repository.md](./docs/references/base_repository.md): BaseRepositoryの詳細
-    - [./docs/references/coding_standards.md](./docs/references/coding_standards.md): コーディング規約
-    - [./docs/references/project_directory_tree.md](./docs/references/project_directory_tree.md): プロジェクトディレクトリツリーの詳細
-    - [./docs/references/project_philosophy.md](./docs/references/project_philosophy.md): プロジェクト実装上の哲学
-    - [./docs/references/template_reference.md](./docs/references/template_reference.md): リファレンス系ドキュメント作成用のテンプレート
-  - [./DOCUMENTATION_GUIDE.md](./docs/DOCUMENTATION_GUIDE.md): ドキュメント全体の作成におけるガイドライン
