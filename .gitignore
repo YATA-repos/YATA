@@ -48,12 +48,7 @@ app.*.map.json
 
 # temp
 _temp/
-.idx/
-.vscode/
-_old_py_project/
-_old_py_docs/
 _temp_images/
-docs/
 _temp_log/
 # Generated files
 *.g.dart
@@ -62,7 +57,3 @@ _temp_log/
 
 # dotenv
 .env
-
-
-# Claude Code
-# CLAUDE.md
