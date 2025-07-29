@@ -1,8 +1,7 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 
 import "../auth/auth_service.dart";
-import "../constants/exceptions.dart";
-import "../constants/log_enums/repository.dart";
+import "../constants/exceptions/exceptions.dart";
 import "../constants/query_types.dart";
 import "../utils/logger_mixin.dart";
 import "../utils/query_utils.dart";

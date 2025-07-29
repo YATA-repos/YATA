@@ -53,19 +53,3 @@ enum RepositoryError implements LogMessage {
     }
   }
 }
-
-/// リポジトリ関連の例外
-class RepositoryException implements Exception {
-  const RepositoryException(this.error, {this.params = const <String, String>{}});
-
-  /// エラー種別
-  final RepositoryError error;
-
-  /// エラーメッセージのパラメータ
-  final Map<String, String> params;
-
-  String get message => error.withParams(params);
-
-  @override
-  String toString() => "RepositoryException: $message";
-}

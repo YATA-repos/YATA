@@ -1,4 +1,4 @@
-import "../constants/exceptions.dart";
+import "../constants/exceptions/base/validation_exception.dart";
 
 /// 型検証用ヘルパークラス
 class TypeValidator {
