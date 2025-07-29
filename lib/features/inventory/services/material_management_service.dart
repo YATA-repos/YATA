@@ -1,5 +1,4 @@
-import "../../../core/constants/exceptions.dart";
-import "../../../core/constants/log_enums/service.dart";
+import "../../../core/constants/exceptions/exceptions.dart";
 import "../../../core/utils/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../models/inventory_model.dart";
@@ -86,6 +85,85 @@ class MaterialManagementService with LoggerMixin {
   /// カテゴリ別材料一覧を取得
   Future<List<Material>> getMaterialsByCategory(String? categoryId, String userId) async =>
       _materialRepository.findByCategoryId(categoryId, userId);
+
+  /// 材料を更新
+  Future<Material?> updateMaterial(Material material, String userId) async {
+    if (material.id == null) {
+      throw ArgumentError("Material ID is required for update");
+    }
+
+    // 既存の材料を確認
+    final Material? existingMaterial = await _materialRepository.getById(material.id!);
+    if (existingMaterial == null || existingMaterial.userId != userId) {
+      throw Exception("Material not found or access denied");
+    }
+
+    // 入力検証
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(
+        material.name,
+        required: true,
+        maxLength: 100,
+        fieldName: "材料名",
+      ),
+      InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
+      InputValidator.validateNumber(material.currentStock, min: 0, fieldName: "現在在庫量"),
+      InputValidator.validateNumber(material.alertThreshold, min: 0, fieldName: "アラート閾値"),
+      InputValidator.validateNumber(material.criticalThreshold, min: 0, fieldName: "危険閾値"),
+    ];
+
+    // 閾値の妥当性検証
+    if (material.criticalThreshold > material.alertThreshold) {
+      validationResults.add(ValidationResult.error("危険閾値はアラート閾値以下である必要があります"));
+    }
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      final List<String> errorMessages = InputValidator.getErrorMessages(errors);
+      logError("Validation failed for material update: ${errorMessages.join(', ')}");
+      throw ValidationException(errorMessages);
+    }
+
+    logInfoMessage(ServiceInfo.materialCreationStarted, <String, String>{
+      "materialId": material.id!,
+      "materialName": material.name,
+    });
+
+    try {
+      // ユーザーIDを設定
+      material.userId = userId;
+      
+      // 材料を更新
+      final Material? updatedMaterial = await _materialRepository.updateById(
+        material.id!,
+        material.toJson(),
+      );
+
+      if (updatedMaterial != null) {
+        logInfoMessage(ServiceInfo.materialCreationSuccessful, <String, String>{
+          "materialId": material.id!,
+          "materialName": material.name,
+        });
+      } else {
+        logWarningMessage(ServiceWarning.updateFailed, <String, String>{
+          "entityType": "material: ${material.name}",
+        });
+      }
+
+      return updatedMaterial;
+    } catch (e, stackTrace) {
+      logErrorMessage(
+        ServiceError.materialCreationFailed,
+        <String, String>{
+          "materialId": material.id!,
+          "materialName": material.name,
+        },
+        e,
+        stackTrace,
+      );
+      rethrow;
+    }
+  }
 
   /// 材料のアラート閾値を更新
   Future<Material?> updateMaterialThresholds(

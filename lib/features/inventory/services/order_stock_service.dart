@@ -5,11 +5,11 @@ import "../../../core/constants/log_enums/service.dart";
 import "../../../core/utils/logger_mixin.dart";
 import "../../order/models/order_model.dart";
 import "../../order/repositories/order_item_repository.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
 import "../models/inventory_model.dart";
+import "../models/transaction_model.dart";
 import "../repositories/material_repository.dart";
 import "../repositories/recipe_repository.dart";
+import "../repositories/stock_transaction_repository.dart";
 
 /// 注文関連在庫操作サービス
 class OrderStockService with LoggerMixin {

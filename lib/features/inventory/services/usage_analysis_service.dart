@@ -1,8 +1,8 @@
 import "../../../core/utils/logger_mixin.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
 import "../models/inventory_model.dart";
+import "../models/transaction_model.dart";
 import "../repositories/material_repository.dart";
+import "../repositories/stock_transaction_repository.dart";
 
 /// 使用量分析・予測サービス
 class UsageAnalysisService with LoggerMixin {

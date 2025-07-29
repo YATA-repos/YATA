@@ -1,12 +1,11 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/analytics.dart";
 import "../../../core/utils/logger_mixin.dart";
-
+import "../../inventory/models/transaction_model.dart";
+import "../../inventory/repositories/stock_transaction_repository.dart";
 import "../../order/models/order_model.dart";
 import "../../order/repositories/order_item_repository.dart";
 import "../../order/repositories/order_repository.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
 import "../dto/analytics_dto.dart";
 
 class AnalyticsService with LoggerMixin {

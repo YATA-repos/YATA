@@ -1,7 +1,6 @@
 import "dart:math" as math;
 
-import "../../../core/constants/exceptions.dart";
-import "../../../core/constants/log_enums/menu.dart";
+import "../../../core/constants/constants.dart";
 import "../../../core/utils/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../inventory/dto/inventory_dto.dart";
@@ -44,7 +43,7 @@ class MenuService with LoggerMixin {
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
     // 入力検証
     final List<ValidationResult> validationResults = <ValidationResult>[
-      InputValidator.validateString(keyword, required: true, maxLength: 100, fieldName: "検索キーワード"),
+      InputValidator.validateString(keyword, required: true, maxLength: AppConfig.maxItemNameLength, fieldName: "検索キーワード"),
       InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
     ];
 
@@ -90,7 +89,7 @@ class MenuService with LoggerMixin {
     // 入力検証
     final List<ValidationResult> validationResults = <ValidationResult>[
       InputValidator.validateString(menuItemId, required: true, fieldName: "メニューアイテムID"),
-      InputValidator.validateNumber(quantity, required: true, min: 1, max: 1000, fieldName: "数量"),
+      InputValidator.validateNumber(quantity, required: true, min: AppConfig.minQuantity, max: AppConfig.maxQuantity, fieldName: "数量"),
       InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
     ];
 

@@ -1,14 +1,14 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
 import "../../../core/utils/logger_mixin.dart";
-import "../../stock/dto/stock_dto.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/purchase_item_repository.dart";
-import "../../stock/repositories/purchase_repository.dart";
-import "../../stock/repositories/stock_adjustment_repository.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
+import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
+import "../models/transaction_model.dart";
 import "../repositories/material_repository.dart";
+import "../repositories/purchase_item_repository.dart";
+import "../repositories/purchase_repository.dart";
+import "../repositories/stock_adjustment_repository.dart";
+import "../repositories/stock_transaction_repository.dart";
 
 /// 在庫操作サービス（手動更新・仕入れ記録）
 class StockOperationService with LoggerMixin {

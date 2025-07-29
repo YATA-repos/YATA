@@ -1,7 +1,7 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/utils/logger_mixin.dart";
-import "../../stock/dto/stock_dto.dart";
 import "../dto/inventory_dto.dart";
+import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
 import "material_management_service.dart";
 import "order_stock_service.dart";
