@@ -34,8 +34,14 @@ class AppLayout {
 
   static const EdgeInsets hBigPaddingTiny = EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0);
   static const EdgeInsets hBigPaddingSmall = EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0);
-  static const EdgeInsets hBigPaddingDefault = EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0);
-  static const EdgeInsets hBigPaddingMedium = EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0);
+  static const EdgeInsets hBigPaddingDefault = EdgeInsets.symmetric(
+    horizontal: 16.0,
+    vertical: 8.0,
+  );
+  static const EdgeInsets hBigPaddingMedium = EdgeInsets.symmetric(
+    horizontal: 24.0,
+    vertical: 12.0,
+  );
   static const EdgeInsets hBigPaddingLarge = EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0);
   static const EdgeInsets hBigPaddingHuge = EdgeInsets.symmetric(horizontal: 64.0, vertical: 32.0);
 
@@ -48,8 +54,14 @@ class AppLayout {
 
   static const EdgeInsets vBigPaddingTiny = EdgeInsets.symmetric(horizontal: 2.0, vertical: 4.0);
   static const EdgeInsets vBigPaddingSmall = EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0);
-  static const EdgeInsets vBigPaddingDefault = EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0);
-  static const EdgeInsets vBigPaddingMedium = EdgeInsets.symmetric(horizontal: 12.0, vertical: 24.0);
+  static const EdgeInsets vBigPaddingDefault = EdgeInsets.symmetric(
+    horizontal: 8.0,
+    vertical: 16.0,
+  );
+  static const EdgeInsets vBigPaddingMedium = EdgeInsets.symmetric(
+    horizontal: 12.0,
+    vertical: 24.0,
+  );
   static const EdgeInsets vBigPaddingLarge = EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0);
   static const EdgeInsets vBigPaddingHuge = EdgeInsets.symmetric(horizontal: 32.0, vertical: 64.0);
 

@@ -47,6 +47,9 @@ class AppColors {
   static const Color darkBorder = Color(0xFF334155);
   static const Color darkInput = Color(0xFF334155);
 
+  static const Color trueWhite = Color(0xFFFFFFFF);
+  static const Color trueBlack = Color(0xFF000000);
+
   // 業務固有カラーエイリアス
   static const Color complete = success; // 完了・確定
   static const Color completeForeground = successForeground;
