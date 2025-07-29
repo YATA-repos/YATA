@@ -207,6 +207,7 @@ class LogService {
 
     // 開発時は常にconsoleに出力
     if (kDebugMode) {
+      // developer.logは DevToolsに出力
       developer.log(
         message,
         time: DateTime.now(),
@@ -215,6 +216,18 @@ class LogService {
         error: error,
         stackTrace: stackTrace,
       );
+      
+      // debugPrintはflutter runのコンソールに直接出力
+      final String levelStr = level.name.toUpperCase().padRight(7);
+      final String componentStr = component.padRight(20);
+      debugPrint("$levelStr | $componentStr | $message");
+      
+      if (error != null) {
+        debugPrint("$levelStr | $componentStr | Error: $error");
+      }
+      if (stackTrace != null) {
+        debugPrint("$levelStr | $componentStr | Stack: ${stackTrace.toString().split('\n').take(3).join(' -> ')}");
+      }
     }
 
     // デバッグ時は全レベル、リリース時はwarning/errorのみファイル保存(バッファ)
