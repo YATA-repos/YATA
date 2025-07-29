@@ -1,5 +1,5 @@
 import "../../../core/constants/enums.dart";
-import "../../../core/constants/exceptions.dart";
+import "../../../core/constants/exceptions/exceptions.dart";
 import "../../../core/utils/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../menu/models/menu_model.dart";
@@ -49,7 +49,6 @@ class OrderManagementService with LoggerMixin {
         InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
         InputValidator.validateString(
           request.customerName,
-          required: false,
           maxLength: 100,
           fieldName: "顧客名",
         ),
@@ -146,7 +145,7 @@ class OrderManagementService with LoggerMixin {
         throw Exception("Order $orderId not found or access denied");
       }
 
-      if (order.status == OrderStatus.canceled) {
+      if (order.status == OrderStatus.cancelled) {
         logWarning("Order already canceled");
         return (order, false); // 既にキャンセル済み
       }
@@ -171,7 +170,7 @@ class OrderManagementService with LoggerMixin {
       // 注文をキャンセル状態に更新
       final String newNotes = "${order.notes ?? ""} [CANCELED: $reason]".trim();
       final Order? canceledOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
-        "status": OrderStatus.canceled.value,
+        "status": OrderStatus.cancelled.value,
         "notes": newNotes,
       });
 

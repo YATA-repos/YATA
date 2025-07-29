@@ -191,7 +191,7 @@ enum OrderStatus {
   completed("completed"),
 
   /// キャンセル。オーダーがキャンセルされた状態。基本的にはオーダー作成後即座に割り当てられる想定。
-  canceled("canceled"),
+  cancelled("canceled"),
 
   /// 返金済み。キャンセルされた注文で返金が完了した状態。
   refunded("refunded");
@@ -218,7 +218,7 @@ enum OrderStatus {
         return "配達済み";
       case OrderStatus.completed:
         return "完了";
-      case OrderStatus.canceled:
+      case OrderStatus.cancelled:
         return "キャンセル";
       case OrderStatus.refunded:
         return "返金済み";
@@ -241,7 +241,7 @@ enum OrderStatus {
         return "purple";
       case OrderStatus.completed:
         return "green";
-      case OrderStatus.canceled:
+      case OrderStatus.cancelled:
         return "red";
       case OrderStatus.refunded:
         return "gray";
@@ -259,7 +259,7 @@ enum OrderStatus {
   bool get isFinished =>
       this == OrderStatus.delivered ||
       this == OrderStatus.completed ||
-      this == OrderStatus.canceled ||
+      this == OrderStatus.cancelled ||
       this == OrderStatus.refunded;
 
   /// ステータスが処理中かどうかを判定
@@ -336,3 +336,73 @@ enum LogLevel {
     }
   }
 }
+
+/// 優先度
+@JsonEnum()
+enum Priority {
+  /// 低
+  low("low"),
+
+  /// 中
+  medium("medium"),
+
+  /// 高
+  high("high"),
+
+  /// 緊急
+  urgent("urgent");
+
+  const Priority(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+
+  /// 日本語での表示名
+  String get displayName {
+    switch (this) {
+      case Priority.low:
+        return "低";
+      case Priority.medium:
+        return "中";
+      case Priority.high:
+        return "高";
+      case Priority.urgent:
+        return "緊急";
+    }
+  }
+
+  /// 優先度の重要度（数値が大きいほど重要）
+  int get importance {
+    switch (this) {
+      case Priority.low:
+        return 1;
+      case Priority.medium:
+        return 2;
+      case Priority.high:
+        return 3;
+      case Priority.urgent:
+        return 4;
+    }
+  }
+}
+
+/// デバイスタイプ列挙型
+enum DeviceType { mobile, tablet, desktop, largeDesktop }
+
+/// メニュー表示モード
+enum MenuDisplayMode {
+  grid, // グリッド表示
+  list, // リスト表示
+}
+
+/// 在庫表示モード
+enum StockDisplayMode {
+  grid, // グリッド表示
+  list, // リスト表示
+  alert, // アラートのみ表示
+}
+
+/// 在庫ステータス（ダッシュボード用）
+enum InventoryStatus { inStock, lowStock, outOfStock }
