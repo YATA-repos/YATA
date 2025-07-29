@@ -1,0 +1,5 @@
+{
+    "dart.flutterSdkPath": "~/dev/sdk/flutter",
+    "markdown.validate.enabled": true,
+    "remote.autoForwardPortsFallback": 0
+}
