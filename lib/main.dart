@@ -1,125 +1,123 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
+import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "package:lucide_icons/lucide_icons.dart";
 
-import "./shared/themes/themes.dart";
-import "core/constants/constants.dart";
+import "app/app.dart";
+import "core/auth/auth_service.dart";
 import "core/utils/log_service.dart";
 import "core/utils/logger_mixin.dart";
 
 void main() async {
+  // 起動開始の明確な表示
+  debugPrint("DEBUG: ========================================");
+  debugPrint("DEBUG: YATA Application Starting...");
+  debugPrint("DEBUG: Time: ${DateTime.now().toIso8601String()}");
+  debugPrint("DEBUG: Flutter Version: unknown");
+  debugPrint("DEBUG: Debug Mode: $kDebugMode");
+  debugPrint("DEBUG: ========================================");
+
   // Flutterの初期化を確実に行う
+  debugPrint("DEBUG: [1/6] Initializing Flutter bindings...");
   WidgetsFlutterBinding.ensureInitialized();
+  debugPrint("DEBUG: [1/6] ✅ Flutter bindings initialized");
 
-  // 環境変数の読み込み
-  // await dotenv.load();
+  try {
+    // 環境変数の読み込み
+    debugPrint("DEBUG: [2/6] Loading environment variables...");
+    await dotenv.load();
+    debugPrint("DEBUG: [2/6] ✅ Environment variables loaded");
+    
+    // 環境変数の内容確認（セキュリティのため一部のみ）
+    debugPrint("DEBUG: Environment variables status:");
+    debugPrint("DEBUG: - SUPABASE_URL: ${(dotenv.env['SUPABASE_URL']?.isNotEmpty ?? false) ? 'configured' : 'missing'}");
+    debugPrint("DEBUG: - SUPABASE_ANON_KEY: ${(dotenv.env['SUPABASE_ANON_KEY']?.isNotEmpty ?? false) ? 'configured' : 'missing'}");
 
-  // ログサービスの初期化
-  await LogService.initialize();
+    // ログサービスの初期化
+    debugPrint("DEBUG: [3/6] Initializing log service...");
+    await LogService.initialize();
+    debugPrint("DEBUG: [3/6] ✅ Log service initialized");
+    
+    // ログサービス初期化後の最初のログ
+    debugPrint("DEBUG: [3/6] Testing LogService functionality...");
+    LogService.info("main", "DEBUG: === YATA Application Startup ===");
+    LogService.info("main", "DEBUG: Log service is now active and operational");
+    LogService.info("main", "DEBUG: Application starting with debug logging enabled");
+    debugPrint("DEBUG: [3/6] ✅ LogService test calls completed");
 
-  // Supabaseの初期化
-  // await SupabaseClientService.initialize();
+    // Supabaseの初期化（環境変数が設定されている場合のみ）
+    debugPrint("DEBUG: [4/6] Checking Supabase configuration...");
+    LogService.info("main", "DEBUG: [4/6] Checking Supabase configuration...");
+    
+    final bool shouldInit = _shouldInitializeSupabase();
+    debugPrint("DEBUG: [4/6] Should initialize Supabase: $shouldInit");
+    
+    if (shouldInit) {
+      debugPrint("DEBUG: [4/6] Supabase configuration found, initializing...");
+      LogService.info("main", "DEBUG: [4/6] Supabase configuration found, initializing...");
+      
+      try {
+        debugPrint("DEBUG: [4/6] Calling SupabaseClientService.initialize()...");
+        await SupabaseClientService.initialize();
+        debugPrint("DEBUG: [4/6] ✅ SupabaseClientService.initialize() completed");
+        LogService.info("main", "DEBUG: [4/6] ✅ Supabase initialized successfully");
+      } catch (e, stackTrace) {
+        debugPrint("DEBUG: [4/6] ❌ SupabaseClientService.initialize() failed: $e");
+        debugPrint("DEBUG: [4/6] Stack trace: $stackTrace");
+        LogService.error("main", "DEBUG: [4/6] ❌ Supabase initialization failed: $e", e, stackTrace);
+        rethrow;
+      }
+    } else {
+      debugPrint("DEBUG: [4/6] ⚠️  Supabase initialization skipped: Environment variables not configured");
+      LogService.warning("main", "DEBUG: [4/6] ⚠️  Supabase initialization skipped: Environment variables not configured");
+    }
+    
+    debugPrint("DEBUG: [5/6] Setting up error handling...");
+    LogService.info("main", "DEBUG: [5/6] Setting up error handling...");
+  } catch (e, stackTrace) {
+    // 初期化エラーの場合、開発モードでは詳細を表示
+    debugPrint("DEBUG: ❌ CRITICAL ERROR during initialization:");
+    debugPrint("DEBUG: Error Type: ${e.runtimeType}");
+    debugPrint("DEBUG: Error Message: $e");
+    debugPrint("DEBUG: Stack Trace: $stackTrace");
+    
+    if (kDebugMode) {
+      debugPrint("Initialization error: $e");
+    }
+    
+    // ログサービスが利用可能かチェック
+    try {
+      LogService.error("main", "DEBUG: Application initialization failed: ${e.toString()}", e);
+    } catch (logError) {
+      debugPrint("DEBUG: Log service also failed: $logError");
+    }
+  }
 
   // エラーハンドリングの設定
+  debugPrint("DEBUG: [5/6] Setting up error handlers...");
   _setupErrorHandling();
+  debugPrint("DEBUG: [5/6] ✅ Error handlers configured");
+  
+  LogService.info("main", "DEBUG: [6/6] Starting Flutter application...");
+  debugPrint("DEBUG: [6/6] Starting Flutter application...");
 
   // 起動
   runApp(const ProviderScope(child: YataApp()));
+  
+  LogService.info("main", "DEBUG: [6/6] ✅ Flutter application started successfully");
+  debugPrint("DEBUG: [6/6] ✅ Flutter application started successfully");
+  debugPrint("DEBUG: ========================================");
 }
 
-class YataApp extends ConsumerWidget {
-  const YataApp({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
-    title: AppStrings.titleApp,
-    theme: AppTheme.lightTheme,
-    darkTheme: AppTheme.darkTheme,
-    home: Scaffold(
-      appBar: AppBar(
-        title: AppBarTitle(),
-        centerTitle: false,
-        actions: <Widget>[
-          CustomNavigation(),
-        ]
-      ),
-      body: Center(child: Text(AppStrings.titleApp)),
-    ),
-    debugShowCheckedModeBanner: false,
-  );
-}
-
-class AppBarTitle extends StatelessWidget {
-  const AppBarTitle({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        const Icon(LucideIcons.coffee),
-        AppLayout.hSpacerSmall,
-        Text(
-          AppStrings.titleApp,
-          style: Theme.of(context).textTheme.headlineSmall
-        ),
-      ],
-    );
-}
-
-class CustomNavigation extends StatelessWidget {
-  const CustomNavigation({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        CustomNavItem(
-          icon: LucideIcons.home, 
-          label: AppStrings.navHome
-        ),
-        AppLayout.hSpacerSmall,
-        CustomNavItem(
-          icon: LucideIcons.history, 
-          label: AppStrings.navOrderHistory
-        ),
-        AppLayout.hSpacerSmall,
-        CustomNavItem(
-          icon: LucideIcons.barChart4, 
-          label: AppStrings.navAnalytics
-        ),
-      ],
-    );
-}
-
-class CustomNavItem extends StatelessWidget {
-  const CustomNavItem({
-    required this.icon, required this.label, super.key,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Column(
-      children: <Widget>[
-        Container(
-          margin: AppLayout.marginSmall,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(icon),
-              AppLayout.hSpacerSmall,
-              Text(label),
-            ],
-          ),
-        ),
-      ]
-    );
+/// Supabaseを初期化すべきかどうかをチェック
+bool _shouldInitializeSupabase() {
+  final String? url = dotenv.env["SUPABASE_URL"];
+  final String? key = dotenv.env["SUPABASE_ANON_KEY"];
+  
+  return url != null && 
+         key != null && 
+         url.isNotEmpty && 
+         key.isNotEmpty;
 }
 
 /// エラーハンドリングの設定
