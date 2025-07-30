@@ -1,263 +1,295 @@
-import "dart:async";
-
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
-import "package:lucide_icons/lucide_icons.dart";
 
-import "../../../../core/auth/auth_service.dart";
-import "../../../../core/constants/app_strings/app_strings.dart";
-import "../../../../core/providers/auth_providers.dart";
-import "../../../../core/utils/log_service.dart";
-import "../../../../shared/enums/ui_enums.dart";
-import "../../../../shared/themes/app_colors.dart";
-import "../../../../shared/themes/app_layout.dart";
-import "../../../../shared/themes/app_text_theme.dart";
-import "../../../../shared/widgets/buttons/app_button.dart";
-import "../../../../shared/widgets/cards/app_card.dart";
-import "../../../../shared/widgets/common/loading_indicator.dart";
+import "../../models/auth_state.dart";
+import "../providers/auth_providers.dart";
 
 /// ログイン画面
 /// 
-/// Google OAuth認証を提供
+/// Google OAuth認証を通じてユーザーログインを提供します。
+/// 認証状態に応じて適切なUIを表示し、認証成功時には
+/// 適切なページにリダイレクトします。
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    LogService.info("LoginScreen", "DEBUG: === Login Screen Build Started ===");
-    LogService.info("LoginScreen", "DEBUG: Building login screen UI");
-    
-    final bool isLoading = ref.watch(authLoadingProvider);
-    final String? error = ref.watch(authErrorProvider);
-    
-    LogService.info("LoginScreen", "DEBUG: Current state - isLoading: $isLoading, hasError: ${error != null}");
-    if (error != null) {
-      LogService.info("LoginScreen", "DEBUG: Current error: $error");
+    final AuthState authState = ref.watch(authStateNotifierProvider);
+    final AuthStateNotifier authNotifier = ref.read(authStateNotifierProvider.notifier);
+
+    // 認証済みの場合は自動的にダッシュボードにリダイレクト
+    // これはAuthGuardでも処理されるが、二重の安全策として実装
+    if (authState.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.go("/");
+        }
+      });
     }
 
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: AppLayout.paddingLarge,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                // アプリロゴ・タイトル
-                Icon(
-                  LucideIcons.store,
-                  size: 80,
-                  color: AppColors.primary,
-                ),
-                AppLayout.vSpacerMedium,
-                Text(
-                  AppStrings.titleApp,
-                  style: AppTextTheme.cardTitle.copyWith(fontSize: 32),
-                ),
-                AppLayout.vSpacerSmall,
-                Text(
-                  AppStrings.descriptionApp,
-                  style: AppTextTheme.cardDescription,
-                  textAlign: TextAlign.center,
-                ),
-                AppLayout.vSpacerLarge,
-
-                // ログインカード
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Text(
-                        AppStrings.textLogin,
-                        style: AppTextTheme.cardTitle,
-                        textAlign: TextAlign.center,
-                      ),
-                      AppLayout.vSpacerMedium,
-
-                      // エラー表示
-                      if (error != null) ...<Widget>[
-                        Container(
-                          padding: AppLayout.paddingDefault,
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.1),
-                            borderRadius: AppLayout.borderRadiusSmall,
-                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
-                          ),
-                          child: Row(
-                            children: <Widget>[
-                              Icon(
-                                LucideIcons.alertCircle,
-                                color: AppColors.danger,
-                                size: 20,
-                              ),
-                              AppLayout.hSpacerSmall,
-                              Expanded(
-                                child: Text(
-                                  error,
-                                  style: AppTextTheme.cardDescription.copyWith(color: AppColors.danger),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AppLayout.vSpacerMedium,
-                      ],
-
-                      // ローディング表示
-                      if (isLoading) ...<Widget>[
-                        const LoadingIndicator(),
-                        AppLayout.vSpacerMedium,
-                        Text(
-                          AppStrings.textAuthenticating,
-                          style: AppTextTheme.cardDescription,
-                          textAlign: TextAlign.center,
-                        ),
-                      ] else ...<Widget>[
-                        // Googleログインボタン
-                        AppButton(
-                          onPressed: () => _signInWithGoogle(ref, context),
-                          variant: ButtonVariant.outline,
-                          size: ButtonSize.large,
-                          isFullWidth: true,
-                          text: AppStrings.buttonGoogleLogin,
-                          icon: const Icon(LucideIcons.chrome),
-                        ),
-                        AppLayout.vSpacerMedium,
-
-                        // 説明テキスト
-                        Text(
-                          AppStrings.descriptionGoogleAuth,
-                          style: AppTextTheme.cardDescription,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              // アプリロゴ・タイトル部分
+              Column(
+                children: <Widget>[
+                  // アプリアイコン
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Icon(
+                      Icons.storefront,
+                      size: 64,
+                      color: Theme.of(context).primaryColor,
+                    ),
                   ),
-                ),
-
-                AppLayout.vSpacerLarge,
-
-                // 開発者向け情報
-                Container(
-                  padding: AppLayout.paddingDefault,
-                  decoration: BoxDecoration(
-                    color: AppColors.muted.withValues(alpha: 0.3),
-                    borderRadius: AppLayout.borderRadiusSmall,
+                  const SizedBox(height: 24),
+                  
+                  // アプリタイトル
+                  Text(
+                    "YATA",
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
                   ),
-                  child: Column(
-                    children: <Widget>[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Icon(
-                            LucideIcons.info,
-                            size: 16,
-                            color: AppColors.mutedForeground,
-                          ),
-                          AppLayout.hSpacerSmall,
-                          Text(
-                            AppStrings.textDeveloperInfo,
-                            style: AppTextTheme.cardDescription.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      AppLayout.vSpacerSmall,
-                      Text(
-                        AppStrings.textSupabaseEnvInfo,
-                        style: AppTextTheme.cardDescription.copyWith(fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  
+                  // サブタイトル
+                  Text(
+                    r"屋台・小規模レストラン向け\n在庫・注文管理システム",
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
+                ],
+              ),
+              
+              const SizedBox(height: 48),
+              
+              // 認証状態に応じたコンテンツ
+              _buildAuthContent(context, authState, authNotifier),
+              
+              const SizedBox(height: 48),
+              
+              // フッター情報
+              Text(
+                "安全なGoogle認証でログインします",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  /// Googleログイン処理
-  Future<void> _signInWithGoogle(WidgetRef ref, BuildContext context) async {
-    LogService.info("LoginScreen", "DEBUG: ========================================");
-    LogService.info("LoginScreen", "DEBUG: === Google Sign-In Button Pressed ===");
-    LogService.info("LoginScreen", "DEBUG: Time: ${DateTime.now().toIso8601String()}");
-    LogService.info("LoginScreen", "DEBUG: Context mounted: ${context.mounted}");
-    LogService.info("LoginScreen", "DEBUG: ========================================");
-    
-    final AuthError authErrorNotifier = ref.read(authErrorProvider.notifier);
-    final AuthLoading authLoadingNotifier = ref.read(authLoadingProvider.notifier);
-
-    try {
-      LogService.info("LoginScreen", "DEBUG: [1/4] Clearing previous errors...");
-      // エラーをクリア
-      authErrorNotifier.clearError();
-      LogService.info("LoginScreen", "DEBUG: [1/4] ✅ Previous errors cleared");
-      
-      LogService.info("LoginScreen", "DEBUG: [2/4] Setting loading state to true...");
-      // ローディング開始
-      authLoadingNotifier.setLoading(true);
-      LogService.info("LoginScreen", "DEBUG: [2/4] ✅ Loading state set to true");
-
-      LogService.info("LoginScreen", "DEBUG: [3/4] Getting auth service instance...");
-      // 認証実行
-      final SupabaseClientService authService = ref.read(supabaseClientServiceProvider);
-      LogService.info("LoginScreen", "DEBUG: [3/4] ✅ Auth service instance obtained");
-      LogService.info("LoginScreen", "DEBUG: [3/4] Starting Google sign-in process...");
-      
-      final bool success = await authService.signInWithGoogle();
-      
-      LogService.info("LoginScreen", "DEBUG: [3/4] ✅ Google sign-in process completed");
-      LogService.info("LoginScreen", "DEBUG: [3/4] Authentication result: $success");
-
-      LogService.info("LoginScreen", "DEBUG: [4/4] Processing authentication result...");
-      if (success && context.mounted) {
-        LogService.info("LoginScreen", "DEBUG: [4/4] ✅ Authentication successful, redirecting to home");
-        LogService.info("LoginScreen", "DEBUG: [4/4] Context still mounted: ${context.mounted}");
-        // 認証成功時はホームへリダイレクト
-        context.go("/");
-        LogService.info("LoginScreen", "DEBUG: [4/4] ✅ Redirect to home completed");
-      } else {
-        LogService.warning("LoginScreen", "DEBUG: [4/4] ❌ Authentication failed or context unmounted");
-        LogService.warning("LoginScreen", "DEBUG: [4/4] - Success: $success, Context mounted: ${context.mounted}");
-        // 認証が失敗した場合（falseが返された）
-        authErrorNotifier.setError("認証プロセスが完了しませんでした。再度お試しください。");
-      }
-    } on TimeoutException catch (e) {
-      LogService.error("LoginScreen", "DEBUG: ❌ TimeoutException caught in login");
-      LogService.error("LoginScreen", "DEBUG: - Message: ${e.message}");
-      LogService.error("LoginScreen", "DEBUG: - Duration: ${e.duration}");
-      // タイムアウト例外
-      authErrorNotifier.setError(e.message ?? "認証処理がタイムアウトしました。再度お試しください。");
-    } on SupabaseAuthException catch (e) {
-      LogService.error("LoginScreen", "DEBUG: ❌ SupabaseAuthException caught in login");
-      LogService.error("LoginScreen", "DEBUG: - Message: ${e.message}");
-      // Supabase認証関連の例外（ユーザー向けメッセージが設定済み）
-      authErrorNotifier.setError(e.message);
-    } on SupabaseClientException catch (e) {
-      LogService.error("LoginScreen", "DEBUG: ❌ SupabaseClientException caught in login");
-      LogService.error("LoginScreen", "DEBUG: - Message: ${e.message}");
-      // Supabaseクライアント関連の例外（ユーザー向けメッセージが設定済み）
-      authErrorNotifier.setError(e.message);
-    } catch (e, stackTrace) {
-      LogService.error("LoginScreen", "DEBUG: ❌ Unexpected exception caught in login");
-      LogService.error("LoginScreen", "DEBUG: - Type: ${e.runtimeType}");
-      LogService.error("LoginScreen", "DEBUG: - Message: $e");
-      LogService.error("LoginScreen", "DEBUG: - Stack trace: $stackTrace");
-      // その他の予期しない例外
-      authErrorNotifier.setError("予期しないエラーが発生しました。しばらく待ってから再度お試しください。");
-      // デバッグ用にログ出力
-      LogService.error("LoginScreen", "Unexpected error in login: ${e.runtimeType} - $e", e);
-    } finally {
-      LogService.info("LoginScreen", "DEBUG: === Login process completed, setting loading to false ===");
-      authLoadingNotifier.setLoading(false);
-      LogService.info("LoginScreen", "DEBUG: ✅ Loading state set to false");
-      LogService.info("LoginScreen", "DEBUG: ========================================");
+  /// 認証状態に応じたコンテンツを構築
+  Widget _buildAuthContent(
+    BuildContext context, 
+    AuthState authState, 
+    AuthStateNotifier authNotifier,
+  ) {
+    // 認証処理中
+    if (authState.isAuthenticating) {
+      return Column(
+        children: <Widget>[
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(
+            "認証処理中...",
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
     }
+
+    // エラー状態
+    if (authState.hasError) {
+      return Column(
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: <Widget>[
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "認証エラー",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _getErrorMessage(authState.error),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // リトライボタンとログインボタンを並べて表示
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              // リトライボタン（ネットワークエラーなどの場合）
+              if (_shouldShowRetryButton(authState.error))
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _handleRetry(context, authNotifier),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("再試行"),
+                  ),
+                ),
+              if (_shouldShowRetryButton(authState.error))
+                const SizedBox(width: 12),
+              // ログインボタン
+              Expanded(
+                child: _buildLoginButton(context, authNotifier),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // 通常状態（ログインボタン表示）
+    return _buildLoginButton(context, authNotifier);
+  }
+
+  /// ログインボタンを構築
+  Widget _buildLoginButton(BuildContext context, AuthStateNotifier authNotifier) => ElevatedButton.icon(
+      onPressed: () => _handleGoogleSignIn(context, authNotifier),
+      icon: const Icon(Icons.login),
+      label: const Text("Googleでログイン"),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+
+  /// Google認証処理
+  Future<void> _handleGoogleSignIn(
+    BuildContext context, 
+    AuthStateNotifier authNotifier,
+  ) async {
+    try {
+      await authNotifier.signInWithGoogle();
+      
+      // 認証成功時の追加処理があれば実装
+      // 現在はAuthGuardによる自動リダイレクトに任せる
+    } catch (e) {
+      // エラーは既にAuthStateNotifierで処理されている
+      // 必要に応じて追加のエラーハンドリングを実装
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("認証に失敗しました: ${e.toString()}"),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// リトライボタンを表示すべきかどうか判定
+  bool _shouldShowRetryButton(String? error) {
+    if (error == null) {
+      return false;
+    }
+    
+    final String lowerError = error.toLowerCase();
+    final List<String> retryableErrors = <String>[
+      "network_error",
+      "timeout", 
+      "server_error",
+      "connection",
+      "failed to fetch",
+      "network request failed",
+    ];
+    
+    return retryableErrors.any(lowerError.contains);
+  }
+
+  /// リトライ処理
+  Future<void> _handleRetry(
+    BuildContext context,
+    AuthStateNotifier authNotifier,
+  ) async {
+    // エラー状態をクリア
+    authNotifier.clearError();
+    
+    // 少し待機してからリトライ
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    
+    // 再度認証を試行
+    if (context.mounted) {
+      await _handleGoogleSignIn(context, authNotifier);
+    }
+  }
+
+  /// エラーメッセージを整形
+  String _getErrorMessage(String? error) {
+    if (error == null || error.isEmpty) {
+      return "不明なエラーが発生しました";
+    }
+
+    // よくあるエラーメッセージを日本語に変換
+    final Map<String, String> errorMessages = <String, String>{
+      "popup_closed_by_user": "認証がキャンセルされました",
+      "network_error": r"ネットワークエラーが発生しました\n\nインターネット接続を確認してください",
+      "invalid_request": r"認証リクエストが無効です\n\n設定を確認してください",
+      "access_denied": r"アクセスが拒否されました\n\nGoogleアカウントへのアクセス許可が必要です",
+      "session_expired": r"セッションの有効期限が切れました\n\n再度ログインしてください",
+      "timeout": r"認証処理がタイムアウトしました\n\n再度お試しください",
+      "server_error": r"サーバーエラーが発生しました\n\nしばらく時間をおいて再度お試しください",
+      "oauth_error": "OAuth認証でエラーが発生しました",
+      "config_error": "認証設定にエラーがあります",
+    };
+
+    final String lowerError = error.toLowerCase();
+    for (final MapEntry<String, String> entry in errorMessages.entries) {
+      if (lowerError.contains(entry.key.toLowerCase())) {
+        return entry.value;
+      }
+    }
+
+    // その他のエラーメッセージを整形
+    if (error.length > 100) {
+      return "認証エラーが発生しました\\n\\n詳細: ${error.substring(0, 100)}...";
+    }
+
+    return "認証エラー: $error";
   }
 }
