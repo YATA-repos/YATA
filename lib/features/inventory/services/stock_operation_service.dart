@@ -1,6 +1,8 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
@@ -13,12 +15,13 @@ import "../repositories/stock_transaction_repository.dart";
 /// 在庫操作サービス（手動更新・仕入れ記録）
 class StockOperationService with LoggerMixin {
   StockOperationService({
+    required Ref ref,
     MaterialRepository? materialRepository,
     PurchaseRepository? purchaseRepository,
     PurchaseItemRepository? purchaseItemRepository,
     StockAdjustmentRepository? stockAdjustmentRepository,
     StockTransactionRepository? stockTransactionRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
        _purchaseRepository = purchaseRepository ?? PurchaseRepository(),
        _purchaseItemRepository = purchaseItemRepository ?? PurchaseItemRepository(),
        _stockAdjustmentRepository = stockAdjustmentRepository ?? StockAdjustmentRepository(),
@@ -42,9 +45,9 @@ class StockOperationService with LoggerMixin {
     try {
       // 材料を取得
       final Material? material = await _materialRepository.getById(request.materialId);
-      if (material == null || material.userId != userId) {
+      if (material == null) {
         logWarningMessage(ServiceWarning.accessDenied);
-        throw Exception("Material not found or access denied");
+        throw Exception("Material not found");
       }
 
       final double oldStock = material.currentStock;
@@ -137,7 +140,7 @@ class StockOperationService with LoggerMixin {
       for (final PurchaseItemDto itemData in request.items) {
         // 材料を取得して在庫更新
         final Material? material = await _materialRepository.getById(itemData.materialId);
-        if (material != null && material.userId == userId) {
+        if (material != null) {
           final double oldStock = material.currentStock;
           material.currentStock += itemData.quantity;
           await _materialRepository.updateById(material.id!, <String, dynamic>{

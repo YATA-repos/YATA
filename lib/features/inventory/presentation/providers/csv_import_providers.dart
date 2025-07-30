@@ -7,4 +7,4 @@ part "csv_import_providers.g.dart";
 
 /// CSVインポートサービスプロバイダー
 @riverpod
-CSVImportService csvImportService(Ref ref) => CSVImportService();
+CSVImportService csvImportService(Ref ref) => CSVImportService(ref: ref);

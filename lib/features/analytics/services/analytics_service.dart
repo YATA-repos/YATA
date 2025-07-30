@@ -1,6 +1,8 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/analytics.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../inventory/models/transaction_model.dart";
 import "../../inventory/repositories/stock_transaction_repository.dart";
 import "../../order/models/order_model.dart";
@@ -10,11 +12,12 @@ import "../dto/analytics_dto.dart";
 
 class AnalyticsService with LoggerMixin {
   AnalyticsService({
+    required Ref ref,
     OrderRepository? orderRepository,
     OrderItemRepository? orderItemRepository,
     StockTransactionRepository? stockTransactionRepository,
-  }) : _orderRepository = orderRepository ?? OrderRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
+  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref),
+       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref),
        _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
 
   final OrderRepository _orderRepository;
@@ -32,13 +35,11 @@ class AnalyticsService with LoggerMixin {
       // 指定日の注文数を取得
       final Map<OrderStatus, int> statusCounts = await _orderRepository.countByStatusAndDate(
         targetDate,
-        userId,
       );
 
       // 完了注文を取得して売上計算
       final List<Order> completedOrders = await _orderRepository.findCompletedByDate(
         targetDate,
-        userId,
       );
 
       logDebug("Retrieved ${completedOrders.length} completed orders for stats calculation");
@@ -101,7 +102,7 @@ class AnalyticsService with LoggerMixin {
     try {
       // 売上集計を取得
       final List<Map<String, dynamic>> salesSummary = await _orderItemRepository
-          .getMenuItemSalesSummary(days, userId);
+          .getMenuItemSalesSummary(days);
 
       logDebug("Retrieved sales summary for ${salesSummary.length} menu items");
 
@@ -144,7 +145,6 @@ class AnalyticsService with LoggerMixin {
     final List<Order> completedOrders = await _orderRepository.findOrdersByCompletionTimeRange(
       startDate,
       endDate,
-      userId,
     );
 
     // 特定メニューアイテムの場合はフィルタ
@@ -184,7 +184,6 @@ class AnalyticsService with LoggerMixin {
     final List<Order> orders = await _orderRepository.findByDateRange(
       targetDate,
       targetDate,
-      userId,
     );
 
     // 時間帯別に集計
@@ -213,7 +212,7 @@ class AnalyticsService with LoggerMixin {
 
     try {
       // 期間内の完了注文を取得
-      final List<Order> orders = await _orderRepository.findByDateRange(dateFrom, dateTo, userId);
+      final List<Order> orders = await _orderRepository.findByDateRange(dateFrom, dateTo);
       final List<Order> completedOrders = orders
           .where((Order order) => order.status == OrderStatus.completed)
           .toList();
@@ -316,7 +315,6 @@ class AnalyticsService with LoggerMixin {
       menuItemId,
       startDate,
       endDate,
-      userId,
     );
 
     // 売上統計を計算

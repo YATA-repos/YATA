@@ -12,12 +12,12 @@ part "order_providers.g.dart";
 /// OrderService プロバイダー
 /// 既存の注文管理サービスをRiverpodで利用可能にする
 @riverpod
-OrderService orderService(Ref ref) => OrderService();
+OrderService orderService(Ref ref) => OrderService(ref: ref);
 
 /// KitchenService プロバイダー
 /// 既存のキッチン操作・分析サービスをRiverpodで利用可能にする
 @riverpod
-KitchenService kitchenService(Ref ref) => KitchenService();
+KitchenService kitchenService(Ref ref) => KitchenService(ref: ref);
 
 /// 注文履歴プロバイダー
 /// 既存のOrderService.getOrderHistoryを直接活用

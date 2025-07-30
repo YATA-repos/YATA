@@ -3,13 +3,13 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_layout.dart";
 import "../../../../shared/themes/app_text_theme.dart";
 import "../../../../shared/widgets/buttons/app_button.dart";
 import "../../../../shared/widgets/forms/app_text_field.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/inventory_model.dart";
 import "../../services/material_management_service.dart";
 import "../providers/inventory_providers.dart";
@@ -98,7 +98,7 @@ class _MaterialFormDialogState extends ConsumerState<MaterialFormDialog> {
       );
     }
 
-    return ref.watch(materialCategoriesProvider(userId!)).when(
+    return ref.watch(materialCategoriesProvider).when(
       data: _buildDialog,
       loading: () => const AlertDialog(
         title: Text("読み込み中"),
@@ -364,9 +364,9 @@ class _MaterialFormDialogState extends ConsumerState<MaterialFormDialog> {
           ref.read(materialManagementServiceProvider);
 
       if (isEditMode) {
-        await service.updateMaterial(material, userId!);
+        await service.updateMaterial(material);
       } else {
-        await service.createMaterial(material, userId!);
+        await service.createMaterial(material);
       }
 
       if (mounted) {

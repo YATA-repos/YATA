@@ -1,5 +1,7 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/exceptions/exceptions.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../models/inventory_model.dart";
 import "../repositories/material_category_repository.dart";
@@ -8,10 +10,11 @@ import "../repositories/material_repository.dart";
 /// 材料管理サービス
 class MaterialManagementService with LoggerMixin {
   MaterialManagementService({
+    required Ref ref,
     MaterialRepository? materialRepository,
     MaterialCategoryRepository? materialCategoryRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
-       _materialCategoryRepository = materialCategoryRepository ?? MaterialCategoryRepository();
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
+       _materialCategoryRepository = materialCategoryRepository ?? MaterialCategoryRepository(ref: ref);
 
   final MaterialRepository _materialRepository;
   final MaterialCategoryRepository _materialCategoryRepository;
@@ -20,7 +23,7 @@ class MaterialManagementService with LoggerMixin {
   String get loggerComponent => "MaterialManagementService";
 
   /// 材料を作成
-  Future<Material?> createMaterial(Material material, String userId) async {
+  Future<Material?> createMaterial(Material material) async {
     // 入力検証
     final List<ValidationResult> validationResults = <ValidationResult>[
       InputValidator.validateString(
@@ -29,7 +32,6 @@ class MaterialManagementService with LoggerMixin {
         maxLength: 100,
         fieldName: "材料名",
       ),
-      InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
       InputValidator.validateNumber(material.currentStock, min: 0, fieldName: "現在在庫量"),
       InputValidator.validateNumber(material.alertThreshold, min: 0, fieldName: "アラート閾値"),
       InputValidator.validateNumber(material.criticalThreshold, min: 0, fieldName: "危険閾値"),
@@ -52,8 +54,6 @@ class MaterialManagementService with LoggerMixin {
     });
 
     try {
-      // ユーザーIDを設定
-      material.userId = userId;
       final Material? createdMaterial = await _materialRepository.create(material);
 
       if (createdMaterial != null) {
@@ -79,23 +79,23 @@ class MaterialManagementService with LoggerMixin {
   }
 
   /// 材料カテゴリ一覧を取得
-  Future<List<MaterialCategory>> getMaterialCategories(String userId) async =>
-      _materialCategoryRepository.findActiveOrdered(userId);
+  Future<List<MaterialCategory>> getMaterialCategories() async =>
+      _materialCategoryRepository.findActiveOrdered();
 
   /// カテゴリ別材料一覧を取得
-  Future<List<Material>> getMaterialsByCategory(String? categoryId, String userId) async =>
-      _materialRepository.findByCategoryId(categoryId, userId);
+  Future<List<Material>> getMaterialsByCategory(String? categoryId) async =>
+      _materialRepository.findByCategoryId(categoryId);
 
   /// 材料を更新
-  Future<Material?> updateMaterial(Material material, String userId) async {
+  Future<Material?> updateMaterial(Material material) async {
     if (material.id == null) {
       throw ArgumentError("Material ID is required for update");
     }
 
     // 既存の材料を確認
     final Material? existingMaterial = await _materialRepository.getById(material.id!);
-    if (existingMaterial == null || existingMaterial.userId != userId) {
-      throw Exception("Material not found or access denied");
+    if (existingMaterial == null) {
+      throw Exception("Material not found");
     }
 
     // 入力検証
@@ -106,7 +106,6 @@ class MaterialManagementService with LoggerMixin {
         maxLength: 100,
         fieldName: "材料名",
       ),
-      InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
       InputValidator.validateNumber(material.currentStock, min: 0, fieldName: "現在在庫量"),
       InputValidator.validateNumber(material.alertThreshold, min: 0, fieldName: "アラート閾値"),
       InputValidator.validateNumber(material.criticalThreshold, min: 0, fieldName: "危険閾値"),
@@ -130,9 +129,6 @@ class MaterialManagementService with LoggerMixin {
     });
 
     try {
-      // ユーザーIDを設定
-      material.userId = userId;
-      
       // 材料を更新
       final Material? updatedMaterial = await _materialRepository.updateById(
         material.id!,
@@ -170,12 +166,11 @@ class MaterialManagementService with LoggerMixin {
     String materialId,
     double alertThreshold,
     double criticalThreshold,
-    String userId,
   ) async {
     // 材料を取得
     final Material? material = await _materialRepository.getById(materialId);
-    if (material == null || material.userId != userId) {
-      throw Exception("Material not found or access denied");
+    if (material == null) {
+      throw Exception("Material not found");
     }
 
     // 閾値の妥当性チェック

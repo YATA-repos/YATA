@@ -61,7 +61,9 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
 
   /// インポート実行処理
   Future<void> _executeImport() async {
-    if (_selectedFile == null) return;
+    if (_selectedFile == null) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;

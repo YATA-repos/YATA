@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 
 import "../features/analytics/presentation/screens/analytics_screen.dart";
@@ -13,22 +14,25 @@ import "../routing/guards/auth_guard.dart";
 /// アプリケーション全体のルーティング設定
 ///
 /// Go Routerを使用してページ遷移を管理します。
-/// 各機能（dashboard, order, analytics）への基本ルートを提供します。
+/// 認証ガードにより保護されたルートと、ログイン機能を提供します。
 class AppRouter {
   AppRouter._();
 
-  /// メインルーター設定
-  static final GoRouter router = GoRouter(
+  /// メインルーター設定を取得
+  /// 
+  /// 認証ガードの統合にはWidgetRefが必要なため、
+  /// アプリケーション初期化時にRefを渡して構築します。
+  static GoRouter getRouter(WidgetRef ref) => GoRouter(
     initialLocation: "/",
-    redirect: AuthGuard.checkAuth,
+    redirect: (BuildContext context, GoRouterState state) => 
+        AuthGuard.guardRedirect(ref, state),
     routes: <RouteBase>[
-      // ログイン画面
+      // 認証関連ルート
       GoRoute(
         path: "/login",
         name: "login",
         builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
       ),
-
       // ダッシュボード（ホーム）
       GoRoute(
         path: "/",

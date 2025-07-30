@@ -1,8 +1,9 @@
 import "dart:math" as math;
+import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../order/models/order_model.dart";
 import "../../order/repositories/order_item_repository.dart";
 import "../models/inventory_model.dart";
@@ -14,14 +15,15 @@ import "../repositories/stock_transaction_repository.dart";
 /// 注文関連在庫操作サービス
 class OrderStockService with LoggerMixin {
   OrderStockService({
+    required Ref ref,
     MaterialRepository? materialRepository,
     RecipeRepository? recipeRepository,
     StockTransactionRepository? stockTransactionRepository,
     OrderItemRepository? orderItemRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
-       _recipeRepository = recipeRepository ?? RecipeRepository(),
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
+       _recipeRepository = recipeRepository ?? RecipeRepository(ref: ref),
        _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository();
+       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref);
 
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
@@ -53,7 +55,6 @@ class OrderStockService with LoggerMixin {
         // メニューアイテムのレシピを取得
         final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
           orderItem.menuItemId,
-          userId,
         );
 
         for (final Recipe recipe in recipes) {
@@ -76,7 +77,7 @@ class OrderStockService with LoggerMixin {
 
         // 材料を取得
         final Material? material = await _materialRepository.getById(materialId);
-        if (material == null || material.userId != userId) {
+        if (material == null) {
           continue;
         }
 
@@ -151,7 +152,7 @@ class OrderStockService with LoggerMixin {
       for (final StockTransaction transaction in consumptionOnly) {
         // 材料を取得
         final Material? material = await _materialRepository.getById(transaction.materialId);
-        if (material == null || material.userId != userId) {
+        if (material == null) {
           continue;
         }
 

@@ -1,6 +1,8 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
@@ -14,16 +16,17 @@ import "order_stock_service.dart";
 /// 注文管理サービス（基本CRUD・チェックアウト・キャンセル・履歴）
 class OrderManagementService with LoggerMixin {
   OrderManagementService({
+    required Ref ref,
     OrderRepository? orderRepository,
     OrderItemRepository? orderItemRepository,
     MenuItemRepository? menuItemRepository,
     OrderCalculationService? orderCalculationService,
     OrderStockService? orderStockService,
-  }) : _orderRepository = orderRepository ?? OrderRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
-       _menuItemRepository = menuItemRepository ?? MenuItemRepository(),
-       _orderCalculationService = orderCalculationService ?? OrderCalculationService(),
-       _orderStockService = orderStockService ?? OrderStockService();
+  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref),
+       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref),
+       _menuItemRepository = menuItemRepository ?? MenuItemRepository(ref: ref),
+       _orderCalculationService = orderCalculationService ?? OrderCalculationService(ref: ref),
+       _orderStockService = orderStockService ?? OrderStockService(ref: ref);
 
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
@@ -87,7 +90,6 @@ class OrderManagementService with LoggerMixin {
       logDebug("Starting stock validation for checkout");
       final Map<String, bool> stockValidation = await _orderStockService.validateCartStock(
         cartItems,
-        userId,
       );
 
       final bool allSufficient = stockValidation.values.every((bool sufficient) => sufficient);
@@ -101,11 +103,11 @@ class OrderManagementService with LoggerMixin {
 
       // 材料消費の実行
       logDebug("Consuming materials for order");
-      await _orderStockService.consumeMaterialsForOrder(cartItems, userId);
+      await _orderStockService.consumeMaterialsForOrder(cartItems);
 
       // 注文の確定
       // 注文番号生成（将来の使用のため）
-      await _orderRepository.generateNextOrderNumber(userId);
+      await _orderRepository.generateNextOrderNumber();
 
       final Order? updatedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
         "payment_method": request.paymentMethod.value,
@@ -161,7 +163,7 @@ class OrderManagementService with LoggerMixin {
       if (order.startedPreparingAt == null) {
         logDebug("Restoring materials for canceled order");
         final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
-        await _orderStockService.restoreMaterialsFromOrder(orderItems, userId);
+        await _orderStockService.restoreMaterialsFromOrder(orderItems);
         logDebug("Materials restored successfully");
       } else {
         logInfo("Order already started preparation: materials not restored");
@@ -191,7 +193,6 @@ class OrderManagementService with LoggerMixin {
       final List<Order> allOrders = await _orderRepository.findByDateRange(
         DateTime.now().subtract(const Duration(days: 365)), // 過去1年間
         DateTime.now(),
-        userId,
       );
 
       logDebug("Retrieved ${allOrders.length} orders from repository");

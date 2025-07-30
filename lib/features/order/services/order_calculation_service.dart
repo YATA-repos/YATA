@@ -1,12 +1,16 @@
-import "../../../core/utils/logger_mixin.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../core/logging/logger_mixin.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "../repositories/order_item_repository.dart";
 
 /// 注文金額計算サービス
 class OrderCalculationService with LoggerMixin {
-  OrderCalculationService({OrderItemRepository? orderItemRepository})
-    : _orderItemRepository = orderItemRepository ?? OrderItemRepository();
+  OrderCalculationService({
+    required Ref ref,
+    OrderItemRepository? orderItemRepository,
+  }) : _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref);
 
   final OrderItemRepository _orderItemRepository;
 

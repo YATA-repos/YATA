@@ -1,32 +1,33 @@
-import "../../../core/base/base_repository.dart";
+import "../../../core/base/base_multitenant_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/menu_model.dart";
 
-class MenuItemRepository extends BaseRepository<MenuItem, String> {
-  MenuItemRepository() : super(tableName: "menu_items");
+class MenuItemRepository extends BaseMultiTenantRepository<MenuItem, String> {
+  MenuItemRepository({required super.ref}) : super(tableName: "menu_items");
 
   @override
   MenuItem fromJson(Map<String, dynamic> json) => MenuItem.fromJson(json);
 
   /// カテゴリIDでメニューアイテムを取得（None時は全件）
-  Future<List<MenuItem>> findByCategoryId(String? categoryId, String userId) async {
-    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
-
-    if (categoryId != null) {
-      filters.add(QueryConditionBuilder.eq("category_id", categoryId));
-    }
-
+  Future<List<MenuItem>> findByCategoryId(String? categoryId) async {
     final List<OrderByCondition> orderBy = <OrderByCondition>[
       const OrderByCondition(column: "display_order"),
+    ];
+
+    if (categoryId == null) {
+      return list();
+    }
+
+    final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("category_id", categoryId),
     ];
 
     return find(filters: filters, orderBy: orderBy);
   }
 
   /// 販売可能なメニューアイテムのみ取得
-  Future<List<MenuItem>> findAvailableOnly(String userId) async {
+  Future<List<MenuItem>> findAvailableOnly() async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("is_available", true),
     ];
 
@@ -38,7 +39,7 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
   }
 
   /// 名前でメニューアイテムを検索
-  Future<List<MenuItem>> searchByName(dynamic keyword, String userId) async {
+  Future<List<MenuItem>> searchByName(dynamic keyword) async {
     // キーワードの正規化
     List<String> keywords;
     if (keyword is String) {
@@ -53,7 +54,7 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
       return <MenuItem>[];
     }
 
-    final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("user_id", userId)];
+    final List<QueryFilter> filters = <QueryFilter>[];
 
     // 複数キーワードの場合はAND条件で検索
     // Supabaseでは複数のilike条件は自動的にANDになる
@@ -69,13 +70,12 @@ class MenuItemRepository extends BaseRepository<MenuItem, String> {
   }
 
   /// IDリストでメニューアイテムを取得
-  Future<List<MenuItem>> findByIds(List<String> menuItemIds, String userId) async {
+  Future<List<MenuItem>> findByIds(List<String> menuItemIds) async {
     if (menuItemIds.isEmpty) {
       return <MenuItem>[];
     }
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.inList("id", menuItemIds),
     ];
 

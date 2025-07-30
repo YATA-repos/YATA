@@ -1,10 +1,10 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
-import "package:supabase_flutter/supabase_flutter.dart";
 
 import "../../../../core/constants/enums.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/providers/common_providers.dart";
+import "../../../auth/models/user_profile.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
 import "../../services/kitchen_service.dart";
 import "order_providers.dart";
@@ -62,14 +62,14 @@ class OrderStatusManager extends _$OrderStatusManager {
     Duration? estimatedTime,
   }) async {
     try {
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser == null) {
         throw Exception("ユーザーが認証されていません");
       }
 
       // 現在の注文情報を取得
       final Order? currentOrder = await ref.read(
-        orderDetailsProvider(orderId, currentUser.id).future,
+        orderDetailsProvider(orderId, currentUser.id!).future,
       );
       if (currentOrder == null) {
         throw Exception("注文が見つかりません");
@@ -81,12 +81,12 @@ class OrderStatusManager extends _$OrderStatusManager {
       }
 
       // KitchenServiceを使用してステータスを更新
-      final KitchenService kitchenService = KitchenService();
+      final KitchenService kitchenService = KitchenService(ref: ref);
       final bool success = await _performStatusUpdate(
         kitchenService,
         orderId,
         newStatus,
-        currentUser.id,
+        currentUser.id!,
       );
 
       if (success) {
@@ -96,7 +96,7 @@ class OrderStatusManager extends _$OrderStatusManager {
           previousStatus: currentOrder.status,
           newStatus: newStatus,
           changedAt: DateTime.now(),
-          changedBy: currentUser.id,
+          changedBy: currentUser.id!,
           reason: reason,
           estimatedTime: estimatedTime,
         );
@@ -109,8 +109,8 @@ class OrderStatusManager extends _$OrderStatusManager {
         }
 
         // プロバイダーを無効化してリフレッシュ
-        ref.invalidate(orderDetailsProvider(orderId, currentUser.id));
-        ref.invalidate(activeOrdersByStatusProvider(currentUser.id));
+        ref..invalidate(orderDetailsProvider(orderId, currentUser.id!))
+        ..invalidate(activeOrdersByStatusProvider(currentUser.id!));
 
         return true;
       }
@@ -228,12 +228,12 @@ class OrderWorkflowManager extends _$OrderWorkflowManager {
   /// 注文を次の段階に進める
   Future<bool> progressOrder(String orderId) async {
     try {
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser == null) {
         return false;
       }
 
-      final Order? order = await ref.read(orderDetailsProvider(orderId, currentUser.id).future);
+      final Order? order = await ref.read(orderDetailsProvider(orderId, currentUser.id!).future);
       if (order == null) {
         return false;
       }
@@ -254,12 +254,12 @@ class OrderWorkflowManager extends _$OrderWorkflowManager {
   /// 注文を前の段階に戻す
   Future<bool> regressOrder(String orderId, String reason) async {
     try {
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser == null) {
         return false;
       }
 
-      final Order? order = await ref.read(orderDetailsProvider(orderId, currentUser.id).future);
+      final Order? order = await ref.read(orderDetailsProvider(orderId, currentUser.id!).future);
       if (order == null) {
         return false;
       }

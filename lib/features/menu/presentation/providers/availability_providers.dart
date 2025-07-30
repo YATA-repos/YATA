@@ -13,7 +13,7 @@ part "availability_providers.g.dart";
 @riverpod
 Future<List<MenuItem>> availableMenuItems(Ref ref, String userId) async {
   // 全メニューアイテムを取得
-  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null, userId).future);
+  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null).future);
 
   // 在庫可否情報を取得
   final Map<String, MenuAvailabilityInfo> availabilityMap = await ref.watch(bulkMenuAvailabilityProvider(userId).future);
@@ -29,7 +29,7 @@ Future<List<MenuItem>> availableMenuItems(Ref ref, String userId) async {
 @riverpod
 Future<List<MenuItem>> unavailableMenuItemsWithDetails(Ref ref, String userId) async {
   // 全メニューアイテムを取得
-  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null, userId).future);
+  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null).future);
 
   // 在庫可否情報を取得
   final Map<String, MenuAvailabilityInfo> availabilityMap = await ref.watch(bulkMenuAvailabilityProvider(userId).future);
@@ -51,7 +51,7 @@ Future<int> availableMenuItemCount(Ref ref, String userId) async {
 /// 在庫レベル別にメニューアイテムを分類するプロバイダー
 @riverpod
 Future<Map<String, List<MenuItem>>> menuItemsByAvailabilityStatus(Ref ref, String userId) async {
-  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null, userId).future);
+  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null).future);
   final Map<String, MenuAvailabilityInfo> availabilityMap = await ref.watch(bulkMenuAvailabilityProvider(userId).future);
 
   final Map<String, List<MenuItem>> groupedItems = <String, List<MenuItem>>{
@@ -214,7 +214,7 @@ Future<int> lowStockMenuItemCount(Ref ref, String userId) async {
 /// カテゴリー別利用可能アイテム数プロバイダー
 @riverpod
 Future<Map<String, int>> availableItemCountByCategory(Ref ref, String userId) async {
-  final List<MenuCategory> categories = await ref.watch(menuCategoriesProvider(userId).future);
+  final List<MenuCategory> categories = await ref.watch(menuCategoriesProvider.future);
   final Map<String, int> counts = <String, int>{};
 
   for (final MenuCategory category in categories) {

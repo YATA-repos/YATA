@@ -3,13 +3,13 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/enums.dart" as core_enums;
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_text_theme.dart";
 import "../../../../shared/widgets/buttons/app_button.dart";
 import "../../../../shared/widgets/cards/app_card.dart";
 import "../../../../shared/widgets/common/app_badge.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
 import "../../models/order_ui_extensions.dart";
 import "../providers/order_providers.dart";

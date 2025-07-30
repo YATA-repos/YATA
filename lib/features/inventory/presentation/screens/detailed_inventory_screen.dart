@@ -4,7 +4,6 @@ import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
 import "../../../../core/constants/enums.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/layouts/main_layout.dart";
@@ -16,6 +15,7 @@ import "../../../../shared/widgets/filters/category_filter.dart";
 import "../../../../shared/widgets/forms/search_field.dart";
 import "../../../../shared/widgets/navigation/pagination.dart";
 import "../../../../shared/widgets/tables/data_table.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/inventory_dto.dart";
 import "../providers/inventory_providers.dart";
 import "../widgets/material_form_dialog.dart";
@@ -483,7 +483,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
     try {
       // プロバイダーを無効化して再取得をトリガー
       ref..invalidate(materialsWithStockInfoProvider(null, userId!))
-      ..invalidate(materialCategoriesProvider(userId!));
+      ..invalidate(materialCategoriesProvider);
 
       // 成功メッセージを表示
       ScaffoldMessenger.of(context).showSnackBar(

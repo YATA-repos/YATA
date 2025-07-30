@@ -1,7 +1,8 @@
 import "dart:math" as math;
+import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/constants.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
@@ -14,14 +15,15 @@ import "../repositories/menu_item_repository.dart";
 
 class MenuService with LoggerMixin {
   MenuService({
+    required Ref ref,
     MenuItemRepository? menuItemRepository,
     MenuCategoryRepository? menuCategoryRepository,
     MaterialRepository? materialRepository,
     RecipeRepository? recipeRepository,
-  }) : _menuItemRepository = menuItemRepository ?? MenuItemRepository(),
-       _menuCategoryRepository = menuCategoryRepository ?? MenuCategoryRepository(),
-       _materialRepository = materialRepository ?? MaterialRepository(),
-       _recipeRepository = recipeRepository ?? RecipeRepository();
+  }) : _menuItemRepository = menuItemRepository ?? MenuItemRepository(ref: ref),
+       _menuCategoryRepository = menuCategoryRepository ?? MenuCategoryRepository(ref: ref),
+       _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
+       _recipeRepository = recipeRepository ?? RecipeRepository(ref: ref);
 
   final MenuItemRepository _menuItemRepository;
   final MenuCategoryRepository _menuCategoryRepository;
@@ -32,12 +34,12 @@ class MenuService with LoggerMixin {
   String get loggerComponent => "MenuService";
 
   /// メニューカテゴリ一覧を取得
-  Future<List<MenuCategory>> getMenuCategories(String userId) async =>
-      _menuCategoryRepository.findActiveOrdered(userId);
+  Future<List<MenuCategory>> getMenuCategories() async =>
+      _menuCategoryRepository.findActiveOrdered();
 
   /// カテゴリ別メニューアイテム一覧を取得
-  Future<List<MenuItem>> getMenuItemsByCategory(String? categoryId, String userId) async =>
-      _menuItemRepository.findByCategoryId(categoryId, userId);
+  Future<List<MenuItem>> getMenuItemsByCategory(String? categoryId) async =>
+      _menuItemRepository.findByCategoryId(categoryId);
 
   /// メニューアイテムを検索
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
@@ -57,7 +59,7 @@ class MenuService with LoggerMixin {
 
     try {
       // まずユーザーのメニューアイテムを取得してから手動検索
-      final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null, userId);
+      final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null);
 
       logDebug("Retrieved ${userItems.length} menu items for search");
 
@@ -127,7 +129,7 @@ class MenuService with LoggerMixin {
       }
 
       // レシピを取得
-      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
 
       if (recipes.isEmpty) {
         // レシピがない場合は作成可能とみなす
@@ -201,7 +203,7 @@ class MenuService with LoggerMixin {
   /// 在庫不足で販売不可なメニューアイテムIDを取得
   Future<List<String>> getUnavailableMenuItems(String userId) async {
     // 全メニューアイテムを取得
-    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null, userId);
+    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null);
 
     final List<String> unavailableItems = <String>[];
 
@@ -228,7 +230,7 @@ class MenuService with LoggerMixin {
   /// 全メニューアイテムの在庫可否を一括チェック
   Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(String userId) async {
     // 全メニューアイテムを取得
-    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null, userId);
+    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null);
 
     final Map<String, MenuAvailabilityInfo> availabilityInfo = <String, MenuAvailabilityInfo>{};
 
@@ -247,7 +249,7 @@ class MenuService with LoggerMixin {
   /// 現在の在庫で作れる最大数を計算
   Future<int> calculateMaxServings(String menuItemId, String userId) async {
     // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
 
     if (recipes.isEmpty) {
       // レシピがない場合は無制限とみなす（実際には業務ルールに依存）
@@ -287,7 +289,7 @@ class MenuService with LoggerMixin {
     String userId,
   ) async {
     // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
 
     final List<MaterialUsageCalculation> calculations = <MaterialUsageCalculation>[];
 

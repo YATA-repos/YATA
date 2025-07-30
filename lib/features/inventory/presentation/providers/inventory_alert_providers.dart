@@ -209,8 +209,8 @@ class AlertWatcher extends _$AlertWatcher {
   void refresh() {
     state = DateTime.now();
     // 関連するプロバイダーを無効化して再取得を促す
-    ref.invalidate(detailedInventoryAlertsProvider);
-    ref.invalidate(filteredInventoryAlertsProvider);
-    ref.invalidate(alertStatisticsProvider);
+    ref..invalidate(detailedInventoryAlertsProvider)
+    ..invalidate(filteredInventoryAlertsProvider)
+    ..invalidate(alertStatisticsProvider);
   }
 }

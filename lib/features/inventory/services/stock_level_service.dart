@@ -1,13 +1,17 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../dto/inventory_dto.dart";
 import "../models/inventory_model.dart";
 import "../repositories/material_repository.dart";
 
 /// 在庫レベル判定・アラートサービス
 class StockLevelService with LoggerMixin {
-  StockLevelService({MaterialRepository? materialRepository})
-    : _materialRepository = materialRepository ?? MaterialRepository();
+  StockLevelService({
+    required Ref ref,
+    MaterialRepository? materialRepository,
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref);
 
   final MaterialRepository _materialRepository;
 
@@ -15,11 +19,9 @@ class StockLevelService with LoggerMixin {
   String get loggerComponent => "StockLevelService";
 
   /// 在庫レベル別アラート材料を取得
-  Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel(String userId) async {
-    final List<Material> criticalMaterials = await _materialRepository.findBelowCriticalThreshold(
-      userId,
-    );
-    final List<Material> alertMaterials = await _materialRepository.findBelowAlertThreshold(userId);
+  Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel() async {
+    final List<Material> criticalMaterials = await _materialRepository.findBelowCriticalThreshold();
+    final List<Material> alertMaterials = await _materialRepository.findBelowAlertThreshold();
 
     // アラートレベルからクリティカルを除外
     final List<Material> alertOnly = alertMaterials
@@ -34,19 +36,18 @@ class StockLevelService with LoggerMixin {
   }
 
   /// 緊急レベルの材料一覧を取得
-  Future<List<Material>> getCriticalStockMaterials(String userId) async =>
-      _materialRepository.findBelowCriticalThreshold(userId);
+  Future<List<Material>> getCriticalStockMaterials() async =>
+      _materialRepository.findBelowCriticalThreshold();
 
   /// 材料一覧を在庫レベル・使用可能日数付きで取得
   /// 注意: 使用可能日数の計算にはUsageAnalysisServiceが必要
   Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(
-    String? categoryId,
-    String userId, {
+    String? categoryId, {
     Map<String, int?>? usageDays,
     Map<String, double?>? dailyUsageRates,
   }) async {
     // 材料一覧を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(categoryId, userId);
+    final List<Material> materials = await _materialRepository.findByCategoryId(categoryId);
 
     // MaterialStockInfoに変換
     final List<MaterialStockInfo> stockInfos = <MaterialStockInfo>[];
@@ -65,15 +66,13 @@ class StockLevelService with LoggerMixin {
 
   /// 詳細な在庫アラート情報を取得（レベル別 + 詳細情報付き）
   /// 注意: 使用可能日数の計算にはUsageAnalysisServiceが必要
-  Future<Map<String, List<MaterialStockInfo>>> getDetailedStockAlerts(
-    String userId, {
+  Future<Map<String, List<MaterialStockInfo>>> getDetailedStockAlerts({
     Map<String, int?>? usageDays,
     Map<String, double?>? dailyUsageRates,
   }) async {
     // 全材料の在庫情報を取得
     final List<MaterialStockInfo> allMaterialsInfo = await getMaterialsWithStockInfo(
       null,
-      userId,
       usageDays: usageDays,
       dailyUsageRates: dailyUsageRates,
     );

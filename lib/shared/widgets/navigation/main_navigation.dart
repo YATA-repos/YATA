@@ -3,15 +3,11 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
-import "../../../core/auth/auth_service.dart";
 import "../../../core/constants/constants.dart";
-import "../../../core/providers/auth_providers.dart";
 import "../../../core/utils/responsive_helper.dart";
-import "../../enums/ui_enums.dart";
 import "../../themes/app_colors.dart";
 import "../../themes/app_layout.dart";
 import "../../themes/app_text_theme.dart";
-import "../buttons/app_button.dart";
 
 /// メインナビゲーションコンポーネント
 ///
@@ -158,9 +154,6 @@ class SideNavigation extends ConsumerWidget {
           ),
         ),
 
-        // ユーザー情報・ログアウト
-        const Divider(height: 1),
-        _buildUserSection(ref, context),
       ],
     ),
   );
@@ -170,92 +163,6 @@ class SideNavigation extends ConsumerWidget {
     return currentRoute == route;
   }
 
-  /// ユーザー情報・ログアウトセクション
-  Widget _buildUserSection(WidgetRef ref, BuildContext context) {
-    final String? userDisplayName = ref.watch(currentUserDisplayNameProvider);
-    final bool isLoggedIn = ref.watch(isLoggedInProvider);
-
-    if (!isLoggedIn) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: AppLayout.paddingDefault,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          // ユーザー情報
-          Row(
-            children: <Widget>[
-              Container(
-                padding: AppLayout.paddingSmall,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  LucideIcons.user,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              AppLayout.hSpacerDefault,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      userDisplayName ?? "ユーザー",
-                      style: AppTextTheme.cardTitle.copyWith(fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      "ログイン中",
-                      style: AppTextTheme.cardDescription.copyWith(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          AppLayout.vSpacerDefault,
-
-          // ログアウトボタン
-          AppButton(
-            onPressed: () => _handleSignOut(ref, context),
-            variant: ButtonVariant.outline,
-            size: ButtonSize.small,
-            isFullWidth: true,
-            text: "ログアウト",
-            icon: const Icon(LucideIcons.logOut),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// ログアウト処理
-  Future<void> _handleSignOut(WidgetRef ref, BuildContext context) async {
-    try {
-      final SupabaseClientService authService = ref.read(supabaseClientServiceProvider);
-      await authService.signOut();
-      
-      if (context.mounted) {
-        context.go("/login");
-      }
-    } catch (e) {
-      // エラーハンドリング
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("ログアウトに失敗しました: $e"),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
-  }
 }
 
 /// ナビゲーションアイテム（トップナビゲーション用）

@@ -11,22 +11,22 @@ part "menu_providers.g.dart";
 /// MenuService プロバイダー
 /// 既存の高度なMenuServiceをRiverpodで利用可能にする
 @riverpod
-MenuService menuService(MenuServiceRef ref) => MenuService();
+MenuService menuService(MenuServiceRef ref) => MenuService(ref: ref);
 
 /// メニューカテゴリー一覧プロバイダー
 /// 既存のMenuService.getMenuCategoriesを直接活用
 @riverpod
-Future<List<MenuCategory>> menuCategories(MenuCategoriesRef ref, String userId) async {
+Future<List<MenuCategory>> menuCategories(MenuCategoriesRef ref) async {
   final MenuService service = ref.watch(menuServiceProvider);
-  return service.getMenuCategories(userId);
+  return service.getMenuCategories();
 }
 
 /// カテゴリー別メニューアイテム一覧プロバイダー
 /// 既存のMenuService.getMenuItemsByCategoryを直接活用
 @riverpod
-Future<List<MenuItem>> menuItems(MenuItemsRef ref, String? categoryId, String userId) async {
+Future<List<MenuItem>> menuItems(MenuItemsRef ref, String? categoryId) async {
   final MenuService service = ref.watch(menuServiceProvider);
-  return service.getMenuItemsByCategory(categoryId, userId);
+  return service.getMenuItemsByCategory(categoryId);
 }
 
 /// メニューアイテム検索プロバイダー

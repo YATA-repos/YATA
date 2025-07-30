@@ -4,7 +4,6 @@ import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/layouts/main_layout.dart";
 import "../../../../shared/themes/app_colors.dart";
@@ -16,6 +15,7 @@ import "../../../../shared/widgets/forms/date_range_picker.dart";
 import "../../../../shared/widgets/forms/search_field.dart";
 import "../../../../shared/widgets/navigation/pagination.dart";
 import "../../../../shared/widgets/tables/data_table.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../models/order_ui_extensions.dart";

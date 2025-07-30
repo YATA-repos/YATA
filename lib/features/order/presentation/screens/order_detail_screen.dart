@@ -4,11 +4,11 @@ import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/layouts/main_layout.dart";
 import "../../../../shared/themes/themes.dart";
 import "../../../../shared/widgets/buttons/app_button.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
 import "../../models/order_ui_extensions.dart";
 import "../providers/order_providers.dart";

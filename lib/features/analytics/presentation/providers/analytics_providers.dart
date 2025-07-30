@@ -1,7 +1,8 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../../../../core/providers/auth_providers.dart";
+import "../../../auth/models/user_profile.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/analytics_dto.dart";
 import "../../services/analytics_service.dart";
 
@@ -9,26 +10,26 @@ part "analytics_providers.g.dart";
 
 /// AnalyticsService プロバイダー
 @riverpod
-AnalyticsService analyticsService(Ref ref) => AnalyticsService();
+AnalyticsService analyticsService(Ref ref) => AnalyticsService(ref: ref);
 
 /// 本日の統計データプロバイダー
 @riverpod
 Future<DailyStatsResult> todayStats(Ref ref) async {
-  final String? userId = ref.watch(currentUserIdProvider);
-  if (userId == null) {
+  final UserProfile? user = ref.watch(currentUserProvider);
+  if (user == null) {
     throw StateError("User not authenticated");
   }
   
   final AnalyticsService service = ref.watch(analyticsServiceProvider);
   final DateTime today = DateTime.now();
-  return service.getRealTimeDailyStats(today, userId);
+  return service.getRealTimeDailyStats(today, user.id!);
 }
 
 /// 期間別統計データプロバイダー
 @riverpod
 Future<List<DailyStatsResult>> periodStats(Ref ref, DateTime startDate, DateTime endDate) async {
-  final String? userId = ref.watch(currentUserIdProvider);
-  if (userId == null) {
+  final UserProfile? user = ref.watch(currentUserProvider);
+  if (user == null) {
     throw StateError("User not authenticated");
   }
   
@@ -37,7 +38,7 @@ Future<List<DailyStatsResult>> periodStats(Ref ref, DateTime startDate, DateTime
   
   DateTime currentDate = startDate;
   while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
-    final DailyStatsResult dailyStats = await service.getRealTimeDailyStats(currentDate, userId);
+    final DailyStatsResult dailyStats = await service.getRealTimeDailyStats(currentDate, user.id!);
     stats.add(dailyStats);
     currentDate = currentDate.add(const Duration(days: 1));
   }
@@ -48,13 +49,13 @@ Future<List<DailyStatsResult>> periodStats(Ref ref, DateTime startDate, DateTime
 /// 人気商品ランキングプロバイダー
 @riverpod
 Future<List<Map<String, dynamic>>> popularItems(Ref ref, {int days = 7, int limit = 10}) async {
-  final String? userId = ref.watch(currentUserIdProvider);
-  if (userId == null) {
+  final UserProfile? user = ref.watch(currentUserProvider);
+  if (user == null) {
     throw StateError("User not authenticated");
   }
   
   final AnalyticsService service = ref.watch(analyticsServiceProvider);
-  return service.getPopularItemsRanking(days, limit, userId);
+  return service.getPopularItemsRanking(days, limit, user.id!);
 }
 
 /// 売上推移チャートデータプロバイダー

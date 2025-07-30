@@ -1,7 +1,9 @@
 import "dart:math" as math;
 
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../models/order_model.dart";
@@ -12,14 +14,15 @@ import "kitchen_operation_service.dart";
 /// キッチン分析・予測サービス
 class KitchenAnalysisService with LoggerMixin {
   KitchenAnalysisService({
+    required Ref ref,
     OrderRepository? orderRepository,
     OrderItemRepository? orderItemRepository,
     MenuItemRepository? menuItemRepository,
     KitchenOperationService? kitchenOperationService,
-  }) : _orderRepository = orderRepository ?? OrderRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
-       _menuItemRepository = menuItemRepository ?? MenuItemRepository(),
-       _kitchenOperationService = kitchenOperationService ?? KitchenOperationService();
+  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref),
+       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref),
+       _menuItemRepository = menuItemRepository ?? MenuItemRepository(ref: ref),
+       _kitchenOperationService = kitchenOperationService ?? KitchenOperationService(ref: ref);
 
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
@@ -84,7 +87,7 @@ class KitchenAnalysisService with LoggerMixin {
     try {
       final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
         OrderStatus.preparing,
-      ], userId);
+      ]);
 
       final int notStartedCount = activeOrders
           .where((Order o) => o.startedPreparingAt == null)
@@ -166,7 +169,7 @@ class KitchenAnalysisService with LoggerMixin {
     try {
       final List<Order> notStartedOrders = await _orderRepository.findByStatusList(<OrderStatus>[
         OrderStatus.preparing,
-      ], userId);
+      ]);
 
       final List<Order> filteredOrders = notStartedOrders
           .where((Order o) => o.startedPreparingAt == null)
@@ -212,7 +215,7 @@ class KitchenAnalysisService with LoggerMixin {
     try {
       final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
         OrderStatus.preparing,
-      ], userId);
+      ]);
       final Map<String, DateTime> completionTimes = <String, DateTime>{};
 
       for (final Order order in activeOrders) {
@@ -241,7 +244,6 @@ class KitchenAnalysisService with LoggerMixin {
       // 指定日の完了注文を取得
       final List<Order> completedOrders = await _orderRepository.findCompletedByDate(
         targetDate,
-        userId,
       );
 
       if (completedOrders.isEmpty) {

@@ -1,5 +1,7 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
@@ -13,16 +15,17 @@ import "usage_analysis_service.dart";
 /// 複数のサービスを組み合わせて在庫管理の全機能を提供
 class InventoryService with LoggerMixin {
   InventoryService({
+    required Ref ref,
     MaterialManagementService? materialManagementService,
     StockLevelService? stockLevelService,
     StockOperationService? stockOperationService,
     UsageAnalysisService? usageAnalysisService,
     OrderStockService? orderStockService,
-  }) : _materialManagementService = materialManagementService ?? MaterialManagementService(),
-       _stockLevelService = stockLevelService ?? StockLevelService(),
-       _stockOperationService = stockOperationService ?? StockOperationService(),
-       _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService(),
-       _orderStockService = orderStockService ?? OrderStockService();
+  }) : _materialManagementService = materialManagementService ?? MaterialManagementService(ref: ref),
+       _stockLevelService = stockLevelService ?? StockLevelService(ref: ref),
+       _stockOperationService = stockOperationService ?? StockOperationService(ref: ref),
+       _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService(ref: ref),
+       _orderStockService = orderStockService ?? OrderStockService(ref: ref);
 
   final MaterialManagementService _materialManagementService;
   final StockLevelService _stockLevelService;
@@ -36,39 +39,37 @@ class InventoryService with LoggerMixin {
   // ===== 材料管理関連メソッド =====
 
   /// 材料を作成
-  Future<Material?> createMaterial(Material material, String userId) async =>
-      _materialManagementService.createMaterial(material, userId);
+  Future<Material?> createMaterial(Material material) async =>
+      _materialManagementService.createMaterial(material);
 
   /// 材料カテゴリ一覧を取得
-  Future<List<MaterialCategory>> getMaterialCategories(String userId) async =>
-      _materialManagementService.getMaterialCategories(userId);
+  Future<List<MaterialCategory>> getMaterialCategories() async =>
+      _materialManagementService.getMaterialCategories();
 
   /// カテゴリ別材料一覧を取得
-  Future<List<Material>> getMaterialsByCategory(String? categoryId, String userId) async =>
-      _materialManagementService.getMaterialsByCategory(categoryId, userId);
+  Future<List<Material>> getMaterialsByCategory(String? categoryId) async =>
+      _materialManagementService.getMaterialsByCategory(categoryId);
 
   /// 材料のアラート閾値を更新
   Future<Material?> updateMaterialThresholds(
     String materialId,
     double alertThreshold,
     double criticalThreshold,
-    String userId,
   ) async => _materialManagementService.updateMaterialThresholds(
     materialId,
     alertThreshold,
     criticalThreshold,
-    userId,
   );
 
   // ===== 在庫レベル・アラート関連メソッド =====
 
   /// 在庫レベル別アラート材料を取得
-  Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel(String userId) async =>
-      _stockLevelService.getStockAlertsByLevel(userId);
+  Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel() async =>
+      _stockLevelService.getStockAlertsByLevel();
 
   /// 緊急レベルの材料一覧を取得
-  Future<List<Material>> getCriticalStockMaterials(String userId) async =>
-      _stockLevelService.getCriticalStockMaterials(userId);
+  Future<List<Material>> getCriticalStockMaterials() async =>
+      _stockLevelService.getCriticalStockMaterials();
 
   /// 材料一覧を在庫レベル・使用可能日数付きで取得
   Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(
@@ -83,7 +84,6 @@ class InventoryService with LoggerMixin {
     // 在庫レベルサービスで情報を組み立て
     return _stockLevelService.getMaterialsWithStockInfo(
       categoryId,
-      userId,
       usageDays: usageDays,
       dailyUsageRates: dailyUsageRates,
     );
@@ -98,7 +98,6 @@ class InventoryService with LoggerMixin {
 
     // 在庫レベルサービスで詳細アラート情報を取得
     return _stockLevelService.getDetailedStockAlerts(
-      userId,
       usageDays: usageDays,
       dailyUsageRates: dailyUsageRates,
     );

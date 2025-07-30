@@ -1,13 +1,17 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/kitchen.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../models/order_model.dart";
 import "../repositories/order_repository.dart";
 
 /// キッチン調理進行管理サービス
 class KitchenOperationService with LoggerMixin {
-  KitchenOperationService({OrderRepository? orderRepository})
-    : _orderRepository = orderRepository ?? OrderRepository();
+  KitchenOperationService({
+    required Ref ref,
+    OrderRepository? orderRepository,
+  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref);
 
   final OrderRepository _orderRepository;
 
@@ -22,7 +26,6 @@ class KitchenOperationService with LoggerMixin {
       final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.preparing];
       final List<Order> activeOrders = await _orderRepository.findByStatusList(
         activeStatuses,
-        userId,
       );
 
       // ステータス別に分類
@@ -47,7 +50,7 @@ class KitchenOperationService with LoggerMixin {
     try {
       final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
         OrderStatus.preparing,
-      ], userId);
+      ]);
 
       // 調理開始前の注文を優先順位順に並べる
       final List<Order> notStarted = activeOrders

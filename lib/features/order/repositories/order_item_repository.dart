@@ -1,10 +1,10 @@
-import "../../../core/base/base_repository.dart";
+import "../../../core/base/base_multitenant_repository.dart";
 import "../../../core/constants/query_types.dart";
 import "../models/order_model.dart";
 
 /// 注文明細リポジトリ
-class OrderItemRepository extends BaseRepository<OrderItem, String> {
-  OrderItemRepository() : super(tableName: "order_items");
+class OrderItemRepository extends BaseMultiTenantRepository<OrderItem, String> {
+  OrderItemRepository({required super.ref}) : super(tableName: "order_items");
 
   @override
   OrderItem fromJson(Map<String, dynamic> json) => OrderItem.fromJson(json);
@@ -66,7 +66,6 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
     String menuItemId,
     DateTime dateFrom,
     DateTime dateTo,
-    String userId,
   ) async {
     // 日付を正規化
     final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
@@ -80,10 +79,9 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
       999,
     );
 
-    // 指定メニューアイテムとユーザーでフィルタ
+    // 指定メニューアイテムでフィルタ
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("menu_item_id", menuItemId),
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("created_at", dateFromNormalized.toIso8601String()),
       QueryConditionBuilder.lte("created_at", dateToNormalized.toIso8601String()),
     ];
@@ -97,7 +95,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
   }
 
   /// メニューアイテム別売上集計を取得
-  Future<List<Map<String, dynamic>>> getMenuItemSalesSummary(int days, String userId) async {
+  Future<List<Map<String, dynamic>>> getMenuItemSalesSummary(int days) async {
     // 過去N日間の日付範囲を計算
     final DateTime endDate = DateTime.now();
     final DateTime startDate = endDate.subtract(Duration(days: days));
@@ -114,9 +112,8 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
       999,
     );
 
-    // ユーザーの全注文明細を取得
+    // 全注文明細を取得
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("created_at", startDateNormalized.toIso8601String()),
       QueryConditionBuilder.lte("created_at", endDateNormalized.toIso8601String()),
     ];

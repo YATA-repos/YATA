@@ -1,11 +1,11 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "package:gotrue/gotrue.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/providers/common_providers.dart";
 import "../../../../shared/models/cart_models.dart";
+import "../../../auth/models/user_profile.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../menu/models/menu_model.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
@@ -17,7 +17,7 @@ part "cart_providers.g.dart";
 /// CartService プロバイダー
 /// 既存のカート管理サービスをRiverpodで利用可能にする
 @riverpod
-CartService cartService(Ref ref) => CartService();
+CartService cartService(Ref ref) => CartService(ref: ref);
 
 /// アクティブなカートプロバイダー
 /// ユーザーのアクティブなカート（下書き注文）を取得/作成
@@ -52,9 +52,9 @@ class Cart extends _$Cart {
       state = state.addItem(cartItem);
 
       // バックエンドサービスとの同期
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser != null) {
-        final Order? activeCartOrder = await ref.read(activeCartProvider(currentUser.id).future);
+        final Order? activeCartOrder = await ref.read(activeCartProvider(currentUser.id!).future);
         if (activeCartOrder != null) {
           final CartService cartService = ref.read(cartServiceProvider);
           final CartItemRequest request = CartItemRequest(
@@ -67,7 +67,7 @@ class Cart extends _$Cart {
           final (OrderItem? orderItem, bool success) = await cartService.addItemToCart(
             activeCartOrder.id!,
             request,
-            currentUser.id,
+            currentUser.id!,
           );
 
           if (!success) {
@@ -111,9 +111,9 @@ class Cart extends _$Cart {
       state = state.removeItem(menuItemId, options: options);
 
       // バックエンドサービスとの同期
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser != null) {
-        final Order? activeCartOrder = await ref.read(activeCartProvider(currentUser.id).future);
+        final Order? activeCartOrder = await ref.read(activeCartProvider(currentUser.id!).future);
         if (activeCartOrder != null) {
           final CartService cartService = ref.read(cartServiceProvider);
 
@@ -124,7 +124,7 @@ class Cart extends _$Cart {
           final bool success = await cartService.removeItemFromCart(
             activeCartOrder.id!,
             orderItemId,
-            currentUser.id,
+            currentUser.id!,
           );
 
           if (!success) {
@@ -173,9 +173,9 @@ class Cart extends _$Cart {
       state = state.updateItemQuantity(menuItemId, quantity, options: options);
 
       // バックエンドサービスとの同期
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser != null) {
-        final Order? activeCartOrder = await ref.read(activeCartProvider(currentUser.id).future);
+        final Order? activeCartOrder = await ref.read(activeCartProvider(currentUser.id!).future);
         if (activeCartOrder != null) {
           final CartService cartService = ref.read(cartServiceProvider);
 
@@ -187,7 +187,7 @@ class Cart extends _$Cart {
             activeCartOrder.id!,
             orderItemId,
             quantity,
-            currentUser.id,
+            currentUser.id!,
           );
 
           if (!success) {
@@ -241,11 +241,11 @@ class Cart extends _$Cart {
       state = state.clear();
 
       // バックエンドサービスとの同期
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser != null && cartId != null) {
         final CartService cartService = ref.read(cartServiceProvider);
 
-        final bool success = await cartService.clearCart(cartId, currentUser.id);
+        final bool success = await cartService.clearCart(cartId, currentUser.id!);
 
         if (!success) {
           // バックエンド失敗時はローカル状態をロールバック
@@ -287,7 +287,7 @@ class Cart extends _$Cart {
       ref.read(globalLoadingProvider.notifier).startLoading();
 
       // 認証されたユーザーを取得
-      final User? currentUser = ref.read(currentUserProvider);
+      final UserProfile? currentUser = ref.read(currentUserProvider);
       if (currentUser == null) {
         throw Exception("ユーザーが認証されていません");
       }
@@ -303,7 +303,7 @@ class Cart extends _$Cart {
       }
 
       // OrderServiceを使用してチェックアウト
-      final OrderService orderService = OrderService();
+      final OrderService orderService = OrderService(ref: ref);
 
       // チェックアウトリクエストを作成
       final OrderCheckoutRequest checkoutRequest = OrderCheckoutRequest(
@@ -317,7 +317,7 @@ class Cart extends _$Cart {
       final (Order? order, bool success) = await orderService.checkoutCart(
         cartId,
         checkoutRequest,
-        currentUser.id,
+        currentUser.id!,
       );
 
       if (success && order != null) {

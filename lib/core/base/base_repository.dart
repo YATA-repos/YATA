@@ -1,11 +1,11 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 
-import "../auth/auth_service.dart";
 import "../constants/exceptions/exceptions.dart";
 import "../constants/query_types.dart";
-import "../utils/logger_mixin.dart";
+import "../infrastructure/supabase/supabase_client.dart";
+import "../logging/logger_mixin.dart";
 import "../utils/query_utils.dart";
-import "../utils/type_validator.dart";
+import "../validation/type_validator.dart";
 import "base_model.dart";
 
 /// プライマリキー

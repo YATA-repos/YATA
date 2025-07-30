@@ -1,4 +1,6 @@
-import "../../../core/utils/logger_mixin.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../core/logging/logger_mixin.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
 import "../repositories/material_repository.dart";
@@ -69,14 +71,15 @@ class OrderCalculationResult {
 /// 発注ワークフローサービス
 class OrderWorkflowService with LoggerMixin {
   OrderWorkflowService({
+    required Ref ref,
     MaterialRepository? materialRepository,
     PurchaseRepository? purchaseRepository,
     StockLevelService? stockLevelService,
     UsageAnalysisService? usageAnalysisService,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
        _purchaseRepository = purchaseRepository ?? PurchaseRepository(),
-       _stockLevelService = stockLevelService ?? StockLevelService(),
-       _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService();
+       _stockLevelService = stockLevelService ?? StockLevelService(ref: ref),
+       _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService(ref: ref);
 
   final MaterialRepository _materialRepository;
   final PurchaseRepository _purchaseRepository;
@@ -97,7 +100,7 @@ class OrderWorkflowService with LoggerMixin {
 
     try {
       // 材料一覧を取得
-      final List<Material> materials = await _materialRepository.findByCategoryId(categoryId, userId);
+      final List<Material> materials = await _materialRepository.findByCategoryId(categoryId);
       
       if (materials.isEmpty) {
         logInfo("No materials found for user: $userId");

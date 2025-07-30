@@ -1,4 +1,6 @@
-import "../../../core/utils/logger_mixin.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../core/logging/logger_mixin.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "cart_management_service.dart";
@@ -8,10 +10,11 @@ import "order_calculation_service.dart";
 /// CartManagementServiceとOrderCalculationServiceを組み合わせて使用
 class CartService with LoggerMixin {
   CartService({
+    required Ref ref,
     CartManagementService? cartManagementService,
     OrderCalculationService? orderCalculationService,
-  }) : _cartManagementService = cartManagementService ?? CartManagementService(),
-       _orderCalculationService = orderCalculationService ?? OrderCalculationService();
+  }) : _cartManagementService = cartManagementService ?? CartManagementService(ref: ref),
+       _orderCalculationService = orderCalculationService ?? OrderCalculationService(ref: ref);
 
   final CartManagementService _cartManagementService;
   final OrderCalculationService _orderCalculationService;

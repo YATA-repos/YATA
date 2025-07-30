@@ -2,13 +2,13 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_text_theme.dart";
 import "../../../../shared/widgets/common/loading_indicator.dart";
 import "../../../../shared/widgets/filters/category_filter.dart";
 import "../../../../shared/widgets/forms/search_field.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../menu/models/menu_model.dart";
 import "../../../menu/presentation/providers/menu_providers.dart";
 import "../../../menu/presentation/widgets/menu_item_card.dart";
@@ -73,7 +73,7 @@ class _MenuSelectionPanelState extends ConsumerState<MenuSelectionPanel> {
           }
 
           return ref
-              .watch(menuCategoriesProvider(userId!))
+              .watch(menuCategoriesProvider)
               .when(
                 data: (List<MenuCategory> categories) {
                   final List<CategoryOption> categoryOptions = categories
@@ -126,7 +126,7 @@ class _MenuSelectionPanelState extends ConsumerState<MenuSelectionPanel> {
         builder: (BuildContext context, WidgetRef ref, Widget? child) {
           // 選択されたカテゴリのアイテムを取得
           final List<AsyncValue<List<MenuItem>>> categoryResults = selectedCategories
-              .map((String categoryId) => ref.watch(menuItemsProvider(categoryId, userId!)))
+              .map((String categoryId) => ref.watch(menuItemsProvider(categoryId)))
               .toList();
 
           // すべての結果が取得できているかチェック
@@ -158,7 +158,7 @@ class _MenuSelectionPanelState extends ConsumerState<MenuSelectionPanel> {
     // フィルターなしの場合は全アイテムを表示
     return Consumer(
       builder: (BuildContext context, WidgetRef ref, Widget? child) => ref
-            .watch(menuItemsProvider(null, userId!))
+            .watch(menuItemsProvider(null))
             .when(
               data: _buildGridView,
               loading: () => const LoadingIndicator(),

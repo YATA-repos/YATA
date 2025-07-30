@@ -34,7 +34,7 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
     });
 
     try {
-      final OrderWorkflowService service = OrderWorkflowService();
+      final OrderWorkflowService service = OrderWorkflowService(ref: ref as Ref);
       final OrderCalculationResult result = await service.calculateOrderSuggestions(
         "user-id", // 実際のユーザーIDを取得する必要がある
       );
@@ -60,7 +60,9 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
 
   /// 発注を実行
   Future<void> _executeOrders() async {
-    if (_orderResult == null) return;
+    if (_orderResult == null) {
+      return;
+    }
 
     // 実際の発注処理を実装
     // 今回は簡単な通知のみ
@@ -261,9 +263,9 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: <Widget>[
@@ -281,7 +283,7 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -298,10 +300,10 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(
-          color: _getPriorityColor(suggestion.priority).withOpacity(0.3),
+          color: _getPriorityColor(suggestion.priority).withValues(alpha: 0.3),
         ),
         borderRadius: BorderRadius.circular(8),
-        color: _getPriorityColor(suggestion.priority).withOpacity(0.05),
+        color: _getPriorityColor(suggestion.priority).withValues(alpha: 0.05),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -14,37 +14,37 @@ part "inventory_providers.g.dart";
 /// InventoryService プロバイダー
 /// 既存の在庫管理統合サービスをRiverpodで利用可能にする
 @riverpod
-InventoryService inventoryService(Ref ref) => InventoryService();
+InventoryService inventoryService(Ref ref) => InventoryService(ref: ref);
 
 /// MaterialManagementService プロバイダー
 /// 既存の材料管理サービスをRiverpodで利用可能にする
 @riverpod
-MaterialManagementService materialManagementService(Ref ref) => MaterialManagementService();
+MaterialManagementService materialManagementService(Ref ref) => MaterialManagementService(ref: ref);
 
 /// StockLevelService プロバイダー
 /// 既存の在庫レベルサービスをRiverpodで利用可能にする
 @riverpod
-StockLevelService stockLevelService(Ref ref) => StockLevelService();
+StockLevelService stockLevelService(Ref ref) => StockLevelService(ref: ref);
 
 /// UsageAnalysisService プロバイダー
 /// 既存の使用量分析サービスをRiverpodで利用可能にする
 @riverpod
-UsageAnalysisService usageAnalysisService(Ref ref) => UsageAnalysisService();
+UsageAnalysisService usageAnalysisService(Ref ref) => UsageAnalysisService(ref: ref);
 
 /// 材料カテゴリー一覧プロバイダー
 /// 既存のInventoryService.getMaterialCategoriesを直接活用
 @riverpod
-Future<List<MaterialCategory>> materialCategories(Ref ref, String userId) async {
+Future<List<MaterialCategory>> materialCategories(Ref ref) async {
   final InventoryService service = ref.watch(inventoryServiceProvider);
-  return service.getMaterialCategories(userId);
+  return service.getMaterialCategories();
 }
 
 /// カテゴリー別材料一覧プロバイダー
 /// 既存のInventoryService.getMaterialsByCategoryを直接活用
 @riverpod
-Future<List<Material>> materials(Ref ref, String? categoryId, String userId) async {
+Future<List<Material>> materials(Ref ref, String? categoryId) async {
   final InventoryService service = ref.watch(inventoryServiceProvider);
-  return service.getMaterialsByCategory(categoryId, userId);
+  return service.getMaterialsByCategory(categoryId);
 }
 
 /// 在庫情報付き材料一覧プロバイダー
@@ -62,17 +62,17 @@ Future<List<MaterialStockInfo>> materialsWithStockInfo(
 /// 在庫アラート（レベル別）プロバイダー
 /// 既存のInventoryService.getStockAlertsByLevelを直接活用
 @riverpod
-Future<Map<StockLevel, List<Material>>> stockAlertsByLevel(Ref ref, String userId) async {
+Future<Map<StockLevel, List<Material>>> stockAlertsByLevel(Ref ref) async {
   final InventoryService service = ref.watch(inventoryServiceProvider);
-  return service.getStockAlertsByLevel(userId);
+  return service.getStockAlertsByLevel();
 }
 
 /// 緊急在庫材料プロバイダー
 /// 既存のInventoryService.getCriticalStockMaterialsを直接活用
 @riverpod
-Future<List<Material>> criticalStockMaterials(Ref ref, String userId) async {
+Future<List<Material>> criticalStockMaterials(Ref ref) async {
   final InventoryService service = ref.watch(inventoryServiceProvider);
-  return service.getCriticalStockMaterials(userId);
+  return service.getCriticalStockMaterials();
 }
 
 /// 材料使用可能日数一括計算プロバイダー

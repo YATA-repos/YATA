@@ -21,10 +21,8 @@ class GlobalError extends _$GlobalError {
   void setErrorFromException(Exception exception) {
     if (exception is ValidationException) {
       state = exception.message;
-    } else if (exception is AuthenticationException) {
+    } else if (exception is AuthException) {
       state = exception.message;
-    } else if (exception is PermissionException) {
-      state = "権限エラー: ${exception.message}";
     } else if (exception is YataException) {
       state = exception.message;
     } else {

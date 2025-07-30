@@ -1,4 +1,6 @@
-import "../../../core/utils/logger_mixin.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../core/logging/logger_mixin.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
 import "../repositories/material_repository.dart";
@@ -7,9 +9,10 @@ import "../repositories/stock_transaction_repository.dart";
 /// 使用量分析・予測サービス
 class UsageAnalysisService with LoggerMixin {
   UsageAnalysisService({
+    required Ref ref,
     MaterialRepository? materialRepository,
     StockTransactionRepository? stockTransactionRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
        _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
 
   final MaterialRepository _materialRepository;
@@ -51,7 +54,7 @@ class UsageAnalysisService with LoggerMixin {
   Future<int?> calculateEstimatedUsageDays(String materialId, String userId) async {
     // 材料を取得
     final Material? material = await _materialRepository.getById(materialId);
-    if (material == null || material.userId != userId) {
+    if (material == null) {
       return null;
     }
 
@@ -71,7 +74,7 @@ class UsageAnalysisService with LoggerMixin {
   /// 全材料の使用可能日数を一括計算
   Future<Map<String, int?>> bulkCalculateUsageDays(String userId) async {
     // 全材料を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(null, userId);
+    final List<Material> materials = await _materialRepository.findByCategoryId(null);
 
     // 各材料の使用可能日数を計算
     final Map<String, int?> usageDays = <String, int?>{};
@@ -88,7 +91,7 @@ class UsageAnalysisService with LoggerMixin {
   /// 全材料の日次使用量を一括計算
   Future<Map<String, double?>> bulkCalculateDailyUsageRates(String userId, {int days = 30}) async {
     // 全材料を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(null, userId);
+    final List<Material> materials = await _materialRepository.findByCategoryId(null);
 
     // 各材料の日次使用量を計算
     final Map<String, double?> dailyUsageRates = <String, double?>{};

@@ -3,7 +3,6 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/models/cart_models.dart";
@@ -13,6 +12,7 @@ import "../../../../shared/themes/app_text_theme.dart";
 import "../../../../shared/widgets/buttons/app_button.dart";
 import "../../../../shared/widgets/cards/app_card.dart";
 import "../../../../shared/widgets/common/app_badge.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../order/models/order_model.dart";
 import "../../../order/presentation/providers/cart_providers.dart";
 
@@ -255,7 +255,7 @@ class CurrentOrderPanel extends ConsumerWidget {
 
   /// 注文処理
   Future<void> _processOrder(WidgetRef ref) async {
-    final String? userId = ref.read(currentUserIdProvider);
+    final String? userId = ref.read(currentUserProvider)?.id;
     if (userId == null) {
       return;
     }
@@ -272,7 +272,7 @@ class CurrentOrderPanel extends ConsumerWidget {
 
   /// カートクリア
   void _clearCart(WidgetRef ref) async {
-    final String? userId = ref.read(currentUserIdProvider);
+    final String? userId = ref.read(currentUserProvider)?.id;
     if (userId == null) {
       return;
     }

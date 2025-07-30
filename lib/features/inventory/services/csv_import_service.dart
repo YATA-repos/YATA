@@ -1,8 +1,10 @@
 import "dart:io";
 import "package:csv/csv.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../models/inventory_model.dart";
 import "material_management_service.dart";
 
@@ -60,8 +62,9 @@ class CSVImportPreview {
 /// CSVインポートサービス
 class CSVImportService with LoggerMixin {
   CSVImportService({
+    required Ref ref,
     MaterialManagementService? materialManagementService,
-  }) : _materialManagementService = materialManagementService ?? MaterialManagementService();
+  }) : _materialManagementService = materialManagementService ?? MaterialManagementService(ref: ref);
 
   final MaterialManagementService _materialManagementService;
 
@@ -168,7 +171,6 @@ class CSVImportService with LoggerMixin {
         try {
           final Material? imported = await _materialManagementService.createMaterial(
             material,
-            userId,
           );
           
           if (imported != null) {

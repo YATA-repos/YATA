@@ -4,9 +4,10 @@ import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app/app.dart";
-import "core/auth/auth_service.dart";
-import "core/utils/log_service.dart";
-import "core/utils/logger_mixin.dart";
+import "core/infrastructure/supabase/supabase_client.dart";
+import "core/validation/env_validator.dart";
+import "core/logging/log_service.dart";
+import "core/logging/logger_mixin.dart";
 
 void main() async {
   // 起動開始の明確な表示
@@ -28,10 +29,18 @@ void main() async {
     await dotenv.load();
     debugPrint("DEBUG: [2/6] ✅ Environment variables loaded");
     
-    // 環境変数の内容確認（セキュリティのため一部のみ）
-    debugPrint("DEBUG: Environment variables status:");
-    debugPrint("DEBUG: - SUPABASE_URL: ${(dotenv.env['SUPABASE_URL']?.isNotEmpty ?? false) ? 'configured' : 'missing'}");
-    debugPrint("DEBUG: - SUPABASE_ANON_KEY: ${(dotenv.env['SUPABASE_ANON_KEY']?.isNotEmpty ?? false) ? 'configured' : 'missing'}");
+    // 環境変数の詳細検証
+    debugPrint("DEBUG: [2/6] Validating environment variables...");
+    final EnvValidationResult validationResult = EnvValidator.validate();
+    EnvValidator.printValidationResult(validationResult);
+    
+    if (!validationResult.isValid) {
+      debugPrint("DEBUG: [2/6] ❌ Environment validation failed, but continuing startup...");
+      // 本番環境では起動を停止することも検討
+      // throw Exception("Environment validation failed");
+    } else {
+      debugPrint("DEBUG: [2/6] ✅ Environment validation successful");
+    }
 
     // ログサービスの初期化
     debugPrint("DEBUG: [3/6] Initializing log service...");
@@ -61,8 +70,9 @@ void main() async {
         await SupabaseClientService.initialize();
         debugPrint("DEBUG: [4/6] ✅ SupabaseClientService.initialize() completed");
         LogService.info("main", "DEBUG: [4/6] ✅ Supabase initialized successfully");
+        
       } catch (e, stackTrace) {
-        debugPrint("DEBUG: [4/6] ❌ SupabaseClientService.initialize() failed: $e");
+        debugPrint("DEBUG: [4/6] ❌ Supabase initialization failed: $e");
         debugPrint("DEBUG: [4/6] Stack trace: $stackTrace");
         LogService.error("main", "DEBUG: [4/6] ❌ Supabase initialization failed: $e", e, stackTrace);
         rethrow;

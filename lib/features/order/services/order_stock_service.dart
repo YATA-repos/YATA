@@ -1,4 +1,6 @@
-import "../../../core/utils/logger_mixin.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../core/logging/logger_mixin.dart";
 import "../../inventory/models/inventory_model.dart";
 import "../../inventory/repositories/material_repository.dart";
 import "../../inventory/repositories/recipe_repository.dart";
@@ -6,9 +8,12 @@ import "../models/order_model.dart";
 
 /// 注文関連在庫操作サービス（在庫確認・材料消費・復元）
 class OrderStockService with LoggerMixin {
-  OrderStockService({MaterialRepository? materialRepository, RecipeRepository? recipeRepository})
-    : _materialRepository = materialRepository ?? MaterialRepository(),
-      _recipeRepository = recipeRepository ?? RecipeRepository();
+  OrderStockService({
+    required Ref ref,
+    MaterialRepository? materialRepository,
+    RecipeRepository? recipeRepository,
+  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
+       _recipeRepository = recipeRepository ?? RecipeRepository(ref: ref);
 
   final MaterialRepository _materialRepository;
   final RecipeRepository _recipeRepository;
@@ -17,12 +22,12 @@ class OrderStockService with LoggerMixin {
   String get loggerComponent => "OrderStockService";
 
   /// メニューアイテムの在庫充足を確認
-  Future<bool> checkMenuItemStock(String menuItemId, int quantity, String userId) async {
+  Future<bool> checkMenuItemStock(String menuItemId, int quantity) async {
     logDebug("Checking stock for menu item: $menuItemId, quantity: $quantity");
 
     try {
       // レシピを取得
-      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
 
       for (final Recipe recipe in recipes) {
         if (recipe.isOptional) {
@@ -51,7 +56,7 @@ class OrderStockService with LoggerMixin {
   }
 
   /// カート内全商品の在庫を検証（戻り値: {order_item_id: 在庫充足フラグ}）
-  Future<Map<String, bool>> validateCartStock(List<OrderItem> cartItems, String userId) async {
+  Future<Map<String, bool>> validateCartStock(List<OrderItem> cartItems, ) async {
     logInfo("Started validating cart stock for ${cartItems.length} items");
 
     try {
@@ -59,7 +64,7 @@ class OrderStockService with LoggerMixin {
       int insufficientItems = 0;
 
       for (final OrderItem item in cartItems) {
-        final bool isSufficient = await checkMenuItemStock(item.menuItemId, item.quantity, userId);
+        final bool isSufficient = await checkMenuItemStock(item.menuItemId, item.quantity);
         stockValidation[item.id!] = isSufficient;
         if (!isSufficient) {
           insufficientItems++;
@@ -80,7 +85,7 @@ class OrderStockService with LoggerMixin {
   }
 
   /// 注文に対する材料消費を実行
-  Future<void> consumeMaterialsForOrder(List<OrderItem> orderItems, String userId) async {
+  Future<void> consumeMaterialsForOrder(List<OrderItem> orderItems, ) async {
     logInfo("Started consuming materials for order");
 
     try {
@@ -90,7 +95,6 @@ class OrderStockService with LoggerMixin {
       for (final OrderItem item in orderItems) {
         final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
           item.menuItemId,
-          userId,
         );
         for (final Recipe recipe in recipes) {
           if (!recipe.isOptional) {
@@ -113,7 +117,7 @@ class OrderStockService with LoggerMixin {
         final Material? material = await _materialRepository.getById(materialId);
         if (material != null) {
           final double newStock = material.currentStock - consumedAmount;
-          await _materialRepository.updateStockAmount(materialId, newStock, userId);
+          await _materialRepository.updateStockAmount(materialId, newStock);
           logDebug("Material consumed: $materialId, amount: $consumedAmount, newStock: $newStock");
         }
       }
@@ -126,7 +130,7 @@ class OrderStockService with LoggerMixin {
   }
 
   /// 注文キャンセル時の材料在庫復元
-  Future<void> restoreMaterialsFromOrder(List<OrderItem> orderItems, String userId) async {
+  Future<void> restoreMaterialsFromOrder(List<OrderItem> orderItems, ) async {
     logInfo("Started restoring materials from canceled order");
 
     try {
@@ -136,7 +140,6 @@ class OrderStockService with LoggerMixin {
       for (final OrderItem item in orderItems) {
         final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
           item.menuItemId,
-          userId,
         );
         for (final Recipe recipe in recipes) {
           if (!recipe.isOptional) {
@@ -159,7 +162,7 @@ class OrderStockService with LoggerMixin {
         final Material? material = await _materialRepository.getById(materialId);
         if (material != null) {
           final double newStock = material.currentStock + restoredAmount;
-          await _materialRepository.updateStockAmount(materialId, newStock, userId);
+          await _materialRepository.updateStockAmount(materialId, newStock);
           logDebug("Material restored: $materialId, amount: $restoredAmount, newStock: $newStock");
         }
       }

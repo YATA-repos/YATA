@@ -1,10 +1,9 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "package:gotrue/gotrue.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/providers/common_providers.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/inventory_dto.dart";
 import "../../models/inventory_model.dart";
 import "inventory_providers.dart";
@@ -70,14 +69,14 @@ class RealTimeInventoryMonitor extends _$RealTimeInventoryMonitor {
   /// 在庫更新をチェック
   Future<void> _checkForUpdates() async {
     try {
-      final User? currentUser = ref.read(currentUserProvider);
-      if (currentUser == null) {
+      final String? currentUserId = ref.read(currentUserProvider)?.id;
+      if (currentUserId == null) {
         return;
       }
 
       // 現在の在庫情報を取得
       final List<MaterialStockInfo> currentInventory = await ref.read(
-        materialsWithStockInfoProvider(null, currentUser.id).future,
+        materialsWithStockInfoProvider(null, currentUserId).future,
       );
 
       // 前回の状態と比較して更新を検出

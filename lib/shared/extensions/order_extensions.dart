@@ -189,8 +189,12 @@ extension OrderUIExtensions on Order {
     }
 
     // 時間経過による優先度
-    if (minutes > 30) return 3; // 高優先度
-    if (minutes > 20) return 2; // 中優先度
+    if (minutes > 30) {
+      return 3; // 高優先度
+    }
+    if (minutes > 20) {
+      return 2; // 中優先度
+    }
     return 1; // 通常優先度
   }
 

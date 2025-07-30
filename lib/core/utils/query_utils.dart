@@ -1,6 +1,6 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
-import "log_service.dart";
+import "../logging/log_service.dart";
 
 // ! 静的メソッドのためLoggerMixinは使用不可
 class QueryUtils {

@@ -1,4 +1,6 @@
-import "../../../core/utils/logger_mixin.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../core/logging/logger_mixin.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "order_management_service.dart";
@@ -6,8 +8,10 @@ import "order_management_service.dart";
 /// 注文サービス統合クラス
 /// OrderManagementServiceを使用
 class OrderService with LoggerMixin {
-  OrderService({OrderManagementService? orderManagementService})
-    : _orderManagementService = orderManagementService ?? OrderManagementService();
+  OrderService({
+    required Ref ref,
+    OrderManagementService? orderManagementService,
+  }) : _orderManagementService = orderManagementService ?? OrderManagementService(ref: ref);
 
   final OrderManagementService _orderManagementService;
 

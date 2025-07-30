@@ -1,5 +1,7 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../menu/models/menu_model.dart";
 import "../../menu/repositories/menu_item_repository.dart";
 import "../dto/order_dto.dart";
@@ -12,16 +14,17 @@ import "order_stock_service.dart";
 /// カート管理サービス
 class CartManagementService with LoggerMixin {
   CartManagementService({
+    required Ref ref,
     OrderRepository? orderRepository,
     OrderItemRepository? orderItemRepository,
     MenuItemRepository? menuItemRepository,
     OrderCalculationService? orderCalculationService,
     OrderStockService? orderStockService,
-  }) : _orderRepository = orderRepository ?? OrderRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
-       _menuItemRepository = menuItemRepository ?? MenuItemRepository(),
-       _orderCalculationService = orderCalculationService ?? OrderCalculationService(),
-       _orderStockService = orderStockService ?? OrderStockService();
+  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref),
+       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref),
+       _menuItemRepository = menuItemRepository ?? MenuItemRepository(ref: ref),
+       _orderCalculationService = orderCalculationService ?? OrderCalculationService(ref: ref),
+       _orderStockService = orderStockService ?? OrderStockService(ref: ref);
 
   final OrderRepository _orderRepository;
   final OrderItemRepository _orderItemRepository;
@@ -38,7 +41,7 @@ class CartManagementService with LoggerMixin {
 
     try {
       // 既存のアクティブカートを検索
-      final Order? existingCart = await _orderRepository.findActiveDraftByUser(userId);
+      final Order? existingCart = await _orderRepository.findActiveDraftByUser();
 
       if (existingCart != null) {
         logInfo("Active cart found and returned");
@@ -99,7 +102,6 @@ class CartManagementService with LoggerMixin {
       final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
         request.menuItemId,
         request.quantity,
-        userId,
       );
 
       if (!isStockSufficient) {
@@ -208,7 +210,6 @@ class CartManagementService with LoggerMixin {
       final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
         orderItem.menuItemId,
         newQuantity,
-        userId,
       );
 
       if (!isStockSufficient) {
@@ -317,7 +318,7 @@ class CartManagementService with LoggerMixin {
       logDebug("Validating stock for ${cartItems.length} cart items");
 
       // 在庫検証サービスを使用
-      return _orderStockService.validateCartStock(cartItems, userId);
+      return _orderStockService.validateCartStock(cartItems);
     } catch (e, stackTrace) {
       logError("Failed to validate cart stock", e, stackTrace);
       rethrow;

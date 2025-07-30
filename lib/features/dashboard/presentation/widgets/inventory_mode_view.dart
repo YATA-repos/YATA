@@ -3,7 +3,6 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
-import "../../../../core/providers/auth_providers.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/themes/app_colors.dart";
@@ -11,6 +10,7 @@ import "../../../../shared/themes/app_text_theme.dart";
 import "../../../../shared/widgets/cards/app_card.dart";
 import "../../../../shared/widgets/cards/stats_card.dart";
 import "../../../../shared/widgets/common/loading_indicator.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../inventory/dto/inventory_dto.dart";
 import "../../../inventory/presentation/providers/inventory_providers.dart";
 
