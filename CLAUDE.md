@@ -128,3 +128,52 @@ lib/
 
 - このプロジェクトにおけるDTOは、Entityとの変換を前提として**いません**。
 - このプロジェクトにおいて、DTOはデータ転送専用のオブジェクトです。高度なdictのように振る舞うことを目的としています。
+
+---
+
+## 3. プラットフォーム別認証システム設定
+
+### 3.1 マルチプラットフォーム対応
+
+**重要**: 認証システムはプラットフォーム別に自動切り替えされます。
+
+#### プラットフォーム別CallbackURL
+```dart
+// lib/features/auth/models/auth_config.dart で自動判定
+if (kIsWeb) {
+  // Web: http://localhost:8080 (開発) | https://yourdomain.com (本番)
+} else {
+  // Desktop/Mobile: com.example.yata://login
+}
+```
+
+#### 各プラットフォームの設定状況
+
+| プラットフォーム | CallbackURL | 設定ファイル | 状態 |
+|------------|-------------|-------------|------|
+| **Web開発** | `http://localhost:8080` | `.vscode/settings.json` | ✅設定済み |
+| **Web本番** | `https://yourdomain.com` | `auth_config.dart` | ⚠️要変更 |
+| **Desktop** | `com.example.yata://login` | 自動判定 | ✅設定済み |
+| **Android** | `com.example.yata://login` | `AndroidManifest.xml` | ✅設定済み |
+| **iOS** | `com.example.yata://login` | `Info.plist` | ✅設定済み |
+
+### 3.2 デプロイ時の作業
+
+#### **Web本番のみ**
+- `auth_config.dart`で本番URL変更: `return "https://yourdomain.com";`
+- Supabase管理画面でWebドメイン追加
+
+#### **Desktop/Mobileアプリ**
+- **設定変更不要** (自動でカスタムスキーム使用)
+- **ディープリンク設定済み** (Android/iOS)
+
+### 3.3 Supabase Redirect URLs設定
+
+以下すべてをSupabase管理画面で設定:
+```
+http://localhost:8080           # Web開発
+https://yourdomain.com          # Web本番
+com.example.yata://login        # Desktop/Mobile
+```
+
+詳細は `docs/production-auth-setup.md` を参照してください。

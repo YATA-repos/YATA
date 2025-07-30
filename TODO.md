@@ -21,21 +21,6 @@
 
 ## In Progress
 
-### [Bugfix] WSL2環境でのGoogle OAuth認証失敗問題の根本的解決
-
-- **Priority**: P0  
-- **Size**: M
-- **Area**: Core
-- **Dependencies**: Google Cloud Console設定変更
-- **Goal**: WSL2環境でGoogle OAuth認証が確実に完了し、ユーザーがアプリケーションにログインできるようにする
-- **Steps**:
-  1. Google Cloud Console OAuth設定に`http://localhost:3000/`を追加
-  2. 手動認証URL生成ロジックを`localhost:3000`リダイレクトに変更
-  3. LocalAuthServerを手動認証時も継続使用するよう修正
-  4. 複雑なセッション監視ロジックを削除しシンプル化
-  5. 認証フロー全体のテストと動作確認
-- **Description**: WSL2環境での Google OAuth認証が失敗している根本原因は、Supabaseの手動認証フローでクライアントサイドセッション検知が機能しないことです。LocalAuthServerを活用した確実な認証フローに戻し、Google Cloud Console設定と併せて完全な解決を図ります。
-
 ---
 
 ## Backlog
