@@ -21,6 +21,7 @@ class AppStrings {
   static const String titleOrderStatus = "注文状況";
   static const String titleAnalytics = "売上分析";
   static const String titleInventory = "在庫管理";
+  static const String titleMenu = "メニュー管理";
   static const String titleSelectMenu = "メニュー選択";
 
   // ======================== tab ========================
@@ -29,6 +30,7 @@ class AppStrings {
   static const String navOrderStatus = "注文状況";
   static const String navAnalytics = "売上分析";
   static const String navInventory = "在庫管理";
+  static const String navMenu = "メニュー管理";
 
   // ======================== button ========================
   static const String buttonGoogleLogin = "Googleでログイン";

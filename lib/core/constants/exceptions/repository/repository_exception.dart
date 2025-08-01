@@ -97,4 +97,19 @@ class RepositoryException extends BaseContextException<RepositoryError> {
         return ExceptionSeverity.low;
     }
   }
+
+  /// ユーザーフレンドリーなエラーメッセージを取得
+  String get userMessage => error.userMessage;
+
+  /// エラーが一時的なものかどうかを判定
+  bool get isTemporary => error.isTemporary;
+
+  /// エラーハンドリング用のSnackBarメッセージを生成
+  String getSnackBarMessage({bool includeRetryHint = true}) {
+    final String baseMessage = userMessage;
+    if (includeRetryHint && isTemporary) {
+      return "$baseMessage\n（再試行可能）";
+    }
+    return baseMessage;
+  }
 }

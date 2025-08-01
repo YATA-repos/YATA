@@ -52,4 +52,46 @@ enum RepositoryError implements LogMessage {
         return "Database transaction failed: {error}";
     }
   }
+
+  /// ユーザーフレンドリーな日本語エラーメッセージ
+  String get userMessage {
+    switch (this) {
+      case RepositoryError.databaseConnectionFailed:
+        return "データベースに接続できませんでした。ネットワーク接続を確認してください。";
+      case RepositoryError.recordNotFound:
+        return "指定されたデータが見つかりませんでした。";
+      case RepositoryError.insertFailed:
+        return "データの保存に失敗しました。もう一度お試しください。";
+      case RepositoryError.updateFailed:
+        return "データの更新に失敗しました。もう一度お試しください。";
+      case RepositoryError.deleteFailed:
+        return "データの削除に失敗しました。もう一度お試しください。";
+      case RepositoryError.validationFailed:
+        return "入力されたデータに問題があります。内容を確認してください。";
+      case RepositoryError.concurrencyConflict:
+        return "他のユーザーが同じデータを変更しています。画面を更新してやり直してください。";
+      case RepositoryError.invalidQueryParameters:
+        return "検索条件に問題があります。条件を見直してください。";
+      case RepositoryError.transactionFailed:
+        return "処理中にエラーが発生しました。もう一度お試しください。";
+    }
+  }
+
+  /// エラーが一時的なものかどうかを判定
+  bool get isTemporary {
+    switch (this) {
+      case RepositoryError.databaseConnectionFailed:
+      case RepositoryError.transactionFailed:
+        return true; // ネットワークやサーバーの問題は一時的
+      case RepositoryError.concurrencyConflict:
+        return true; // 競合は再試行で解決可能
+      case RepositoryError.recordNotFound:
+      case RepositoryError.insertFailed:
+      case RepositoryError.updateFailed:
+      case RepositoryError.deleteFailed:
+      case RepositoryError.validationFailed:
+      case RepositoryError.invalidQueryParameters:
+        return false; // データや設定の問題は永続的
+    }
+  }
 }
