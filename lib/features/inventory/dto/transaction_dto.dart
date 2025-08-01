@@ -10,7 +10,7 @@ class StockUpdateRequest {
   /// JSONからオブジェクトを生成
   factory StockUpdateRequest.fromJson(Map<String, dynamic> json) => StockUpdateRequest(
     materialId: json["material_id"] as String,
-    newQuantity: json["new_quantity"] as double,
+    newQuantity: (json["new_quantity"] as num?)?.toDouble() ?? 0.0,
     reason: json["reason"] as String,
     notes: json["notes"] as String?,
   );
@@ -73,7 +73,7 @@ class PurchaseItemDto {
   /// JSONからオブジェクトを生成
   factory PurchaseItemDto.fromJson(Map<String, dynamic> json) => PurchaseItemDto(
     materialId: json["material_id"] as String,
-    quantity: json["quantity"] as double,
+    quantity: (json["quantity"] as num?)?.toDouble() ?? 0.0,
   );
 
   /// 材料ID

@@ -25,7 +25,6 @@ class EnhancedAlertPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<AlertStatistics> alertStatistics = ref.watch(alertStatisticsProvider(userId));
-    final InventoryAlertSettings settings = ref.watch(inventoryAlertSettingsNotifierProvider);
 
     return AppCard(
       child: Column(
@@ -114,9 +113,9 @@ class EnhancedAlertPanel extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: <Widget>[
@@ -134,7 +133,7 @@ class EnhancedAlertPanel extends ConsumerWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ],

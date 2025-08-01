@@ -651,8 +651,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
       case ExportFormat.pdf:
         return "PDF形式のデータ（${items.length}件）";
       case ExportFormat.json:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "JSON形式のデータ（${items.length}件）";
     }
   }
 

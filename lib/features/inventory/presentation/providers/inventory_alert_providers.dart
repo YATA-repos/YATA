@@ -64,10 +64,15 @@ class AlertStatistics {
 }
 
 /// 在庫アラート設定プロバイダー
+/// **ライフサイクル**: keepAlive（UI状態は永続化）
+/// **データ性質**: uiState, **アクセス頻度**: medium
 @riverpod
 class InventoryAlertSettingsNotifier extends _$InventoryAlertSettingsNotifier {
   @override
-  InventoryAlertSettings build() => const InventoryAlertSettings();
+  InventoryAlertSettings build() {
+    ref.keepAlive(); // UI状態は画面使用中は永続化
+    return const InventoryAlertSettings();
+  }
 
   /// 設定を更新
   void updateSettings(InventoryAlertSettings newSettings) {
@@ -101,21 +106,27 @@ class InventoryAlertSettingsNotifier extends _$InventoryAlertSettingsNotifier {
 }
 
 /// 詳細アラート情報プロバイダー
+/// **ライフサイクル**: AutoDispose（userDynamic・高頻度アクセス）
+/// **データ性質**: userDynamic, **アクセス頻度**: high
 @riverpod
 Future<Map<String, List<MaterialStockInfo>>> detailedInventoryAlerts(
   Ref ref,
   String userId,
 ) async {
+  // 在庫アラートは頻繁に変わるため自動破棄（リアルタイム更新で再取得）
   final InventoryService service = ref.watch(inventoryServiceProvider);
   return service.getDetailedStockAlerts(userId);
 }
 
 /// フィルタリングされたアラート情報プロバイダー
+/// **ライフサイクル**: AutoDispose（userDynamic・高頻度アクセス）
+/// **データ性質**: userDynamic, **アクセス頻度**: high
 @riverpod
 Future<Map<String, List<MaterialStockInfo>>> filteredInventoryAlerts(
   Ref ref,
   String userId,
 ) async {
+  // フィルタリング結果は設定変更で変わるため自動破棄
   final InventoryAlertSettings settings = ref.watch(inventoryAlertSettingsNotifierProvider);
   final Map<String, List<MaterialStockInfo>> allAlerts = await ref.watch(detailedInventoryAlertsProvider(userId).future);
   
@@ -154,11 +165,14 @@ Future<Map<String, List<MaterialStockInfo>>> filteredInventoryAlerts(
 }
 
 /// アラート統計情報プロバイダー
+/// **ライフサイクル**: AutoDispose（userDynamic・高頻度アクセス）
+/// **データ性質**: userDynamic, **アクセス頻度**: high
 @riverpod
 Future<AlertStatistics> alertStatistics(
   Ref ref,
   String userId,
 ) async {
+  // 統計情報はアラートデータに依存するため自動破棄
   final Map<String, List<MaterialStockInfo>> alerts = await ref.watch(filteredInventoryAlertsProvider(userId).future);
   
   final int criticalCount = alerts["critical"]?.length ?? 0;
@@ -200,10 +214,15 @@ Future<List<MaterialStockInfo>> lowStockAlerts(
 }
 
 /// アラート監視プロバイダー（自動更新用）
+/// **ライフサイクル**: keepAlive（UI状態は永続化）
+/// **データ性質**: uiState, **アクセス頻度**: low
 @riverpod
 class AlertWatcher extends _$AlertWatcher {
   @override
-  DateTime build() => DateTime.now();
+  DateTime build() {
+    ref.keepAlive(); // UI状態は画面使用中は永続化
+    return DateTime.now();
+  }
 
   /// アラートを手動更新
   void refresh() {

@@ -16,8 +16,8 @@ class MaterialStockInfo {
     stockLevel: StockLevel.values.firstWhere(
       (StockLevel level) => level.value == json["stock_level"] as String,
     ),
-    estimatedUsageDays: json["estimated_usage_days"] as int?,
-    dailyUsageRate: json["daily_usage_rate"] as double?,
+    estimatedUsageDays: (json["estimated_usage_days"] as num?)?.toInt(),
+    dailyUsageRate: (json["daily_usage_rate"] as num?)?.toDouble(),
   );
 
   /// 材料情報
@@ -53,8 +53,8 @@ class MaterialUsageCalculation {
   /// JSONからオブジェクトを生成
   factory MaterialUsageCalculation.fromJson(Map<String, dynamic> json) => MaterialUsageCalculation(
     materialId: json["material_id"] as String,
-    requiredAmount: json["required_amount"] as double,
-    availableAmount: json["available_amount"] as double,
+    requiredAmount: (json["required_amount"] as num?)?.toDouble() ?? 0.0,
+    availableAmount: (json["available_amount"] as num?)?.toDouble() ?? 0.0,
     isSufficient: json["is_sufficient"] as bool,
   );
 

@@ -324,7 +324,8 @@ class _MaterialFormDialogState extends ConsumerState<MaterialFormDialog> {
 
   /// 保存処理
   Future<void> _handleSave() async {
-    if (!_formKey.currentState!.validate()) {
+    final FormState? formState = _formKey.currentState;
+    if (formState == null || !formState.validate()) {
       return;
     }
 

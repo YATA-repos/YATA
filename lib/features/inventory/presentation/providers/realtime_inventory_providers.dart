@@ -60,7 +60,7 @@ class RealTimeInventoryMonitor extends _$RealTimeInventoryMonitor {
 
   /// 定期チェックをスケジュール
   void _scheduleCheck(Duration interval) {
-    Future.delayed(interval, () async {
+    Future<void>.delayed(interval, () async {
       await _checkForUpdates();
       _scheduleCheck(interval);
     });
@@ -369,7 +369,7 @@ class InventoryDashboardData {
 Stream<List<InventoryUpdate>> inventoryChangesStream(Ref ref, String userId) async* {
   // 定期的に在庫変更をチェックしてストリームで配信
   while (true) {
-    await Future.delayed(const Duration(seconds: 30));
+    await Future<void>.delayed(const Duration(seconds: 30));
 
     try {
       final RealTimeInventoryMonitor monitor = ref.read(realTimeInventoryMonitorProvider.notifier);

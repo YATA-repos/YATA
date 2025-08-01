@@ -5,7 +5,6 @@ import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
 import "../repositories/material_repository.dart";
 import "../repositories/purchase_repository.dart";
-import "stock_level_service.dart";
 import "usage_analysis_service.dart";
 
 /// 発注提案データ
@@ -74,16 +73,13 @@ class OrderWorkflowService with LoggerMixin {
     required Ref ref,
     MaterialRepository? materialRepository,
     PurchaseRepository? purchaseRepository,
-    StockLevelService? stockLevelService,
     UsageAnalysisService? usageAnalysisService,
   }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
        _purchaseRepository = purchaseRepository ?? PurchaseRepository(),
-       _stockLevelService = stockLevelService ?? StockLevelService(ref: ref),
        _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService(ref: ref);
 
   final MaterialRepository _materialRepository;
   final PurchaseRepository _purchaseRepository;
-  final StockLevelService _stockLevelService;
   final UsageAnalysisService _usageAnalysisService;
 
   @override

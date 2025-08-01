@@ -26,7 +26,6 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
   /// ファイル選択処理
   Future<void> _selectFile() async {
     try {
-      final CSVImportService service = ref.read(csvImportServiceProvider);
       // ここでfile_pickerを使ったファイル選択を実装
       // 今回は簡単な例として、手動でファイルパスを指定
     } catch (e) {
@@ -79,17 +78,17 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       );
       
       // インポート完了後の処理
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("インポート完了: ${result.successCount}件成功, ${result.errorCount}件エラー"),
-            backgroundColor: result.hasErrors ? Colors.orange : Colors.green,
-          ),
-        );
-        
-        if (!result.hasErrors) {
-          Navigator.of(context).pop();
-        }
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("インポート完了: ${result.successCount}件成功, ${result.errorCount}件エラー"),
+          backgroundColor: result.hasErrors ? Colors.orange : Colors.green,
+        ),
+      );
+      
+      if (!result.hasErrors) {
+        Navigator.of(context).pop();
       }
     } catch (e) {
       setState(() {

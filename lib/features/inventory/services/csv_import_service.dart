@@ -385,7 +385,7 @@ class CSVImportService with LoggerMixin {
     }
 
     if (errors.isNotEmpty) {
-      throw errors;
+      throw Exception("CSV validation failed: ${errors.join(', ')}");
     }
 
     // Materialオブジェクトを作成

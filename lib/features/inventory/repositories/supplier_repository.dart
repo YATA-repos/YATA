@@ -121,7 +121,8 @@ class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String
 
   /// 材料の優先供給業者設定を全て解除
   Future<void> _clearPreferredSuppliers(String materialId, String userId) async {
-    // TODO: 実際の実装では、バッチ更新クエリを使用することが望ましい
+    // 注意: BaseRepositoryにバッチ更新機能が追加された時にパフォーマンス改善を検討
+    // 現在の実装: 個別更新（小規模データでは許容範囲）
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("material_id", materialId),
@@ -130,6 +131,7 @@ class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String
 
     final List<MaterialSupplier> preferredSuppliers = await find(filters: filters);
     
+    // 現在は個別更新を使用（将来的にはバッチ更新で最適化可能）
     for (final MaterialSupplier supplier in preferredSuppliers) {
       await updateById(supplier.id!, <String, dynamic>{
         "is_preferred": false,

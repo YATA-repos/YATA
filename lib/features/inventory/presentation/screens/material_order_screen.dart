@@ -294,7 +294,6 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
   /// 発注提案カードウィジェット
   Widget _buildOrderSuggestionCard(OrderSuggestion suggestion) {
     final String materialId = suggestion.material.id!;
-    final double adjustedQuantity = _adjustedQuantities[materialId] ?? suggestion.suggestedOrderQuantity;
     
     return Container(
       padding: const EdgeInsets.all(12),
