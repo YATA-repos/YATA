@@ -75,16 +75,23 @@ Repository Layer (Data Access)
 ```text
 lib/
 ├── main.dart                # アプリケーションエントリーポイント
+├── app/                     # アプリケーション設定
+│   ├── app.dart            # アプリケーション設定
+│   └── routes.dart         # ルーティング設定
 ├── core/                    # コア機能
-│   ├── auth/               # 認証サービス
 │   ├── base/               # 基底クラス（BaseModel, BaseRepository）
+│   ├── cache/              # キャッシュ機能
 │   ├── constants/          # 定数・設定
+│   │   ├── exceptions/     # 例外クラス（フィーチャー別分類）
 │   │   └── log_enums/      # ログ関連列挙型
 │   ├── infrastructure/     # インフラ層
 │   │   ├── offline/        # オフライン機能
 │   │   └── supabase/       # Supabase統合
-│   ├── utils/              # ユーティリティ（ログ、クエリ）
-│   └── validation/         # 入力バリデーションなど
+│   ├── logging/            # ログサービス
+│   ├── providers/          # コアプロバイダー
+│   ├── realtime/           # リアルタイム機能
+│   ├── utils/              # ユーティリティ（クエリ、エラーハンドラー）
+│   └── validation/         # 入力バリデーション
 ├── features/               # 機能別ディレクトリ
 │   ├── analytics/          # 分析機能
 │   │   ├── dto/            # Data Transfer Objects
@@ -92,6 +99,14 @@ lib/
 │   │   ├── presentation/   # UI（providers, screens, widgets）
 │   │   ├── repositories/   # データアクセス
 │   │   └── services/       # ビジネスロジック
+│   ├── auth/               # 認証機能
+│   │   ├── dto/
+│   │   ├── models/
+│   │   ├── presentation/
+│   │   ├── repositories/
+│   │   └── services/
+│   ├── dashboard/          # ダッシュボード機能
+│   │   └── presentation/   # ダッシュボードUI
 │   ├── inventory/          # 在庫管理
 │   │   ├── dto/
 │   │   ├── models/
@@ -104,24 +119,30 @@ lib/
 │   │   ├── presentation/
 │   │   ├── repositories/
 │   │   └── services/
-│   ├── order/              # 注文管理
-│   │   ├── dto/
-│   │   ├── models/
-│   │   ├── presentation/
-│   │   ├── repositories/
-│   │   └── services/
-│   └── stock/              # 在庫機能
+│   └── order/              # 注文管理
 │       ├── dto/
 │       ├── models/
 │       ├── presentation/
 │       ├── repositories/
 │       └── services/
 ├── routing/                # ルーティング
-└── shared/                 # 共通UI要素
+│   └── guards/             # 認証ガード等
+└── shared/                 # 共通UI要素・ユーティリティ
+    ├── enums/              # 共通列挙型
+    ├── extensions/         # 拡張メソッド
     ├── layouts/            # レイアウト
-    ├── providers/          # プロバイダ
+    ├── models/             # 共通モデル
+    ├── providers/          # 共通プロバイダ
     ├── themes/             # テーマ
     └── widgets/            # ウィジェット
+        ├── buttons/        # ボタン系ウィジェット
+        ├── cards/          # カード系ウィジェット
+        ├── common/         # 汎用ウィジェット
+        ├── dialogs/        # ダイアログ
+        ├── filters/        # フィルター系ウィジェット
+        ├── forms/          # フォーム系ウィジェット
+        ├── navigation/     # ナビゲーション
+        └── tables/         # テーブル系ウィジェット
 ```
 
 #### DTOに関する注意点
@@ -131,49 +152,57 @@ lib/
 
 ---
 
-## 3. プラットフォーム別認証システム設定
+## 3. 開発上のベストプラクティス
 
-### 3.1 マルチプラットフォーム対応
+### 3.1 コーディング規約
 
-**重要**: 認証システムはプラットフォーム別に自動切り替えされます。
+- **命名規則**:
+  - クラス名: `UpperCamelCase`
+  - メソッド名: `lowerCamelCase`
+  - 定数: `lowerCamelCase`
+  - ファイル名: `snake_case.dart`
 
-#### プラットフォーム別CallbackURL
-```dart
-// lib/features/auth/models/auth_config.dart で自動判定
-if (kIsWeb) {
-  // Web: http://localhost:8080 (開発) | https://yourdomain.com (本番)
-} else {
-  // Desktop/Mobile: com.example.yata://login
-}
-```
+- **コメント**:
+  - クラス、メソッド、重要なロジックには必ずコメントを記述すること。
+  - クラス・メソッドの説明は、`///` を使用してドキュメンテーションコメントを記述
+  - 重要なロジックや複雑な部分には、`//` を使用してコメントを記述
+  - 冗長性を避け、コード内容から明らかな部分はコメントを省略すること。
+  - 以下の接頭辞を使用して、コメントの種類を明確にすること:
+    - `// TODO `: 一時的なTODOコメント。`TODO.md`に移行すること。
+    - `// ! `: 修正の必要性やクリティカルな情報を示す。将来的に`TODO.md`に移行すること。
+    - `// ? `: コードに対する疑問・質問を示す。
+    - `// * `: 重要な情報や注意点を示す。
 
-#### 各プラットフォームの設定状況
+### 3.2 Gitの使用
+  - **コミットメッセージ**:
+    - 英語で記述すること。
+    - 自己宣伝や感情的な表現は使用しないこと。
+    - 一行の簡潔な要約を記述し、必要に応じて3~5行程度の詳細を追加すること。
+    - コミットメッセージの先頭に、以下の形式を使用すること:
+      - `feat:` 新機能
+      - `fix:` バグ修正
+      - `refactor:` リファクタリング
+      - `style:` スタイルの変更（コードの意味に影響しない）
+      - `perf:` パフォーマンス改善
+      - `docs:` ドキュメントの変更
+      - `build:` ビルドシステムや外部依存関係の変更
+      - `ci:` CI/CDの設定変更
+      - `test:` テストの追加・修正
+      - `chore:` 以上のカテゴリに該当しない雑多な変更
+    - コミットメッセージの例:
+      ```
+      feat: add analytics presentation layer
 
-| プラットフォーム | CallbackURL | 設定ファイル | 状態 |
-|------------|-------------|-------------|------|
-| **Web開発** | `http://localhost:8080` | `.vscode/settings.json` | ✅設定済み |
-| **Web本番** | `https://yourdomain.com` | `auth_config.dart` | ⚠️要変更 |
-| **Desktop** | `com.example.yata://login` | 自動判定 | ✅設定済み |
-| **Android** | `com.example.yata://login` | `AndroidManifest.xml` | ✅設定済み |
-| **iOS** | `com.example.yata://login` | `Info.plist` | ✅設定済み |
-
-### 3.2 デプロイ時の作業
-
-#### **Web本番のみ**
-- `auth_config.dart`で本番URL変更: `return "https://yourdomain.com";`
-- Supabase管理画面でWebドメイン追加
-
-#### **Desktop/Mobileアプリ**
-- **設定変更不要** (自動でカスタムスキーム使用)
-- **ディープリンク設定済み** (Android/iOS)
-
-### 3.3 Supabase Redirect URLs設定
-
-以下すべてをSupabase管理画面で設定:
-```
-http://localhost:8080           # Web開発
-https://yourdomain.com          # Web本番
-com.example.yata://login        # Desktop/Mobile
-```
-
-詳細は `docs/production-auth-setup.md` を参照してください。
+      - Add analytics screens for main view, inventory, and sales analytics
+      - Implement analytics UI widgets including charts and stats cards
+      - Add index file for organized widget exports
+      ```
+  - **ブランチ戦略**:
+    - 新規作成するブランチ名は、以下の形式を使用すること:
+      - `feature/` 機能追加
+      - `fix/` バグ修正
+      - `chore/` 雑多な変更
+    - また、通常、`dev`ブランチをベースにして作業を行うこと。
+  - **プルリクエスト**:
+    - プルリクエストのタイトルは、コミットメッセージの要約と同様の形式を使用すること。
+    - プルリクエストの説明には、変更内容の概要、目的、影響範囲を記述すること。

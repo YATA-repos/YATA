@@ -25,6 +25,38 @@
 
 ## Backlog
 
+### [Refactor] base_repository.dart設計課題の解決
+
+- **Priority**: P1
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: base_repository.dartの19箇所の設計検討事項（`// *`コメント）と14箇所の疑問点（`// ?`コメント）を解決し、Repository層の設計を確定させる
+- **Steps**:
+  1. 設計検討事項19箇所の内容と影響範囲を調査
+  2. 疑問点14箇所の技術的妥当性を検証
+  3. 各項目の解決方向性を決定（事前定義、エラーハンドリング詳細化等）
+  4. 優先度付けと段階的実装計画の策定
+  5. 高優先度項目から順次実装・検証
+  6. Repository層のベストプラクティス文書化
+- **Description**: base_repository.dartに散在する設計検討事項と疑問点を体系的に解決。Repository層の設計を確定させ、今後の開発における一貫性を確保する。主要な検討項目は事前定義の必要性、エラーハンドリングの詳細化、クエリメソッドの最適化など
+
+### [Enhancement] コード品質改善（警告コメント解決・命名規則修正）
+
+- **Priority**: P2  
+- **Size**: S
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: 重要警告コメント3箇所の解決とDart命名規則違反の修正を行い、コード品質の一貫性を向上させる
+- **Steps**:
+  1. menu_service.dart:256の要件調整事項を確認・解決
+  2. auth_config.dart:83の認証設定妥当性を検証・修正
+  3. query_utils.dart:5のLoggerMixin使用不可問題の代替案実装
+  4. コードベース全体での命名規則違反箇所を特定・修正
+  5. 各修正点の影響範囲確認とテスト実施
+  6. 警告コメントの削除と改善内容の文書化
+- **Description**: コード内の重要警告コメント3箇所を調査・解決し、併せてanalyze_result.mdで特定された命名規則の軽微な違反も修正。要件の明確化、認証設定の検証、ログ機能の代替実装、命名の一貫性向上を通じて、コード品質を総合的に改善する
+
 ### [Enhancement] TODO.mdタスク管理コマンドの実装
 
 - **Priority**: P2
@@ -33,10 +65,11 @@
 - **Dependencies**: None
 - **Goal**: Claude CodeとGitHub Copilot用のTODO.mdタスク管理コマンド（追加・お任せ実装・指定実装）を作成し、開発効率を向上させる
 - **Steps**:
-  1. /todo-add コマンドの実装（対話式タスク追加）
-  2. /todo-auto コマンドの実装（Ready→In Progress→完了の自動化）
-  3. /todo-do コマンドの実装（タイトル検索ベースの指定実装）
-  4. 各コマンドのテストと動作確認
+- 1. /todo-add-auto コマンドの実装（現在のコードベースから自動的にタスクを追加）
+  2. /todo-add コマンドの実装（対話式タスク追加）
+  3. /todo-auto コマンドの実装（Ready→In Progress→完了の自動化）
+  4. /todo-do コマンドの実装（タイトル検索ベースの指定実装）
+  5. 各コマンドのテストと動作確認
 - **Description**: TODO.mdの運用を効率化するため、AIエージェント用のスラッシュコマンドを実装。タスクの追加、自動選択実装、指定実装の3つの機能を提供し、開発ワークフローを改善する
 
 ### [Refactor] 基本UIコンポーネントのレビューと改善
@@ -103,6 +136,21 @@
   6. エラー追跡とデバッグ効率向上のための改善
   7. ログ統計情報ダッシュボード機能の検討
 - **Description**: 既存の高度なログシステムをさらに最適化し、運用効率とデバッグ効率を向上させる改善
+
+### [Enhancement] stream_manager_mixinのメモリリーク対策強化
+
+- **Priority**: P2
+- **Size**: S
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: StreamSubscriptionとStreamControllerの適切な管理を保証し、メモリリークリスクを完全に排除する
+- **Steps**:
+  1. stream_manager_mixin.dartの現在の実装を詳細調査
+  2. 使用箇所でのdispose処理の適切性を確認
+  3. メモリリーク検出のためのテストケース作成
+  4. 必要に応じて追加のセーフガード機能を実装
+  5. 使用ガイドラインの文書化
+- **Description**: lib/core/utils/stream_manager_mixin.dartでのStreamSubscriptionとStreamControllerの管理は適切に実装されているが、使用箇所での適切なdisposeがメモリリーク防止に重要。さらなる安全性向上のための対策を実施
 
 ---
 
