@@ -26,6 +26,7 @@ dependencies:
   gotrue: ^2.13.0
   file_picker: ^8.1.6
   csv: ^6.0.0
+  window_manager: ^0.5.1
   # intl: ^0.20.2
 
 dev_dependencies:
