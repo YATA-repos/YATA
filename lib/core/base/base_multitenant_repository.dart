@@ -34,6 +34,9 @@ abstract class BaseMultiTenantRepository<T extends BaseModel, ID> extends BaseRe
     }
   }
 
+  /// パブリックな現在ユーザーID取得（RepositoryCacheMixin用）
+  String? get currentUserId => _currentUserId;
+
   /// 認証チェック付きユーザーID取得
   String _requireAuthenticatedUserId() {
     final String? userId = _currentUserId;

@@ -42,7 +42,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   // =================================================================
 
   /// 単一キーを主キーマップに正規化（型安全）
-  PrimaryKeyMap _normalizeKey(dynamic key) {
+  PrimaryKeyMap _normalizeKey(ID key) {
     // 型検証を最初に実行
     if (!TypeValidator.isValidIdType(key)) {
       logError("Invalid ID type provided: ${key.runtimeType}");
@@ -67,7 +67,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     try {
       logDebug("Finding single entity in table: $tableName");
 
-      PostgrestFilterBuilder<dynamic> query = _table.select();
+      PostgrestFilterBuilder<List<Map<String, dynamic>>> query = _table.select();
 
       if (filters != null && filters.isNotEmpty) {
         query = QueryUtils.applyFilters(query, filters);
@@ -105,7 +105,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         throw ArgumentError("主キーカラム '$column' がキーマップに見つかりません");
       }
 
-      final dynamic value = keyMap[column];
+      final Object? value = keyMap[column];
       if (value is String || value is int || value is double || value is bool) {
         result = result.eq(column, value as Object);
       } else {
@@ -391,7 +391,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   Future<bool> existsById(ID id) async {
     try {
       final PrimaryKeyMap keyMap = _normalizeKey(id);
-      final PostgrestResponse<dynamic> response = await _applyPrimaryKey(
+      final PostgrestResponse<List<Map<String, dynamic>>> response = await _applyPrimaryKey(
         _table.select(primaryKeyColumns.join(", ")),
         keyMap,
       ).limit(1).count(); // ? `limit(1)`のカウントでいいんだっけ?existsみたいなの無かった？
@@ -410,7 +410,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
   /// 主キーマップによってエンティティの存在を確認
   Future<bool> existsByPrimaryKey(PrimaryKeyMap keyMap) async {
     try {
-      final PostgrestResponse<dynamic> response = await _applyPrimaryKey(
+      final PostgrestResponse<List<Map<String, dynamic>>> response = await _applyPrimaryKey(
         _table.select(primaryKeyColumns.join(", ")),
         keyMap,
       ).limit(1).count(); // ? existsByIdと同様の疑問
@@ -472,27 +472,25 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       logDebug("Finding entities in table: $tableName (limit: $limit, offset: $offset)");
 
       // ベースクエリを構築
-      PostgrestTransformBuilder<List<Map<String, dynamic>>> query = _table.select().range(
+      PostgrestFilterBuilder<List<Map<String, dynamic>>> query = _table.select();
+
+      // フィルタ条件を適用
+      if (filters != null && filters.isNotEmpty) {
+        query = QueryUtils.applyFilters(query, filters);
+      }
+
+      // rangeを適用してTransformBuilderに変換
+      PostgrestTransformBuilder<List<Map<String, dynamic>>> transformQuery = query.range(
         offset,
         offset + limit - 1,
       );
 
-      // フィルタ条件を適用
-      if (filters != null && filters.isNotEmpty) {
-        query =
-            QueryUtils.applyFilters(
-                  query as PostgrestFilterBuilder<List<Map<String, Object?>>>,
-                  filters,
-                )
-                as PostgrestTransformBuilder<List<Map<String, dynamic>>>;
-      }
-
       // ソート条件を適用
       if (orderBy != null && orderBy.isNotEmpty) {
-        query = QueryUtils.applyOrderBys(query, orderBy);
+        transformQuery = QueryUtils.applyOrderBys(transformQuery, orderBy);
       }
 
-      final List<Map<String, dynamic>> response = await query;
+      final List<Map<String, dynamic>> response = await transformQuery;
 
       logDebug("Found ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
@@ -513,9 +511,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       if (filters != null && filters.isNotEmpty) {
         // 条件付きカウントの場合
         logDebug("Counting entities with condition in table: $tableName");
-        final PostgrestFilterBuilder<dynamic> baseQuery = _table.select();
-        final PostgrestFilterBuilder<dynamic> query = QueryUtils.applyFilters(baseQuery, filters);
-        final PostgrestResponse<dynamic> response = await query.count();
+        final PostgrestFilterBuilder<List<Map<String, dynamic>>> baseQuery = _table.select();
+        final PostgrestFilterBuilder<List<Map<String, dynamic>>> query = QueryUtils.applyFilters(baseQuery, filters);
+        final PostgrestResponse<List<Map<String, dynamic>>> response = await query.count();
         logDebug("Counted ${response.count} entities in table: $tableName");
         return response.count;
       } else {
