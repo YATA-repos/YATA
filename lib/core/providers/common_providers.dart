@@ -64,7 +64,8 @@ class GlobalLoading extends _$GlobalLoading {
   /// ローディング状態を一時的に設定（指定時間後に自動停止）
   void setTemporaryLoading(Duration duration) {
     state = true;
-    Future.delayed(duration, () {
+    // ignore: unused_local_variable
+    final Future<void> delayed = Future<void>.delayed(duration, () {
       state = false;
     });
     ref.onDispose(() {
@@ -117,7 +118,8 @@ class SuccessMessage extends _$SuccessMessage {
   void setMessage(String message) {
     state = message;
     // 5秒後に自動的にクリア
-    Future.delayed(AppConfig.messageDisplayDuration, clearMessage);
+    // ignore: unused_local_variable
+    final Future<void> delayed = Future<void>.delayed(AppConfig.messageDisplayDuration, clearMessage);
     ref.onDispose(() {
       // プロバイダー破棄時にタイマーをキャンセル
     });
@@ -180,6 +182,132 @@ class WarningMessage extends _$WarningMessage {
 
   /// メッセージの有無を確認
   bool get hasMessage => state != null;
+}
+
+/// キャッシュ状態データクラス
+class CacheStatusData {
+  const CacheStatusData({
+    this.enabled = false,
+    this.memoryItems = 0,
+    this.memorySizeMB = 0.0,
+    this.ttlItems = 0,
+    this.lastCleanup,
+    this.lastUpdated,
+    this.lastCleared,
+  });
+
+  final bool enabled;
+  final int memoryItems;
+  final double memorySizeMB;
+  final int ttlItems;
+  final DateTime? lastCleanup;
+  final DateTime? lastUpdated;
+  final DateTime? lastCleared;
+
+  CacheStatusData copyWith({
+    bool? enabled,
+    int? memoryItems,
+    double? memorySizeMB,
+    int? ttlItems,
+    DateTime? lastCleanup,
+    DateTime? lastUpdated,
+    DateTime? lastCleared,
+  }) => CacheStatusData(
+    enabled: enabled ?? this.enabled,
+    memoryItems: memoryItems ?? this.memoryItems,
+    memorySizeMB: memorySizeMB ?? this.memorySizeMB,
+    ttlItems: ttlItems ?? this.ttlItems,
+    lastCleanup: lastCleanup ?? this.lastCleanup,
+    lastUpdated: lastUpdated ?? this.lastUpdated,
+    lastCleared: lastCleared ?? this.lastCleared,
+  );
+}
+
+/// キャッシュ状態管理プロバイダー
+/// UI層でのキャッシュ状態表示用（Repository層の統計情報を表示）
+@riverpod
+class CacheStatus extends _$CacheStatus {
+  @override
+  CacheStatusData build() => const CacheStatusData();
+
+  /// キャッシュ統計情報の更新
+  /// Repository層から呼び出される（間接的にService経由）
+  void updateStats(Map<String, dynamic> stats) {
+    state = state.copyWith(
+      enabled: true,
+      memoryItems: stats["memory_items"] as int? ?? state.memoryItems,
+      memorySizeMB: stats["memory_size_mb"] as double? ?? state.memorySizeMB,
+      ttlItems: stats["ttl_items"] as int? ?? state.ttlItems,
+      lastUpdated: DateTime.now(),
+    );
+  }
+
+  /// キャッシュクリア完了通知
+  void notifyCacheCleared() {
+    state = state.copyWith(
+      memoryItems: 0,
+      ttlItems: 0,
+      lastCleared: DateTime.now(),
+    );
+  }
+}
+
+/// キャッシュパフォーマンスデータクラス
+class CachePerformanceData {
+  const CachePerformanceData({
+    this.hits = 0,
+    this.misses = 0,
+    this.totalRequests = 0,
+  });
+
+  final int hits;
+  final int misses;
+  final int totalRequests;
+
+  /// ヒット率計算
+  double get hitRate => totalRequests > 0 ? hits / totalRequests : 0.0;
+
+  /// ミス率計算
+  double get missRate => totalRequests > 0 ? misses / totalRequests : 0.0;
+
+  CachePerformanceData copyWith({
+    int? hits,
+    int? misses,
+    int? totalRequests,
+  }) => CachePerformanceData(
+    hits: hits ?? this.hits,
+    misses: misses ?? this.misses,
+    totalRequests: totalRequests ?? this.totalRequests,
+  );
+}
+
+/// キャッシュパフォーマンス監視プロバイダー
+/// UI層でのパフォーマンス表示用
+@riverpod 
+class CachePerformance extends _$CachePerformance {
+  @override
+  CachePerformanceData build() => const CachePerformanceData();
+
+  /// キャッシュヒット記録
+  void recordHit() {
+    state = state.copyWith(
+      hits: state.hits + 1,
+      totalRequests: state.totalRequests + 1,
+    );
+  }
+
+  /// キャッシュミス記録
+  void recordMiss() {
+    state = state.copyWith(
+      misses: state.misses + 1,
+      totalRequests: state.totalRequests + 1,
+    );
+  }
+
+  /// 統計リセット
+  void resetStats() {
+    state = const CachePerformanceData();
+  }
 }
 
 /// 確認ダイアログ状態プロバイダー

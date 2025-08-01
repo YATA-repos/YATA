@@ -30,8 +30,8 @@ class QueryUtils {
   };
 
   /// 単一フィルタ条件をクエリに適用
-  static PostgrestFilterBuilder<dynamic> _applySingleFilter(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applySingleFilter<T>(
+    PostgrestFilterBuilder<T> query,
     FilterCondition condition,
   ) {
     // 演算子の確認
@@ -170,8 +170,8 @@ class QueryUtils {
   }
 
   /// 論理条件をクエリに適用（階層化対応済み）
-  static PostgrestFilterBuilder<dynamic> _applyLogicalCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyLogicalCondition<T>(
+    PostgrestFilterBuilder<T> query,
     LogicalCondition condition,
   ) {
     if (condition is AndCondition) {
@@ -191,11 +191,11 @@ class QueryUtils {
   }
 
   /// AND条件を適用
-  static PostgrestFilterBuilder<dynamic> _applyAndCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyAndCondition<T>(
+    PostgrestFilterBuilder<T> query,
     AndCondition condition,
   ) {
-    PostgrestFilterBuilder<dynamic> result = query;
+    PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter cond in condition.conditions) {
       result = applyFilter(result, cond);
     }
@@ -203,8 +203,8 @@ class QueryUtils {
   }
 
   /// OR条件を適用
-  static PostgrestFilterBuilder<dynamic> _applyOrCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyOrCondition<T>(
+    PostgrestFilterBuilder<T> query,
     OrCondition condition,
   ) {
     final List<FilterCondition> filterConditions = <FilterCondition>[];
@@ -241,8 +241,8 @@ class QueryUtils {
   }
 
   /// 複合条件を適用
-  static PostgrestFilterBuilder<dynamic> _applyComplexCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyComplexCondition<T>(
+    PostgrestFilterBuilder<T> query,
     ComplexCondition condition,
   ) {
     if (condition.operator == LogicalOperator.and) {
@@ -253,8 +253,8 @@ class QueryUtils {
   }
 
   /// フィルタ条件をクエリに適用
-  static PostgrestFilterBuilder<dynamic> applyFilter(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> applyFilter<T>(
+    PostgrestFilterBuilder<T> query,
     QueryFilter filter,
   ) {
     if (filter is FilterCondition) {
@@ -272,12 +272,12 @@ class QueryUtils {
   }
 
   /// 複数のフィルタ条件をクエリに適用（AND結合）
-  static PostgrestFilterBuilder<dynamic> applyFilters(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> applyFilters<T>(
+    PostgrestFilterBuilder<T> query,
     List<QueryFilter> filters,
   ) {
     LogService.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
-    PostgrestFilterBuilder<dynamic> result = query;
+    PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter filter in filters) {
       result = applyFilter(result, filter);
     }
