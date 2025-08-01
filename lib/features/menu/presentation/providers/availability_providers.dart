@@ -128,7 +128,7 @@ class AvailabilityMonitor extends _$AvailabilityMonitor {
     }
 
     // プロバイダーを無効化してリフレッシュ
-    Future.delayed(interval, () {
+    Future<void>.delayed(interval, () {
       if (state) {
         ref.invalidate(bulkMenuAvailabilityProvider);
         _scheduleNextCheck(interval);
