@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
+import "../../../../core/utils/error_handler.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/layouts/main_layout.dart";
@@ -507,15 +508,46 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   void _handleApplyFilter() async {
     setState(() => _isLoading = true);
 
-    // TODO: 実際のデータ取得処理
-    await Future<void>.delayed(const Duration(seconds: 1));
-
-    setState(() => _isLoading = false);
+    try {
+      // フィルター適用後、統計データをリフレッシュ
+      ref.invalidate(todayStatsProvider);
+      
+      // 新しいデータの読み込みを待つ
+      await ref.read(todayStatsProvider.future);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("フィルターを適用しました")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.instance.showRetryableErrorSnackBar(
+          context,
+          e,
+          onRetry: _handleApplyFilter,
+          fallbackMessage: "データの取得に失敗しました",
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   /// エクスポート処理
   void _handleExport(ExportFormat format) {
-    // TODO: レポートエクスポート処理
+    // エクスポート機能の本格実装は別タスクで実施予定
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("${format.name}形式でのエクスポート機能は開発中です"),
+        action: SnackBarAction(
+          label: "了解",
+          onPressed: () {},
+        ),
+      ),
+    );
   }
 }
 

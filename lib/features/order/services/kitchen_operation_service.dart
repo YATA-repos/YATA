@@ -243,8 +243,10 @@ class KitchenOperationService with LoggerMixin {
 
   /// 実際の調理時間を取得（分）
   double? getActualPrepTimeMinutes(Order order) {
-    if (order.startedPreparingAt != null && order.readyAt != null) {
-      final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
+    final DateTime? startedAt = order.startedPreparingAt;
+    final DateTime? readyAt = order.readyAt;
+    if (startedAt != null && readyAt != null) {
+      final Duration delta = readyAt.difference(startedAt);
       final double minutes = delta.inSeconds / 60.0;
       logDebug("Actual prep time calculated: ${minutes.toStringAsFixed(1)} minutes");
       return minutes;

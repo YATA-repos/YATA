@@ -147,7 +147,9 @@ class OrderStatusManager extends _$OrderStatusManager {
           // 完了は提供後の自動遷移であり、直接のメソッドはない
           // ここでは簡単に成功として扱う
           return true;
-        default:
+        case OrderStatus.cancelled:
+        case OrderStatus.refunded:
+        case OrderStatus.pending:
           // その他のステータスは直接サポートされていない
           return false;
       }
@@ -165,15 +167,15 @@ class OrderStatusManager extends _$OrderStatusManager {
     }
 
     // 通常の進行順序をチェック
-    final Map<OrderStatus, List> validTransitions = <OrderStatus, List>{
+    final Map<OrderStatus, List<OrderStatus>> validTransitions = <OrderStatus, List<OrderStatus>>{
       OrderStatus.pending: <OrderStatus>[OrderStatus.confirmed, OrderStatus.cancelled],
       OrderStatus.confirmed: <OrderStatus>[OrderStatus.preparing, OrderStatus.cancelled],
       OrderStatus.preparing: <OrderStatus>[OrderStatus.ready, OrderStatus.cancelled],
       OrderStatus.ready: <OrderStatus>[OrderStatus.delivered, OrderStatus.cancelled],
       OrderStatus.delivered: <OrderStatus>[OrderStatus.completed],
-      OrderStatus.completed: <dynamic>[], // 完了からは変更不可
+      OrderStatus.completed: <OrderStatus>[], // 完了からは変更不可
       OrderStatus.cancelled: <OrderStatus>[OrderStatus.refunded],
-      OrderStatus.refunded: <dynamic>[], // 返金済みからは変更不可
+      OrderStatus.refunded: <OrderStatus>[], // 返金済みからは変更不可
     };
 
     return validTransitions[from]?.contains(to) ?? false;
@@ -203,7 +205,10 @@ class OrderStatusManager extends _$OrderStatusManager {
         return "注文${change.orderId.substring(0, 8)}がキャンセルされました";
       case OrderStatus.completed:
         return "注文${change.orderId.substring(0, 8)}が完了しました";
-      default:
+      case OrderStatus.pending:
+      case OrderStatus.confirmed:
+      case OrderStatus.preparing:
+      case OrderStatus.refunded:
         return "注文${change.orderId.substring(0, 8)}のステータスが${change.newStatus.displayName}に更新されました";
     }
   }
@@ -290,7 +295,9 @@ class OrderWorkflowManager extends _$OrderWorkflowManager {
         return OrderStatus.delivered;
       case OrderStatus.delivered:
         return OrderStatus.completed;
-      default:
+      case OrderStatus.completed:
+      case OrderStatus.cancelled:
+      case OrderStatus.refunded:
         return null;
     }
   }
@@ -306,7 +313,10 @@ class OrderWorkflowManager extends _$OrderWorkflowManager {
         return OrderStatus.preparing;
       case OrderStatus.delivered:
         return OrderStatus.ready;
-      default:
+      case OrderStatus.pending:
+      case OrderStatus.completed:
+      case OrderStatus.cancelled:
+      case OrderStatus.refunded:
         return null;
     }
   }

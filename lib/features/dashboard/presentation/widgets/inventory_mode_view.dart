@@ -7,6 +7,7 @@ import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_text_theme.dart";
+import "../../../../shared/widgets/buttons/app_button.dart";
 import "../../../../shared/widgets/cards/app_card.dart";
 import "../../../../shared/widgets/cards/stats_card.dart";
 import "../../../../shared/widgets/common/loading_indicator.dart";
@@ -18,14 +19,21 @@ import "../../../inventory/presentation/providers/inventory_providers.dart";
 ///
 /// リアルタイム在庫状況と統計情報を表示
 /// 在庫アラートや低在庫アイテムの確認が可能
-class InventoryModeView extends ConsumerWidget {
+class InventoryModeView extends ConsumerStatefulWidget {
   const InventoryModeView({super.key});
 
-  String? _getUserId(WidgetRef ref) => ref.read(currentUserProvider)?.id;
+  @override
+  ConsumerState<InventoryModeView> createState() => _InventoryModeViewState();
+}
+
+class _InventoryModeViewState extends ConsumerState<InventoryModeView> {
+  bool _isLoading = false;
+
+  String? _getUserId() => ref.read(currentUserProvider)?.id;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final String? userId = _getUserId(ref);
+  Widget build(BuildContext context) {
+    final String? userId = _getUserId();
 
     if (userId == null) {
       return const Center(child: Text(AppStrings.textUserInfoNotAvailable));
@@ -36,11 +44,24 @@ class InventoryModeView extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // 在庫統計サマリー
-          Text("在庫状況サマリー", style: AppTextTheme.cardTitle),
+          // 在庫統計サマリーとリフレッシュボタン
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text("在庫状況サマリー", style: AppTextTheme.cardTitle),
+              AppButton(
+                text: "リフレッシュ",
+                onPressed: _handleRefresh,
+                variant: ButtonVariant.outline,
+                size: ButtonSize.small,
+                icon: const Icon(LucideIcons.refreshCw),
+                isLoading: _isLoading,
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
 
-          _buildInventoryStatsRow(context, ref, userId),
+          _buildInventoryStatsRow(context, userId),
 
           const SizedBox(height: 24),
 
@@ -48,14 +69,40 @@ class InventoryModeView extends ConsumerWidget {
           Text("在庫アイテム", style: AppTextTheme.cardTitle),
           const SizedBox(height: 16),
 
-          Expanded(child: _buildInventoryList(context, ref, userId)),
+          Expanded(child: _buildInventoryList(context, userId)),
         ],
       ),
     );
   }
 
+  /// リフレッシュ処理
+  void _handleRefresh() async {
+    final String? userId = _getUserId();
+    if (userId == null) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // プロバイダーを無効化して再取得をトリガー
+      ref.invalidate(materialsWithStockInfoProvider(null, userId));
+
+      // 成功メッセージを表示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("在庫データを更新しました"), backgroundColor: AppColors.success),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("更新に失敗しました: $e"), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   /// 在庫統計行
-  Widget _buildInventoryStatsRow(BuildContext context, WidgetRef ref, String userId) => ref
+  Widget _buildInventoryStatsRow(BuildContext context, String userId) => ref
         .watch(materialsWithStockInfoProvider(null, userId))
         .when(
           data: (List<MaterialStockInfo> materials) {
@@ -153,7 +200,7 @@ class InventoryModeView extends ConsumerWidget {
       );
 
   /// 在庫アイテムリスト
-  Widget _buildInventoryList(BuildContext context, WidgetRef ref, String userId) => ref
+  Widget _buildInventoryList(BuildContext context, String userId) => ref
         .watch(materialsWithStockInfoProvider(null, userId))
         .when(
           data: (List<MaterialStockInfo> materials) => GridView.builder(

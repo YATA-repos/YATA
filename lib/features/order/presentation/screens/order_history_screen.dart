@@ -178,7 +178,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                       children: <Widget>[
                         Icon(_getStatusIcon(status), size: 16, color: _getStatusColor(status)),
                         AppLayout.hSpacerSmall,
-                        Text(_getStatusText(status)),
+                        Flexible(
+                          child: Text(
+                            _getStatusText(status),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   )),
@@ -372,8 +377,17 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
 
   /// ソート処理
   void _handleSort(String column, bool ascending) {
-    // ソート機能は現在未実装
-    // TODO: 必要に応じてソート機能を実装
+    // ソート機能は現在未実装（将来的な拡張機能として検討中）
+    // 現在は日付・ステータスフィルターで十分な機能を提供
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("$column列のソート機能は開発予定です"),
+        action: SnackBarAction(
+          label: "了解",
+          onPressed: () {},
+        ),
+      ),
+    );
   }
 
   /// フィルター適用
@@ -463,14 +477,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       case OrderStatus.cancelled:
         return LucideIcons.xCircle;
       case OrderStatus.confirmed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return LucideIcons.checkCircle2;
       case OrderStatus.completed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return LucideIcons.checkCheck;
       case OrderStatus.refunded:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return LucideIcons.refreshCcw;
     }
   }
 
@@ -488,14 +499,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       case OrderStatus.cancelled:
         return AppColors.danger;
       case OrderStatus.confirmed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return AppColors.primary;
       case OrderStatus.completed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return AppColors.success;
       case OrderStatus.refunded:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return AppColors.muted;
     }
   }
 
@@ -513,14 +521,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       case OrderStatus.cancelled:
         return "キャンセル";
       case OrderStatus.confirmed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "確認済み";
       case OrderStatus.completed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "完了";
       case OrderStatus.refunded:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "返金済み";
     }
   }
 
@@ -583,8 +588,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       case ExportFormat.pdf:
         return "PDF形式の注文履歴データ（${orders.length}件）";
       case ExportFormat.json:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "JSON形式の注文履歴データ（${orders.length}件）";
     }
   }
 }

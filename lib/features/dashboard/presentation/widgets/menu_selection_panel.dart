@@ -3,8 +3,10 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/utils/responsive_helper.dart";
+import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_text_theme.dart";
+import "../../../../shared/widgets/buttons/app_button.dart";
 import "../../../../shared/widgets/common/loading_indicator.dart";
 import "../../../../shared/widgets/filters/category_filter.dart";
 import "../../../../shared/widgets/forms/search_field.dart";
@@ -28,6 +30,7 @@ class MenuSelectionPanel extends ConsumerStatefulWidget {
 class _MenuSelectionPanelState extends ConsumerState<MenuSelectionPanel> {
   String searchQuery = "";
   List<String> selectedCategories = <String>[];
+  bool _isLoading = false;
 
   String? get userId => ref.read(currentUserProvider)?.id;
 
@@ -37,8 +40,21 @@ class _MenuSelectionPanelState extends ConsumerState<MenuSelectionPanel> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // ヘッダー
-        Text("メニュー選択", style: AppTextTheme.cardTitle),
+        // ヘッダーとリフレッシュボタン
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text("メニュー選択", style: AppTextTheme.cardTitle),
+            AppButton(
+              text: "リフレッシュ",
+              onPressed: _handleRefresh,
+              variant: ButtonVariant.outline,
+              size: ButtonSize.small,
+              icon: const Icon(LucideIcons.refreshCw),
+              isLoading: _isLoading,
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
 
         // 検索・フィルター
@@ -196,6 +212,43 @@ class _MenuSelectionPanelState extends ConsumerState<MenuSelectionPanel> {
     }
 
     return items.where((MenuItem item) => selectedCategories.contains(item.categoryId)).toList();
+  }
+
+  /// リフレッシュ処理
+  void _handleRefresh() async {
+    final String? userId = this.userId;
+    if (userId == null) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // メニュー関連のプロバイダーを無効化して再取得をトリガー
+      ref..invalidate(menuItemsProvider(null))
+      ..invalidate(menuCategoriesProvider);
+
+      // 検索結果もクリア
+      if (searchQuery.isNotEmpty) {
+        ref.invalidate(searchMenuItemsProvider(searchQuery, userId));
+      }
+
+      // カテゴリ別のメニューアイテムもクリア
+      for (final String categoryId in selectedCategories) {
+        ref.invalidate(menuItemsProvider(categoryId));
+      }
+
+      // 成功メッセージを表示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("メニューデータを更新しました"), backgroundColor: AppColors.success),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("更新に失敗しました: $e"), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   /// カートに追加

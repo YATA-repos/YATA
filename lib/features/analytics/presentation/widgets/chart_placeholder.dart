@@ -1,6 +1,8 @@
 import "package:flutter/material.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../../core/constants/app_constants.dart";
+
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_text_theme.dart";
 import "../../../../shared/widgets/cards/app_card.dart";
@@ -268,18 +270,18 @@ class ChartPlaceholder extends StatelessWidget {
     
     // 文字列から数値を抽出 (例: "¥1,000" -> 1000, "45個" -> 45)
     final String stringValue = value.toString();
-    final RegExp numRegex = RegExp(r"[\d,]+");
+    final RegExp numRegex = RegExp(AppConstants.numericExtractionPattern);
     final Match? match = numRegex.firstMatch(stringValue);
     
     if (match != null) {
-      final String numString = match.group(0)!.replaceAll(",", "");
+      final String numString = match.group(0)!.replaceAll(AppConstants.commaChar, "");
       return double.tryParse(numString) ?? 0.0;
     }
     
     return 0.0;
   }
 
-  String _truncateLabel(String label, {int maxLength = 8}) {
+  String _truncateLabel(String label, {int maxLength = AppConstants.chartLabelMaxLength}) {
     if (label.length <= maxLength) {
       return label;
     }

@@ -52,8 +52,10 @@ class AnalyticsService with LoggerMixin {
       // 平均調理時間を計算
       final List<int> prepTimes = <int>[];
       for (final Order order in completedOrders) {
-        if (order.startedPreparingAt != null && order.readyAt != null) {
-          final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
+        final DateTime? startedAt = order.startedPreparingAt;
+        final DateTime? readyAt = order.readyAt;
+        if (startedAt != null && readyAt != null) {
+          final Duration delta = readyAt.difference(startedAt);
           prepTimes.add((delta.inSeconds / 60).floor());
         }
       }
@@ -167,8 +169,10 @@ class AnalyticsService with LoggerMixin {
     // 調理時間を計算
     final List<double> prepTimes = <double>[];
     for (final Order order in completedOrders) {
-      if (order.startedPreparingAt != null && order.readyAt != null) {
-        final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
+      final DateTime? startedAt = order.startedPreparingAt;
+      final DateTime? readyAt = order.readyAt;
+      if (startedAt != null && readyAt != null) {
+        final Duration delta = readyAt.difference(startedAt);
         prepTimes.add(delta.inSeconds / 60.0); // 分単位
       }
     }
@@ -230,8 +234,9 @@ class AnalyticsService with LoggerMixin {
       // 日別売上を計算
       final Map<String, int> dailyRevenue = <String, int>{};
       for (final Order order in completedOrders) {
-        final String dateKey = order.completedAt != null
-            ? order.completedAt!.toIso8601String().split("T")[0]
+        final DateTime? completedAt = order.completedAt;
+        final String dateKey = completedAt != null
+            ? completedAt.toIso8601String().split("T")[0]
             : order.orderedAt.toIso8601String().split("T")[0];
         dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + order.totalAmount;
       }
@@ -282,8 +287,9 @@ class AnalyticsService with LoggerMixin {
     final Map<String, double> dailyConsumption = <String, double>{};
 
     for (final StockTransaction tx in consumptionTransactions) {
-      final String dateKey = tx.createdAt != null
-          ? tx.createdAt!.toIso8601String().split("T")[0]
+      final DateTime? createdAt = tx.createdAt;
+      final String dateKey = createdAt != null
+          ? createdAt.toIso8601String().split("T")[0]
           : DateTime.now().toIso8601String().split("T")[0];
       dailyConsumption[dateKey] = (dailyConsumption[dateKey] ?? 0.0) + tx.changeAmount.abs();
     }
@@ -325,12 +331,14 @@ class AnalyticsService with LoggerMixin {
     // 日別売上を計算
     final Map<String, Map<String, int>> dailySales = <String, Map<String, int>>{};
     for (final OrderItem item in orderItems) {
-      final String dateKey = item.createdAt != null
-          ? item.createdAt!.toIso8601String().split("T")[0]
+      final DateTime? createdAt = item.createdAt;
+      final String dateKey = createdAt != null
+          ? createdAt.toIso8601String().split("T")[0]
           : DateTime.now().toIso8601String().split("T")[0];
       dailySales[dateKey] ??= <String, int>{"quantity": 0, "revenue": 0};
-      dailySales[dateKey]!["quantity"] = dailySales[dateKey]!["quantity"]! + item.quantity;
-      dailySales[dateKey]!["revenue"] = dailySales[dateKey]!["revenue"]! + item.subtotal;
+      final Map<String, int> dailyData = dailySales[dateKey]!;
+      dailyData["quantity"] = dailyData["quantity"]! + item.quantity;
+      dailyData["revenue"] = dailyData["revenue"]! + item.subtotal;
     }
 
     return <String, dynamic>{
@@ -365,14 +373,14 @@ class AnalyticsService with LoggerMixin {
 
     // トレンド計算
     final double avgDailyRevenue = comparisonDays > 0
-        ? (comparisonRevenue["total_revenue"] as int) / comparisonDays
+        ? (_parseToInt(comparisonRevenue["total_revenue"]) ?? 0) / comparisonDays
         : 0.0;
     final double revenueTrend = avgDailyRevenue > 0
         ? ((targetStats.totalRevenue - avgDailyRevenue) / avgDailyRevenue * 100)
         : 0.0;
 
     final double avgDailyOrders = comparisonDays > 0
-        ? (comparisonRevenue["total_orders"] as int) / comparisonDays
+        ? (_parseToInt(comparisonRevenue["total_orders"]) ?? 0) / comparisonDays
         : 0.0;
     final double orderTrend = avgDailyOrders > 0
         ? ((targetStats.completedOrders - avgDailyOrders) / avgDailyOrders * 100)
@@ -397,5 +405,25 @@ class AnalyticsService with LoggerMixin {
         "avg_daily_orders": (avgDailyOrders * 100).round() / 100.0,
       },
     };
+  }
+
+  /// 安全なint変換ヘルパー
+  int? _parseToInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is double) {
+      return value.toInt();
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 }

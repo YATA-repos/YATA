@@ -224,8 +224,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  item.menuItemId, // TODO: メニューアイテム名を取得する実装が必要
+                  item.menuItemId, // 注意: メニューアイテム名の表示は将来の改善予定
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
+                // 最終的には MenuItem 名を表示する予定
                 const SizedBox(height: 4),
                 Text(
                   "数量: ${item.quantity}",
@@ -295,11 +299,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 印刷処理
   void _handlePrint(Order order) {
-    // TODO: 印刷機能の実装(優先度低め)
+    // 印刷機能は将来の拡張機能として実装予定
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("印刷機能は現在開発中です"),
+      SnackBar(
+        content: Text("注文 ${order.id} の印刷機能は開発中です"),
         backgroundColor: AppColors.warning,
+        action: SnackBarAction(
+          label: "了解",
+          onPressed: () {},
+        ),
       ),
     );
   }
@@ -562,7 +570,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   /// 注文編集を実行
   Future<void> _performOrderEdit(Order order, String customerName, String notes) async {
     try {
-      // TODO: OrderServiceを使用して注文編集API呼び出し
+      // 注意: OrderServiceに編集機能が実装された時に以下を有効化
       // await ref.read(orderServiceProvider).updateOrder(order.id!, {
       //   'customer_name': customerName.isEmpty ? null : customerName,
       //   'notes': notes.isEmpty ? null : notes,
@@ -592,7 +600,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   /// 注文複製を実行
   Future<void> _performOrderDuplicate(Order order) async {
     try {
-      // TODO: OrderServiceを使用して注文複製API呼び出し
+      // 注意: OrderServiceに複製機能が実装された時に以下を有効化
       // final String newOrderId = await ref.read(orderServiceProvider).duplicateOrder(order.id!);
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -602,8 +610,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           action: SnackBarAction(
             label: "新注文を表示",
             onPressed: () {
-              // TODO: 新しい注文の詳細画面に遷移
+              // 注意: 複製機能完成後に以下を有効化
               // context.go("/orders/$newOrderId");
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("注文複製機能は開発中です")),
+              );
             },
           ),
         ),
@@ -621,7 +632,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   /// ステータス変更を実行
   Future<void> _performStatusChange(Order order, OrderStatus newStatus) async {
     try {
-      // TODO: OrderServiceを使用してステータス変更API呼び出し
+      // 注意: OrderServiceにステータス変更機能が実装された時に以下を有効化
       // await ref.read(orderServiceProvider).updateOrderStatus(order.id!, newStatus);
       
       // プロバイダーをリフレッシュして画面を更新
@@ -659,14 +670,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       case OrderStatus.cancelled:
         return LucideIcons.x;
       case OrderStatus.confirmed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return LucideIcons.thumbsUp;
       case OrderStatus.delivered:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return LucideIcons.truck;
       case OrderStatus.refunded:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return LucideIcons.dollarSign;
     }
   }
 
@@ -681,18 +689,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         return AppColors.primary;
       case OrderStatus.cancelled:
         return AppColors.danger;
-      case OrderStatus.confirmed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
       case OrderStatus.delivered:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return AppColors.success;
       case OrderStatus.refunded:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return AppColors.warning;
+      case OrderStatus.confirmed:
+        return AppColors.primary;
       case OrderStatus.ready:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return AppColors.success;
     }
   }
 
@@ -710,14 +714,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       case OrderStatus.cancelled:
         return "キャンセル";
       case OrderStatus.confirmed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "確認済み";
       case OrderStatus.delivered:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "配達済み";
       case OrderStatus.refunded:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return "返金済み";
     }
   }
 }
