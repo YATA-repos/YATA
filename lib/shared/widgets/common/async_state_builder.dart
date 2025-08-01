@@ -81,7 +81,7 @@ class SimpleAsyncBuilder<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AsyncStateBuilder<T>(
     value: value,
-    data: (data) => builder(context, data),
+    data: (T data) => builder(context, data),
     loadingMessage: loadingMessage,
   );
 }

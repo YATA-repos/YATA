@@ -35,6 +35,7 @@ class MobileBottomNavigation extends StatelessWidget {
           label: AppStrings.navOrderStatus,
         ),
         BottomNavigationBarItem(icon: Icon(LucideIcons.barChart4), label: AppStrings.navAnalytics),
+        BottomNavigationBarItem(icon: Icon(LucideIcons.utensils), label: AppStrings.navMenu),
       ],
     );
   }
@@ -44,6 +45,7 @@ class MobileBottomNavigation extends StatelessWidget {
     "/orders" => 1,
     "/order-status" => 2,
     "/analytics" => 3,
+    "/menu" => 4,
     _ => 0,
   };
 
@@ -53,6 +55,7 @@ class MobileBottomNavigation extends StatelessWidget {
       1 => "/orders",
       2 => "/order-status",
       3 => "/analytics",
+      4 => "/menu",
       _ => "/",
     };
     context.go(route);

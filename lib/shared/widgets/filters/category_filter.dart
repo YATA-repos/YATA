@@ -322,7 +322,7 @@ class CategoryFilter extends StatelessWidget {
       newSelection = <String>[];
     } else if (allowMultipleSelection) {
       // 複数選択モード
-      newSelection = List.from(selectedCategories);
+      newSelection = List<String>.from(selectedCategories);
       if (newSelection.contains(value)) {
         newSelection.remove(value);
       } else {

@@ -68,6 +68,13 @@ class TopNavigation extends StatelessWidget {
         route: "/inventory",
         isActive: _isCurrentRoute(context, "/inventory"),
       ),
+      const SizedBox(width: 8),
+      NavigationItem(
+        icon: LucideIcons.utensils,
+        label: AppStrings.navMenu,
+        route: "/menu",
+        isActive: _isCurrentRoute(context, "/menu"),
+      ),
     ],
   );
 
@@ -148,6 +155,13 @@ class SideNavigation extends ConsumerWidget {
                   label: AppStrings.navInventory,
                   route: "/inventory",
                   isActive: _isCurrentRoute(context, "/inventory"),
+                ),
+                AppLayout.vSpacerSmall,
+                SideNavigationItem(
+                  icon: LucideIcons.utensils,
+                  label: AppStrings.navMenu,
+                  route: "/menu",
+                  isActive: _isCurrentRoute(context, "/menu"),
                 ),
               ],
             ),

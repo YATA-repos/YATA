@@ -74,8 +74,9 @@ class AuthService with LoggerMixin {
       final local.AuthResponse response = await _authRepository.signInWithGoogle();
 
       if (response.isSuccess && response.user != null) {
-        _updateState(AuthState.authenticated(response.user!));
-        logInfo("Google OAuth authentication successful: ${response.user!.email}");
+        final UserProfile user = response.user!;
+        _updateState(AuthState.authenticated(user));
+        logInfo("Google OAuth authentication successful: ${user.email}");
       } else {
         final String error = response.error ?? "Authentication failed";
         _updateState(AuthState.error(error));
@@ -98,8 +99,9 @@ class AuthService with LoggerMixin {
       final local.AuthResponse response = await _authRepository.handleOAuthCallback(callbackUrl);
 
       if (response.isSuccess && response.user != null) {
-        _updateState(AuthState.authenticated(response.user!));
-        logInfo("OAuth callback processed successfully: ${response.user!.email}");
+        final UserProfile user = response.user!;
+        _updateState(AuthState.authenticated(user));
+        logInfo("OAuth callback processed successfully: ${user.email}");
       } else {
         final String error = response.error ?? "OAuth callback failed";
         _updateState(AuthState.error(error));
@@ -143,8 +145,9 @@ class AuthService with LoggerMixin {
       final local.AuthResponse response = await _authRepository.refreshSession();
 
       if (response.isSuccess && response.user != null) {
-        _updateState(AuthState.authenticated(response.user!));
-        logInfo("Session refreshed successfully: ${response.user!.email}");
+        final UserProfile user = response.user!;
+        _updateState(AuthState.authenticated(user));
+        logInfo("Session refreshed successfully: ${user.email}");
       } else {
         final String error = response.error ?? "Session refresh failed";
         _updateState(AuthState.error(error));
@@ -191,9 +194,7 @@ class AuthService with LoggerMixin {
   int getSessionRemainingSeconds() => _authRepository.getSessionRemainingSeconds();
 
   /// セッションの期限が近いかどうかをチェック（5分以内）
-  bool isSessionExpiringSoon() {
-    return getSessionRemainingSeconds() <= 300; // 5分 = 300秒
-  }
+  bool isSessionExpiringSoon() => getSessionRemainingSeconds() <= 300; // 5分 = 300秒
 
   /// 自動セッション更新を開始
   Timer? _refreshTimer;

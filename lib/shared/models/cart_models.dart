@@ -239,7 +239,7 @@ class CartState {
     List<CartItem> updatedItems;
     if (existingIndex != -1) {
       // 既存アイテムの数量を増加
-      updatedItems = List.from(items);
+      updatedItems = List<CartItem>.from(items);
       updatedItems[existingIndex] = updatedItems[existingIndex].copyWith(
         quantity: updatedItems[existingIndex].quantity + newItem.quantity,
       );

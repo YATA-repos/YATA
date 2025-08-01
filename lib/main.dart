@@ -1,13 +1,15 @@
+import "dart:io";
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:window_manager/window_manager.dart";
 
 import "app/app.dart";
 import "core/infrastructure/supabase/supabase_client.dart";
-import "core/validation/env_validator.dart";
 import "core/logging/log_service.dart";
 import "core/logging/logger_mixin.dart";
+import "core/validation/env_validator.dart";
 
 void main() async {
   // 起動開始の明確な表示
@@ -22,6 +24,34 @@ void main() async {
   debugPrint("DEBUG: [1/6] Initializing Flutter bindings...");
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint("DEBUG: [1/6] ✅ Flutter bindings initialized");
+
+  // Desktopプラットフォームでのウィンドウサイズ設定（800x600）
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    debugPrint("DEBUG: [1/6] Configuring window size for desktop platform...");
+    try {
+      await windowManager.ensureInitialized();
+      
+      const WindowOptions windowOptions = WindowOptions(
+        size: Size(800, 600),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        titleBarStyle: TitleBarStyle.normal,
+        minimumSize: Size(600, 450),
+      );
+      
+      await windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
+      
+      debugPrint("DEBUG: [1/6] ✅ Window configured: 800x600, centered");
+    } catch (e) {
+      debugPrint("DEBUG: [1/6] ⚠️  Window configuration failed: $e");
+    }
+  } else {
+    debugPrint("DEBUG: [1/6] ⚠️  Skipping window configuration (Web/Mobile platform)");
+  }
 
   try {
     // 環境変数の読み込み

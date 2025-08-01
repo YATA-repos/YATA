@@ -6,6 +6,7 @@ import "../features/analytics/presentation/screens/analytics_screen.dart";
 import "../features/auth/presentation/screens/login_screen.dart";
 import "../features/dashboard/presentation/screens/dashboard_screen.dart";
 import "../features/inventory/presentation/screens/detailed_inventory_screen.dart";
+import "../features/menu/presentation/screens/menu_management_screen.dart";
 import "../features/order/presentation/screens/order_detail_screen.dart";
 import "../features/order/presentation/screens/order_history_screen.dart";
 import "../features/order/presentation/screens/order_status_screen.dart";
@@ -51,7 +52,16 @@ class AppRouter {
             path: "/:orderId",
             name: "order-detail",
             builder: (BuildContext context, GoRouterState state) {
-              final String orderId = state.pathParameters["orderId"]!;
+              final String? orderId = state.pathParameters["orderId"];
+              if (orderId == null) {
+                // orderIdが取得できない場合は注文一覧にリダイレクト
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  context.go("/orders");
+                });
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
               return OrderDetailScreen(orderId: orderId);
             },
           ),
@@ -77,6 +87,13 @@ class AppRouter {
         path: "/inventory",
         name: "inventory",
         builder: (BuildContext context, GoRouterState state) => const DetailedInventoryScreen(),
+      ),
+
+      // メニュー管理
+      GoRoute(
+        path: "/menu",
+        name: "menu",
+        builder: (BuildContext context, GoRouterState state) => const MenuManagementScreen(),
       ),
     ],
 
