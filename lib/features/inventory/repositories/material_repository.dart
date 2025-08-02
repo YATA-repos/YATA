@@ -1,7 +1,9 @@
 import "../../../core/base/base_multitenant_repository.dart";
 import "../../../core/cache/cache_strategy.dart";
 import "../../../core/cache/repository_cache_mixin.dart";
+import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
+import "../dto/inventory_dto.dart";
 import "../models/inventory_model.dart";
 
 /// 材料リポジトリ（キャッシュ対応）
@@ -80,5 +82,68 @@ class MaterialRepository extends BaseMultiTenantRepository<Material, String>
     final Material? updatedMaterial = await updateWithCacheInvalidation(materialId, updateData);
 
     return updatedMaterial;
+  }
+
+  /// 在庫情報付きの材料リストを取得
+  Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(
+    List<String>? materialIds,
+    String userId,
+  ) async {
+    List<Material> materials;
+
+    if (materialIds != null && materialIds.isNotEmpty) {
+      // 指定IDの材料を取得
+      materials = await findByIds(materialIds);
+    } else {
+      // 全材料を取得
+      materials = await findCached();
+    }
+
+    // MaterialStockInfoに変換
+    final List<MaterialStockInfo> stockInfoList = <MaterialStockInfo>[];
+    
+    for (final Material material in materials) {
+      final StockLevel stockLevel = _calculateStockLevel(material);
+      final MaterialStockInfo stockInfo = MaterialStockInfo(
+        material: material,
+        stockLevel: stockLevel,
+        estimatedUsageDays: _calculateEstimatedUsageDays(material),
+        dailyUsageRate: _calculateDailyUsageRate(material),
+      );
+      stockInfoList.add(stockInfo);
+    }
+
+    return stockInfoList;
+  }
+
+  /// 在庫レベルを計算
+  StockLevel _calculateStockLevel(Material material) {
+    final double currentStock = material.currentStock;
+    final double criticalThreshold = material.criticalThreshold;
+    final double alertThreshold = material.alertThreshold;
+
+    if (currentStock <= criticalThreshold) {
+      return StockLevel.critical;
+    } else if (currentStock <= alertThreshold) {
+      return StockLevel.low;
+    } else {
+      return StockLevel.sufficient;
+    }
+  }
+
+  /// 推定使用日数を計算（簡易版）
+  int? _calculateEstimatedUsageDays(Material material) {
+    // 簡易計算：現在の在庫÷平均使用量（仮定値）
+    const double averageDailyUsage = 1.0; // 仮の値
+    if (material.currentStock > 0) {
+      return (material.currentStock / averageDailyUsage).ceil();
+    }
+    return null;
+  }
+
+  /// 日間使用率を計算（簡易版）
+  double? _calculateDailyUsageRate(Material material) {
+    // 簡易計算：固定値を返す（実際はログデータから計算）
+    return 1.0; // 仮の値
   }
 }

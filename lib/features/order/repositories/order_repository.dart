@@ -227,4 +227,71 @@ class OrderRepository extends BaseMultiTenantRepository<Order, String> {
 
     return find(orderBy: orderBy, limit: limit);
   }
+
+  /// 期間指定で完了注文を取得
+  Future<List<Order>> findCompletedByDateRange(DateTime start, DateTime end) async {
+    final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("status", OrderStatus.completed.value),
+      QueryConditionBuilder.gte("completed_at", start.toIso8601String()),
+      QueryConditionBuilder.lte("completed_at", end.toIso8601String()),
+    ];
+
+    final List<OrderByCondition> orderBy = <OrderByCondition>[
+      const OrderByCondition(column: "completed_at", ascending: false),
+    ];
+
+    return find(filters: filters, orderBy: orderBy);
+  }
+
+  /// 期間とステータス別の注文数を取得
+  Future<Map<OrderStatus, Map<DateTime, int>>> countByStatusAndDateRange(
+    DateTime start, 
+    DateTime end,
+  ) async {
+    final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.gte("ordered_at", start.toIso8601String()),
+      QueryConditionBuilder.lte("ordered_at", end.toIso8601String()),
+    ];
+
+    final List<Order> orders = await find(filters: filters);
+
+    // ステータス別・日別に集計
+    final Map<OrderStatus, Map<DateTime, int>> result = <OrderStatus, Map<DateTime, int>>{};
+    
+    for (final Order order in orders) {
+      final DateTime orderDate = DateTime(
+        order.orderedAt.year,
+        order.orderedAt.month,
+        order.orderedAt.day,
+      );
+      
+      result[order.status] ??= <DateTime, int>{};
+      result[order.status]![orderDate] = (result[order.status]![orderDate] ?? 0) + 1;
+    }
+
+    return result;
+  }
+
+  /// アクティブ注文をステータス別に取得
+  Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(String userId) async {
+    final List<OrderStatus> activeStatuses = <OrderStatus>[
+      OrderStatus.pending,
+      OrderStatus.confirmed,
+      OrderStatus.preparing,
+      OrderStatus.ready,
+    ];
+
+    final List<Order> activeOrders = await findByStatusList(activeStatuses);
+    
+    // ステータス別にグループ化
+    final Map<OrderStatus, List<Order>> result = <OrderStatus, List<Order>>{};
+    
+    for (final OrderStatus status in activeStatuses) {
+      result[status] = activeOrders
+          .where((Order order) => order.status == status)
+          .toList();
+    }
+
+    return result;
+  }
 }

@@ -1,6 +1,6 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
-import "../logging/log_service.dart";
+import "../logging/yata_logger.dart";
 
 // ! 静的メソッドのためLoggerMixinは使用不可
 class QueryUtils {
@@ -36,11 +36,11 @@ class QueryUtils {
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
-      LogService.error("QueryUtils", "Unsupported operator: ${condition.operator}");
+      YataLogger.error("QueryUtils", "Unsupported operator: ${condition.operator}");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
-    LogService.debug(
+    YataLogger.debug(
       "QueryUtils",
       "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
     );
@@ -57,7 +57,7 @@ class QueryUtils {
     if (condition.operator == FilterOperator.inList ||
         condition.operator == FilterOperator.notInList) {
       if (condition.value is! List) {
-        LogService.error(
+        YataLogger.error(
           "QueryUtils",
           "List type value required for ${condition.operator} operator",
         );
@@ -110,7 +110,7 @@ class QueryUtils {
       case FilterOperator.notInList:
         // これらは上記で処理済み
 
-        LogService.error(
+        YataLogger.error(
           "QueryUtils",
           "This operator should be handled in preprocessing: ${condition.operator}",
         );
@@ -124,7 +124,7 @@ class QueryUtils {
 
     for (final FilterCondition condition in conditions) {
       if (!_operatorMethodMap.containsKey(condition.operator)) {
-        LogService.error(
+        YataLogger.error(
           "QueryUtils",
           "Unsupported operator in OR condition: ${condition.operator}",
           "OR条件でサポートされていない演算子: ${condition.operator}",
@@ -139,7 +139,7 @@ class QueryUtils {
         orParts.add("${condition.column}.not.is.null");
       } else if (condition.operator == FilterOperator.inList) {
         if (condition.value is! List) {
-          LogService.error(
+          YataLogger.error(
             "QueryUtils",
             "List type value required for inList operator",
             "inList演算子にはList型の値が必要です",
@@ -151,7 +151,7 @@ class QueryUtils {
         orParts.add("${condition.column}.in.($valueStr)");
       } else if (condition.operator == FilterOperator.notInList) {
         if (condition.value is! List) {
-          LogService.error(
+          YataLogger.error(
             "QueryUtils",
             "List type value required for notInList operator",
             "notInList演算子にはList型の値が必要です",
@@ -181,7 +181,7 @@ class QueryUtils {
     } else if (condition is ComplexCondition) {
       return _applyComplexCondition(query, condition);
     } else {
-      LogService.error(
+      YataLogger.error(
         "QueryUtils",
         "Unknown logical condition type: ${condition.runtimeType}",
         "不明な論理条件タイプ: ${condition.runtimeType}",
@@ -221,7 +221,7 @@ class QueryUtils {
           }
         }
       } else {
-        LogService.error(
+        YataLogger.error(
           "QueryUtils",
           "Unsupported condition type in OR: ${cond.runtimeType}",
           "OR条件内でサポートされていない条件タイプ: ${cond.runtimeType}",
@@ -236,7 +236,7 @@ class QueryUtils {
 
     final String orString = _buildOrConditionString(filterConditions);
 
-    LogService.debug("QueryUtils", "Applying OR condition: $orString");
+    YataLogger.debug("QueryUtils", "Applying OR condition: $orString");
     return query.or(orString);
   }
 
@@ -262,7 +262,7 @@ class QueryUtils {
     } else if (filter is LogicalCondition) {
       return _applyLogicalCondition(query, filter);
     } else {
-      LogService.error(
+      YataLogger.error(
         "QueryUtils",
         "Unsupported filter type: ${filter.runtimeType}",
         "サポートされていないフィルタタイプ: ${filter.runtimeType}",
@@ -276,7 +276,7 @@ class QueryUtils {
     PostgrestFilterBuilder<T> query,
     List<QueryFilter> filters,
   ) {
-    LogService.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
+    YataLogger.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
     PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter filter in filters) {
       result = applyFilter(result, filter);
@@ -289,7 +289,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     OrderByCondition orderBy,
   ) {
-    LogService.debug(
+    YataLogger.debug(
       "QueryUtils",
       "Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}",
     );
@@ -301,7 +301,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
-    LogService.debug("QueryUtils", "Applying ${orderBys.length} order by conditions");
+    YataLogger.debug("QueryUtils", "Applying ${orderBys.length} order by conditions");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
       result = applyOrderBy(result, orderBy);

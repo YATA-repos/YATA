@@ -3,7 +3,7 @@ import "package:supabase_flutter/supabase_flutter.dart" hide AuthException;
 
 import "../../constants/exceptions/auth/auth_exception.dart";
 import "../../constants/log_enums/auth.dart";
-import "../../logging/log_service.dart";
+import "../../logging/yata_logger.dart";
 
 /// Supabaseクライアント管理サービス
 /// 
@@ -58,12 +58,12 @@ class SupabaseClientService {
   /// アプリケーション起動時に一度だけ呼び出してください。
   static Future<void> initialize() async {
     if (_client != null) {
-      LogService.info("SupabaseClientService", "Client already initialized, skipping");
+      YataLogger.info("SupabaseClientService", "Client already initialized, skipping");
       return;
     }
     
     try {
-      LogService.info("SupabaseClientService", "Starting Supabase client initialization");
+      YataLogger.info("SupabaseClientService", "Starting Supabase client initialization");
       
       await Supabase.initialize(
         url: _supabaseUrl,
@@ -71,10 +71,10 @@ class SupabaseClientService {
       );
       
       _client = Supabase.instance.client;
-      LogService.infoWithMessage("SupabaseClientService", AuthInfo.clientInitialized);
+      YataLogger.infoWithMessage("SupabaseClientService", AuthInfo.clientInitialized);
       
     } catch (e) {
-      LogService.errorWithMessage(
+      YataLogger.errorWithMessage(
         "SupabaseClientService",
         AuthError.initializationFailed,
         <String, String>{"error": e.toString()},
@@ -99,7 +99,7 @@ class SupabaseClientService {
       if (e is PostgrestException && e.code == "PGRST116") {
         return true;
       }
-      LogService.error("SupabaseClientService", "Connection test failed: $e");
+      YataLogger.error("SupabaseClientService", "Connection test failed: $e");
       return false;
     }
   }
