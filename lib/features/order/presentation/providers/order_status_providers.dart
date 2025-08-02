@@ -3,6 +3,7 @@ import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
 import "../../../../core/providers/common_providers.dart";
+import "../../../../core/providers/unified_realtime_providers.dart";
 import "../../../auth/models/user_profile.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
@@ -63,13 +64,14 @@ class OrderStatusManager extends _$OrderStatusManager {
   }) async {
     try {
       final UserProfile? currentUser = ref.read(currentUserProvider);
-      if (currentUser == null) {
+      final String? userId = ref.read(currentUserIdProvider);
+      if (currentUser == null || userId == null) {
         throw Exception("ユーザーが認証されていません");
       }
 
       // 現在の注文情報を取得
       final Order? currentOrder = await ref.read(
-        orderDetailsProvider(orderId, currentUser.id!).future,
+        orderDetailsProvider(orderId, userId).future,
       );
       if (currentOrder == null) {
         throw Exception("注文が見つかりません");
@@ -86,7 +88,7 @@ class OrderStatusManager extends _$OrderStatusManager {
         kitchenService,
         orderId,
         newStatus,
-        currentUser.id!,
+        userId,
       );
 
       if (success) {
@@ -96,7 +98,7 @@ class OrderStatusManager extends _$OrderStatusManager {
           previousStatus: currentOrder.status,
           newStatus: newStatus,
           changedAt: DateTime.now(),
-          changedBy: currentUser.id!,
+          changedBy: userId,
           reason: reason,
           estimatedTime: estimatedTime,
         );
@@ -109,8 +111,8 @@ class OrderStatusManager extends _$OrderStatusManager {
         }
 
         // プロバイダーを無効化してリフレッシュ
-        ref..invalidate(orderDetailsProvider(orderId, currentUser.id!))
-        ..invalidate(activeOrdersByStatusProvider(currentUser.id!));
+        ref..invalidate(orderDetailsProvider(orderId, userId))
+        ..invalidate(activeOrdersByStatusProvider(userId));
 
         return true;
       }
@@ -234,11 +236,12 @@ class OrderWorkflowManager extends _$OrderWorkflowManager {
   Future<bool> progressOrder(String orderId) async {
     try {
       final UserProfile? currentUser = ref.read(currentUserProvider);
-      if (currentUser == null) {
+      final String? userId = ref.read(currentUserIdProvider);
+      if (currentUser == null || userId == null) {
         return false;
       }
 
-      final Order? order = await ref.read(orderDetailsProvider(orderId, currentUser.id!).future);
+      final Order? order = await ref.read(orderDetailsProvider(orderId, userId).future);
       if (order == null) {
         return false;
       }
@@ -260,11 +263,12 @@ class OrderWorkflowManager extends _$OrderWorkflowManager {
   Future<bool> regressOrder(String orderId, String reason) async {
     try {
       final UserProfile? currentUser = ref.read(currentUserProvider);
-      if (currentUser == null) {
+      final String? userId = ref.read(currentUserIdProvider);
+      if (currentUser == null || userId == null) {
         return false;
       }
 
-      final Order? order = await ref.read(orderDetailsProvider(orderId, currentUser.id!).future);
+      final Order? order = await ref.read(orderDetailsProvider(orderId, userId).future);
       if (order == null) {
         return false;
       }
@@ -480,16 +484,18 @@ Future<List<Order>> filteredOrders(Ref ref, String userId) async {
 }
 
 /// リアルタイム注文ストリームプロバイダー
+/// 統合リアルタイム監視システムを使用
 @riverpod
 Stream<List<Order>> realTimeOrdersStream(Ref ref, String userId) async* {
-  // 定期的に注文状況をチェックしてストリームで配信
+  // 統合リアルタイム監視を自動開始
+  final UnifiedRealtimeManager unifiedManager = ref.read(unifiedRealtimeManagerProvider.notifier);
+  await unifiedManager.startOrderMonitoring(userId);
+
+  // 5秒間隔で注文データを配信
   while (true) {
-    await Future<void>.delayed(const Duration(seconds: 10));
+    await Future<void>.delayed(const Duration(seconds: 5));
 
     try {
-      // プロバイダーを無効化してリフレッシュ
-      ref.invalidate(activeOrdersByStatusProvider(userId));
-
       final Map<OrderStatus, List<Order>> ordersByStatus = await ref.read(
         activeOrdersByStatusProvider(userId).future,
       );

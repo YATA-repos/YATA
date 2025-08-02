@@ -16,20 +16,22 @@ AnalyticsService analyticsService(Ref ref) => AnalyticsService(ref: ref);
 @riverpod
 Future<DailyStatsResult> todayStats(Ref ref) async {
   final UserProfile? user = ref.watch(currentUserProvider);
-  if (user == null) {
+  final String? userId = ref.watch(currentUserIdProvider);
+  if (user == null || userId == null) {
     throw StateError("User not authenticated");
   }
   
   final AnalyticsService service = ref.watch(analyticsServiceProvider);
   final DateTime today = DateTime.now();
-  return service.getRealTimeDailyStats(today, user.id!);
+  return service.getRealTimeDailyStats(today, userId);
 }
 
 /// 期間別統計データプロバイダー
 @riverpod
 Future<List<DailyStatsResult>> periodStats(Ref ref, DateTime startDate, DateTime endDate) async {
   final UserProfile? user = ref.watch(currentUserProvider);
-  if (user == null) {
+  final String? userId = ref.watch(currentUserIdProvider);
+  if (user == null || userId == null) {
     throw StateError("User not authenticated");
   }
   
@@ -38,7 +40,7 @@ Future<List<DailyStatsResult>> periodStats(Ref ref, DateTime startDate, DateTime
   
   DateTime currentDate = startDate;
   while (currentDate.isBefore(endDate) || currentDate.isAtSameMomentAs(endDate)) {
-    final DailyStatsResult dailyStats = await service.getRealTimeDailyStats(currentDate, user.id!);
+    final DailyStatsResult dailyStats = await service.getRealTimeDailyStats(currentDate, userId);
     stats.add(dailyStats);
     currentDate = currentDate.add(const Duration(days: 1));
   }
@@ -50,12 +52,13 @@ Future<List<DailyStatsResult>> periodStats(Ref ref, DateTime startDate, DateTime
 @riverpod
 Future<List<Map<String, dynamic>>> popularItems(Ref ref, {int days = 7, int limit = 10}) async {
   final UserProfile? user = ref.watch(currentUserProvider);
-  if (user == null) {
+  final String? userId = ref.watch(currentUserIdProvider);  
+  if (user == null || userId == null) {
     throw StateError("User not authenticated");
   }
   
   final AnalyticsService service = ref.watch(analyticsServiceProvider);
-  return service.getPopularItemsRanking(days, limit, user.id!);
+  return service.getPopularItemsRanking(days, limit, userId);
 }
 
 /// 売上推移チャートデータプロバイダー

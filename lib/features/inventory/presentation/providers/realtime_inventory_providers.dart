@@ -3,6 +3,7 @@ import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
 import "../../../../core/providers/common_providers.dart";
+import "../../../../core/providers/unified_realtime_providers.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/inventory_dto.dart";
 import "../../models/inventory_model.dart";
@@ -365,19 +366,34 @@ class InventoryDashboardData {
 }
 
 /// 在庫変更ストリームプロバイダー
+/// 統合リアルタイム監視システムを使用
 @riverpod
 Stream<List<InventoryUpdate>> inventoryChangesStream(Ref ref, String userId) async* {
-  // 定期的に在庫変更をチェックしてストリームで配信
+  // 統合リアルタイム監視を自動開始
+  final UnifiedRealtimeManager unifiedManager = ref.read(unifiedRealtimeManagerProvider.notifier);
+  await unifiedManager.startInventoryMonitoring(userId);
+
+  // 15秒間隔で在庫変更をチェック
   while (true) {
-    await Future<void>.delayed(const Duration(seconds: 30));
+    await Future<void>.delayed(const Duration(seconds: 15));
 
     try {
-      final RealTimeInventoryMonitor monitor = ref.read(realTimeInventoryMonitorProvider.notifier);
-      await monitor.manualUpdate();
+      // 統合システムから在庫更新イベントを取得
+      final List<InventoryUpdateEvent> realtimeEvents = unifiedManager.getRecentInventoryUpdates();
+      
+      // 既存のInventoryUpdate形式に変換
+      final List<InventoryUpdate> updates = realtimeEvents.map((InventoryUpdateEvent event) => InventoryUpdate(
+          materialId: event.materialId,
+          previousStock: event.previousStock,
+          currentStock: event.currentStock,
+          previousLevel: StockLevel.sufficient, // 簡略化
+          currentLevel: StockLevel.sufficient,  // 簡略化
+          changeAmount: event.changeAmount,
+          changeReason: event.changeReason,
+          timestamp: event.timestamp,
+        )).toList();
 
-      final Map<String, InventoryUpdate> updates = ref.read(realTimeInventoryMonitorProvider);
-      yield updates.values.toList()
-        ..sort((InventoryUpdate a, InventoryUpdate b) => b.timestamp.compareTo(a.timestamp));
+      yield updates;
     } catch (e) {
       // エラーの場合は空のリストを返す
       yield <InventoryUpdate>[];
