@@ -34,6 +34,7 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
   @override
   Widget build(BuildContext context) {
     final UserProfile? currentUser = ref.watch(currentUserProvider);
+    final String? userId = ref.watch(currentUserIdProvider);
 
     if (currentUser == null) {
       return const MainLayout(
@@ -42,9 +43,16 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
       );
     }
 
+    if (userId == null) {
+      return const MainLayout(
+        title: "注文状況",
+        child: Center(child: Text("ユーザー情報の取得に失敗しました")),
+      );
+    }
+
     // リアルタイム注文データを取得
     return ref
-        .watch(realTimeOrdersStreamProvider(currentUser.id!))
+        .watch(realTimeOrdersStreamProvider(userId))
         .when(
           data: (List<Order> orders) {
             // アクティブな注文のみフィルタリング

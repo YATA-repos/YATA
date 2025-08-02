@@ -17,6 +17,7 @@ import "../../../../shared/widgets/filters/category_filter.dart";
 import "../../../../shared/widgets/forms/date_range_picker.dart";
 import "../providers/analytics_providers.dart";
 import "../widgets/chart_placeholder.dart";
+import "../widgets/log_monitoring_card.dart";
 
 /// 売上分析画面
 ///
@@ -76,6 +77,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             Padding(
               padding: ResponsiveHelper.getResponsivePadding(context),
               child: _buildChartsSection(),
+            ),
+
+            AppLayout.vSpacerLarge,
+
+            // ログ監視セクション
+            Padding(
+              padding: ResponsiveHelper.getResponsivePadding(context),
+              child: _buildLogMonitoringSection(),
             ),
 
             AppLayout.vSpacerMedium,
@@ -390,105 +399,27 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       AppLayout.vSpacerMedium,
 
       // 商品別売上比較
-      ResponsiveHelper.shouldShowSideNavigation(context)
-          ? Row(
-              children: <Widget>[
-                Expanded(
-                  child: Consumer(
-                    builder: (BuildContext context, WidgetRef ref, Widget? child) => ref.watch(itemSalesChartDataProvider()).when(
-                        data: (Map<String, dynamic> chartData) => ChartPlaceholder(
-                          title: "商品別売上比率",
-                          description: "商品別の売上構成",
-                          chartType: ChartType.pie,
-                          data: chartData,
-                        ),
-                        loading: () => const ChartPlaceholder(
-                          title: "商品別売上比率",
-                          description: "データを読み込み中...",
-                          chartType: ChartType.pie,
-                        ),
-                        error: (Object error, StackTrace stack) => ChartPlaceholder(
-                          title: "商品別売上比率",
-                          description: "データの取得に失敗しました",
-                          chartType: ChartType.pie,
-                          data: const <String, dynamic>{"エラー": "データなし"},
-                        ),
-                      ),
-                  ),
-                ),
-                AppLayout.hSpacerMedium,
-                Expanded(
-                  child: Consumer(
-                    builder: (BuildContext context, WidgetRef ref, Widget? child) => ref.watch(itemQuantityChartDataProvider()).when(
-                        data: (Map<String, dynamic> chartData) => ChartPlaceholder(
-                          title: "商品別販売数",
-                          description: "商品別の販売個数",
-                          chartType: ChartType.bar,
-                          data: chartData,
-                        ),
-                        loading: () => const ChartPlaceholder(
-                          title: "商品別販売数",
-                          description: "データを読み込み中...",
-                          chartType: ChartType.bar,
-                        ),
-                        error: (Object error, StackTrace stack) => ChartPlaceholder(
-                          title: "商品別販売数",
-                          description: "データの取得に失敗しました",
-                          chartType: ChartType.bar,
-                          data: const <String, dynamic>{"エラー": "データなし"},
-                        ),
-                      ),
-                  ),
-                ),
-              ],
-            )
-          : Column(
-              children: <Widget>[
-                Consumer(
-                  builder: (BuildContext context, WidgetRef ref, Widget? child) => ref.watch(itemSalesChartDataProvider()).when(
-                      data: (Map<String, dynamic> chartData) => ChartPlaceholder(
-                        title: "商品別売上比率",
-                        description: "商品別の売上構成",
-                        chartType: ChartType.pie,
-                        data: chartData,
-                      ),
-                      loading: () => const ChartPlaceholder(
-                        title: "商品別売上比率",
-                        description: "データを読み込み中...",
-                        chartType: ChartType.pie,
-                      ),
-                      error: (Object error, StackTrace stack) => ChartPlaceholder(
-                        title: "商品別売上比率",
-                        description: "データの取得に失敗しました",
-                        chartType: ChartType.pie,
-                        data: const <String, dynamic>{"エラー": "データなし"},
-                      ),
-                    ),
-                ),
-                AppLayout.vSpacerMedium,
-                Consumer(
-                  builder: (BuildContext context, WidgetRef ref, Widget? child) => ref.watch(itemQuantityChartDataProvider()).when(
-                      data: (Map<String, dynamic> chartData) => ChartPlaceholder(
-                        title: "商品別販売数",
-                        description: "商品別の販売個数",
-                        chartType: ChartType.bar,
-                        data: chartData,
-                      ),
-                      loading: () => const ChartPlaceholder(
-                        title: "商品別販売数",
-                        description: "データを読み込み中...",
-                        chartType: ChartType.bar,
-                      ),
-                      error: (Object error, StackTrace stack) => ChartPlaceholder(
-                        title: "商品別販売数",
-                        description: "データの取得に失敗しました",
-                        chartType: ChartType.bar,
-                        data: const <String, dynamic>{"エラー": "データなし"},
-                      ),
-                    ),
-                ),
-              ],
-            ),
+      Consumer(
+        builder: (BuildContext context, WidgetRef ref, Widget? child) => ref.watch(itemSalesChartDataProvider()).when(
+            data: (Map<String, dynamic> salesData) => ref.watch(itemQuantityChartDataProvider()).when(
+                data: (Map<String, dynamic> quantityData) => ResponsiveHelper.shouldShowSideNavigation(context)
+                      ? _buildDesktopCharts(salesData, quantityData)
+                      : _buildMobileCharts(salesData, quantityData),
+                loading: () => ResponsiveHelper.shouldShowSideNavigation(context)
+                    ? _buildDesktopChartsLoading()
+                    : _buildMobileChartsLoading(),
+                error: (Object error, StackTrace stack) => ResponsiveHelper.shouldShowSideNavigation(context)
+                    ? _buildDesktopChartsError(error)
+                    : _buildMobileChartsError(error),
+              ),
+            loading: () => ResponsiveHelper.shouldShowSideNavigation(context)
+                ? _buildDesktopChartsLoading()
+                : _buildMobileChartsLoading(),
+            error: (Object error, StackTrace stack) => ResponsiveHelper.shouldShowSideNavigation(context)
+                ? _buildDesktopChartsError(error)
+                : _buildMobileChartsError(error),
+          ),
+      ),
 
       AppLayout.vSpacerMedium,
 
@@ -504,6 +435,141 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     ],
   );
 
+  /// デスクトップ用チャート表示
+  Widget _buildDesktopCharts(Map<String, dynamic> salesData, Map<String, dynamic> quantityData) => Row(
+    children: <Widget>[
+      Expanded(
+        child: ChartPlaceholder(
+          title: "商品別売上比率",
+          description: "商品別の売上構成",
+          chartType: ChartType.pie,
+          data: salesData,
+        ),
+      ),
+      AppLayout.hSpacerMedium,
+      Expanded(
+        child: ChartPlaceholder(
+          title: "商品別販売数",
+          description: "商品別の販売個数",
+          chartType: ChartType.bar,
+          data: quantityData,
+        ),
+      ),
+    ],
+  );
+
+  /// モバイル用チャート表示
+  Widget _buildMobileCharts(Map<String, dynamic> salesData, Map<String, dynamic> quantityData) => Column(
+    children: <Widget>[
+      ChartPlaceholder(
+        title: "商品別売上比率",
+        description: "商品別の売上構成",
+        chartType: ChartType.pie,
+        data: salesData,
+      ),
+      AppLayout.vSpacerMedium,
+      ChartPlaceholder(
+        title: "商品別販売数",
+        description: "商品別の販売個数",
+        chartType: ChartType.bar,
+        data: quantityData,
+      ),
+    ],
+  );
+
+  /// デスクトップ用ローディング表示
+  Widget _buildDesktopChartsLoading() => Row(
+    children: <Widget>[
+      const Expanded(
+        child: ChartPlaceholder(
+          title: "商品別売上比率",
+          description: "データを読み込み中...",
+          chartType: ChartType.pie,
+        ),
+      ),
+      AppLayout.hSpacerMedium,
+      const Expanded(
+        child: ChartPlaceholder(
+          title: "商品別販売数",
+          description: "データを読み込み中...",
+          chartType: ChartType.bar,
+        ),
+      ),
+    ],
+  );
+
+  /// モバイル用ローディング表示
+  Widget _buildMobileChartsLoading() => const Column(
+    children: <Widget>[
+      ChartPlaceholder(
+        title: "商品別売上比率",
+        description: "データを読み込み中...",
+        chartType: ChartType.pie,
+      ),
+      AppLayout.vSpacerMedium,
+      ChartPlaceholder(
+        title: "商品別販売数",
+        description: "データを読み込み中...",
+        chartType: ChartType.bar,
+      ),
+    ],
+  );
+
+  /// デスクトップ用エラー表示
+  Widget _buildDesktopChartsError(Object error) => Row(
+    children: <Widget>[
+      Expanded(
+        child: ChartPlaceholder(
+          title: "商品別売上比率",
+          description: "データの取得に失敗しました",
+          chartType: ChartType.pie,
+          data: const <String, dynamic>{"エラー": "データなし"},
+        ),
+      ),
+      AppLayout.hSpacerMedium,
+      Expanded(
+        child: ChartPlaceholder(
+          title: "商品別販売数",
+          description: "データの取得に失敗しました",
+          chartType: ChartType.bar,
+          data: const <String, dynamic>{"エラー": "データなし"},
+        ),
+      ),
+    ],
+  );
+
+  /// モバイル用エラー表示
+  Widget _buildMobileChartsError(Object error) => Column(
+    children: <Widget>[
+      ChartPlaceholder(
+        title: "商品別売上比率",
+        description: "データの取得に失敗しました",
+        chartType: ChartType.pie,
+        data: const <String, dynamic>{"エラー": "データなし"},
+      ),
+      AppLayout.vSpacerMedium,
+      ChartPlaceholder(
+        title: "商品別販売数",
+        description: "データの取得に失敗しました",
+        chartType: ChartType.bar,
+        data: const <String, dynamic>{"エラー": "データなし"},
+      ),
+    ],
+  );
+
+  /// ログ監視セクション
+  Widget _buildLogMonitoringSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text(
+        "システム監視",
+        style: AppTextTheme.cardTitle,
+      ),
+      AppLayout.vSpacerMedium,
+      const LogMonitoringCard(),
+    ],
+  );
+
   /// フィルター適用
   void _handleApplyFilter() async {
     setState(() => _isLoading = true);
@@ -511,9 +577,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     try {
       // フィルター適用後、統計データをリフレッシュ
       ref.invalidate(todayStatsProvider);
-      
-      // 新しいデータの読み込みを待つ
-      await ref.read(todayStatsProvider.future);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

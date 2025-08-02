@@ -45,6 +45,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
   // データ状態
   bool _isLoading = false;
+  List<MaterialStockInfo>? _cachedMaterials;
 
   // ソート状態
   String _sortColumn = "name";
@@ -78,6 +79,9 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
   /// メインコンテンツを構築
   Widget _buildMainContent(List<MaterialStockInfo> allMaterials) {
+    // データをキャッシュして、エクスポート機能で再利用
+    _cachedMaterials = allMaterials;
+    
     final List<MaterialStockInfo> filteredItems = _getFilteredMaterials(allMaterials);
     final int totalPages = (filteredItems.length / _itemsPerPage).ceil();
     final List<MaterialStockInfo> paginatedItems = _getPaginatedMaterials(filteredItems);
@@ -113,7 +117,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
           // 統計サマリー
           Padding(
             padding: ResponsiveHelper.getResponsivePadding(context),
-            child: _buildStatsSection(),
+            child: _buildStatsSection(allMaterials),
           ),
 
           const SizedBox(height: 24),
@@ -155,95 +159,89 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
   }
 
   /// 統計セクション
-  Widget _buildStatsSection() => ref
-        .watch(materialsWithStockInfoProvider(null, userId!))
-        .when(
-          data: (List<MaterialStockInfo> allMaterials) {
-            final Map<String, int> stats = _calculateStats(allMaterials);
+  Widget _buildStatsSection(List<MaterialStockInfo> allMaterials) {
+    final Map<String, int> stats = _calculateStats(allMaterials);
 
-            return ResponsiveHelper.shouldShowSideNavigation(context)
-                ? Row(
-                    children: <Widget>[
-                      _buildStatsCard(
-                        "総在庫アイテム",
-                        "${stats['total']}",
-                        LucideIcons.package,
-                        StatsCardVariant.default_,
-                        "材料",
-                      ),
-                      const SizedBox(width: 16),
-                      _buildStatsCard(
-                        "在庫警告",
-                        "${stats['lowStock']}",
-                        LucideIcons.alertTriangle,
-                        StatsCardVariant.danger,
-                        "緊急",
-                      ),
-                      const SizedBox(width: 16),
-                      _buildStatsCard(
-                        "在庫切れ",
-                        "${stats['outOfStock']}",
-                        LucideIcons.xCircle,
-                        StatsCardVariant.warning,
-                        "切れ",
-                      ),
-                      const SizedBox(width: 16),
-                      _buildStatsCard(
-                        "在庫金額",
-                        "¥${stats['totalValue']}",
-                        LucideIcons.dollarSign,
-                        StatsCardVariant.success,
-                        "総額",
-                      ),
-                    ],
-                  )
-                : Column(
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          _buildStatsCard(
-                            "総在庫アイテム",
-                            "${stats['total']}",
-                            LucideIcons.package,
-                            StatsCardVariant.default_,
-                            "材料",
-                          ),
-                          const SizedBox(width: 16),
-                          _buildStatsCard(
-                            "在庫警告",
-                            "${stats['lowStock']}",
-                            LucideIcons.alertTriangle,
-                            StatsCardVariant.danger,
-                            "緊急",
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: <Widget>[
-                          _buildStatsCard(
-                            "在庫切れ",
-                            "${stats['outOfStock']}",
-                            LucideIcons.xCircle,
-                            StatsCardVariant.warning,
-                            "切れ",
-                          ),
-                          const SizedBox(width: 16),
-                          _buildStatsCard(
-                            "在庫金額",
-                            "¥${stats['totalValue']}",
-                            LucideIcons.dollarSign,
-                            StatsCardVariant.success,
-                            "総額",
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (Object error, StackTrace stack) => const Center(child: Text("統計情報の読み込みに失敗しました")),
-        );
+    return ResponsiveHelper.shouldShowSideNavigation(context)
+        ? Row(
+            children: <Widget>[
+              _buildStatsCard(
+                "総在庫アイテム",
+                "${stats['total']}",
+                LucideIcons.package,
+                StatsCardVariant.default_,
+                "材料",
+              ),
+              const SizedBox(width: 16),
+              _buildStatsCard(
+                "在庫警告",
+                "${stats['lowStock']}",
+                LucideIcons.alertTriangle,
+                StatsCardVariant.danger,
+                "緊急",
+              ),
+              const SizedBox(width: 16),
+              _buildStatsCard(
+                "在庫切れ",
+                "${stats['outOfStock']}",
+                LucideIcons.xCircle,
+                StatsCardVariant.warning,
+                "切れ",
+              ),
+              const SizedBox(width: 16),
+              _buildStatsCard(
+                "在庫金額",
+                "¥${stats['totalValue']}",
+                LucideIcons.dollarSign,
+                StatsCardVariant.success,
+                "総額",
+              ),
+            ],
+          )
+        : Column(
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  _buildStatsCard(
+                    "総在庫アイテム",
+                    "${stats['total']}",
+                    LucideIcons.package,
+                    StatsCardVariant.default_,
+                    "材料",
+                  ),
+                  const SizedBox(width: 16),
+                  _buildStatsCard(
+                    "在庫警告",
+                    "${stats['lowStock']}",
+                    LucideIcons.alertTriangle,
+                    StatsCardVariant.danger,
+                    "緊急",
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: <Widget>[
+                  _buildStatsCard(
+                    "在庫切れ",
+                    "${stats['outOfStock']}",
+                    LucideIcons.xCircle,
+                    StatsCardVariant.warning,
+                    "切れ",
+                  ),
+                  const SizedBox(width: 16),
+                  _buildStatsCard(
+                    "在庫金額",
+                    "¥${stats['totalValue']}",
+                    LucideIcons.dollarSign,
+                    StatsCardVariant.success,
+                    "総額",
+                  ),
+                ],
+              ),
+            ],
+          );
+  }
 
   Widget _buildStatsCard(
     String title,
@@ -481,6 +479,9 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
     setState(() => _isLoading = true);
 
     try {
+      // キャッシュをクリア
+      _cachedMaterials = null;
+      
       // プロバイダーを無効化して再取得をトリガー
       ref..invalidate(materialsWithStockInfoProvider(null, userId!))
       ..invalidate(materialCategoriesProvider);
@@ -513,36 +514,37 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
   }
 
   /// エクスポート処理
-  void _handleExport(ExportFormat format) => ref
-        .watch(materialsWithStockInfoProvider(null, userId!))
-        .when(
-          data: (List<MaterialStockInfo> allMaterials) {
-            final List<MaterialStockInfo> items = _getFilteredMaterials(allMaterials);
+  void _handleExport(ExportFormat format) {
+    if (_cachedMaterials == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("データが読み込まれていません"), backgroundColor: AppColors.danger),
+      );
+      return;
+    }
 
-            showDialog<void>(
-              context: context,
-              builder: (BuildContext context) => AlertDialog(
-                title: Text("${format.name.toUpperCase()}エクスポート"),
-                content: Text("在庫データ${items.length}件を${format.name.toUpperCase()}形式でエクスポートしますか？"),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text("キャンセル"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _performMaterialExport(format, items);
-                    },
-                    child: const Text("エクスポート"),
-                  ),
-                ],
-              ),
-            );
-          },
-          loading: () {},
-          error: (Object error, StackTrace stack) {},
-        );
+    final List<MaterialStockInfo> items = _getFilteredMaterials(_cachedMaterials!);
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text("${format.name.toUpperCase()}エクスポート"),
+        content: Text("在庫データ${items.length}件を${format.name.toUpperCase()}形式でエクスポートしますか？"),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("キャンセル"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performMaterialExport(format, items);
+            },
+            child: const Text("エクスポート"),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// 材料追加
   Future<void> _handleAddMaterial() async {
@@ -553,6 +555,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
     // 追加が成功した場合、データをリフレッシュ
     if ((result ?? false) && userId != null) {
+      _cachedMaterials = null; // キャッシュをクリア
       ref.invalidate(materialsWithStockInfoProvider(null, userId!));
     }
   }
@@ -566,6 +569,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
     // 編集が成功した場合、データをリフレッシュ
     if ((result ?? false) && userId != null) {
+      _cachedMaterials = null; // キャッシュをクリア
       ref.invalidate(materialsWithStockInfoProvider(null, userId!));
     }
   }

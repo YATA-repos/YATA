@@ -24,7 +24,7 @@ class EnhancedAlertPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<AlertStatistics> alertStatistics = ref.watch(alertStatisticsProvider(userId));
+    final AsyncValue<Map<String, List<MaterialStockInfo>>> filteredAlerts = ref.watch(filteredInventoryAlertsProvider(userId));
 
     return AppCard(
       child: Column(
@@ -61,20 +61,23 @@ class EnhancedAlertPanel extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // 統計情報
-          alertStatistics.when(
-            data: (AlertStatistics stats) => _buildStatisticsRow(context, stats),
+          filteredAlerts.when(
+            data: (Map<String, List<MaterialStockInfo>> alerts) {
+              final AlertStatistics stats = _calculateStatistics(alerts);
+              return _buildStatisticsRow(context, stats);
+            },
             loading: () => const LoadingIndicator(),
             error: (Object error, _) => _buildErrorWidget(error),
           ),
           const SizedBox(height: 16),
 
-          // アラート一覧
+          // アラート一覧  
           Flexible(
             child: Container(
               constraints: BoxConstraints(
                 maxHeight: maxHeight ?? 300,
               ),
-              child: _buildAlertList(context, ref),
+              child: _buildAlertList(context, filteredAlerts),
             ),
           ),
         ],
@@ -142,10 +145,7 @@ class EnhancedAlertPanel extends ConsumerWidget {
     );
 
   /// アラート一覧を構築
-  Widget _buildAlertList(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Map<String, List<MaterialStockInfo>>> filteredAlerts = ref.watch(filteredInventoryAlertsProvider(userId));
-
-    return filteredAlerts.when(
+  Widget _buildAlertList(BuildContext context, AsyncValue<Map<String, List<MaterialStockInfo>>> filteredAlerts) => filteredAlerts.when(
       data: (Map<String, List<MaterialStockInfo>> alerts) {
         final List<MaterialStockInfo> allAlerts = <MaterialStockInfo>[
           ...alerts["critical"] ?? <MaterialStockInfo>[],
@@ -168,7 +168,6 @@ class EnhancedAlertPanel extends ConsumerWidget {
       loading: () => const Center(child: LoadingIndicator()),
       error: (Object error, _) => _buildErrorWidget(error),
     );
-  }
 
   /// アラート項目を構築
   Widget _buildAlertItem(BuildContext context, MaterialStockInfo alert) {
@@ -349,6 +348,26 @@ class EnhancedAlertPanel extends ConsumerWidget {
       case StockLevel.sufficient:
         return LucideIcons.checkCircle;
     }
+  }
+
+  /// 統計情報を計算
+  AlertStatistics _calculateStatistics(Map<String, List<MaterialStockInfo>> alerts) {
+    final int criticalCount = alerts["critical"]?.length ?? 0;
+    final int lowStockCount = alerts["low"]?.length ?? 0;
+    final int shortUsageDaysCount = alerts["low"]
+        ?.where((MaterialStockInfo item) =>
+            item.stockLevel == StockLevel.sufficient &&
+            item.estimatedUsageDays != null &&
+            item.estimatedUsageDays! <= 7)
+        .length ?? 0;
+
+    return AlertStatistics(
+      totalAlerts: criticalCount + lowStockCount,
+      criticalCount: criticalCount,
+      lowStockCount: lowStockCount,
+      shortUsageDaysCount: shortUsageDaysCount,
+      lastUpdated: DateTime.now(),
+    );
   }
 }
 

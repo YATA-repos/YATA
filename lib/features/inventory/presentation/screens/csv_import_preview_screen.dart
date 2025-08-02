@@ -80,7 +80,8 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       // インポート完了後の処理
       if (!context.mounted) return;
       
-      ScaffoldMessenger.of(context).showSnackBar(
+      final BuildContext currentContext = context;
+      ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
           content: Text("インポート完了: ${result.successCount}件成功, ${result.errorCount}件エラー"),
           backgroundColor: result.hasErrors ? Colors.orange : Colors.green,
@@ -88,7 +89,8 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       );
       
       if (!result.hasErrors) {
-        Navigator.of(context).pop();
+        if (!currentContext.mounted) return;
+        Navigator.of(currentContext).pop();
       }
     } catch (e) {
       setState(() {

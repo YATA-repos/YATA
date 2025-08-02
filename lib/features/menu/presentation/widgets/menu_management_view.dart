@@ -83,7 +83,6 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
           AppButton(
             text: "一括販売開始",
             size: ButtonSize.small,
-            variant: ButtonVariant.primary,
             onPressed: () => _bulkUpdateAvailability(true),
           ),
           const SizedBox(width: 8),
@@ -173,7 +172,7 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
               value: _availabilityFilter,
               hint: const Text("販売状況"),
               items: const <DropdownMenuItem<bool?>>[
-                DropdownMenuItem<bool?>(value: null, child: Text("全て")),
+                DropdownMenuItem<bool?>(child: Text("全て")),
                 DropdownMenuItem<bool?>(value: true, child: Text("販売中")),
                 DropdownMenuItem<bool?>(value: false, child: Text("販売停止")),
               ],
@@ -238,7 +237,6 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    showCheckboxColumn: true,
                     columns: const <DataColumn>[
                       DataColumn(label: Text("メニュー名")),
                       DataColumn(label: Text("カテゴリ")),
@@ -247,7 +245,7 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
                       DataColumn(label: Text("調理時間")),
                       DataColumn(label: Text("操作")),
                     ],
-                    rows: filteredItems.map((MenuItem item) => _buildDataRow(item)).toList(),
+                    rows: filteredItems.map(_buildDataRow).toList(),
                   ),
                 );
               },
@@ -449,7 +447,7 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
       ref.invalidate(menuItemsProvider);
 
       // 選択をクリア
-      setState(() => _selectedItems.clear());
+      setState(_selectedItems.clear);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
