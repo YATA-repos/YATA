@@ -1,4 +1,5 @@
 import "dart:io";
+
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
@@ -7,8 +8,8 @@ import "package:window_manager/window_manager.dart";
 
 import "app/app.dart";
 import "core/infrastructure/supabase/supabase_client.dart";
-import "core/logging/log_service.dart";
 import "core/logging/logger_mixin.dart";
+import "core/logging/yata_logger.dart";
 import "core/validation/env_validator.dart";
 
 void main() async {
@@ -74,46 +75,46 @@ void main() async {
 
     // ログサービスの初期化
     debugPrint("DEBUG: [3/6] Initializing log service...");
-    await LogService.initialize();
+    await YataLogger.initialize();
     debugPrint("DEBUG: [3/6] ✅ Log service initialized");
     
     // ログサービス初期化後の最初のログ
-    debugPrint("DEBUG: [3/6] Testing LogService functionality...");
-    LogService.info("main", "DEBUG: === YATA Application Startup ===");
-    LogService.info("main", "DEBUG: Log service is now active and operational");
-    LogService.info("main", "DEBUG: Application starting with debug logging enabled");
-    debugPrint("DEBUG: [3/6] ✅ LogService test calls completed");
+    debugPrint("DEBUG: [3/6] Testing YataLogger functionality...");
+    YataLogger.info("main", "DEBUG: === YATA Application Startup ===");
+    YataLogger.info("main", "DEBUG: Log service is now active and operational");
+    YataLogger.info("main", "DEBUG: Application starting with debug logging enabled");
+    debugPrint("DEBUG: [3/6] ✅ YataLogger test calls completed");
 
     // Supabaseの初期化（環境変数が設定されている場合のみ）
     debugPrint("DEBUG: [4/6] Checking Supabase configuration...");
-    LogService.info("main", "DEBUG: [4/6] Checking Supabase configuration...");
+    YataLogger.info("main", "DEBUG: [4/6] Checking Supabase configuration...");
     
     final bool shouldInit = _shouldInitializeSupabase();
     debugPrint("DEBUG: [4/6] Should initialize Supabase: $shouldInit");
     
     if (shouldInit) {
       debugPrint("DEBUG: [4/6] Supabase configuration found, initializing...");
-      LogService.info("main", "DEBUG: [4/6] Supabase configuration found, initializing...");
+      YataLogger.info("main", "DEBUG: [4/6] Supabase configuration found, initializing...");
       
       try {
         debugPrint("DEBUG: [4/6] Calling SupabaseClientService.initialize()...");
         await SupabaseClientService.initialize();
         debugPrint("DEBUG: [4/6] ✅ SupabaseClientService.initialize() completed");
-        LogService.info("main", "DEBUG: [4/6] ✅ Supabase initialized successfully");
+        YataLogger.info("main", "DEBUG: [4/6] ✅ Supabase initialized successfully");
         
       } catch (e, stackTrace) {
         debugPrint("DEBUG: [4/6] ❌ Supabase initialization failed: $e");
         debugPrint("DEBUG: [4/6] Stack trace: $stackTrace");
-        LogService.error("main", "DEBUG: [4/6] ❌ Supabase initialization failed: $e", e, stackTrace);
+        YataLogger.error("main", "DEBUG: [4/6] ❌ Supabase initialization failed: $e", e, stackTrace);
         rethrow;
       }
     } else {
       debugPrint("DEBUG: [4/6] ⚠️  Supabase initialization skipped: Environment variables not configured");
-      LogService.warning("main", "DEBUG: [4/6] ⚠️  Supabase initialization skipped: Environment variables not configured");
+      YataLogger.warning("main", "DEBUG: [4/6] ⚠️  Supabase initialization skipped: Environment variables not configured");
     }
     
     debugPrint("DEBUG: [5/6] Setting up error handling...");
-    LogService.info("main", "DEBUG: [5/6] Setting up error handling...");
+    YataLogger.info("main", "DEBUG: [5/6] Setting up error handling...");
   } catch (e, stackTrace) {
     // 初期化エラーの場合、開発モードでは詳細を表示
     debugPrint("DEBUG: ❌ CRITICAL ERROR during initialization:");
@@ -127,7 +128,7 @@ void main() async {
     
     // ログサービスが利用可能かチェック
     try {
-      LogService.error("main", "DEBUG: Application initialization failed: ${e.toString()}", e);
+      YataLogger.error("main", "DEBUG: Application initialization failed: ${e.toString()}", e);
     } catch (logError) {
       debugPrint("DEBUG: Log service also failed: $logError");
     }
@@ -138,13 +139,13 @@ void main() async {
   _setupErrorHandling();
   debugPrint("DEBUG: [5/6] ✅ Error handlers configured");
   
-  LogService.info("main", "DEBUG: [6/6] Starting Flutter application...");
+  YataLogger.info("main", "DEBUG: [6/6] Starting Flutter application...");
   debugPrint("DEBUG: [6/6] Starting Flutter application...");
 
   // 起動
   runApp(const ProviderScope(child: YataApp()));
   
-  LogService.info("main", "DEBUG: [6/6] ✅ Flutter application started successfully");
+  YataLogger.info("main", "DEBUG: [6/6] ✅ Flutter application started successfully");
   debugPrint("DEBUG: [6/6] ✅ Flutter application started successfully");
   debugPrint("DEBUG: ========================================");
 }
@@ -191,5 +192,5 @@ void _setupErrorHandling() {
 
 /// エラーハンドリング用クラス
 class _ErrorHandler with LoggerMixin {
-  // LoggerMixin のメソッドが利用可能
+  // LoggerV2Mixin のメソッドが利用可能
 }
