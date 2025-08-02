@@ -23,8 +23,6 @@
 
 ---
 
-## Backlog
-
 ### [Refactor] base_repository.dart設計課題の解決
 
 - **Priority**: P1
@@ -120,22 +118,6 @@
   7. インタラクティブ機能（ズーム、フィルター）の追加
   8. レスポンシブ対応とアニメーション実装
 - **Description**: AnalyticsServiceと連携した本格的なチャート機能。fl_chartを使用したインタラクティブなデータ可視化
-
-### [Enhancement] ログシステムの運用最適化とモニタリング強化
-
-- **Priority**: P2
-- **Size**: M
-- **Area**: Core
-- **Dependencies**: None
-- **Steps**:
-  1. 現在のLogServiceとlog_enumsの使用状況全体調査
-  2. 各フィーチャーでのLoggerMixin活用状況確認
-  3. ログレベル設定の最適化（開発/本番環境別）
-  4. ログローテーション・クリーンアップ機能の運用検証
-  5. パフォーマンス監視用ログの追加検討
-  6. エラー追跡とデバッグ効率向上のための改善
-  7. ログ統計情報ダッシュボード機能の検討
-- **Description**: 既存の高度なログシステムをさらに最適化し、運用効率とデバッグ効率を向上させる改善
 
 ### [Enhancement] stream_manager_mixinのメモリリーク対策強化
 
