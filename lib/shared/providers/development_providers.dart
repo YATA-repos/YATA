@@ -3,7 +3,7 @@ import "dart:async";
 import "package:flutter/foundation.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../utils/provider_logger.dart";
+import "../../core/utils/provider_logger.dart";
 
 part "development_providers.g.dart";
 

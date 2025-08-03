@@ -1,9 +1,9 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../../features/auth/presentation/providers/auth_providers.dart";
-import "../constants/enums.dart" as core_enums;
+import "../../core/constants/enums.dart" as core_enums;
 import "../../data/batch/batch_processing_service.dart";
+import "../../features/auth/presentation/providers/auth_providers.dart";
 
 part "batch_processing_providers.g.dart";
 

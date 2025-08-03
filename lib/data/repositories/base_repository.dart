@@ -1,12 +1,12 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 
-import "../constants/exceptions/exceptions.dart";
-import "../constants/query_types.dart";
-import "../../data/remote/supabase_client.dart";
-import "../logging/logger_mixin.dart";
-import "../utils/query_utils.dart";
-import "../validation/type_validator.dart";
-import "base_model.dart";
+import "../../core/base/base_model.dart";
+import "../../core/constants/exceptions/exceptions.dart";
+import "../../core/constants/query_types.dart";
+import "../../core/logging/logger_mixin.dart";
+import "../../core/utils/query_utils.dart";
+import "../../core/validation/type_validator.dart";
+import "../remote/supabase_client.dart";
 
 /// プライマリキー
 typedef PrimaryKeyMap = Map<String, dynamic>;
@@ -82,9 +82,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
       logDebug("Entity not found in table: $tableName");
       return null;
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // エラー分類とログレベルの標準化が必要
       logError("Failed to find single entity in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -128,16 +128,16 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final List<Map<String, dynamic>> response = await _table.insert(data).select();
 
       if (response.isNotEmpty) {
-        // * 事前定義するべきか検討
+        // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
         logInfo("Entity created successfully in table: $tableName");
         return _fromJson(response[0]);
       }
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logWarning("No response returned from entity creation in table: $tableName");
       return null;
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to create entity in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.insertFailed,
@@ -157,12 +157,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final List<Map<String, dynamic>> dataList = entities.map((T e) => e.toJson()).toList();
       final List<Map<String, dynamic>> response = await _table.insert(dataList).select();
 
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logInfo("Bulk created ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to bulk create entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.insertFailed,
@@ -218,9 +218,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       }
       logDebug("Entity not found in table: $tableName");
       return null;
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to get entity by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -271,16 +271,16 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       ).select();
 
       if (response.isNotEmpty) {
-        // * 事前定義するべきか検討
+        // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
         logInfo("Entity updated successfully by primary key in table: $tableName");
         return _fromJson(response[0]);
       }
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logWarning("No entity updated by primary key in table: $tableName");
       return null;
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to update entity by primary key in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.updateFailed,
@@ -317,11 +317,11 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
     try {
       logDebug("Deleting entity by primary key from table: $tableName");
       await _applyPrimaryKey(_table.delete(), keyMap);
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logInfo("Entity deleted successfully by primary key from table: $tableName");
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to delete entity by primary key from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
@@ -353,7 +353,7 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         }).toList();
 
         await _table.delete().inFilter(pkColumn, values);
-        // * 事前定義するべきか検討
+        // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
         logInfo("Bulk deleted ${keys.length} entities from table: $tableName");
       } else {
         // 複合主キーの場合は効率的な削除のためチャンク処理
@@ -373,12 +373,12 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
             }),
           );
         }
-        // * 事前定義するべきか検討
+        // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
         logInfo("Bulk deleted ${keys.length} entities with composite keys from table: $tableName");
       }
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to bulk delete entities from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.deleteFailed,
@@ -394,10 +394,10 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final PostgrestResponse<List<Map<String, dynamic>>> response = await _applyPrimaryKey(
         _table.select(primaryKeyColumns.join(", ")),
         keyMap,
-      ).limit(1).count(); // ? `limit(1)`のカウントでいいんだっけ?existsみたいなの無かった？
+      ).limit(1).count(); // TODO: 存在チェック用のより効率的なメソッドがあるか調査
 
       return response.count > 0;
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
       logError("Failed to check entity existence by ID in table: $tableName", e);
       throw RepositoryException(
@@ -413,10 +413,10 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
       final PostgrestResponse<List<Map<String, dynamic>>> response = await _applyPrimaryKey(
         _table.select(primaryKeyColumns.join(", ")),
         keyMap,
-      ).limit(1).count(); // ? existsByIdと同様の疑問
+      ).limit(1).count(); // TODO: 存在チェック用のより効率的なメソッドがあるか調査
 
       return response.count > 0;
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
       logError("Failed to check entity existence by primary key in table: $tableName", e);
       throw RepositoryException(
@@ -446,9 +446,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
       logDebug("Retrieved ${response.length} entities from table: $tableName");
       return response.map(_fromJson).toList();
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to list entities from table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -494,9 +494,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
 
       logDebug("Found ${response.length} entities in table: $tableName");
       return response.map(_fromJson).toList();
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to find entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,
@@ -523,9 +523,9 @@ abstract class BaseRepository<T extends BaseModel, ID> with LoggerMixin {
         logDebug("Counted $response entities in table: $tableName");
         return response;
       }
-      // ? エラーハンドリング詳細化？
+      // TODO: エラーハンドリングの詳細化が必要
     } catch (e) {
-      // * 事前定義するべきか検討
+      // NOTE: エラー分類・ログレベル・戻り値の標準化が必要
       logError("Failed to count entities in table: $tableName", e);
       throw RepositoryException(
         RepositoryError.databaseConnectionFailed,

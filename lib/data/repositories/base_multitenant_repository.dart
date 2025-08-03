@@ -1,9 +1,9 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../core/base/base_model.dart";
+import "../../core/constants/exceptions/exceptions.dart";
+import "../../core/constants/query_types.dart";
 import "../../features/auth/presentation/providers/auth_providers.dart";
-import "../constants/exceptions/exceptions.dart";
-import "../constants/query_types.dart";
-import "base_model.dart";
 import "base_repository.dart";
 
 /// マルチテナント対応ベースリポジトリ

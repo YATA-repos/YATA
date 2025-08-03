@@ -1,8 +1,8 @@
 import "package:flutter/foundation.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../constants/constants.dart";
-import "../utils/provider_logger.dart";
+import "../../core/constants/constants.dart";
+import "../../core/utils/provider_logger.dart";
 
 part "common_providers.g.dart";
 

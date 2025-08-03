@@ -3,8 +3,9 @@ import "dart:async";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../../features/auth/presentation/providers/auth_providers.dart";
 import "../../data/local/cache/enhanced_cache_strategy.dart";
+import "../../features/auth/presentation/providers/auth_providers.dart";
+import "common_providers.dart";
 
 part "intelligent_cache_providers.g.dart";
 
@@ -96,10 +97,10 @@ class IntelligentCacheManager extends _$IntelligentCacheManager {
     state = newState;
 
     // 実際のプロバイダー無効化は外部で実装
-    // TODO: 成功メッセージの通知機能を実装
-    // ref.read(globalSuccessMessageProvider.notifier).setMessage(
-    //   "キャッシュを無効化しました: $providerId"
-    // );
+    // 成功メッセージの通知
+    ref.read(successMessageProvider.notifier).setMessage(
+      "キャッシュを無効化しました: $providerId"
+    );
   }
 
   /// データタイプ別の一括無効化

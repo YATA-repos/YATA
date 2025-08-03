@@ -2,8 +2,8 @@ import "dart:async";
 
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../../core/utils/provider_logger.dart";
 import "../../data/local/cache/cache_manager.dart";
-import "../utils/provider_logger.dart";
 
 part "cache_providers.g.dart";
 

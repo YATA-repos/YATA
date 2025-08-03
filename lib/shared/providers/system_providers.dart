@@ -2,7 +2,7 @@ import "dart:async";
 
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../utils/provider_logger.dart";
+import "../../core/utils/provider_logger.dart";
 
 part "system_providers.g.dart";
 

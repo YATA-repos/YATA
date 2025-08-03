@@ -3,13 +3,13 @@ import "dart:async";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../../core/constants/enums.dart" as core_enums;
+import "../../data/realtime/realtime_manager.dart";
 import "../../features/auth/presentation/providers/auth_providers.dart";
 import "../../features/inventory/dto/inventory_dto.dart";
 import "../../features/inventory/presentation/providers/inventory_providers.dart";
 import "../../features/order/models/order_model.dart";
 import "../../features/order/presentation/providers/order_providers.dart";
-import "../constants/enums.dart" as core_enums;
-import "../../data/realtime/realtime_manager.dart";
 import "common_providers.dart";
 
 part "unified_realtime_providers.g.dart";
