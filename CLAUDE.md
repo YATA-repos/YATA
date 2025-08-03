@@ -68,7 +68,16 @@ UI Layer (Flutter Widgets/Pages)
 Business Services Layer  
     ↓
 Repository Layer (Data Access)
+    ↓
+Data Layer (lib/data/) ← 新しく分離されたデータ層
+    ├─ Local Data (cache, offline)
+    ├─ Remote Data (Supabase)
+    ├─ Realtime Data (WebSocket)
+    └─ Batch Processing
 ```
+
+**データ層の分離について**:
+プロジェクトの進化により、データアクセスロジックを`lib/data/`に分離し、より明確な責務分離を実現しました。この分離により、キャッシュ、リアルタイム通信、バッチ処理などの横断的関心事を統一的に管理できます。
 
 #### ディレクトリ構造
 
@@ -80,53 +89,73 @@ lib/
 │   └── routes.dart         # ルーティング設定
 ├── core/                    # コア機能
 │   ├── base/               # 基底クラス（BaseModel, BaseRepository）
-│   ├── cache/              # キャッシュ機能
 │   ├── constants/          # 定数・設定
 │   │   ├── exceptions/     # 例外クラス（フィーチャー別分類）
 │   │   └── log_enums/      # ログ関連列挙型
-│   ├── infrastructure/     # インフラ層
-│   │   ├── offline/        # オフライン機能
-│   │   └── supabase/       # Supabase統合
 │   ├── logging/            # ログサービス
 │   ├── providers/          # コアプロバイダー
-│   ├── realtime/           # リアルタイム機能
 │   ├── utils/              # ユーティリティ（クエリ、エラーハンドラー）
 │   └── validation/         # 入力バリデーション
+├── data/                   # データ層（新アーキテクチャ）
+│   ├── batch/              # バッチ処理サービス
+│   ├── local/              # ローカルデータアクセス
+│   │   ├── cache/          # キャッシュ機能（旧 core/cache）
+│   │   └── offline_queue/  # オフライン機能
+│   ├── realtime/           # リアルタイム機能（旧 core/realtime）
+│   └── remote/             # リモートデータアクセス（旧 core/infrastructure/supabase）
 ├── features/               # 機能別ディレクトリ
 │   ├── analytics/          # 分析機能
 │   │   ├── dto/            # Data Transfer Objects
 │   │   ├── models/         # ドメインモデル
 │   │   ├── presentation/   # UI（providers, screens, widgets）
+│   │   │   ├── providers/  # 分析機能のプロバイダー
+│   │   │   ├── screens/    # 分析画面
+│   │   │   └── widgets/    # 分析UI部品
 │   │   ├── repositories/   # データアクセス
 │   │   └── services/       # ビジネスロジック
 │   ├── auth/               # 認証機能
-│   │   ├── dto/
-│   │   ├── models/
-│   │   ├── presentation/
-│   │   ├── repositories/
-│   │   └── services/
+│   │   ├── dto/            # 認証リクエスト/レスポンス
+│   │   ├── models/         # 認証モデル
+│   │   ├── presentation/   # 認証UI
+│   │   │   ├── providers/  # 認証プロバイダー
+│   │   │   ├── screens/    # ログイン画面等
+│   │   │   └── widgets/    # 認証UI部品
+│   │   ├── repositories/   # 認証データアクセス
+│   │   └── services/       # 認証サービス
 │   ├── dashboard/          # ダッシュボード機能
 │   │   └── presentation/   # ダッシュボードUI
+│   │       ├── screens/    # ダッシュボード画面
+│   │       └── widgets/    # ダッシュボードUI部品
 │   ├── inventory/          # 在庫管理
-│   │   ├── dto/
-│   │   ├── models/
-│   │   ├── presentation/
-│   │   ├── repositories/
-│   │   └── services/
+│   │   ├── dto/            # 在庫データ転送オブジェクト
+│   │   ├── models/         # 在庫モデル
+│   │   ├── presentation/   # 在庫管理UI
+│   │   │   ├── providers/  # 在庫プロバイダー（CSV、アラート等）
+│   │   │   ├── screens/    # 在庫管理画面
+│   │   │   └── widgets/    # 在庫管理UI部品
+│   │   ├── repositories/   # 在庫データアクセス
+│   │   └── services/       # 在庫管理サービス
 │   ├── menu/               # メニュー管理
-│   │   ├── dto/
-│   │   ├── models/
-│   │   ├── presentation/
-│   │   ├── repositories/
-│   │   └── services/
+│   │   ├── dto/            # メニューデータ転送オブジェクト
+│   │   ├── models/         # メニューモデル
+│   │   ├── presentation/   # メニュー管理UI
+│   │   │   ├── providers/  # メニュープロバイダー
+│   │   │   ├── screens/    # メニュー管理画面
+│   │   │   └── widgets/    # メニュー管理UI部品
+│   │   ├── repositories/   # メニューデータアクセス
+│   │   └── services/       # メニュー管理サービス
 │   └── order/              # 注文管理
-│       ├── dto/
-│       ├── models/
-│       ├── presentation/
-│       ├── repositories/
-│       └── services/
+│       ├── dto/            # 注文データ転送オブジェクト
+│       ├── models/         # 注文モデル
+│       ├── presentation/   # 注文管理UI
+│       │   ├── providers/  # 注文プロバイダー（カート、ステータス等）
+│       │   ├── screens/    # 注文管理画面
+│       │   └── widgets/    # 注文管理UI部品
+│       ├── repositories/   # 注文データアクセス
+│       └── services/       # 注文管理サービス
 ├── routing/                # ルーティング
-│   └── guards/             # 認証ガード等
+│   ├── guards/             # 認証ガード等
+│   └── providers/          # ルーティングプロバイダー
 └── shared/                 # 共通UI要素・ユーティリティ
     ├── enums/              # 共通列挙型
     ├── extensions/         # 拡張メソッド
@@ -144,6 +173,26 @@ lib/
         ├── navigation/     # ナビゲーション
         └── tables/         # テーブル系ウィジェット
 ```
+
+#### データ層（lib/data/）について
+
+プロジェクトの進化に伴い、データアクセスに関する機能を`lib/data/`ディレクトリに集約しました。これにより、より明確な責務分離と保守性の向上を実現しています。
+
+- **`lib/data/batch/`** - バッチ処理サービス
+  - 大量データの一括処理
+  - 非同期タスクの管理
+
+- **`lib/data/local/`** - ローカルデータアクセス
+  - `cache/` - キャッシュ機能（旧 `lib/core/cache/`）
+  - `offline_queue/` - オフライン時のデータキューイング
+
+- **`lib/data/realtime/`** - リアルタイム機能（旧 `lib/core/realtime/`）
+  - WebSocketベースのリアルタイム通信
+  - 接続管理とリアルタイムデータ同期
+
+- **`lib/data/remote/`** - リモートデータアクセス（旧 `lib/core/infrastructure/supabase/`）
+  - Supabaseクライアント
+  - 外部APIとの通信
 
 #### DTOに関する注意点
 

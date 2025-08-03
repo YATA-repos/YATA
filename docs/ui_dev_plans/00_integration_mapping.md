@@ -25,7 +25,7 @@
 | 注文サービス | `lib/features/order/services/` | ✅ 推定実装済み | Riverpodプロバイダーで直接インジェクション |
 | **ユーティリティ** | | | |
 | バリデーション | `lib/core/validation/input_validator.dart` | ✅ 完全実装 | フォームWidgetで直接使用 |
-| ログ機能 | `lib/core/utils/logger_mixin.dart` | ✅ 完全実装 | プロバイダー・Widgetで継承使用 |
+| ログ機能 | `lib/core/logging/logger_mixin.dart` | ✅ 完全実装 | プロバイダー・Widgetで継承使用 |
 
 ### 1.2 ❌ 未実装（新規作成対象）
 
