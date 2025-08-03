@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/layouts/main_layout.dart";
 import "../../../../shared/widgets/navigation/mode_selector.dart";
@@ -20,8 +21,16 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> with LoggerMixin {
+  @override
+  String get componentName => "DashboardScreen";
   String selectedMode = "order";
+
+  @override
+  void initState() {
+    super.initState();
+    logDebug("ダッシュボード画面を初期化: 初期モード=$selectedMode");
+  }
 
   @override
   Widget build(BuildContext context) => MainLayout(
@@ -33,7 +42,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: ResponsiveHelper.getResponsivePadding(context),
             child: ModeSelector(
               selectedMode: selectedMode,
-              onModeChanged: (String mode) => setState(() => selectedMode = mode),
+              onModeChanged: (String mode) {
+                logDebug("ダッシュボードモードを変更: $selectedMode -> $mode");
+                setState(() => selectedMode = mode);
+              },
               options: const <ModeOption>[
                 ModeOption(
                   id: "order",
@@ -53,7 +65,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
           // モード別コンテンツ
           Expanded(
-            child: selectedMode == "order" ? const OrderModeView() : const InventoryModeView(),
+            child: selectedMode == "order" 
+                ? const OrderModeView() 
+                : const InventoryModeView(),
           ),
         ],
       ),

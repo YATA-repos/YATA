@@ -3,6 +3,8 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../../core/logging/logger_mixin.dart";
+
 import "../../../../shared/widgets/cards/app_card.dart";
 import "../../../../shared/widgets/common/loading_indicator.dart";
 import "../../models/inventory_model.dart" as inventory;
@@ -17,7 +19,9 @@ class CSVImportPreviewScreen extends ConsumerStatefulWidget {
   ConsumerState<CSVImportPreviewScreen> createState() => _CSVImportPreviewScreenState();
 }
 
-class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen> {
+class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen> with LoggerMixin {
+  @override
+  String get componentName => "CSVImportPreviewScreen";
   File? _selectedFile;
   CSVImportPreview? _previewData;
   bool _isLoading = false;
@@ -25,10 +29,13 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
 
   /// ファイル選択処理
   Future<void> _selectFile() async {
+    logDebug("CSVファイル選択を開始");
     try {
       // ここでfile_pickerを使ったファイル選択を実装
       // 今回は簡単な例として、手動でファイルパスを指定
-    } catch (e) {
+      logDebug("CSVファイル選択機能は開発中です");
+    } catch (e, stackTrace) {
+      logError("CSVファイル選択中にエラーが発生", e, stackTrace);
       setState(() {
         _errorMessage = "ファイル選択に失敗しました: $e";
       });
@@ -37,6 +44,7 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
 
   /// CSVプレビュー処理
   Future<void> _previewCSV(File file) async {
+    logDebug("CSVプレビューを開始: filePath=${file.path}");
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -46,11 +54,13 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       final CSVImportService service = ref.read(csvImportServiceProvider);
       final CSVImportPreview preview = await service.previewCSVFile(file);
       
+      logInfo("CSVプレビューが完了: 総件数=${preview.materials.length}, エラー数=${preview.validationErrors.length}");
       setState(() {
         _previewData = preview;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("CSVプレビュー中にエラーが発生: filePath=${file.path}", e, stackTrace);
       setState(() {
         _errorMessage = "CSVプレビューに失敗しました: $e";
         _isLoading = false;
@@ -61,9 +71,11 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
   /// インポート実行処理
   Future<void> _executeImport() async {
     if (_selectedFile == null) {
+      logWarning("CSVインポート実行: _selectedFileがnullです");
       return;
     }
 
+    logDebug("CSVインポート実行を開始: filePath=${_selectedFile!.path}");
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -77,6 +89,8 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
         skipInvalidRows: true,
       );
       
+      logInfo("CSVインポートが完了: 成功=${result.successCount}件, エラー=${result.errorCount}件, hasErrors=${result.hasErrors}");
+      
       // インポート完了後の処理
       if (!context.mounted) return;
       
@@ -89,10 +103,12 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       );
       
       if (!result.hasErrors) {
+        logDebug("CSVインポートがエラーなしで完了。画面を閉じます");
         if (!currentContext.mounted) return;
         Navigator.of(currentContext).pop();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("CSVインポート中にエラーが発生: filePath=${_selectedFile!.path}", e, stackTrace);
       setState(() {
         _errorMessage = "インポートに失敗しました: $e";
       });

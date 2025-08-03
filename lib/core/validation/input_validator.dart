@@ -1,4 +1,5 @@
 import "../constants/app_strings/app_strings.dart";
+import "../logging/yata_logger.dart";
 
 /// 検証結果クラス
 class ValidationResult {
@@ -117,10 +118,12 @@ class InputValidator {
     try {
       final Uri uri = Uri.parse(value);
       if (!uri.hasScheme || (!uri.scheme.startsWith("http"))) {
+        YataLogger.warning("InputValidator", "URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value");
         return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
       }
       return ValidationResult.success();
     } catch (e) {
+      YataLogger.warning("InputValidator", "URL検証中にURIパースエラーが発生: ${e.toString()}");
       return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
     }
   }
@@ -162,8 +165,13 @@ class InputValidator {
   }
 
   /// 複数の検証結果をまとめて確認
-  static List<ValidationResult> validateAll(List<ValidationResult> results) =>
-      results.where((ValidationResult result) => !result.isValid).toList();
+  static List<ValidationResult> validateAll(List<ValidationResult> results) {
+    final List<ValidationResult> errors = results.where((ValidationResult result) => !result.isValid).toList();
+    if (errors.isNotEmpty) {
+      YataLogger.debug("InputValidator", "バリデーションエラーが${errors.length}件発見されました");
+    }
+    return errors;
+  }
 
   /// 検証エラーメッセージのリストを取得
   static List<String> getErrorMessages(List<ValidationResult> results) => results
@@ -403,28 +411,38 @@ class InputValidator {
     dynamic quantity, {
     num? maxTotalAmount,
   }) {
-    // 個別の値が有効かチェック
-    final ValidationResult priceValidation = validatePrice(price, required: true);
-    if (!priceValidation.isValid) {
-      return priceValidation;
-    }
-
-    final ValidationResult quantityValidation = validateQuantity(quantity, required: true);
-    if (!quantityValidation.isValid) {
-      return quantityValidation;
-    }
-
-    // どちらも有効な場合、合計金額をチェック
-    if (maxTotalAmount != null) {
-      final num priceValue = price is String ? num.parse(price.replaceAll(RegExp(r"[,¥￥\s]"), "")) : price as num;
-      final num quantityValue = quantity is String ? num.parse(quantity) : quantity as num;
-      final num totalAmount = priceValue * quantityValue;
-
-      if (totalAmount > maxTotalAmount) {
-        return ValidationResult.error("合計金額が上限（$maxTotalAmount円）を超えています");
+    try {
+      // 個別の値が有効かチェック
+      final ValidationResult priceValidation = validatePrice(price, required: true);
+      if (!priceValidation.isValid) {
+        YataLogger.debug("InputValidator", "価格バリデーションエラー: ${priceValidation.errorMessage}");
+        return priceValidation;
       }
-    }
 
-    return ValidationResult.success();
+      final ValidationResult quantityValidation = validateQuantity(quantity, required: true);
+      if (!quantityValidation.isValid) {
+        YataLogger.debug("InputValidator", "数量バリデーションエラー: ${quantityValidation.errorMessage}");
+        return quantityValidation;
+      }
+
+      // どちらも有効な場合、合計金額をチェック
+      if (maxTotalAmount != null) {
+        final num priceValue = price is String ? num.parse(price.replaceAll(RegExp(r"[,¥￥\s]"), "")) : price as num;
+        final num quantityValue = quantity is String ? num.parse(quantity) : quantity as num;
+        final num totalAmount = priceValue * quantityValue;
+
+        if (totalAmount > maxTotalAmount) {
+          YataLogger.warning("InputValidator", "合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円");
+          return ValidationResult.error("合計金額が上限（$maxTotalAmount円）を超えています");
+        }
+
+        YataLogger.trace("InputValidator", "価格数量一貫性チェック成功: 価格=$priceValue, 数量=$quantityValue, 合計=$totalAmount");
+      }
+
+      return ValidationResult.success();
+    } catch (e) {
+      YataLogger.error("InputValidator", "価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}");
+      return ValidationResult.error("バリデーション中にエラーが発生しました");
+    }
   }
 }

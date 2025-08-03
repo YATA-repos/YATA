@@ -1,8 +1,8 @@
 import "package:supabase_flutter/supabase_flutter.dart" hide AuthException;
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
-import "../../../data/remote/supabase_client.dart";
 import "../../../core/logging/logger_mixin.dart";
+import "../../../data/remote/supabase_client.dart";
 import "../dto/auth_request.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";

@@ -7,10 +7,10 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:window_manager/window_manager.dart";
 
 import "app/app.dart";
-import "data/remote/supabase_client.dart";
 import "core/logging/logger_mixin.dart";
 import "core/logging/yata_logger.dart";
 import "core/validation/env_validator.dart";
+import "data/remote/supabase_client.dart";
 
 void main() async {
   // 起動開始の明確な表示

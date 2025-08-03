@@ -1,6 +1,6 @@
-import "../../../core/base/base_repository.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/transaction_model.dart";
 
 class StockTransactionRepository extends BaseRepository<StockTransaction, String> {

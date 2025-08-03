@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../core/logging/logger_mixin.dart";
 import "../../enums/ui_enums.dart";
 import "../../themes/app_colors.dart";
 import "../../themes/app_text_theme.dart";
@@ -149,7 +150,9 @@ class ExportSettingsDialog extends StatefulWidget {
     );
 }
 
-class _ExportSettingsDialogState extends State<ExportSettingsDialog> {
+class _ExportSettingsDialogState extends State<ExportSettingsDialog> with LoggerMixin {
+  @override
+  String get loggerComponent => "ExportSettingsDialog";
   late ExportFormat _selectedFormat;
   DateTimeRange? _dateRange;
   bool _includeHeaders = true;
@@ -160,6 +163,7 @@ class _ExportSettingsDialogState extends State<ExportSettingsDialog> {
     super.initState();
     _selectedFormat = widget.defaultFormat;
     _includeFilters = widget.includeFilters;
+    logDebug("エクスポート設定ダイアログを初期化: defaultFormat=${widget.defaultFormat.displayName}, includeFilters=${widget.includeFilters}");
   }
 
   @override
@@ -176,7 +180,12 @@ class _ExportSettingsDialogState extends State<ExportSettingsDialog> {
             value: _selectedFormat,
             onChanged: (ExportFormat? format) {
               if (format != null) {
-                setState(() => _selectedFormat = format);
+                try {
+                  logDebug("エクスポート形式を変更: ${_selectedFormat.displayName} -> ${format.displayName}");
+                  setState(() => _selectedFormat = format);
+                } catch (e, stackTrace) {
+                  logError("エクスポート形式変更中にエラーが発生: format=${format.displayName}", e, stackTrace);
+                }
               }
             },
             decoration: const InputDecoration(
@@ -205,7 +214,12 @@ class _ExportSettingsDialogState extends State<ExportSettingsDialog> {
             title: const Text("ヘッダー行を含める"),
             value: _includeHeaders,
             onChanged: (bool? value) {
-              setState(() => _includeHeaders = value ?? true);
+              try {
+                logTrace("ヘッダー行設定を変更: $_includeHeaders -> ${value ?? true}");
+                setState(() => _includeHeaders = value ?? true);
+              } catch (e, stackTrace) {
+                logError("ヘッダー行設定変更中にエラーが発生", e, stackTrace);
+              }
             },
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,
@@ -216,7 +230,12 @@ class _ExportSettingsDialogState extends State<ExportSettingsDialog> {
               title: const Text("フィルター条件を含める"),
               value: _includeFilters,
               onChanged: (bool? value) {
-                setState(() => _includeFilters = value ?? false);
+                try {
+                  logTrace("フィルター条件設定を変更: $_includeFilters -> ${value ?? false}");
+                  setState(() => _includeFilters = value ?? false);
+                } catch (e, stackTrace) {
+                  logError("フィルター条件設定変更中にエラーが発生", e, stackTrace);
+                }
               },
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
@@ -234,13 +253,18 @@ class _ExportSettingsDialogState extends State<ExportSettingsDialog> {
     );
 
   void _handleExport() {
-    final ExportSettings settings = ExportSettings(
-      format: _selectedFormat,
-      dateRange: _dateRange,
-      includeHeaders: _includeHeaders,
-      includeFilters: _includeFilters,
-    );
-    Navigator.of(context).pop(settings);
+    try {
+      final ExportSettings settings = ExportSettings(
+        format: _selectedFormat,
+        dateRange: _dateRange,
+        includeHeaders: _includeHeaders,
+        includeFilters: _includeFilters,
+      );
+      logInfo("エクスポート実行: format=${_selectedFormat.displayName}, includeHeaders=$_includeHeaders, includeFilters=$_includeFilters");
+      Navigator.of(context).pop(settings);
+    } catch (e, stackTrace) {
+      logError("エクスポート実行中にエラーが発生", e, stackTrace);
+    }
   }
 
   IconData _getFormatIcon(ExportFormat format) {

@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../core/utils/error_handler.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
@@ -29,7 +30,9 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with LoggerMixin {
+  @override
+  String get componentName => "AnalyticsScreen";
   // フィルター状態
   DateTime? _startDate;
   DateTime? _endDate;
@@ -44,6 +47,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final DateTime now = DateTime.now();
     _endDate = DateTime(now.year, now.month, now.day);
     _startDate = _endDate!.subtract(const Duration(days: 6));
+    logDebug("統計画面を初期化: 期間 ${_startDate!.toIso8601String()} - ${_endDate!.toIso8601String()}");
   }
 
   @override
@@ -385,13 +389,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               chartType: ChartType.line,
               height: 350,
             ),
-            error: (Object error, StackTrace stack) => ChartPlaceholder(
-              title: "日別売上推移",
-              description: "データの取得に失敗しました: $error",
-              chartType: ChartType.line,
-              height: 350,
-              data: const <String, dynamic>{"エラー": "データなし"},
-            ),
+            error: (Object error, StackTrace stack) {
+              logError("日別売上推移チャートデータの取得に失敗", error, stack);
+              return ChartPlaceholder(
+                title: "日別売上推移",
+                description: "データの取得に失敗しました: $error",
+                chartType: ChartType.line,
+                height: 350,
+                data: const <String, dynamic>{"エラー": "データなし"},
+              );
+            },
           );
         },
       ),
@@ -516,46 +523,52 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   );
 
   /// デスクトップ用エラー表示
-  Widget _buildDesktopChartsError(Object error) => Row(
-    children: <Widget>[
-      Expanded(
-        child: ChartPlaceholder(
+  Widget _buildDesktopChartsError(Object error) {
+    logError("商品別チャートデータの取得に失敗（デスクトップ）", error, StackTrace.current);
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: ChartPlaceholder(
+            title: "商品別売上比率",
+            description: "データの取得に失敗しました",
+            chartType: ChartType.pie,
+            data: const <String, dynamic>{"エラー": "データなし"},
+          ),
+        ),
+        AppLayout.hSpacerMedium,
+        Expanded(
+          child: ChartPlaceholder(
+            title: "商品別販売数",
+            description: "データの取得に失敗しました",
+            chartType: ChartType.bar,
+            data: const <String, dynamic>{"エラー": "データなし"},
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// モバイル用エラー表示
+  Widget _buildMobileChartsError(Object error) {
+    logError("商品別チャートデータの取得に失敗（モバイル）", error, StackTrace.current);
+    return Column(
+      children: <Widget>[
+        ChartPlaceholder(
           title: "商品別売上比率",
           description: "データの取得に失敗しました",
           chartType: ChartType.pie,
           data: const <String, dynamic>{"エラー": "データなし"},
         ),
-      ),
-      AppLayout.hSpacerMedium,
-      Expanded(
-        child: ChartPlaceholder(
+        AppLayout.vSpacerMedium,
+        ChartPlaceholder(
           title: "商品別販売数",
           description: "データの取得に失敗しました",
           chartType: ChartType.bar,
           data: const <String, dynamic>{"エラー": "データなし"},
         ),
-      ),
-    ],
-  );
-
-  /// モバイル用エラー表示
-  Widget _buildMobileChartsError(Object error) => Column(
-    children: <Widget>[
-      ChartPlaceholder(
-        title: "商品別売上比率",
-        description: "データの取得に失敗しました",
-        chartType: ChartType.pie,
-        data: const <String, dynamic>{"エラー": "データなし"},
-      ),
-      AppLayout.vSpacerMedium,
-      ChartPlaceholder(
-        title: "商品別販売数",
-        description: "データの取得に失敗しました",
-        chartType: ChartType.bar,
-        data: const <String, dynamic>{"エラー": "データなし"},
-      ),
-    ],
-  );
+      ],
+    );
+  }
 
   /// ログ監視セクション
   Widget _buildLogMonitoringSection() => Column(
@@ -572,18 +585,21 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   /// フィルター適用
   void _handleApplyFilter() async {
+    logDebug("統計フィルター適用を開始: 期間 ${_startDate?.toIso8601String()} - ${_endDate?.toIso8601String()}, 集計単位: $_aggregationUnit, カテゴリ: $_selectedCategories");
     setState(() => _isLoading = true);
 
     try {
       // フィルター適用後、統計データをリフレッシュ
       ref.invalidate(todayStatsProvider);
       
+      logInfo("統計フィルター適用が完了しました");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("フィルターを適用しました")),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("統計フィルター適用中にエラーが発生", e, stackTrace);
       if (mounted) {
         ErrorHandler.instance.showRetryableErrorSnackBar(
           context,
@@ -601,6 +617,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   /// エクスポート処理
   void _handleExport(ExportFormat format) {
+    logDebug("統計レポートエクスポートを要求: ${format.name}形式（開発中機能）");
     // エクスポート機能の本格実装は別タスクで実施予定
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

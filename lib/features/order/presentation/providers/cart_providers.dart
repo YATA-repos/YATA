@@ -2,9 +2,9 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
-import "../../../../core/providers/common_providers.dart";
 import "../../../../core/utils/provider_logger.dart";
 import "../../../../shared/models/cart_models.dart";
+import "../../../../shared/providers/common_providers.dart";
 import "../../../auth/models/user_profile.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../menu/models/menu_model.dart";

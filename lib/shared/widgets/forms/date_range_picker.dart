@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../core/logging/logger_mixin.dart";
 import "../../themes/app_colors.dart";
 import "../../themes/app_text_theme.dart";
 import "../cards/app_card.dart";
@@ -30,7 +31,9 @@ class AppDateRangePicker extends StatefulWidget {
   State<AppDateRangePicker> createState() => _AppDateRangePickerState();
 }
 
-class _AppDateRangePickerState extends State<AppDateRangePicker> {
+class _AppDateRangePickerState extends State<AppDateRangePicker> with LoggerMixin {
+  @override
+  String get loggerComponent => "AppDateRangePicker";
   DateTime? _startDate;
   DateTime? _endDate;
   String? _selectedPreset;
@@ -156,51 +159,76 @@ class _AppDateRangePickerState extends State<AppDateRangePicker> {
   );
 
   void _handlePresetSelection(DateRangePreset preset) {
-    final DateTimeRange range = preset.getDateRange();
-    setState(() {
-      _selectedPreset = preset.key;
-      _startDate = range.start;
-      _endDate = range.end;
-    });
-    widget.onDateRangeChanged(_startDate, _endDate);
+    try {
+      logDebug("日付プリセットを選択：${preset.key} - ${preset.label}");
+      final DateTimeRange range = preset.getDateRange();
+      setState(() {
+        _selectedPreset = preset.key;
+        _startDate = range.start;
+        _endDate = range.end;
+      });
+      widget.onDateRangeChanged(_startDate, _endDate);
+      logInfo("日付範囲を更新：${_startDate?.toString()} - ${_endDate?.toString()}");
+    } catch (e, stackTrace) {
+      logError("プリセット選択処理中にエラーが発生：preset=${preset.key}", e, stackTrace);
+    }
   }
 
   Future<void> _selectStartDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _startDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
+    try {
+      logDebug("開始日選択ダイアログを表示");
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: _startDate ?? DateTime.now(),
+        firstDate: DateTime(2020),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      );
 
-    if (picked != null) {
-      setState(() {
-        _startDate = picked;
-        _selectedPreset = null; // プリセット選択をクリア
+      if (picked != null) {
+        logDebug("開始日を選択：${picked.toString()}");
+        setState(() {
+          _startDate = picked;
+          _selectedPreset = null; // プリセット選択をクリア
 
-        // 終了日が開始日より前の場合は調整
-        if (_endDate != null && _endDate!.isBefore(picked)) {
-          _endDate = picked;
-        }
-      });
-      widget.onDateRangeChanged(_startDate, _endDate);
+          // 終了日が開始日より前の場合は調整
+          if (_endDate != null && _endDate!.isBefore(picked)) {
+            logWarning("終了日が開始日より前のため調整：${_endDate?.toString()} -> ${picked.toString()}");
+            _endDate = picked;
+          }
+        });
+        widget.onDateRangeChanged(_startDate, _endDate);
+        logInfo("開始日を更新：${_startDate?.toString()}");
+      } else {
+        logDebug("開始日選択がキャンセルされました");
+      }
+    } catch (e, stackTrace) {
+      logError("開始日選択中にエラーが発生", e, stackTrace);
     }
   }
 
   Future<void> _selectEndDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _endDate ?? _startDate ?? DateTime.now(),
-      firstDate: _startDate ?? DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
+    try {
+      logDebug("終了日選択ダイアログを表示");
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: _endDate ?? _startDate ?? DateTime.now(),
+        firstDate: _startDate ?? DateTime(2020),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      );
 
-    if (picked != null) {
-      setState(() {
-        _endDate = picked;
-        _selectedPreset = null; // プリセット選択をクリア
-      });
-      widget.onDateRangeChanged(_startDate, _endDate);
+      if (picked != null) {
+        logDebug("終了日を選択：${picked.toString()}");
+        setState(() {
+          _endDate = picked;
+          _selectedPreset = null; // プリセット選択をクリア
+        });
+        widget.onDateRangeChanged(_startDate, _endDate);
+        logInfo("終了日を更新：${_endDate?.toString()}");
+      } else {
+        logDebug("終了日選択がキャンセルされました");
+      }
+    } catch (e, stackTrace) {
+      logError("終了日選択中にエラーが発生", e, stackTrace);
     }
   }
 }

@@ -1,5 +1,5 @@
-import "../../../core/base/base_multitenant_repository.dart";
 import "../../../core/constants/query_types.dart";
+import "../../../data/repositories/base_multitenant_repository.dart";
 import "../models/analytics_model.dart";
 
 class DailySummaryRepository extends BaseMultiTenantRepository<DailySummary, String> {

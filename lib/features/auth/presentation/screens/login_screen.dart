@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 
+import "../../../../core/utils/provider_logger.dart";
 import "../../models/auth_state.dart";
 import "../providers/auth_providers.dart";
 
@@ -204,12 +205,18 @@ class LoginScreen extends ConsumerWidget {
     BuildContext context, 
     AuthStateNotifier authNotifier,
   ) async {
+    ProviderLogger.debug("LoginScreen", "Google認証処理を開始");
+    
     try {
       await authNotifier.signInWithGoogle();
       
+      ProviderLogger.info("LoginScreen", "Google認証が成功しました");
       // 認証成功時の追加処理があれば実装
       // 現在はAuthGuardによる自動リダイレクトに任せる
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // 認証失敗をログに記録
+      ProviderLogger.authenticationFailed("LoginScreen", "Google OAuth", e, stackTrace);
+      
       // エラーは既にAuthStateNotifierで処理されている
       // 必要に応じて追加のエラーハンドリングを実装
       if (context.mounted) {
@@ -247,6 +254,8 @@ class LoginScreen extends ConsumerWidget {
     BuildContext context,
     AuthStateNotifier authNotifier,
   ) async {
+    ProviderLogger.info("LoginScreen", "認証リトライを開始");
+    
     // エラー状態をクリア
     authNotifier.clearError();
     
@@ -256,6 +265,7 @@ class LoginScreen extends ConsumerWidget {
     // 再度認証を試行
     if (context.mounted) {
       await _handleGoogleSignIn(context, authNotifier);
+      ProviderLogger.debug("LoginScreen", "認証リトライ処理が完了");
     }
   }
 

@@ -2,8 +2,8 @@ import "dart:async";
 
 import "package:supabase_flutter/supabase_flutter.dart";
 
-import "../remote/supabase_client.dart";
 import "../../core/logging/logger_mixin.dart";
+import "../remote/supabase_client.dart";
 import "realtime_config.dart";
 
 /// 接続状態列挙型

@@ -1,5 +1,5 @@
-import "../../../core/base/base_multitenant_repository.dart";
 import "../../../core/constants/query_types.dart";
+import "../../../data/repositories/base_multitenant_repository.dart";
 import "../models/order_model.dart";
 
 /// 注文明細リポジトリ

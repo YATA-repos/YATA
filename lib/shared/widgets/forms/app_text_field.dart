@@ -4,6 +4,7 @@ import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 
 import "../../../core/constants/constants.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../enums/ui_enums.dart";
 import "../../themes/app_colors.dart";
@@ -222,7 +223,9 @@ class AppTextField extends StatefulWidget {
   State<AppTextField> createState() => _AppTextFieldState();
 }
 
-class _AppTextFieldState extends State<AppTextField> {
+class _AppTextFieldState extends State<AppTextField> with LoggerMixin {
+  @override
+  String get loggerComponent => "AppTextField";
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   String? _validationError;
@@ -236,67 +239,105 @@ class _AppTextFieldState extends State<AppTextField> {
 
     // バリデーションモードに応じてリスナーを設定
     _setupValidationListeners();
+    logTrace("AppTextField初期化: validationMode=${widget.validationMode}, inputType=${widget.inputType}");
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
-    if (widget.controller == null) {
-      _controller.dispose();
+    try {
+      _debounceTimer?.cancel();
+      if (widget.controller == null) {
+        _controller.dispose();
+      }
+      if (widget.focusNode == null) {
+        _focusNode.dispose();
+      }
+      logTrace("AppTextFieldリソースを破棄");
+      super.dispose();
+    } catch (e, stackTrace) {
+      logError("AppTextField破棄中にエラーが発生", e, stackTrace);
+      super.dispose();
     }
-    if (widget.focusNode == null) {
-      _focusNode.dispose();
-    }
-    super.dispose();
   }
 
   void _setupValidationListeners() {
-    switch (widget.validationMode) {
-      case ValidationMode.realtime:
-        _controller.addListener(_validateInputRealtime);
-        break;
-      case ValidationMode.debounced:
-        _controller.addListener(_validateInputDebounced);
-        break;
-      case ValidationMode.onFocusLost:
-        _focusNode.addListener(_onFocusChanged);
-        break;
-      case ValidationMode.manual:
-        // 手動実行のみ - リスナーなし
-        break;
+    try {
+      switch (widget.validationMode) {
+        case ValidationMode.realtime:
+          _controller.addListener(_validateInputRealtime);
+          logTrace("リアルタイムバリデーションリスナーを設定");
+          break;
+        case ValidationMode.debounced:
+          _controller.addListener(_validateInputDebounced);
+          logTrace("デバウンス付きバリデーションリスナーを設定");
+          break;
+        case ValidationMode.onFocusLost:
+          _focusNode.addListener(_onFocusChanged);
+          logTrace("フォーカス喪失時バリデーションリスナーを設定");
+          break;
+        case ValidationMode.manual:
+          logTrace("手動バリデーションモード - リスナーなし");
+          break;
+      }
+    } catch (e, stackTrace) {
+      logError("バリデーションリスナー設定中にエラーが発生: mode=${widget.validationMode}", e, stackTrace);
     }
   }
 
   void _validateInputRealtime() {
-    if (widget.validation != null) {
-      final String? error = widget.validation!(_controller.text);
-      if (mounted && error != _validationError) {
-        setState(() {
-          _validationError = error;
-        });
+    try {
+      if (widget.validation != null) {
+        final String? error = widget.validation!(_controller.text);
+        if (mounted && error != _validationError) {
+          setState(() {
+            _validationError = error;
+          });
+          if (error != null) {
+            logTrace("バリデーションエラーを検出: $error");
+          }
+        }
       }
+    } catch (e, stackTrace) {
+      logError("リアルタイムバリデーション中にエラーが発生: text=${_controller.text}", e, stackTrace);
     }
   }
 
   void _validateInputDebounced() {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(AppConfig.debounceTimeout, () {
-      if (mounted) {
-        _validateInputRealtime();
-      }
-    });
+    try {
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(AppConfig.debounceTimeout, () {
+        try {
+          if (mounted) {
+            _validateInputRealtime();
+          }
+        } catch (e, stackTrace) {
+          logError("デバウンスバリデーション実行中にエラーが発生", e, stackTrace);
+        }
+      });
+    } catch (e, stackTrace) {
+      logError("デバウンスタイマー設定中にエラーが発生", e, stackTrace);
+    }
   }
 
   void _onFocusChanged() {
-    if (!_focusNode.hasFocus) {
-      // フォーカスが外れた時にバリデーション実行
-      _validateInputRealtime();
+    try {
+      if (!_focusNode.hasFocus) {
+        logTrace("フォーカス喪失によりバリデーションを実行");
+        _validateInputRealtime();
+      }
+    } catch (e, stackTrace) {
+      logError("フォーカス変更処理中にエラーが発生", e, stackTrace);
     }
   }
 
   /// 手動バリデーション実行（外部から呼び出し可能）
   void validateManually() {
-    _validateInputRealtime();
+    try {
+      logDebug("手動バリデーションを実行");
+      _validateInputRealtime();
+    } catch (e, stackTrace) {
+      logError("手動バリデーション実行中にエラーが発生", e, stackTrace);
+    }
   }
 
   @override

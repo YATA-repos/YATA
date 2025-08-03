@@ -2,9 +2,9 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
 import "../../../core/logging/logger_mixin.dart";
+import "../../../core/utils/error_handler.dart";
 import "../../../data/realtime/realtime_config.dart";
 import "../../../data/realtime/realtime_service_mixin.dart";
-import "../../../core/utils/error_handler.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";

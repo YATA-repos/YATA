@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../core/logging/logger_mixin.dart";
 import "../../themes/app_colors.dart";
 import "../../themes/app_text_theme.dart";
 import "../cards/app_card.dart";
@@ -40,7 +41,9 @@ class AppDataTable<T> extends StatefulWidget {
   State<AppDataTable<T>> createState() => _AppDataTableState<T>();
 }
 
-class _AppDataTableState<T> extends State<AppDataTable<T>> {
+class _AppDataTableState<T> extends State<AppDataTable<T>> with LoggerMixin {
+  @override
+  String get loggerComponent => "AppDataTable";
   Set<int> _selectedRows = <int>{};
 
   @override
@@ -126,25 +129,39 @@ class _AppDataTableState<T> extends State<AppDataTable<T>> {
   );
 
   void _handleSelectAll(bool? selectAll) {
-    setState(() {
-      if (true == selectAll) {
-        _selectedRows = Set<int>.from(List<int>.generate(widget.rows.length, (int index) => index));
-      } else {
-        _selectedRows.clear();
-      }
-    });
-    widget.onSelectionChanged?.call(_selectedRows);
+    try {
+      logDebug("全選択処理を実行: selectAll=$selectAll, 行数=${widget.rows.length}");
+      setState(() {
+        if (true == selectAll) {
+          _selectedRows = Set<int>.from(List<int>.generate(widget.rows.length, (int index) => index));
+          logInfo("全ての行を選択しました: ${_selectedRows.length}行");
+        } else {
+          final int previousCount = _selectedRows.length;
+          _selectedRows.clear();
+          logInfo("全ての行の選択を解除しました: $previousCount行");
+        }
+      });
+      widget.onSelectionChanged?.call(_selectedRows);
+    } catch (e, stackTrace) {
+      logError("全選択処理中にエラーが発生: selectAll=$selectAll", e, stackTrace);
+    }
   }
 
   void _handleRowSelection(int index, bool selected) {
-    setState(() {
-      if (selected) {
-        _selectedRows.add(index);
-      } else {
-        _selectedRows.remove(index);
-      }
-    });
-    widget.onSelectionChanged?.call(_selectedRows);
+    try {
+      logTrace("行選択を変更: index=$index, selected=$selected");
+      setState(() {
+        if (selected) {
+          _selectedRows.add(index);
+        } else {
+          _selectedRows.remove(index);
+        }
+      });
+      logDebug("選択行数を更新: ${_selectedRows.length}行選択中");
+      widget.onSelectionChanged?.call(_selectedRows);
+    } catch (e, stackTrace) {
+      logError("行選択処理中にエラーが発生: index=$index, selected=$selected", e, stackTrace);
+    }
   }
 }
 

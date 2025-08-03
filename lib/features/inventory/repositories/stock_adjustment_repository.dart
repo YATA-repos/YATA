@@ -1,5 +1,5 @@
-import "../../../core/base/base_repository.dart";
 import "../../../core/constants/query_types.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/transaction_model.dart";
 
 class StockAdjustmentRepository extends BaseRepository<StockAdjustment, String> {

@@ -4,6 +4,7 @@ import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/layouts/main_layout.dart";
 import "../../../../shared/themes/app_colors.dart";
@@ -32,7 +33,9 @@ class OrderHistoryScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
 }
 
-class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
+class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> with LoggerMixin {
+  @override
+  String get componentName => "OrderHistoryScreen";
   // フィルター状態
   DateTime? _startDate;
   DateTime? _endDate;
@@ -55,11 +58,13 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     final DateTime now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = _startDate;
+    logDebug("注文履歴画面を初期化: 期間 ${_startDate!.toIso8601String()} - ${_endDate!.toIso8601String()}");
   }
 
   @override
   Widget build(BuildContext context) {
     if (userId == null) {
+      logWarning("注文履歴画面: ユーザー情報が取得できません");
       return const MainLayout(
         title: "注文履歴",
         child: Center(child: Text("ユーザー情報が取得できません")),
@@ -79,14 +84,20 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
         .watch(orderHistoryProvider(searchRequest, userId!))
         .when(
           data: _buildMainContent,
-          loading: () => const MainLayout(
-            title: AppStrings.titleOrderHistory,
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (Object error, StackTrace stack) => MainLayout(
-            title: AppStrings.titleOrderHistory,
-            child: Center(child: Text("エラー: $error")),
-          ),
+          loading: () {
+            logTrace("注文履歴データ読み込み中");
+            return const MainLayout(
+              title: AppStrings.titleOrderHistory,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
+          error: (Object error, StackTrace stack) {
+            logError("注文履歴データの読み込みでエラーが発生", error, stack);
+            return MainLayout(
+              title: AppStrings.titleOrderHistory,
+              child: Center(child: Text("エラー: $error")),
+            );
+          },
         );
   }
 
@@ -377,6 +388,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
 
   /// ソート処理
   void _handleSort(String column, bool ascending) {
+    logDebug("注文履歴ソートを要求: $column 列（開発中機能）");
     // ソート機能は現在未実装（将来的な拡張機能として検討中）
     // 現在は日付・ステータスフィルターで十分な機能を提供
     ScaffoldMessenger.of(context).showSnackBar(
@@ -393,9 +405,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
   /// フィルター適用
   void _handleApplyFilter() async {
     if (userId == null) {
+      logWarning("注文履歴フィルター適用: userIdがnullです");
       return;
     }
 
+    logDebug("注文履歴フィルター適用を開始: 期間 ${_startDate?.toIso8601String()} - ${_endDate?.toIso8601String()}, ステータス: $_selectedStatus, 検索: $_searchQuery");
     setState(() => _isLoading = true);
 
     try {
@@ -413,11 +427,13 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       // プロバイダーを無効化してリフレッシュ
       ref.invalidate(orderHistoryProvider(searchRequest, userId!));
 
+      logInfo("注文履歴フィルター適用が完了しました");
       // 成功メッセージを表示
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("フィルターを適用しました"), backgroundColor: AppColors.success),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("注文履歴フィルター適用中にエラーが発生", e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("フィルター適用に失敗しました: $e"), backgroundColor: AppColors.danger),
       );
@@ -428,6 +444,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
 
   /// 実際のエクスポート処理
   void _handleRealExport(ExportFormat format, List<Order> orders) {
+    logDebug("注文履歴エクスポート確認ダイアログを表示: ${format.name.toUpperCase()}形式、${orders.length}件");
     showDialog<void>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -450,6 +467,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
   /// 実際の詳細表示
   void _handleRealViewDetails(Order order) {
     if (order.id == null) {
+      logWarning("注文詳細表示: 注文IDがnullです (orderNumber: ${order.orderNumber})");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("注文IDが取得できませんでした"),
@@ -459,6 +477,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       return;
     }
 
+    logDebug("注文詳細画面に遷移: orderId=${order.id}, orderNumber=${order.orderNumber}");
     // 注文詳細画面に遷移
     context.go("/orders/${order.id}");
   }
@@ -532,9 +551,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
   /// 実際のエクスポート実行
   void _performRealExport(ExportFormat format, List<Order> orders) {
     try {
+      logDebug("注文履歴エクスポートを開始: ${format.name.toUpperCase()}形式、${orders.length}件");
       // 実際の実装では、ここでCSVやExcelファイルを生成
       final String formattedData = _formatRealOrderDataForExport(format, orders);
 
+      logInfo("注文履歴エクスポートが完了: ${format.name.toUpperCase()}形式、${orders.length}件");
       // ファイル保存やダウンロードの処理をシミュレート
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -543,6 +564,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           action: SnackBarAction(
             label: "詳細",
             onPressed: () {
+              logDebug("エクスポート詳細ダイアログを表示");
               showDialog<void>(
                 context: context,
                 builder: (BuildContext context) => AlertDialog(
@@ -562,7 +584,8 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("注文履歴エクスポート中にエラーが発生: ${format.name.toUpperCase()}形式", e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("エクスポートに失敗しました: $e"), backgroundColor: AppColors.danger),
       );

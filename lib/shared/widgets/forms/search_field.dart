@@ -3,6 +3,7 @@ import "dart:async";
 import "package:flutter/material.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../core/logging/logger_mixin.dart";
 import "../../enums/ui_enums.dart";
 import "../../themes/app_colors.dart";
 import "../../themes/app_text_theme.dart";
@@ -50,7 +51,9 @@ class SearchField extends StatefulWidget {
   State<SearchField> createState() => _SearchFieldState();
 }
 
-class _SearchFieldState extends State<SearchField> {
+class _SearchFieldState extends State<SearchField> with LoggerMixin {
+  @override
+  String get loggerComponent => "SearchField";
   late final TextEditingController _controller;
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
@@ -85,30 +88,50 @@ class _SearchFieldState extends State<SearchField> {
   }
 
   void _onFocusChanged() {
-    if (_focusNode.hasFocus) {
-      _showOverlay();
-    } else {
-      _removeOverlay();
+    try {
+      if (_focusNode.hasFocus) {
+        logTrace("検索フィールドにフォーカス：オーバーレイを表示");
+        _showOverlay();
+      } else {
+        logTrace("検索フィールドのフォーカス喪失：オーバーレイを非表示");
+        _removeOverlay();
+      }
+    } catch (e, stackTrace) {
+      logError("フォーカス変更処理中にエラーが発生", e, stackTrace);
     }
   }
 
   void _onTextChanged() {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(Duration(milliseconds: widget.debounceMs), () {
-      widget.onChanged?.call(_controller.text);
-    });
+    try {
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(Duration(milliseconds: widget.debounceMs), () {
+        try {
+          logTrace("検索テキスト変更：'${_controller.text}'");
+          widget.onChanged?.call(_controller.text);
+        } catch (e, stackTrace) {
+          logError("検索テキスト変更コールバック中にエラーが発生", e, stackTrace);
+        }
+      });
 
-    if (_shouldShowOverlay) {
-      _updateOverlay();
-    } else {
-      _removeOverlay();
+      if (_shouldShowOverlay) {
+        _updateOverlay();
+      } else {
+        _removeOverlay();
+      }
+    } catch (e, stackTrace) {
+      logError("テキスト変更処理中にエラーが発生", e, stackTrace);
     }
   }
 
   void _onSuggestionTap(String suggestion) {
-    _controller.text = suggestion;
-    _focusNode.unfocus();
-    widget.onSubmitted?.call(suggestion);
+    try {
+      logDebug("検索候補を選択：'$suggestion'");
+      _controller.text = suggestion;
+      _focusNode.unfocus();
+      widget.onSubmitted?.call(suggestion);
+    } catch (e, stackTrace) {
+      logError("検索候補選択処理中にエラーが発生：suggestion='$suggestion'", e, stackTrace);
+    }
   }
 
   void _onClear() {
@@ -191,13 +214,17 @@ class _SearchFieldState extends State<SearchField> {
   };
 
   void _showOverlay() {
-    if (_overlayEntry != null) {
-      return;
+    try {
+      if (_overlayEntry != null) {
+        return;
+      }
+
+      _overlayEntry = OverlayEntry(builder: (BuildContext context) => _buildOverlay());
+      Overlay.of(context).insert(_overlayEntry!);
+      logTrace("検索候補オーバーレイを表示");
+    } catch (e, stackTrace) {
+      logError("オーバーレイ表示中にエラーが発生", e, stackTrace);
     }
-
-    _overlayEntry = OverlayEntry(builder: (BuildContext context) => _buildOverlay());
-
-    Overlay.of(context).insert(_overlayEntry!);
   }
 
   void _updateOverlay() {
@@ -205,8 +232,13 @@ class _SearchFieldState extends State<SearchField> {
   }
 
   void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+    try {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+      logTrace("検索候補オーバーレイを非表示");
+    } catch (e, stackTrace) {
+      logError("オーバーレイ削除中にエラーが発生", e, stackTrace);
+    }
   }
 
   Widget _buildOverlay() => CompositedTransformFollower(

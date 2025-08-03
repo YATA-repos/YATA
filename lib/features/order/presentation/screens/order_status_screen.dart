@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/enums.dart" as core_enums;
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../shared/layouts/main_layout.dart";
 import "../../../../shared/themes/app_colors.dart";
 import "../../../../shared/themes/app_text_theme.dart";
@@ -26,7 +27,9 @@ class OrderStatusScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderStatusScreen> createState() => _OrderStatusScreenState();
 }
 
-class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
+class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> with LoggerMixin {
+  @override
+  String get componentName => "OrderStatusScreen";
   core_enums.OrderStatus? _selectedStatusFilter;
   List<Order> _selectedOrders = <Order>[];
   bool _showBulkActions = false;
@@ -37,6 +40,7 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
     final String? userId = ref.watch(currentUserIdProvider);
 
     if (currentUser == null) {
+      logWarning("注文状況画面: ユーザーがログインしていません");
       return const MainLayout(
         title: "注文状況",
         child: Center(child: Text("ログインが必要です")),
@@ -44,6 +48,7 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
     }
 
     if (userId == null) {
+      logWarning("注文状況画面: userIdがnullです");
       return const MainLayout(
         title: "注文状況",
         child: Center(child: Text("ユーザー情報の取得に失敗しました")),
@@ -111,48 +116,71 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
               ),
             );
           },
-          loading: () => const MainLayout(
-            title: "注文状況",
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (Object error, StackTrace stack) => MainLayout(
-            title: "注文状況",
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(LucideIcons.alertCircle, size: 64, color: AppColors.danger),
-                  const SizedBox(height: 16),
-                  Text("データの読み込みに失敗しました", style: AppTextTheme.cardTitle),
-                  const SizedBox(height: 8),
-                  Text(
-                    error.toString(),
-                    style: AppTextTheme.cardDescription,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+          loading: () {
+            logTrace("リアルタイム注文データ読み込み中");
+            return const MainLayout(
+              title: "注文状況",
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
+          error: (Object error, StackTrace stack) {
+            logError("リアルタイム注文データの読み込みでエラーが発生", error, stack);
+            return MainLayout(
+              title: "注文状況",
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Icon(LucideIcons.alertCircle, size: 64, color: AppColors.danger),
+                    const SizedBox(height: 16),
+                    Text("データの読み込みに失敗しました", style: AppTextTheme.cardTitle),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: AppTextTheme.cardDescription,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
   }
 
   /// ステータス更新を処理
   void _handleStatusUpdate(String orderId, core_enums.OrderStatus newStatus) {
-    ref.read(orderStatusManagerProvider.notifier).updateOrderStatus(orderId, newStatus);
+    logDebug("注文ステータス更新: orderId=$orderId, newStatus=$newStatus");
+    try {
+      ref.read(orderStatusManagerProvider.notifier).updateOrderStatus(orderId, newStatus);
+      logInfo("注文ステータス更新が完了: orderId=$orderId, newStatus=$newStatus");
+    } catch (e, stackTrace) {
+      logError("注文ステータス更新中にエラーが発生: orderId=$orderId", e, stackTrace);
+      rethrow;
+    }
   }
 
   /// 一括ステータス更新を処理
   void _handleBulkStatusUpdate(List<Order> orders) {
-    for (final Order order in orders) {
-      if (order.id != null) {
-        _handleStatusUpdate(order.id!, order.status);
+    logDebug("一括ステータス更新を開始: ${orders.length}件の注文");
+    try {
+      for (final Order order in orders) {
+        if (order.id != null) {
+          _handleStatusUpdate(order.id!, order.status);
+        } else {
+          logWarning("注文IDがnullのためスキップ: orderNumber=${order.orderNumber}");
+        }
       }
+      logInfo("一括ステータス更新が完了: ${orders.length}件");
+    } catch (e, stackTrace) {
+      logError("一括ステータス更新中にエラーが発生", e, stackTrace);
+      rethrow;
     }
   }
 
   /// 一括アクションを処理
   void _handleBulkAction(BulkOrderAction action) {
+    logDebug("一括アクションを開始: action=$action, 選択中の注文数=${_selectedOrders.length}");
     core_enums.OrderStatus? targetStatus;
 
     switch (action) {
@@ -170,18 +198,28 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
         break;
     }
 
-    for (final Order order in _selectedOrders) {
-      if (order.id != null) {
-        _handleStatusUpdate(order.id!, targetStatus);
+    try {
+      for (final Order order in _selectedOrders) {
+        if (order.id != null) {
+          _handleStatusUpdate(order.id!, targetStatus);
+        } else {
+          logWarning("注文IDがnullのためスキップ: orderNumber=${order.orderNumber}");
+        }
       }
+      logInfo("一括アクションが完了: action=$action, 処理件数=${_selectedOrders.length}");
+      setState(() {
+        _selectedOrders.clear();
+      });
+    } catch (e, stackTrace) {
+      logError("一括アクション中にエラーが発生: action=$action", e, stackTrace);
+      rethrow;
     }
-    setState(() {
-      _selectedOrders.clear();
-    });
-    }
+  }
 
   /// 全選択/解除を処理
   void _handleSelectAll(List<Order> orders) {
+    final bool isSelectingAll = _selectedOrders.length != orders.length;
+    logDebug("${isSelectingAll ? '全選択' : '全解除'}を実行: 対象注文数=${orders.length}");
     setState(() {
       if (_selectedOrders.length == orders.length) {
         _selectedOrders.clear();
@@ -190,16 +228,23 @@ class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> {
       }
       _showBulkActions = _selectedOrders.isNotEmpty;
     });
+    logDebug("${isSelectingAll ? '全選択' : '全解除'}が完了: 選択中の注文数=${_selectedOrders.length}");
   }
 
   /// リフレッシュを処理
   void _handleRefresh() {
-    // Riverpodプロバイダーを再取得
-    ref.invalidate(realTimeOrdersStreamProvider);
-    setState(() {
-      _selectedOrders.clear();
-      _showBulkActions = false;
-    });
+    logDebug("注文状況リフレッシュを開始");
+    try {
+      // Riverpodプロバイダーを再取得
+      ref.invalidate(realTimeOrdersStreamProvider);
+      setState(() {
+        _selectedOrders.clear();
+        _showBulkActions = false;
+      });
+      logInfo("注文状況リフレッシュが完了しました");
+    } catch (e, stackTrace) {
+      logError("注文状況リフレッシュ中にエラーが発生", e, stackTrace);
+    }
   }
 
   /// 空の状態表示

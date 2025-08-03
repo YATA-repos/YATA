@@ -79,9 +79,9 @@ class AuthConfig {
         return dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_PROD"] ?? "https://example.invalid";
       }
     } else {
-      // Desktop/Mobile環境
-      // ! これ正当か？
-      return "com.example.yata://login";
+      // Desktop/Mobile環境 - カスタムURLスキーム使用
+      // 環境変数から取得、未設定の場合はデフォルトスキームを使用
+      return dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_MOBILE"] ?? "com.example.yata://login";
     }
   }
 

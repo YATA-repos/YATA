@@ -1,10 +1,10 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../../../../core/constants/enums.dart";
 import "../../../../data/local/cache/cache_strategy.dart";
 import "../../../../data/local/cache/enhanced_cache_strategy.dart";
-import "../../../../core/constants/enums.dart";
-import "../../../../core/providers/intelligent_cache_providers.dart";
+import "../../../../shared/providers/intelligent_cache_providers.dart";
 import "../../dto/inventory_dto.dart";
 import "../../models/inventory_model.dart";
 import "../../services/inventory_service.dart";

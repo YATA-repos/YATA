@@ -2,7 +2,9 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
 import "../logging/yata_logger.dart";
 
-// ! 静的メソッドのためLoggerMixinは使用不可
+/// Supabaseクエリ構築用ユーティリティクラス
+///
+/// 静的メソッドのみを提供するため、YataLoggerの静的メソッドを直接使用
 class QueryUtils {
   QueryUtils._();
 

@@ -2,6 +2,8 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../../core/logging/logger_mixin.dart";
+
 import "../../../../shared/widgets/cards/app_card.dart";
 import "../../../../shared/widgets/common/loading_indicator.dart";
 import "../../services/order_workflow_service.dart";
@@ -14,7 +16,9 @@ class MaterialOrderScreen extends ConsumerStatefulWidget {
   ConsumerState<MaterialOrderScreen> createState() => _MaterialOrderScreenState();
 }
 
-class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
+class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> with LoggerMixin {
+  @override
+  String get componentName => "MaterialOrderScreen";
   OrderCalculationResult? _orderResult;
   bool _isLoading = false;
   String? _errorMessage;
@@ -23,11 +27,13 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
   @override
   void initState() {
     super.initState();
+    logDebug("材料発注画面を初期化し、発注提案の計算を開始");
     _calculateOrderSuggestions();
   }
 
   /// 発注提案を計算
   Future<void> _calculateOrderSuggestions() async {
+    logDebug("発注提案の計算を開始");
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -39,11 +45,13 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
         "user-id", // 実際のユーザーIDを取得する必要がある
       );
       
+      logInfo("発注提案の計算が完了: 総提案数=${result.totalSuggestions}, 緒急=${result.criticalCount}, 高優先度=${result.highPriorityCount}");
       setState(() {
         _orderResult = result;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("発注提案の計算中にエラーが発生", e, stackTrace);
       setState(() {
         _errorMessage = "発注提案の計算に失敗しました: $e";
         _isLoading = false;
@@ -53,6 +61,7 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
 
   /// 発注量を調整
   void _adjustQuantity(String materialId, double newQuantity) {
+    logDebug("発注量を調整: materialId=$materialId, newQuantity=$newQuantity");
     setState(() {
       _adjustedQuantities[materialId] = newQuantity;
     });
@@ -61,17 +70,30 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
   /// 発注を実行
   Future<void> _executeOrders() async {
     if (_orderResult == null) {
+      logWarning("発注実行: _orderResultがnullです");
       return;
     }
 
-    // 実際の発注処理を実装
-    // 今回は簡単な通知のみ
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("発注処理を実行しました"),
-        backgroundColor: Colors.green,
-      ),
-    );
+    logDebug("発注実行を開始: 総提案数=${_orderResult!.totalSuggestions}, 調整数=${_adjustedQuantities.length}");
+    try {
+      // 実際の発注処理を実装
+      // 今回は簡単な通知のみ
+      logInfo("発注処理を実行しました（シミュレーション）");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("発注処理を実行しました"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e, stackTrace) {
+      logError("発注実行中にエラーが発生", e, stackTrace);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("発注処理に失敗しました: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -391,8 +413,10 @@ class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> {
                   keyboardType: TextInputType.number,
                   onChanged: (String value) {
                     final double? quantity = double.tryParse(value);
-                    if (quantity != null) {
+                    if (quantity != null && quantity > 0) {
                       _adjustQuantity(materialId, quantity);
+                    } else if (value.isNotEmpty) {
+                      logWarning("無効な発注量が入力されました: $value");
                     }
                   },
                 ),

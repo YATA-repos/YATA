@@ -134,7 +134,7 @@ Future<int> queueWaitTime(Ref ref, String userId) async {
     ProviderLogger.debug("OrderProviders", "待ち時間計算を開始");
     final KitchenService service = ref.watch(kitchenServiceProvider);
     final int result = await service.calculateQueueWaitTime(userId);
-    ProviderLogger.info("OrderProviders", "待ち時間計算が完了: ${result}分");
+    ProviderLogger.info("OrderProviders", "待ち時間計算が完了: $result分");
     return result;
   } catch (e, stackTrace) {
     ProviderLogger.asyncOperationFailed("OrderProviders", "queueWaitTime", e, stackTrace);

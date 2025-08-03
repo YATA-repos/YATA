@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/layouts/main_layout.dart";
 import "../../../../shared/widgets/navigation/mode_selector.dart";
@@ -20,8 +21,16 @@ class MenuManagementScreen extends ConsumerStatefulWidget {
   ConsumerState<MenuManagementScreen> createState() => _MenuManagementScreenState();
 }
 
-class _MenuManagementScreenState extends ConsumerState<MenuManagementScreen> {
+class _MenuManagementScreenState extends ConsumerState<MenuManagementScreen> with LoggerMixin {
+  @override
+  String get componentName => "MenuManagementScreen";
   String selectedMode = "display";
+
+  @override
+  void initState() {
+    super.initState();
+    logDebug("メニュー管理画面を初期化: 初期モード=$selectedMode");
+  }
 
   @override
   Widget build(BuildContext context) => MainLayout(
@@ -33,7 +42,10 @@ class _MenuManagementScreenState extends ConsumerState<MenuManagementScreen> {
             padding: ResponsiveHelper.getResponsivePadding(context),
             child: ModeSelector(
               selectedMode: selectedMode,
-              onModeChanged: (String mode) => setState(() => selectedMode = mode),
+              onModeChanged: (String mode) {
+                logDebug("メニュー管理モードを変更: $selectedMode -> $mode");
+                setState(() => selectedMode = mode);
+              },
               options: const <ModeOption>[
                 ModeOption(
                   id: "display",
@@ -53,7 +65,9 @@ class _MenuManagementScreenState extends ConsumerState<MenuManagementScreen> {
 
           // モード別コンテンツ
           Expanded(
-            child: selectedMode == "display" ? const MenuDisplayView() : const MenuManagementView(),
+            child: selectedMode == "display" 
+                ? const MenuDisplayView() 
+                : const MenuManagementView(),
           ),
         ],
       ),

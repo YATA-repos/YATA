@@ -4,9 +4,11 @@ import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/layouts/main_layout.dart";
-import "../../../../shared/themes/themes.dart";
+import "../../../../shared/themes/app_colors.dart";
+import "../../../../shared/themes/app_layout.dart";
 import "../../../../shared/widgets/buttons/app_button.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
@@ -28,12 +30,15 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
 
-class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
+class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> with LoggerMixin {
+  @override
+  String get componentName => "OrderDetailScreen";
   String? get userId => ref.read(currentUserProvider)?.id;
 
   @override
   Widget build(BuildContext context) {
     if (userId == null) {
+      logWarning("注文詳細画面: ユーザー情報が取得できません");
       return const MainLayout(
         title: "注文詳細",
         child: Center(child: Text("ユーザー情報が取得できません")),
@@ -44,36 +49,43 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         .watch(orderWithItemsProvider(widget.orderId, userId!))
         .when(
           data: _buildMainContent,
-          loading: () => const MainLayout(
-            title: "注文詳細",
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (Object error, StackTrace stack) => MainLayout(
-            title: "注文詳細",
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Icon(LucideIcons.alertCircle, size: 64, color: AppColors.danger),
-                  AppLayout.vSpacerDefault,
-                  Text("注文詳細の取得に失敗しました"),
-                  AppLayout.vSpacerSmall,
-                  Text("$error"),
-                  AppLayout.vSpacerDefault,
-                  AppButton(
-                    onPressed: () => context.pop(),
-                    text: "戻る",
-                    variant: ButtonVariant.outline,
-                  ),
-                ],
+          loading: () {
+            logTrace("注文詳細データ読み込み中: orderId=${widget.orderId}");
+            return const MainLayout(
+              title: "注文詳細",
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
+          error: (Object error, StackTrace stack) {
+            logError("注文詳細データの読み込みでエラーが発生: orderId=${widget.orderId}", error, stack);
+            return MainLayout(
+              title: "注文詳細",
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Icon(LucideIcons.alertCircle, size: 64, color: AppColors.danger),
+                    AppLayout.vSpacerDefault,
+                    Text("注文詳細の取得に失敗しました"),
+                    AppLayout.vSpacerSmall,
+                    Text("$error"),
+                    AppLayout.vSpacerDefault,
+                    AppButton(
+                      onPressed: () => context.pop(),
+                      text: "戻る",
+                      variant: ButtonVariant.outline,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
   }
 
   Widget _buildMainContent(Map<String, dynamic>? orderData) {
     if (orderData == null) {
+      logWarning("注文詳細: orderDataがnullです. orderId=${widget.orderId}");
       return const MainLayout(
         title: "注文詳細",
         child: Center(child: Text("注文データが見つかりません")),
@@ -299,6 +311,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 印刷処理
   void _handlePrint(Order order) {
+    logDebug("注文印刷を要求: orderId=${order.id}, orderNumber=${order.orderNumber}（開発中機能）");
     // 印刷機能は将来の拡張機能として実装予定
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -314,10 +327,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 編集処理
   void _handleEdit(Order order) {
+    logDebug("注文編集を要求: orderId=${order.id}, status=${order.status}");
     // 完了済みまたはキャンセル済みの注文は編集できない
     if (order.status == OrderStatus.completed || 
         order.status == OrderStatus.cancelled || 
         order.status == OrderStatus.refunded) {
+      logWarning("注文編集拒否: 編集不可なステータス (${order.status}), orderId=${order.id}");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("この注文は編集できません"),
@@ -327,6 +342,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       return;
     }
 
+    logDebug("注文編集ダイアログを表示: orderId=${order.id}");
     showDialog<void>(
       context: context,
       builder: (BuildContext context) => _buildEditDialog(order),
@@ -335,9 +351,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// ステータス変更処理
   void _handleStatusChange(Order order) {
+    logDebug("ステータス変更を要求: orderId=${order.id}, 現在ステータス=${order.status}");
     final List<OrderStatus> availableStatuses = _getAvailableStatusTransitions(order.status);
     
     if (availableStatuses.isEmpty) {
+      logWarning("ステータス変更拒否: 利用可能な遷移がありません (${order.status}), orderId=${order.id}");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("このステータスからは変更できません"),
@@ -347,6 +365,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       return;
     }
 
+    logDebug("ステータス変更ダイアログを表示: orderId=${order.id}, 利用可能ステータス=$availableStatuses");
     showDialog<void>(
       context: context,
       builder: (BuildContext context) => _buildStatusChangeDialog(order, availableStatuses),
@@ -355,10 +374,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 注文キャンセル処理
   void _handleCancel(Order order) {
+    logDebug("注文キャンセルを要求: orderId=${order.id}, orderNumber=${order.orderNumber}, status=${order.status}");
     // 既にキャンセル済みまたは完了済みの注文はキャンセルできない
     if (order.status == OrderStatus.cancelled || 
         order.status == OrderStatus.completed || 
         order.status == OrderStatus.refunded) {
+      logWarning("注文キャンセル拒否: キャンセル不可なステータス (${order.status}), orderId=${order.id}");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("この注文はキャンセルできません"),
@@ -405,6 +426,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 複製注文処理
   void _handleDuplicate(Order order) {
+    logDebug("注文複製を要求: orderId=${order.id}, orderNumber=${order.orderNumber}");
     showDialog<void>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -569,6 +591,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 注文編集を実行
   Future<void> _performOrderEdit(Order order, String customerName, String notes) async {
+    logDebug("注文編集を実行: orderId=${order.id}, customerName='$customerName', notes='$notes'");
     try {
       // 注意: OrderServiceに編集機能が実装された時に以下を有効化
       // await ref.read(orderServiceProvider).updateOrder(order.id!, {
@@ -581,13 +604,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         ref.invalidate(orderWithItemsProvider(order.id!, userId!));
       }
       
+      logInfo("注文編集が完了しました: orderId=${order.id}");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("注文情報を更新しました"),
           backgroundColor: AppColors.success,
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("注文編集中にエラーが発生: orderId=${order.id}", e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("注文編集に失敗しました: $e"),
@@ -599,10 +624,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// 注文複製を実行
   Future<void> _performOrderDuplicate(Order order) async {
+    logDebug("注文複製を実行: orderId=${order.id}, orderNumber=${order.orderNumber}（シミュレーション）");
     try {
       // 注意: OrderServiceに複製機能が実装された時に以下を有効化
       // final String newOrderId = await ref.read(orderServiceProvider).duplicateOrder(order.id!);
       
+      logInfo("注文複製が完了しました（シミュレーション）: orderId=${order.id}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("注文 #${order.orderNumber} を複製しました"),
@@ -612,6 +639,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             onPressed: () {
               // 注意: 複製機能完成後に以下を有効化
               // context.go("/orders/$newOrderId");
+              logDebug("新注文表示を要求（開発中機能）");
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("注文複製機能は開発中です")),
               );
@@ -619,7 +647,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("注文複製中にエラーが発生: orderId=${order.id}", e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("注文複製に失敗しました: $e"),
@@ -631,6 +660,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   /// ステータス変更を実行
   Future<void> _performStatusChange(Order order, OrderStatus newStatus) async {
+    logDebug("ステータス変更を実行: orderId=${order.id}, ${order.status} -> $newStatus");
     try {
       // 注意: OrderServiceにステータス変更機能が実装された時に以下を有効化
       // await ref.read(orderServiceProvider).updateOrderStatus(order.id!, newStatus);
@@ -640,13 +670,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         ref.invalidate(orderWithItemsProvider(order.id!, userId!));
       }
       
+      logInfo("ステータス変更が完了しました: orderId=${order.id}, ${order.status} -> $newStatus");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("ステータスを「${newStatus.displayName}」に変更しました"),
           backgroundColor: AppColors.success,
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("ステータス変更中にエラーが発生: orderId=${order.id}", e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("ステータス変更に失敗しました: $e"),

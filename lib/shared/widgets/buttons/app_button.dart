@@ -78,6 +78,8 @@ class AppButton extends StatelessWidget {
             ? BorderSide(color: _getOutlineColor())
             : BorderSide.none,
       ),
+    ).copyWith(
+      overlayColor: _getPressedOverlayColor(),
     );
   }
 
@@ -124,6 +126,26 @@ class AppButton extends StatelessWidget {
     ButtonVariant.cooking => AppColors.cooking,
     ButtonVariant.cancel => AppColors.cancel,
     _ => AppColors.border,
+  };
+
+  /// 押下時のオーバーレイ色を取得（薄い色で押下時の視覚効果を提供）
+  WidgetStateProperty<Color?> _getPressedOverlayColor() =>
+    WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+      if (states.contains(WidgetState.pressed)) {
+        return _getPressedColor();
+      }
+      return null; // デフォルトの hover 効果を保持
+    });
+
+  /// 各バリアントに対応した押下時の薄い色を取得
+  Color _getPressedColor() => switch (variant) {
+    ButtonVariant.primary => Colors.white.withValues(alpha: 0.1),
+    ButtonVariant.secondary => Colors.white.withValues(alpha: 0.1),
+    ButtonVariant.outline => AppColors.primary.withValues(alpha: 0.1),
+    ButtonVariant.danger => Colors.white.withValues(alpha: 0.1),
+    ButtonVariant.complete => Colors.white.withValues(alpha: 0.1),
+    ButtonVariant.cooking => Colors.white.withValues(alpha: 0.1),
+    ButtonVariant.cancel => Colors.white.withValues(alpha: 0.1),
   };
 
   EdgeInsets _getPadding() => switch (size) {

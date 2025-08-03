@@ -3,6 +3,8 @@ import "dart:io";
 import "package:flutter/foundation.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 
+import "../logging/yata_logger.dart";
+
 /// 環境変数の検証結果
 class EnvValidationResult {
   const EnvValidationResult({
@@ -56,6 +58,7 @@ class EnvValidator {
 
   /// 環境変数を検証
   static EnvValidationResult validate() {
+    YataLogger.info("EnvValidator", "環境変数検証を開始");
     final List<String> errors = <String>[];
     final List<String> warnings = <String>[];
     final List<String> info = <String>[];
@@ -66,10 +69,12 @@ class EnvValidator {
       
       if (value == null || value.isEmpty) {
         errors.add("必須環境変数 '$varName' が設定されていません");
+        YataLogger.error("EnvValidator", "必須環境変数が未設定: $varName");
       } else {
         // 値の形式チェック
         _validateVarFormat(varName, value, errors, warnings);
         info.add("✓ $varName: 設定済み");
+        YataLogger.debug("EnvValidator", "必須環境変数設定確認: $varName");
       }
     }
 
@@ -79,21 +84,26 @@ class EnvValidator {
       
       if (value == null || value.isEmpty) {
         warnings.add("オプション環境変数 '$varName' が設定されていません");
+        YataLogger.warning("EnvValidator", "オプション環境変数が未設定: $varName");
       } else {
         _validateVarFormat(varName, value, errors, warnings);
         info.add("✓ $varName: $value");
+        YataLogger.debug("EnvValidator", "オプション環境変数設定確認: $varName=$value");
       }
     }
 
     // 環境別チェック
     _validateEnvironmentSpecific(errors, warnings, info);
 
-    return EnvValidationResult(
+    final EnvValidationResult result = EnvValidationResult(
       isValid: errors.isEmpty,
       errors: errors,
       warnings: warnings,
       info: info,
     );
+    
+    YataLogger.info("EnvValidator", "環境変数検証完了: 結果=${result.isValid ? '成功' : '失敗'}, エラー数=${errors.length}, 警告数=${warnings.length}");
+    return result;
   }
 
   /// 環境変数の形式を検証
@@ -180,34 +190,38 @@ class EnvValidator {
 
   /// 検証結果をコンソールに出力
   static void printValidationResult(EnvValidationResult result) {
-    debugPrint("========================================");
-    debugPrint("🔍 環境変数検証結果");
-    debugPrint("========================================");
+    YataLogger.info("EnvValidator", "========================================");
+    YataLogger.info("EnvValidator", "🔍 環境変数検証結果");
+    YataLogger.info("EnvValidator", "========================================");
 
     if (result.hasErrors) {
-      debugPrint("❌ エラー:");
+      YataLogger.error("EnvValidator", "❌ エラー:");
       for (final String error in result.errors) {
-        debugPrint("   $error");
+        YataLogger.error("EnvValidator", "   $error");
       }
     }
 
     if (result.hasWarnings) {
-      debugPrint("⚠️  警告:");
+      YataLogger.warning("EnvValidator", "⚠️  警告:");
       for (final String warning in result.warnings) {
-        debugPrint("   $warning");
+        YataLogger.warning("EnvValidator", "   $warning");
       }
     }
 
     if (result.hasInfo) {
-      debugPrint("ℹ️  情報:");
+      YataLogger.info("EnvValidator", "ℹ️  情報:");
       for (final String info in result.info) {
-        debugPrint("   $info");
+        YataLogger.info("EnvValidator", "   $info");
       }
     }
 
-    debugPrint("========================================");
-    debugPrint(result.isValid ? "✅ 環境変数検証: 成功" : "❌ 環境変数検証: 失敗");
-    debugPrint("========================================");
+    YataLogger.info("EnvValidator", "========================================");
+    if (result.isValid) {
+      YataLogger.info("EnvValidator", "✅ 環境変数検証: 成功");
+    } else {
+      YataLogger.error("EnvValidator", "❌ 環境変数検証: 失敗");
+    }
+    YataLogger.info("EnvValidator", "========================================");
   }
 
   /// .env.example ファイルと比較して不足している変数をチェック

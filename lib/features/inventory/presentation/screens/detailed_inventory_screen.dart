@@ -4,6 +4,7 @@ import "package:lucide_icons/lucide_icons.dart";
 
 import "../../../../core/constants/constants.dart";
 import "../../../../core/constants/enums.dart";
+import "../../../../core/logging/logger_mixin.dart";
 import "../../../../core/utils/responsive_helper.dart";
 import "../../../../shared/enums/ui_enums.dart";
 import "../../../../shared/layouts/main_layout.dart";
@@ -33,7 +34,9 @@ class DetailedInventoryScreen extends ConsumerStatefulWidget {
   ConsumerState<DetailedInventoryScreen> createState() => _DetailedInventoryScreenState();
 }
 
-class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScreen> {
+class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScreen> with LoggerMixin {
+  @override
+  String get componentName => "DetailedInventoryScreen";
   // フィルター状態
   String _searchQuery = "";
   List<String> _selectedCategories = <String>[];
@@ -56,6 +59,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
   @override
   Widget build(BuildContext context) {
     if (userId == null) {
+      logWarning("在庫管理画面: ユーザー情報が取得できません");
       return MainLayout(
         title: "在庫管理",
         child: Center(child: Text("ユーザー情報が取得できません")),
@@ -66,14 +70,20 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
         .watch(materialsWithStockInfoProvider(null, userId!))
         .when(
           data: _buildMainContent,
-          loading: () => MainLayout(
-            title: "在庫管理",
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (Object error, StackTrace stack) => MainLayout(
-            title: "在庫管理",
-            child: Center(child: Text("エラー: $error")),
-          ),
+          loading: () {
+            logTrace("在庫データ読み込み中");
+            return MainLayout(
+              title: "在庫管理",
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
+          error: (Object error, StackTrace stack) {
+            logError("在庫データの読み込みでエラーが発生", error, stack);
+            return MainLayout(
+              title: "在庫管理",
+              child: Center(child: Text("エラー: $error")),
+            );
+          },
         );
   }
 
@@ -473,9 +483,11 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
   /// リフレッシュ処理
   void _handleRefresh() async {
     if (userId == null) {
+      logWarning("リフレッシュ処理: userIdがnullです");
       return;
     }
 
+    logDebug("在庫データのリフレッシュを開始");
     setState(() => _isLoading = true);
 
     try {
@@ -486,11 +498,13 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
       ref..invalidate(materialsWithStockInfoProvider(null, userId!))
       ..invalidate(materialCategoriesProvider);
 
+      logInfo("在庫データのリフレッシュが完了しました");
       // 成功メッセージを表示
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("データを更新しました"), backgroundColor: AppColors.success),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("在庫データリフレッシュ中にエラーが発生", e, stackTrace);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("更新に失敗しました: $e"), backgroundColor: AppColors.danger));
@@ -501,6 +515,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
   /// インポート処理
   void _handleImport() {
+    logDebug("インポート機能ダイアログを表示（開発中機能）");
     showDialog<void>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -548,6 +563,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
   /// 材料追加
   Future<void> _handleAddMaterial() async {
+    logDebug("材料追加ダイアログを表示");
     final bool? result = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => const MaterialFormDialog(),
@@ -555,13 +571,17 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
     // 追加が成功した場合、データをリフレッシュ
     if ((result ?? false) && userId != null) {
+      logInfo("材料追加が成功しました。データをリフレッシュします");
       _cachedMaterials = null; // キャッシュをクリア
       ref.invalidate(materialsWithStockInfoProvider(null, userId!));
+    } else if (result == null) {
+      logDebug("材料追加ダイアログがキャンセルされました");
     }
   }
 
   /// 材料編集
   Future<void> _handleEditMaterial(MaterialStockInfo item) async {
+    logDebug("材料編集ダイアログを表示: ${item.material.name}");
     final bool? result = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => MaterialFormDialog(material: item.material),
@@ -569,13 +589,17 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
 
     // 編集が成功した場合、データをリフレッシュ
     if ((result ?? false) && userId != null) {
+      logInfo("材料編集が成功しました: ${item.material.name}。データをリフレッシュします");
       _cachedMaterials = null; // キャッシュをクリア
       ref.invalidate(materialsWithStockInfoProvider(null, userId!));
+    } else if (result == null) {
+      logDebug("材料編集ダイアログがキャンセルされました: ${item.material.name}");
     }
   }
 
   /// 材料発注
   void _handleOrderMaterial(MaterialStockInfo item) {
+    logDebug("材料発注ダイアログを表示: ${item.material.name} (現在在庫: ${item.material.currentStock})");
     showDialog<void>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -600,9 +624,11 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
   /// 材料エクスポート実行
   void _performMaterialExport(ExportFormat format, List<MaterialStockInfo> items) {
     try {
+      logDebug("材料エクスポートを開始: ${format.name.toUpperCase()}形式、${items.length}件");
       // 実際の実装では、ここでCSVやExcelファイルを生成
       final String formattedData = _formatMaterialDataForExport(format, items);
 
+      logInfo("材料エクスポートが完了: ${format.name.toUpperCase()}形式、${items.length}件");
       // ファイル保存やダウンロードの処理をシミュレート
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -611,6 +637,7 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
           action: SnackBarAction(
             label: "詳細",
             onPressed: () {
+              logDebug("エクスポート詳細ダイアログを表示");
               showDialog<void>(
                 context: context,
                 builder: (BuildContext context) => AlertDialog(
@@ -630,7 +657,8 @@ class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScree
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logError("材料エクスポート中にエラーが発生: ${format.name.toUpperCase()}形式", e, stackTrace);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("エクスポートに失敗しました: $e"), backgroundColor: AppColors.danger),
       );
