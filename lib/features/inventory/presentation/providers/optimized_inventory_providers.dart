@@ -1,8 +1,8 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../../../../core/cache/cache_strategy.dart";
-import "../../../../core/cache/enhanced_cache_strategy.dart";
+import "../../../../data/local/cache/cache_strategy.dart";
+import "../../../../data/local/cache/enhanced_cache_strategy.dart";
 import "../../../../core/constants/enums.dart";
 import "../../../../core/providers/intelligent_cache_providers.dart";
 import "../../dto/inventory_dto.dart";

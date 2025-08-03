@@ -2,7 +2,8 @@ import "dart:async";
 
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../realtime/realtime_manager.dart";
+import "../../data/realtime/realtime_manager.dart";
+import "../utils/provider_logger.dart";
 
 part "realtime_providers.g.dart";
 

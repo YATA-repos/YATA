@@ -9,7 +9,7 @@ import "../../features/inventory/presentation/providers/inventory_providers.dart
 import "../../features/order/models/order_model.dart";
 import "../../features/order/presentation/providers/order_providers.dart";
 import "../constants/enums.dart" as core_enums;
-import "../realtime/realtime_manager.dart";
+import "../../data/realtime/realtime_manager.dart";
 import "common_providers.dart";
 
 part "unified_realtime_providers.g.dart";

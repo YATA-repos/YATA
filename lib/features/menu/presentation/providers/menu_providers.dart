@@ -2,6 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
+import "../../../../core/utils/provider_logger.dart";
 import "../../../inventory/dto/inventory_dto.dart";
 import "../../dto/menu_dto.dart";
 import "../../models/menu_model.dart";
@@ -16,6 +17,7 @@ part "menu_providers.g.dart";
 @riverpod
 MenuService menuService(Ref ref) {
   ref.keepAlive(); // サービスインスタンスは永続化
+  ProviderLogger.info("MenuProviders", "MenuServiceを初期化しました");
   return MenuService(ref: ref);
 }
 
@@ -26,8 +28,16 @@ MenuService menuService(Ref ref) {
 @riverpod
 Future<List<MenuCategory>> menuCategories(Ref ref) async {
   ref.keepAlive(); // マスターデータは永続キャッシュ
-  final MenuService service = ref.watch(menuServiceProvider);
-  return service.getMenuCategories();
+  try {
+    ProviderLogger.debug("MenuProviders", "メニューカテゴリー一覧取得を開始");
+    final MenuService service = ref.watch(menuServiceProvider);
+    final List<MenuCategory> result = await service.getMenuCategories();
+    ProviderLogger.info("MenuProviders", "メニューカテゴリー一覧取得が完了: ${result.length}件");
+    return result;
+  } catch (e, stackTrace) {
+    ProviderLogger.asyncOperationFailed("MenuProviders", "menuCategories", e, stackTrace);
+    rethrow;
+  }
 }
 
 /// カテゴリー別メニューアイテム一覧プロバイダー
@@ -37,8 +47,16 @@ Future<List<MenuCategory>> menuCategories(Ref ref) async {
 @riverpod
 Future<List<MenuItem>> menuItems(Ref ref, String? categoryId) async {
   ref.keepAlive(); // マスターデータは永続キャッシュ
-  final MenuService service = ref.watch(menuServiceProvider);
-  return service.getMenuItemsByCategory(categoryId);
+  try {
+    ProviderLogger.debug("MenuProviders", "カテゴリー別メニューアイテム一覧取得を開始: $categoryId");
+    final MenuService service = ref.watch(menuServiceProvider);
+    final List<MenuItem> result = await service.getMenuItemsByCategory(categoryId);
+    ProviderLogger.info("MenuProviders", "カテゴリー別メニューアイテム一覧取得が完了: ${result.length}件");
+    return result;
+  } catch (e, stackTrace) {
+    ProviderLogger.asyncOperationFailed("MenuProviders", "menuItems", e, stackTrace);
+    rethrow;
+  }
 }
 
 /// メニューアイテム検索プロバイダー

@@ -2,7 +2,8 @@ import "dart:async";
 
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
-import "../cache/cache_manager.dart";
+import "../../data/local/cache/cache_manager.dart";
+import "../utils/provider_logger.dart";
 
 part "cache_providers.g.dart";
 
@@ -10,20 +11,31 @@ part "cache_providers.g.dart";
 
 /// グローバルキャッシュ制御プロバイダー
 @riverpod
-class GlobalCacheControl extends _$GlobalCacheControl {
+class GlobalCacheControl extends _$GlobalCacheControl with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "GlobalCacheControl";
+  
   @override
   bool build() {
     ref.keepAlive(); // キャッシュ設定は永続化
+    logInfo("グローバルキャッシュ制御を初期化しました");
     return true; // デフォルトでキャッシュ有効
   }
 
   /// 全キャッシュクリア
   Future<void> clearAllCache() async {
-    final CacheManager cacheManager = CacheManager();
-    await cacheManager.clearAll();
-    
-    // 統計プロバイダーに通知
-    ref.read(cacheStatusProvider.notifier).notifyCacheCleared();
+    try {
+      logInfo("全キャッシュクリアを開始");
+      final CacheManager cacheManager = CacheManager();
+      await cacheManager.clearAll();
+      
+      // 統計プロバイダーに通知
+      ref.read(cacheStatusProvider.notifier).notifyCacheCleared();
+      logInfo("全キャッシュクリアが完了しました");
+    } catch (e, stackTrace) {
+      logError("キャッシュクリア中にエラーが発生", e, stackTrace);
+      rethrow;
+    }
   }
 
   /// キャッシュ有効化

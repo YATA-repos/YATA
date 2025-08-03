@@ -2,7 +2,7 @@ import "dart:async";
 
 import "package:supabase_flutter/supabase_flutter.dart";
 
-import "../logging/logger_mixin.dart";
+import "../../core/logging/logger_mixin.dart";
 import "connection_manager.dart";
 import "realtime_config.dart";
 

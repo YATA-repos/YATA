@@ -3,26 +3,34 @@ import "dart:async";
 import "package:flutter/foundation.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../utils/provider_logger.dart";
+
 part "development_providers.g.dart";
 
 /// 開発・デバッグ用プロバイダー
 
 /// デバッグモード制御（本番では無効）
 @riverpod
-class DebugModeControl extends _$DebugModeControl {
+class DebugModeControl extends _$DebugModeControl with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "DebugModeControl";
+  
   @override
   bool build() {
     // 本番環境では常にfalse
     if (kReleaseMode) {
+      logInfo("本番モードではデバッグモードを無効化");
       return false;
     }
     
     ref.keepAlive();
+    logInfo("デバッグモード制御を初期化しました");
     return kDebugMode; // デバッグビルドでのみ有効
   }
 
   void toggle() {
     if (!kReleaseMode) {
+      logDebug("デバッグモードを切り替え: ${!state}");
       state = !state;
     }
   }
@@ -30,36 +38,47 @@ class DebugModeControl extends _$DebugModeControl {
 
 /// パフォーマンス監視プロバイダー
 @riverpod
-class PerformanceMonitor extends _$PerformanceMonitor {
+class PerformanceMonitor extends _$PerformanceMonitor with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "PerformanceMonitor";
+  
   @override
   PerformanceMetrics build() {
     if (kReleaseMode) {
+      logInfo("本番モードではパフォーマンス監視を無効化");
       return const PerformanceMetrics(); // 本番では無効
     }
     
     ref.keepAlive();
     
+    logInfo("パフォーマンス監視を開始しました");
     _startPerformanceMonitoring();
     
     return const PerformanceMetrics();
   }
 
   void _startPerformanceMonitoring() {
+    logDebug("パフォーマンス監視の定期実行を開始");
     Timer.periodic(const Duration(seconds: 5), (_) {
       _collectMetrics();
     });
   }
 
   void _collectMetrics() {
-    // パフォーマンスメトリクス収集
-    final PerformanceMetrics metrics = PerformanceMetrics(
-      // メモリ使用量、CPU使用率等の収集
-      memoryUsageMB: _getMemoryUsage(),
-      providerCount: _getActiveProviderCount(),
-      lastUpdated: DateTime.now(),
-    );
-    
-    state = metrics;
+    try {
+      // パフォーマンスメトリクス収集
+      final PerformanceMetrics metrics = PerformanceMetrics(
+        // メモリ使用量、CPU使用率等の収集
+        memoryUsageMB: _getMemoryUsage(),
+        providerCount: _getActiveProviderCount(),
+        lastUpdated: DateTime.now(),
+      );
+      
+      state = metrics;
+      logTrace("パフォーマンスメトリクスを更新");
+    } catch (e, stackTrace) {
+      logError("パフォーマンスメトリクス収集中にエラーが発生", e, stackTrace);
+    }
   }
 
   double _getMemoryUsage() =>

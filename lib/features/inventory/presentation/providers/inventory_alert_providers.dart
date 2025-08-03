@@ -2,6 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
+import "../../../../core/utils/provider_logger.dart";
 import "../../dto/inventory_dto.dart";
 import "../../services/inventory_service.dart";
 import "inventory_providers.dart";
@@ -217,19 +218,25 @@ Future<List<MaterialStockInfo>> lowStockAlerts(
 /// **ライフサイクル**: keepAlive（UI状態は永続化）
 /// **データ性質**: uiState, **アクセス頻度**: low
 @riverpod
-class AlertWatcher extends _$AlertWatcher {
+class AlertWatcher extends _$AlertWatcher with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "AlertWatcher";
+  
   @override
   DateTime build() {
     ref.keepAlive(); // UI状態は画面使用中は永続化
+    logInfo("アラート監視を初期化しました");
     return DateTime.now();
   }
 
   /// アラートを手動更新
   void refresh() {
+    logDebug("アラートを手動更新");
     state = DateTime.now();
     // 関連するプロバイダーを無効化して再取得を促す
     ref..invalidate(detailedInventoryAlertsProvider)
     ..invalidate(filteredInventoryAlertsProvider)
     ..invalidate(alertStatisticsProvider);
+    logInfo("アラート関連プロバイダーを無効化しました");
   }
 }

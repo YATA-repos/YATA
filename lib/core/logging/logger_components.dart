@@ -513,8 +513,7 @@ class UnifiedYataLogPrinter extends LogPrinter {
   /// タイムスタンプフォーマット
   String _formatTimestamp(DateTime timestamp) => "${timestamp.hour.toString().padLeft(2, '0')}:"
            "${timestamp.minute.toString().padLeft(2, '0')}:"
-           "${timestamp.second.toString().padLeft(2, '0')}."
-           "${timestamp.millisecond.toString().padLeft(3, '0')}";
+           "${timestamp.second.toString().padLeft(2, '0')}.";
 
   /// プリンターの設定情報を取得（デバッグ用）
   Map<String, dynamic> getPrinterInfo() => <String, dynamic>{

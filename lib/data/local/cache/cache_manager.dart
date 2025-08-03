@@ -1,6 +1,6 @@
 import "dart:async";
 
-import "../logging/logger_mixin.dart";
+import "../../../core/logging/logger_mixin.dart";
 import "cache_config.dart";
 import "cache_strategy.dart";
 import "memory_cache.dart";

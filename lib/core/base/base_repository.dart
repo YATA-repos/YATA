@@ -2,7 +2,7 @@ import "package:supabase_flutter/supabase_flutter.dart";
 
 import "../constants/exceptions/exceptions.dart";
 import "../constants/query_types.dart";
-import "../infrastructure/supabase/supabase_client.dart";
+import "../../data/remote/supabase_client.dart";
 import "../logging/logger_mixin.dart";
 import "../utils/query_utils.dart";
 import "../validation/type_validator.dart";

@@ -1,6 +1,7 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../../../../core/utils/provider_logger.dart";
 import "../../../auth/models/user_profile.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/analytics_dto.dart";
@@ -10,20 +11,31 @@ part "analytics_providers.g.dart";
 
 /// AnalyticsService プロバイダー
 @riverpod
-AnalyticsService analyticsService(Ref ref) => AnalyticsService(ref: ref);
+AnalyticsService analyticsService(Ref ref) {
+  ProviderLogger.info("AnalyticsProviders", "AnalyticsServiceを初期化しました");
+  return AnalyticsService(ref: ref);
+}
 
 /// 本日の統計データプロバイダー
 @riverpod
 Future<DailyStatsResult> todayStats(Ref ref) async {
-  final UserProfile? user = ref.watch(currentUserProvider);
-  final String? userId = ref.watch(currentUserIdProvider);
-  if (user == null || userId == null) {
-    throw StateError("User not authenticated");
+  try {
+    ProviderLogger.debug("AnalyticsProviders", "本日の統計データ取得を開始");
+    final UserProfile? user = ref.watch(currentUserProvider);
+    final String? userId = ref.watch(currentUserIdProvider);
+    if (user == null || userId == null) {
+      throw StateError("User not authenticated");
+    }
+    
+    final AnalyticsService service = ref.watch(analyticsServiceProvider);
+    final DateTime today = DateTime.now();
+    final DailyStatsResult result = await service.getRealTimeDailyStats(today, userId);
+    ProviderLogger.info("AnalyticsProviders", "本日の統計データ取得が完了");
+    return result;
+  } catch (e, stackTrace) {
+    ProviderLogger.asyncOperationFailed("AnalyticsProviders", "todayStats", e, stackTrace);
+    rethrow;
   }
-  
-  final AnalyticsService service = ref.watch(analyticsServiceProvider);
-  final DateTime today = DateTime.now();
-  return service.getRealTimeDailyStats(today, userId);
 }
 
 /// 期間別統計データプロバイダー

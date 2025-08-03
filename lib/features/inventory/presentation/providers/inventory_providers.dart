@@ -2,6 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
+import "../../../../core/utils/provider_logger.dart";
 import "../../dto/inventory_dto.dart";
 import "../../models/inventory_model.dart";
 import "../../services/inventory_service.dart";
@@ -17,6 +18,7 @@ part "inventory_providers.g.dart";
 @riverpod
 InventoryService inventoryService(Ref ref) {
   ref.keepAlive(); // サービスインスタンスは永続化
+  ProviderLogger.info("InventoryProviders", "InventoryServiceを初期化しました");
   return InventoryService(ref: ref);
 }
 
@@ -26,6 +28,7 @@ InventoryService inventoryService(Ref ref) {
 @riverpod
 MaterialManagementService materialManagementService(Ref ref) {
   ref.keepAlive();
+  ProviderLogger.info("InventoryProviders", "MaterialManagementServiceを初期化しました");
   return MaterialManagementService(ref: ref);
 }
 
@@ -35,15 +38,17 @@ MaterialManagementService materialManagementService(Ref ref) {
 @riverpod
 StockLevelService stockLevelService(Ref ref) {
   ref.keepAlive();
+  ProviderLogger.info("InventoryProviders", "StockLevelServiceを初期化しました");
   return StockLevelService(ref: ref);
 }
 
 /// UsageAnalysisService プロバイダー
 /// 既存の使用量分析サービスをRiverpodで利用可能にする
-/// **ライフサイクル**: keepAlive（サービスクラスは永続化）
+/// **ライフサイクル**: keepAlive（サービスクラスは氈続化）
 @riverpod
 UsageAnalysisService usageAnalysisService(Ref ref) {
   ref.keepAlive();
+  ProviderLogger.info("InventoryProviders", "UsageAnalysisServiceを初期化しました");
   return UsageAnalysisService(ref: ref);
 }
 
@@ -54,8 +59,16 @@ UsageAnalysisService usageAnalysisService(Ref ref) {
 @riverpod
 Future<List<MaterialCategory>> materialCategories(Ref ref) async {
   ref.keepAlive(); // マスターデータは永続キャッシュ
-  final InventoryService service = ref.watch(inventoryServiceProvider);
-  return service.getMaterialCategories();
+  try {
+    ProviderLogger.debug("InventoryProviders", "材料カテゴリー一覧取得を開始");
+    final InventoryService service = ref.watch(inventoryServiceProvider);
+    final List<MaterialCategory> result = await service.getMaterialCategories();
+    ProviderLogger.info("InventoryProviders", "材料カテゴリー一覧取得が完了: ${result.length}件");
+    return result;
+  } catch (e, stackTrace) {
+    ProviderLogger.asyncOperationFailed("InventoryProviders", "materialCategories", e, stackTrace);
+    rethrow;
+  }
 }
 
 /// カテゴリー別材料一覧プロバイダー
@@ -65,8 +78,16 @@ Future<List<MaterialCategory>> materialCategories(Ref ref) async {
 @riverpod
 Future<List<Material>> materials(Ref ref, String? categoryId) async {
   ref.keepAlive(); // マスターデータは永続キャッシュ（リアルタイム更新で無効化）
-  final InventoryService service = ref.watch(inventoryServiceProvider);
-  return service.getMaterialsByCategory(categoryId);
+  try {
+    ProviderLogger.debug("InventoryProviders", "カテゴリー別材料一覧取得を開始: $categoryId");
+    final InventoryService service = ref.watch(inventoryServiceProvider);
+    final List<Material> result = await service.getMaterialsByCategory(categoryId);
+    ProviderLogger.info("InventoryProviders", "カテゴリー別材料一覧取得が完了: ${result.length}件");
+    return result;
+  } catch (e, stackTrace) {
+    ProviderLogger.asyncOperationFailed("InventoryProviders", "materials", e, stackTrace);
+    rethrow;
+  }
 }
 
 /// 在庫情報付き材料一覧プロバイダー

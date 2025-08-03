@@ -2,23 +2,32 @@ import "package:flutter/foundation.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../constants/constants.dart";
+import "../utils/provider_logger.dart";
 
 part "common_providers.g.dart";
 
 /// グローバルエラー管理プロバイダー
 /// アプリケーション全体のエラー状態を管理
 @riverpod
-class GlobalError extends _$GlobalError {
+class GlobalError extends _$GlobalError with ProviderLoggerMixin {
   @override
-  String? build() => null;
+  String get providerComponent => "GlobalError";
+  
+  @override
+  String? build() {
+    logInfo("グローバルエラー管理を初期化しました");
+    return null;
+  }
 
   /// エラーを設定
   void setError(String error) {
+    logWarning("グローバルエラーを設定: $error");
     state = error;
   }
 
   /// 例外からエラーを設定
   void setErrorFromException(Exception exception) {
+    logError("例外からグローバルエラーを設定", exception);
     if (exception is ValidationException) {
       state = exception.message;
     } else if (exception is AuthException) {
@@ -32,6 +41,7 @@ class GlobalError extends _$GlobalError {
 
   /// エラーをクリア
   void clearError() {
+    logDebug("グローバルエラーをクリア");
     state = null;
   }
 
@@ -42,27 +52,37 @@ class GlobalError extends _$GlobalError {
 /// グローバルローディング状態プロバイダー
 /// アプリケーション全体のローディング状態を管理
 @riverpod
-class GlobalLoading extends _$GlobalLoading {
+class GlobalLoading extends _$GlobalLoading with ProviderLoggerMixin {
   @override
-  bool build() => false;
+  String get providerComponent => "GlobalLoading";
+  
+  @override
+  bool build() {
+    logInfo("グローバルローディング管理を初期化しました");
+    return false;
+  }
 
   /// ローディング状態を設定
   void setLoading(bool loading) {
+    logDebug("グローバルローディング状態を設定: $loading");
     state = loading;
   }
 
   /// ローディングを開始
   void startLoading() {
+    logDebug("グローバルローディングを開始");
     state = true;
   }
 
   /// ローディングを停止
   void stopLoading() {
+    logDebug("グローバルローディングを停止");
     state = false;
   }
 
   /// ローディング状態を一時的に設定（指定時間後に自動停止）
   void setTemporaryLoading(Duration duration) {
+    logDebug("一時的ローディングを設定: ${duration.inMilliseconds}ms");
     state = true;
     // ignore: unused_local_variable
     final Future<void> delayed = Future<void>.delayed(duration, () {
@@ -76,33 +96,54 @@ class GlobalLoading extends _$GlobalLoading {
 
 /// メニュー関連ローディング状態プロバイダー
 @riverpod
-class MenuLoading extends _$MenuLoading {
+class MenuLoading extends _$MenuLoading with ProviderLoggerMixin {
   @override
-  bool build() => false;
+  String get providerComponent => "MenuLoading";
+  
+  @override
+  bool build() {
+    logInfo("メニューローディング管理を初期化しました");
+    return false;
+  }
 
   void setLoading(bool loading) {
+    logDebug("メニューローディング状態を設定: $loading");
     state = loading;
   }
 }
 
 /// 注文関連ローディング状態プロバイダー
 @riverpod
-class OrderLoading extends _$OrderLoading {
+class OrderLoading extends _$OrderLoading with ProviderLoggerMixin {
   @override
-  bool build() => false;
+  String get providerComponent => "OrderLoading";
+  
+  @override
+  bool build() {
+    logInfo("注文ローディング管理を初期化しました");
+    return false;
+  }
 
   void setLoading(bool loading) {
+    logDebug("注文ローディング状態を設定: $loading");
     state = loading;
   }
 }
 
 /// 在庫関連ローディング状態プロバイダー
 @riverpod
-class InventoryLoading extends _$InventoryLoading {
+class InventoryLoading extends _$InventoryLoading with ProviderLoggerMixin {
   @override
-  bool build() => false;
+  String get providerComponent => "InventoryLoading";
+  
+  @override
+  bool build() {
+    logInfo("在庫ローディング管理を初期化しました");
+    return false;
+  }
 
   void setLoading(bool loading) {
+    logDebug("在庫ローディング状態を設定: $loading");
     state = loading;
   }
 }
@@ -110,12 +151,19 @@ class InventoryLoading extends _$InventoryLoading {
 /// 成功メッセージ管理プロバイダー
 /// 操作成功時のフィードバックメッセージを管理
 @riverpod
-class SuccessMessage extends _$SuccessMessage {
+class SuccessMessage extends _$SuccessMessage with ProviderLoggerMixin {
   @override
-  String? build() => null;
+  String get providerComponent => "SuccessMessage";
+  
+  @override
+  String? build() {
+    logInfo("成功メッセージ管理を初期化しました");
+    return null;
+  }
 
   /// 成功メッセージを設定
   void setMessage(String message) {
+    logInfo("成功メッセージを設定: $message");
     state = message;
     // 5秒後に自動的にクリア
     // ignore: unused_local_variable
@@ -127,6 +175,7 @@ class SuccessMessage extends _$SuccessMessage {
 
   /// メッセージをクリア
   void clearMessage() {
+    logDebug("成功メッセージをクリア");
     state = null;
   }
 
@@ -137,22 +186,31 @@ class SuccessMessage extends _$SuccessMessage {
 /// ネットワーク状態プロバイダー
 /// オンライン/オフライン状態を管理
 @riverpod
-class NetworkStatus extends _$NetworkStatus {
+class NetworkStatus extends _$NetworkStatus with ProviderLoggerMixin {
   @override
-  bool build() => true; // デフォルトはオンライン状態
+  String get providerComponent => "NetworkStatus";
+  
+  @override
+  bool build() {
+    logInfo("ネットワーク状態管理を初期化しました");
+    return true; // デフォルトはオンライン状態
+  }
 
   /// ネットワーク状態を設定
   void setOnline(bool isOnline) {
+    logInfo("ネットワーク状態を設定: $isOnline");
     state = isOnline;
   }
 
   /// オンライン状態にする
   void setOnlineStatus() {
+    logInfo("オンライン状態に変更");
     state = true;
   }
 
   /// オフライン状態にする
   void setOfflineStatus() {
+    logWarning("オフライン状態に変更");
     state = false;
   }
 
@@ -166,17 +224,25 @@ class NetworkStatus extends _$NetworkStatus {
 /// 警告メッセージ管理プロバイダー
 /// 警告レベルのメッセージを管理
 @riverpod
-class WarningMessage extends _$WarningMessage {
+class WarningMessage extends _$WarningMessage with ProviderLoggerMixin {
   @override
-  String? build() => null;
+  String get providerComponent => "WarningMessage";
+  
+  @override
+  String? build() {
+    logInfo("警告メッセージ管理を初期化しました");
+    return null;
+  }
 
   /// 警告メッセージを設定
   void setMessage(String message) {
+    logWarning("警告メッセージを設定: $message");
     state = message;
   }
 
   /// メッセージをクリア
   void clearMessage() {
+    logDebug("警告メッセージをクリア");
     state = null;
   }
 
@@ -226,13 +292,20 @@ class CacheStatusData {
 /// キャッシュ状態管理プロバイダー
 /// UI層でのキャッシュ状態表示用（Repository層の統計情報を表示）
 @riverpod
-class CacheStatus extends _$CacheStatus {
+class CacheStatus extends _$CacheStatus with ProviderLoggerMixin {
   @override
-  CacheStatusData build() => const CacheStatusData();
+  String get providerComponent => "CacheStatus";
+  
+  @override
+  CacheStatusData build() {
+    logInfo("キャッシュ状態管理を初期化しました");
+    return const CacheStatusData();
+  }
 
   /// キャッシュ統計情報の更新
   /// Repository層から呼び出される（間接的にService経由）
   void updateStats(Map<String, dynamic> stats) {
+    logDebug("キャッシュ統計情報を更新");
     state = state.copyWith(
       enabled: true,
       memoryItems: stats["memory_items"] as int? ?? state.memoryItems,
@@ -244,6 +317,7 @@ class CacheStatus extends _$CacheStatus {
 
   /// キャッシュクリア完了通知
   void notifyCacheCleared() {
+    logInfo("キャッシュクリアが完了しました");
     state = state.copyWith(
       memoryItems: 0,
       ttlItems: 0,
@@ -284,12 +358,19 @@ class CachePerformanceData {
 /// キャッシュパフォーマンス監視プロバイダー
 /// UI層でのパフォーマンス表示用
 @riverpod 
-class CachePerformance extends _$CachePerformance {
+class CachePerformance extends _$CachePerformance with ProviderLoggerMixin {
   @override
-  CachePerformanceData build() => const CachePerformanceData();
+  String get providerComponent => "CachePerformance";
+  
+  @override
+  CachePerformanceData build() {
+    logInfo("キャッシュパフォーマンス監視を初期化しました");
+    return const CachePerformanceData();
+  }
 
   /// キャッシュヒット記録
   void recordHit() {
+    logTrace("キャッシュヒットを記録");
     state = state.copyWith(
       hits: state.hits + 1,
       totalRequests: state.totalRequests + 1,
@@ -298,6 +379,7 @@ class CachePerformance extends _$CachePerformance {
 
   /// キャッシュミス記録
   void recordMiss() {
+    logTrace("キャッシュミスを記録");
     state = state.copyWith(
       misses: state.misses + 1,
       totalRequests: state.totalRequests + 1,
@@ -306,6 +388,7 @@ class CachePerformance extends _$CachePerformance {
 
   /// 統計リセット
   void resetStats() {
+    logDebug("キャッシュパフォーマンス統計をリセット");
     state = const CachePerformanceData();
   }
 }
@@ -343,9 +426,15 @@ class ConfirmationDialogState {
 }
 
 @riverpod
-class ConfirmationDialog extends _$ConfirmationDialog {
+class ConfirmationDialog extends _$ConfirmationDialog with ProviderLoggerMixin {
   @override
-  ConfirmationDialogState build() => const ConfirmationDialogState(isVisible: false);
+  String get providerComponent => "ConfirmationDialog";
+  
+  @override
+  ConfirmationDialogState build() {
+    logInfo("確認ダイアログ管理を初期化しました");
+    return const ConfirmationDialogState(isVisible: false);
+  }
 
   /// 確認ダイアログを表示
   void showDialog({
@@ -354,6 +443,7 @@ class ConfirmationDialog extends _$ConfirmationDialog {
     VoidCallback? onConfirm,
     VoidCallback? onCancel,
   }) {
+    logDebug("確認ダイアログを表示: $title");
     state = ConfirmationDialogState(
       isVisible: true,
       title: title,
@@ -365,17 +455,20 @@ class ConfirmationDialog extends _$ConfirmationDialog {
 
   /// ダイアログを非表示
   void hideDialog() {
+    logDebug("確認ダイアログを非表示");
     state = const ConfirmationDialogState(isVisible: false);
   }
 
   /// 確認ボタンが押された時の処理
   void confirm() {
+    logDebug("確認ダイアログで確認が押されました");
     state.onConfirm?.call();
     hideDialog();
   }
 
   /// キャンセルボタンが押された時の処理
   void cancel() {
+    logDebug("確認ダイアログでキャンセルが押されました");
     state.onCancel?.call();
     hideDialog();
   }

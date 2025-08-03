@@ -246,15 +246,18 @@ class MenuService with LoggerMixin {
     return availabilityInfo;
   }
 
+  /// レシピがないメニューアイテムの最大提供可能数（業務ルールによる制限）
+  static const int _maxServingsWithoutRecipe = 1000;
+
   /// 現在の在庫で作れる最大数を計算
   Future<int> calculateMaxServings(String menuItemId, String userId) async {
     // レシピを取得
     final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
 
     if (recipes.isEmpty) {
-      // レシピがない場合は無制限とみなす（実際には業務ルールに依存）
-      // ! ここは要件に応じて調整が必要
-      return 999999;
+      // レシピがない場合は業務ルールに基づく上限値を返す
+      // 小規模店舗向けの合理的な上限として1000個を設定
+      return _maxServingsWithoutRecipe;
     }
 
     double maxServings = double.infinity;

@@ -2,6 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/constants.dart";
+import "../../../../core/utils/provider_logger.dart";
 import "../../dto/menu_dto.dart";
 import "../../models/menu_model.dart";
 import "menu_providers.dart";
@@ -12,17 +13,26 @@ part "availability_providers.g.dart";
 /// 既存のbulkMenuAvailabilityとmenuItemsを組み合わせ
 @riverpod
 Future<List<MenuItem>> availableMenuItems(Ref ref, String userId) async {
-  // 全メニューアイテムを取得
-  final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null).future);
+  try {
+    ProviderLogger.debug("AvailabilityProviders", "利用可能メニューアイテム取得を開始");
+    // 全メニューアイテムを取得
+    final List<MenuItem> allItems = await ref.watch(menuItemsProvider(null).future);
 
-  // 在庫可否情報を取得
-  final Map<String, MenuAvailabilityInfo> availabilityMap = await ref.watch(bulkMenuAvailabilityProvider(userId).future);
+    // 在庫可否情報を取得
+    final Map<String, MenuAvailabilityInfo> availabilityMap = await ref.watch(bulkMenuAvailabilityProvider(userId).future);
 
-  // 利用可能なアイテムのみをフィルタリング
-  return allItems.where((MenuItem item) {
-    final MenuAvailabilityInfo? availability = availabilityMap[item.id];
-    return availability?.isAvailable ?? item.isAvailable;
-  }).toList();
+    // 利用可能なアイテムのみをフィルタリング
+    final List<MenuItem> result = allItems.where((MenuItem item) {
+      final MenuAvailabilityInfo? availability = availabilityMap[item.id];
+      return availability?.isAvailable ?? item.isAvailable;
+    }).toList();
+    
+    ProviderLogger.info("AvailabilityProviders", "利用可能メニューアイテム取得が完了: ${result.length}件");
+    return result;
+  } catch (e, stackTrace) {
+    ProviderLogger.asyncOperationFailed("AvailabilityProviders", "availableMenuItems", e, stackTrace);
+    rethrow;
+  }
 }
 
 /// 在庫不足で利用できないメニューアイテムを取得するプロバイダー

@@ -4,7 +4,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../features/auth/presentation/providers/auth_providers.dart";
-import "../cache/enhanced_cache_strategy.dart";
+import "../../data/local/cache/enhanced_cache_strategy.dart";
 
 part "intelligent_cache_providers.g.dart";
 

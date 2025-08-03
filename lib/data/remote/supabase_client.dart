@@ -1,9 +1,9 @@
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:supabase_flutter/supabase_flutter.dart" hide AuthException;
 
-import "../../constants/exceptions/auth/auth_exception.dart";
-import "../../constants/log_enums/auth.dart";
-import "../../logging/yata_logger.dart";
+import "../../core/constants/exceptions/auth/auth_exception.dart";
+import "../../core/constants/log_enums/auth.dart";
+import "../../core/logging/yata_logger.dart";
 
 /// Supabaseクライアント管理サービス
 /// 

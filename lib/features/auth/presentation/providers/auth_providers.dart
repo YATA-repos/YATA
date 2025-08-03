@@ -2,6 +2,7 @@ import "package:flutter/widgets.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../../../../core/utils/provider_logger.dart";
 import "../../models/auth_config.dart";
 import "../../models/auth_state.dart";
 import "../../models/user_profile.dart";
@@ -43,7 +44,9 @@ AuthService authService(Ref ref) {
 /// 認証状態Notifier
 /// AuthServiceの状態変更を監視し、Riverpodで管理
 @riverpod
-class AuthStateNotifier extends _$AuthStateNotifier {
+class AuthStateNotifier extends _$AuthStateNotifier with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "AuthStateNotifier";
   late AuthService _authService;
 
   @override
@@ -67,11 +70,16 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   /// 認証システムを初期化
   Future<void> _initializeAuth() async {
     try {
+      logDebug("認証システムの初期化を開始");
       await _authService.restoreSession();
       // 状態が変更された場合、Notifierに反映
       state = _authService.currentState;
-    } catch (e) {
-      // セッション復元エラーは無視（未認証状態として扱う）
+      logInfo("セッション復元が完了しました");
+    } catch (e, stackTrace) {
+      // セッション復元エラーをログに記録（未認証状態として扱う）
+      logSessionRestoreFailed(e, stackTrace);
+      // 状態を明示的に初期状態に設定
+      state = _authService.currentState;
     }
   }
 

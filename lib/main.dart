@@ -7,7 +7,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:window_manager/window_manager.dart";
 
 import "app/app.dart";
-import "core/infrastructure/supabase/supabase_client.dart";
+import "data/remote/supabase_client.dart";
 import "core/logging/logger_mixin.dart";
 import "core/logging/yata_logger.dart";
 import "core/validation/env_validator.dart";

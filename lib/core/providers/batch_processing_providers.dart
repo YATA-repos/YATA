@@ -3,7 +3,7 @@ import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../features/auth/presentation/providers/auth_providers.dart";
 import "../constants/enums.dart" as core_enums;
-import "../services/batch_processing_service.dart";
+import "../../data/batch/batch_processing_service.dart";
 
 part "batch_processing_providers.g.dart";
 

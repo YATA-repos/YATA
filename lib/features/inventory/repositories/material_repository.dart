@@ -1,6 +1,6 @@
 import "../../../core/base/base_multitenant_repository.dart";
-import "../../../core/cache/cache_strategy.dart";
-import "../../../core/cache/repository_cache_mixin.dart";
+import "../../../data/local/cache/cache_strategy.dart";
+import "../../../data/local/cache/repository_cache_mixin.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
 import "../dto/inventory_dto.dart";

@@ -3,6 +3,7 @@ import "package:riverpod_annotation/riverpod_annotation.dart";
 
 import "../../../../core/constants/enums.dart";
 import "../../../../core/providers/common_providers.dart";
+import "../../../../core/utils/provider_logger.dart";
 import "../../../../shared/models/cart_models.dart";
 import "../../../auth/models/user_profile.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
@@ -30,7 +31,9 @@ Future<Order?> activeCart(Ref ref, String userId) async {
 /// カート状態管理プロバイダー
 /// アプリケーション全体のカート状態を管理
 @riverpod
-class Cart extends _$Cart {
+class Cart extends _$Cart with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "Cart";
   @override
   CartState build() => const CartState();
 
@@ -43,6 +46,8 @@ class Cart extends _$Cart {
     Map<String, String>? options,
     String? specialRequest,
   }) async {
+    logDebug("カートへのアイテム追加を開始: ${menuItem.name} (quantity: $quantity)");
+    
     try {
       // ローカルカート状態を即座に更新（UI応答性のため）
       final CartItem cartItem = CartItem.fromMenuItem(
@@ -55,6 +60,7 @@ class Cart extends _$Cart {
       final UserProfile? currentUser = ref.read(currentUserProvider);
       final String? userId = ref.read(currentUserIdProvider);
       if (currentUser != null && userId != null) {
+        logDebug("バックエンドとの同期処理を開始");
         final Order? activeCartOrder = await ref.read(activeCartProvider(userId).future);
         if (activeCartOrder != null) {
           final CartService cartService = ref.read(cartServiceProvider);
@@ -74,15 +80,19 @@ class Cart extends _$Cart {
           if (!success) {
             // バックエンド失敗時はローカル状態をロールバック
             state = state.removeItem(menuItem.id!, options: options);
-            throw Exception("在庫が不足しています");
+            final String errorMsg = "在庫が不足しています";
+            logCartOperationFailed("addMenuItem", Exception(errorMsg));
+            throw Exception(errorMsg);
           }
         }
       }
 
       // 成功メッセージを表示
       ref.read(successMessageProvider.notifier).setMessage("${menuItem.name}をカートに追加しました");
-    } catch (e) {
+      logInfo("カートへのアイテム追加が完了: ${menuItem.name}");
+    } catch (e, stackTrace) {
       // エラーハンドリング
+      logCartOperationFailed("addMenuItem", e, stackTrace);
       ref.read(globalErrorProvider.notifier).setError("カートへの追加に失敗しました: ${e.toString()}");
     }
   }

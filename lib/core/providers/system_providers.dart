@@ -2,13 +2,17 @@ import "dart:async";
 
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
+import "../utils/provider_logger.dart";
+
 part "system_providers.g.dart";
 
 /// システム全体の状態管理プロバイダー
 
 /// システム初期化状態管理
 @riverpod
-class SystemInitialization extends _$SystemInitialization {
+class SystemInitialization extends _$SystemInitialization with ProviderLoggerMixin {
+  @override
+  String get providerComponent => "SystemInitialization";
   @override
   SystemInitState build() {
     ref.keepAlive(); // システム状態は永続化
@@ -16,23 +20,33 @@ class SystemInitialization extends _$SystemInitialization {
   }
 
   Future<void> initialize() async {
+    logInfo("システム初期化を開始しました");
     state = state.copyWith(status: InitStatus.initializing);
     
     try {
       // CacheManager初期化
+      logDebug("CacheManager初期化を開始");
       await _initializeCacheManager();
+      logDebug("CacheManager初期化が完了");
       
       // RealtimeManager初期化
+      logDebug("RealtimeManager初期化を開始");
       await _initializeRealtimeManager();
+      logDebug("RealtimeManager初期化が完了");
       
       // 他のシステムコンポーネント初期化
+      logDebug("その他のシステムコンポーネント初期化を開始");
       await _initializeOtherComponents();
+      logDebug("その他のシステムコンポーネント初期化が完了");
       
       state = state.copyWith(
         status: InitStatus.completed,
         initializedAt: DateTime.now(),
       );
-    } catch (e) {
+      logInfo("システム初期化が正常に完了しました");
+    } catch (e, stackTrace) {
+      // 初期化失敗時のエラーログ出力
+      logSystemInitializationFailed("System", e, stackTrace);
       state = state.copyWith(
         status: InitStatus.failed,
         error: e.toString(),

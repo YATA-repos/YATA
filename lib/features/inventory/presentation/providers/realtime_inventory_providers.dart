@@ -4,6 +4,7 @@ import "package:riverpod_annotation/riverpod_annotation.dart";
 import "../../../../core/constants/enums.dart";
 import "../../../../core/providers/common_providers.dart";
 import "../../../../core/providers/unified_realtime_providers.dart";
+import "../../../../core/utils/provider_logger.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/inventory_dto.dart";
 import "../../models/inventory_model.dart";

@@ -1,6 +1,6 @@
-import "../base/base_model.dart";
-import "../base/base_repository.dart";
-import "../constants/query_types.dart";
+import "../../../core/base/base_model.dart";
+import "../../../core/base/base_repository.dart";
+import "../../../core/constants/query_types.dart";
 import "cache_manager.dart";
 import "cache_strategy.dart";
 

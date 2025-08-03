@@ -1,4 +1,4 @@
-import "../logging/logger_mixin.dart";
+import "../../core/logging/logger_mixin.dart";
 import "realtime_config.dart";
 import "realtime_manager.dart";
 
