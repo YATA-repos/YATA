@@ -36,7 +36,7 @@ class DetailedInventoryScreen extends ConsumerStatefulWidget {
 
 class _DetailedInventoryScreenState extends ConsumerState<DetailedInventoryScreen> with LoggerMixin {
   @override
-  String get componentName => "DetailedInventoryScreen";
+  String get loggerComponent => "DetailedInventoryScreen";
   // フィルター状態
   String _searchQuery = "";
   List<String> _selectedCategories = <String>[];

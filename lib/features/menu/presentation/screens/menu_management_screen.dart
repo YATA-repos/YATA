@@ -23,7 +23,7 @@ class MenuManagementScreen extends ConsumerStatefulWidget {
 
 class _MenuManagementScreenState extends ConsumerState<MenuManagementScreen> with LoggerMixin {
   @override
-  String get componentName => "MenuManagementScreen";
+  String get loggerComponent => "MenuManagementScreen";
   String selectedMode = "display";
 
   @override

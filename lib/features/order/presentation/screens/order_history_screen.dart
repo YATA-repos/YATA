@@ -35,7 +35,7 @@ class OrderHistoryScreen extends ConsumerStatefulWidget {
 
 class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> with LoggerMixin {
   @override
-  String get componentName => "OrderHistoryScreen";
+  String get loggerComponent => "OrderHistoryScreen";
   // フィルター状態
   DateTime? _startDate;
   DateTime? _endDate;

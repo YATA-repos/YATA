@@ -18,7 +18,7 @@ class MaterialOrderScreen extends ConsumerStatefulWidget {
 
 class _MaterialOrderScreenState extends ConsumerState<MaterialOrderScreen> with LoggerMixin {
   @override
-  String get componentName => "MaterialOrderScreen";
+  String get loggerComponent => "MaterialOrderScreen";
   OrderCalculationResult? _orderResult;
   bool _isLoading = false;
   String? _errorMessage;

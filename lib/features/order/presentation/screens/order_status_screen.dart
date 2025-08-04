@@ -29,7 +29,7 @@ class OrderStatusScreen extends ConsumerStatefulWidget {
 
 class _OrderStatusScreenState extends ConsumerState<OrderStatusScreen> with LoggerMixin {
   @override
-  String get componentName => "OrderStatusScreen";
+  String get loggerComponent => "OrderStatusScreen";
   core_enums.OrderStatus? _selectedStatusFilter;
   List<Order> _selectedOrders = <Order>[];
   bool _showBulkActions = false;

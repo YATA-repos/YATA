@@ -23,7 +23,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> with LoggerMixin {
   @override
-  String get componentName => "DashboardScreen";
+  String get loggerComponent => "DashboardScreen";
   String selectedMode = "order";
 
   @override

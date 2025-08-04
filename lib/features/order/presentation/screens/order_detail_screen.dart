@@ -32,7 +32,7 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> with LoggerMixin {
   @override
-  String get componentName => "OrderDetailScreen";
+  String get loggerComponent => "OrderDetailScreen";
   String? get userId => ref.read(currentUserProvider)?.id;
 
   @override

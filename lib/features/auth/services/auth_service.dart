@@ -2,6 +2,7 @@ import "dart:async";
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../../core/logging/logger_mixin.dart";
+import "../../../core/utils/stream_manager_mixin.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";
 import "../models/auth_state.dart";
@@ -13,12 +14,19 @@ import "../repositories/auth_repository.dart";
 /// 認証のビジネスロジックを管理します。
 /// AuthRepositoryを使用してSupabase Authとやり取りし、
 /// アプリケーション全体の認証状態を管理します。
-class AuthService with LoggerMixin {
+class AuthService with LoggerMixin, StreamControllerManagerMixin {
   AuthService({
     AuthRepository? authRepository,
     AuthConfig? config,
   }) : _authRepository = authRepository ?? AuthRepository(config: config),
-       _config = config ?? AuthConfig.forCurrentPlatform();
+       _config = config ?? AuthConfig.forCurrentPlatform() {
+    // StreamControllerを管理対象に追加
+    addController(
+      _stateController,
+      debugName: "auth_state_controller",
+      source: "AuthService",
+    );
+  }
 
   final AuthRepository _authRepository;
   final AuthConfig _config;
@@ -250,13 +258,25 @@ class AuthService with LoggerMixin {
         "expiringSoon": isSessionExpiringSoon(),
         "autoRefreshActive": _refreshTimer != null,
       },
+      "stream_controllers": getControllerDebugInfo(),
       "repository": _authRepository.getDebugInfo(),
     };
 
   /// サービスを破棄
   void dispose() {
+    // メモリリーク警告をチェック
+    if (hasControllerMemoryLeak) {
+      final String? warning = controllerMemoryLeakWarningMessage;
+      if (warning != null) {
+        logWarning("AuthService dispose時にメモリリーク警告: $warning");
+      }
+    }
+    
     stopAutoRefresh();
-    _stateController.close();
+    
+    // StreamControllerManagerMixinを使用してStreamControllerを安全に破棄
+    disposeControllers();
+    
     logDebug("AuthService disposed");
   }
 }

@@ -32,7 +32,7 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with LoggerMixin {
   @override
-  String get componentName => "AnalyticsScreen";
+  String get loggerComponent => "AnalyticsScreen";
   // フィルター状態
   DateTime? _startDate;
   DateTime? _endDate;
