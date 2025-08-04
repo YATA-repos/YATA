@@ -58,50 +58,28 @@ class LogDecorationConstants {
   static const String boxBottomRight = "╝";
   
   /// ログレベル別色分けマッピング
-  static String getColorForLevel(Level level) {
-    switch (level) {
-      case Level.trace:
-        return gray;
-      case Level.debug:
-        return gray;
-      case Level.info:
-        return blue;
-      case Level.warning:
-        return yellow;
-      case Level.error:
-        return red;
-      case Level.fatal:
-        return "$bold$red";
-      case Level.all:
-      case Level.off:
-      default:
-        return reset;
-    }
-  }
+  static String getColorForLevel(Level level) => switch (level) {
+      Level.trace => gray,
+      Level.debug => gray,
+      Level.info => blue,
+      Level.warning => yellow,
+      Level.error => red,
+      Level.fatal => "$bold$red",
+      // 特別な制御用値や非推奨値、不明な値に対するフォールバック
+      _ => reset,
+    };
   
   /// ログレベル別アイコンマッピング
-  static String getIconForLevel(Level level) {
-    switch (level) {
-      case Level.trace:
-        return traceIcon;
-      case Level.debug:
-        return debugIcon;
-      case Level.trace:
-        return debugIcon;
-      case Level.info:
-        return infoIcon;
-      case Level.warning:
-        return warningIcon;
-      case Level.error:
-        return errorIcon;
-      case Level.fatal:
-        return fatalIcon;
-      case Level.all:
-      case Level.off:
-      default:
-        return "";
-    }
-  }
+  static String getIconForLevel(Level level) => switch (level) {
+      Level.trace => traceIcon,
+      Level.debug => debugIcon,
+      Level.info => infoIcon,
+      Level.warning => warningIcon,
+      Level.error => errorIcon,
+      Level.fatal => fatalIcon,
+      // 特別な制御用値や非推奨値、不明な値に対するフォールバック
+      _ => "",
+    };
   
   /// コンポーネント名用の色（ハッシュベース）
   static String getComponentColor(String component) {
@@ -140,27 +118,16 @@ class UnifiedYataLogFilter extends LogFilter {
   /// logger.LevelからYATA LogLevelへのマッピング
   /// 
   /// logger パッケージの標準レベルをYATAのLogLevelに対応
-  LogLevel _mapLoggerLevelToYataLevel(Level loggerLevel) {
-    switch (loggerLevel) {
-      case Level.trace:
-      case Level.debug:
-      case Level.trace:
-        return LogLevel.debug;
-      case Level.info:
-        return LogLevel.info;
-      case Level.warning:
-        return LogLevel.warning;
-      case Level.error:
-      case Level.fatal:
-      case Level.fatal:
-        return LogLevel.error;
-      case Level.all:
-      case Level.off:
-      case Level.off:
-      default:
-        return LogLevel.debug;
-    }
-  }
+  LogLevel _mapLoggerLevelToYataLevel(Level loggerLevel) => switch (loggerLevel) {
+      Level.trace => LogLevel.debug,
+      Level.debug => LogLevel.debug,
+      Level.info => LogLevel.info,
+      Level.warning => LogLevel.warning,
+      Level.error => LogLevel.error,
+      Level.fatal => LogLevel.error,
+      // 特別な制御用値や非推奨値、不明な値に対するフォールバック
+      _ => LogLevel.debug,
+    };
 
   /// YATA LogLevelからlogger.Levelへのマッピング
   /// 
@@ -181,21 +148,18 @@ class UnifiedYataLogFilter extends LogFilter {
   /// logger パッケージの全レベルサポート確認
   /// 
   /// logger パッケージでサポートされているレベルをすべて適切にマッピング
-  bool supportsLevel(Level loggerLevel) {
-    switch (loggerLevel) {
-      case Level.trace:
-      case Level.debug:
-      case Level.info:
-      case Level.warning:
-      case Level.error:
-      case Level.fatal:
-        return true;
-      case Level.all:
-      case Level.off:
-      default:
-        return false;
-    }
-  }
+  bool supportsLevel(Level loggerLevel) => switch (loggerLevel) {
+      Level.trace => true,
+      Level.debug => true,
+      Level.info => true,
+      Level.warning => true,
+      Level.error => true,
+      Level.fatal => true,
+      Level.all => false, // 特別な制御用値（通常のログ出力には使用しない）
+      Level.off => false, // 特別な制御用値（ログ出力無効）
+      // 非推奨値や不明な値に対するフォールバック
+      _ => false,
+    };
 
   /// フィルターの詳細情報を取得（デバッグ用）
   Map<String, dynamic> getFilterInfo() => <String, dynamic>{
@@ -352,19 +316,25 @@ class UnifiedYataLogPrinter extends LogPrinter {
 
   /// テキストに色を適用
   String _applyColor(String text, String color) {
-    if (!_shouldUseColors) return text;
+    if (!_shouldUseColors) {
+      return text;
+    }
     return "$color$text${LogDecorationConstants.reset}";
   }
 
   /// アイコンを取得
   String _getIcon(Level level) {
-    if (!_shouldUseIcons) return "";
+    if (!_shouldUseIcons) {
+      return "";
+    }
     return LogDecorationConstants.getIconForLevel(level);
   }
 
   /// コンポーネント名に色を適用
   String _decorateComponent(String component) {
-    if (!_shouldUseComponentColors) return component;
+    if (!_shouldUseComponentColors) {
+      return component;
+    }
     final String color = LogDecorationConstants.getComponentColor(component);
     return _applyColor(component, color);
   }
@@ -574,7 +544,9 @@ class UnifiedBufferedFileOutput extends LogOutput {
 
   /// 初期化処理
   Future<void> initialize() async {
-    if (_initialized) return;
+    if (_initialized) {
+      return;
+    }
     
     try {
       await _setupLogDirectory();
@@ -704,7 +676,9 @@ class UnifiedBufferedFileOutput extends LogOutput {
 
   /// 現在のログファイルを初期化
   Future<void> _initializeCurrentLogFile() async {
-    if (_logDirectory == null) return;
+    if (_logDirectory == null) {
+      return;
+    }
     
     final DateTime now = DateTime.now();
     final String dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -778,7 +752,9 @@ class UnifiedBufferedFileOutput extends LogOutput {
 
   /// ログファイルローテーション
   Future<void> _rotateLogFile() async {
-    if (_logDirectory == null || _currentLogFileName == null) return;
+    if (_logDirectory == null || _currentLogFileName == null) {
+      return;
+    }
     
     try {
       final String currentPath = "$_logDirectory/$_currentLogFileName";
@@ -970,13 +946,17 @@ class UnifiedBufferedFileOutput extends LogOutput {
 
   /// バッファの内容を強制的にファイルに書き込み
   Future<void> flushBuffer() async {
-    if (!_initialized || _isFlushInProgress) return;
+    if (!_initialized || _isFlushInProgress) {
+      return;
+    }
     await _flushBuffer();
   }
 
   /// リソースの解放
   Future<void> dispose() async {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     
     // 最終フラッシュ
     await _flushBuffer();
