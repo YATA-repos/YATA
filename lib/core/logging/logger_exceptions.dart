@@ -19,8 +19,8 @@ abstract class LoggerException implements Exception {
   
   @override
   String toString() {
-    final StringBuffer buffer = StringBuffer();
-    buffer.write("$runtimeType");
+    final StringBuffer buffer = StringBuffer()
+      ..write("$runtimeType");
     
     if (component != null) {
       buffer.write(" in [$component]");

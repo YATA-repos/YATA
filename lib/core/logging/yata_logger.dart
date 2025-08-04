@@ -126,7 +126,9 @@ class YataLogger {
 
   /// ログサービスの終了処理
   static Future<void> dispose() async {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     
     if (_fileOutput != null) {
       await _fileOutput!.dispose();
@@ -144,42 +146,54 @@ class YataLogger {
 
   /// トレースレベルログ（logger パッケージ t()）
   static void trace(String component, String message) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.t("[$component] $message");
   }
 
   /// デバッグレベルログ（logger パッケージ d()）
   static void debug(String component, String message) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.d("[$component] $message");
   }
 
   /// 情報レベルログ（logger パッケージ i()）
   static void info(String component, String message) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.i("[$component] $message");
   }
 
   /// 警告レベルログ（logger パッケージ w()）
   static void warning(String component, String message) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.w("[$component] $message");
   }
 
   /// エラーレベルログ（logger パッケージ e()）
   static void error(String component, String message, [Object? error, StackTrace? stackTrace]) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.e("[$component] $message", error: error, stackTrace: stackTrace);
   }
 
   /// ファタルレベルログ（logger パッケージ f()）
   static void fatal(String component, String message, [Object? error, StackTrace? stackTrace]) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.f("[$component] $message", error: error, stackTrace: stackTrace);
   }
@@ -194,7 +208,9 @@ class YataLogger {
     LogMessage logMessage, [
     Map<String, String>? params,
   ]) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _logger!.i("[$component] $message");
@@ -206,7 +222,9 @@ class YataLogger {
     LogMessage logMessage, [
     Map<String, String>? params,
   ]) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _logger!.w("[$component] $message");
@@ -220,7 +238,9 @@ class YataLogger {
     Object? error,
     StackTrace? stackTrace,
   ]) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     final String message = params != null ? logMessage.withParams(params) : logMessage.message;
     _logger!.e("[$component] $message", error: error, stackTrace: stackTrace);
@@ -232,21 +252,27 @@ class YataLogger {
 
   /// logger パッケージのログレベル指定出力
   static void logWithLevel(Level level, String component, String message, [Object? error, StackTrace? stackTrace]) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.log(level, "[$component] $message", error: error, stackTrace: stackTrace);
   }
 
   /// 複雑なオブジェクトのログ出力（logger パッケージの機能活用）
   static void logObject(String component, String message, Object object) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.d("[$component] $message\\n$object");
   }
 
   /// 構造化ログ出力（logger パッケージの機能活用）
   static void structured(LogLevel level, String component, Map<String, dynamic> data) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     
     final String message = "[$component] ${data.toString()}";
@@ -342,10 +368,14 @@ class YataLogger {
     final Map<String, dynamic> basicStats = LoggerPerformanceStats.getBasicStats();
     final int totalLogs = basicStats["totalLogsProcessed"] as int? ?? 0;
     
-    if (totalLogs == 0) return 0.0;
+    if (totalLogs == 0) {
+      return 0.0;
+    }
     
     final String? initTimeStr = basicStats["initializationTime"] as String?;
-    if (initTimeStr == null) return 0.0;
+    if (initTimeStr == null) {
+      return 0.0;
+    }
     
     try {
       final DateTime initTime = DateTime.parse(initTimeStr);
@@ -608,7 +638,9 @@ class YataLogger {
     String operation, {
     int? thresholdMs,
   }) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
 
     final DateTime endTime = DateTime.now();
     final Duration elapsed = endTime.difference(startTime);
@@ -632,7 +664,9 @@ class YataLogger {
   /// レベルフィルターを無視して必ず記録される
   /// サービス開始・終了、重要なビジネスロジック等で使用
   static void critical(String component, String message) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     _logger!.f("[$component] 🔥 CRITICAL: $message");
   }
@@ -642,7 +676,9 @@ class YataLogger {
   /// 売上、注文数、在庫変動等のビジネス指標を記録
   /// 分析・レポート生成時の参照用
   static void businessMetric(String component, String metric, Map<String, dynamic> data) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     final String dataStr = data.entries.map((MapEntry<String, dynamic> e) => "${e.key}=${e.value}").join(", ");
     _logger!.i("[$component] 📊 METRIC[$metric]: $dataStr");
@@ -652,7 +688,9 @@ class YataLogger {
   /// 
   /// ユーザーの操作履歴を記録（UI分析・UX改善用）
   static void userAction(String component, String action, {Map<String, String>? context}) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     final String contextStr = context != null ? " | ${context.toString()}" : "";
     _logger!.i("[$component] 👤 USER_ACTION: $action$contextStr");
@@ -662,7 +700,9 @@ class YataLogger {
   /// 
   /// メモリ使用量、レスポンス時間等のシステム状態を記録
   static void systemHealth(String component, String healthMetric, dynamic value, {String? unit}) {
-    if (!_initialized) return;
+    if (!_initialized) {
+      return;
+    }
     LoggerPerformanceStats.incrementLogsProcessed();
     final String unitStr = unit != null ? " $unit" : "";
     _logger!.i("[$component] 🏥 HEALTH[$healthMetric]: $value$unitStr");

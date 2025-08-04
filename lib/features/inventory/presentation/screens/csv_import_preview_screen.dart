@@ -21,7 +21,7 @@ class CSVImportPreviewScreen extends ConsumerStatefulWidget {
 
 class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen> with LoggerMixin {
   @override
-  String get componentName => "CSVImportPreviewScreen";
+  String get loggerComponent => "CSVImportPreviewScreen";
   File? _selectedFile;
   CSVImportPreview? _previewData;
   bool _isLoading = false;
@@ -92,7 +92,9 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       logInfo("CSVインポートが完了: 成功=${result.successCount}件, エラー=${result.errorCount}件, hasErrors=${result.hasErrors}");
       
       // インポート完了後の処理
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
       
       final BuildContext currentContext = context;
       ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -104,7 +106,9 @@ class _CSVImportPreviewScreenState extends ConsumerState<CSVImportPreviewScreen>
       
       if (!result.hasErrors) {
         logDebug("CSVインポートがエラーなしで完了。画面を閉じます");
-        if (!currentContext.mounted) return;
+        if (!currentContext.mounted) {
+          return;
+        }
         Navigator.of(currentContext).pop();
       }
     } catch (e, stackTrace) {

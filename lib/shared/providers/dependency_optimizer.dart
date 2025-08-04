@@ -103,7 +103,9 @@ class DependencyOptimizer extends _$DependencyOptimizer {
   /// プロバイダー変更の処理
   void handleProviderChange(String providerId, {dynamic newValue, dynamic oldValue}) {
     final List<ProviderDependency>? dependencies = _dependencies[providerId];
-    if (dependencies == null || dependencies.isEmpty) return;
+    if (dependencies == null || dependencies.isEmpty) {
+      return;
+    }
 
     // 優先度別にグループ化
     final Map<DependencyPriority, List<ProviderDependency>> priorityGroups = 
@@ -197,14 +199,12 @@ class DependencyOptimizer extends _$DependencyOptimizer {
 
   /// バッチ処理実行
   void _processBatch() {
-    final List<String> targetIds = _batchQueue.keys.toList();
-    
-    // 依存関係の複雑さに基づいてソート
-    targetIds.sort((String a, String b) {
-      final int aComplexity = _batchQueue[a]?.length ?? 0;
-      final int bComplexity = _batchQueue[b]?.length ?? 0;
-      return aComplexity.compareTo(bComplexity); // 単純なものから処理
-    });
+    final List<String> targetIds = _batchQueue.keys.toList()
+      ..sort((String a, String b) {
+        final int aComplexity = _batchQueue[a]?.length ?? 0;
+        final int bComplexity = _batchQueue[b]?.length ?? 0;
+        return aComplexity.compareTo(bComplexity); // 単純なものから処理
+      });
 
     for (final String targetId in targetIds) {
       _invalidateProvider(targetId);
@@ -434,8 +434,8 @@ mixin DependencyOptimizationMixin {
     bool batchable = false,
     bool Function()? condition,
   }) {
-    final DependencyOptimizer optimizer = ref.read(dependencyOptimizerProvider.notifier);
-    optimizer.registerDependency(ProviderDependency(
+    ref.read(dependencyOptimizerProvider.notifier)
+      .registerDependency(ProviderDependency(
       sourceId: sourceId,
       targetId: targetId,
       type: type,
@@ -448,8 +448,8 @@ mixin DependencyOptimizationMixin {
 
   /// プロバイダー変更通知
   void notifyProviderChange(Ref ref, String providerId, {dynamic newValue, dynamic oldValue}) {
-    final DependencyOptimizer optimizer = ref.read(dependencyOptimizerProvider.notifier);
-    optimizer.handleProviderChange(providerId, newValue: newValue, oldValue: oldValue);
+    ref.read(dependencyOptimizerProvider.notifier)
+      .handleProviderChange(providerId, newValue: newValue, oldValue: oldValue);
   }
 }
 

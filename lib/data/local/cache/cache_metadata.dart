@@ -69,7 +69,9 @@ class CacheMetadata {
 
   /// キャッシュが期限切れかどうか
   bool get isExpired {
-    if (expiresAt == null) return false;
+    if (expiresAt == null) {
+      return false;
+    }
     return DateTime.now().isAfter(expiresAt!);
   }
 

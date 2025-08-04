@@ -39,7 +39,9 @@ class _LogMonitoringCardState extends State<LogMonitoringCard> {
   }
 
   Future<void> _loadLogStats() async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     
     setState(() => _isLoading = true);
     
@@ -146,7 +148,9 @@ class _LogMonitoringCardState extends State<LogMonitoringCard> {
 
   Widget _buildPerformanceMetrics() {
     final Map<String, dynamic>? summary = _logStats?["performanceSummary"] as Map<String, dynamic>?;
-    if (summary == null) return const SizedBox.shrink();
+    if (summary == null) {
+      return const SizedBox.shrink();
+    }
 
     final double logsPerSecond = (summary["logsPerSecond"] as double?) ?? 0.0;
     final String avgFlushTime = (summary["averageFlushTime"] as String?) ?? "0";
@@ -201,7 +205,7 @@ class _LogMonitoringCardState extends State<LogMonitoringCard> {
       );
     }
 
-    final String healthStatus = (_logStats?["healthStatus"] as String?) ?? "unknown";
+    final String healthStatus = (_healthCheck?["status"] as String?) ?? "unknown";
     final Map<String, dynamic>? systemInfo = _logStats?["systemInfo"] as Map<String, dynamic>?;
 
     return AppCard(

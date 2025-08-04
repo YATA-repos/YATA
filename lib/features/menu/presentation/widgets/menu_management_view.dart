@@ -396,7 +396,9 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
 
   /// アイテムの販売可否を切り替え
   void _toggleItemAvailability(MenuItem item) async {
-    if (userId == null) return;
+    if (userId == null) {
+      return;
+    }
 
     try {
 
@@ -431,7 +433,9 @@ class _MenuManagementViewState extends ConsumerState<MenuManagementView> {
 
   /// 一括販売可否更新
   void _bulkUpdateAvailability(bool isAvailable) async {
-    if (userId == null || _selectedItems.isEmpty) return;
+    if (userId == null || _selectedItems.isEmpty) {
+      return;
+    }
 
     try {
 

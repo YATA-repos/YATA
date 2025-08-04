@@ -328,23 +328,19 @@ class LoggerPerformanceStats {
   /// デバッグ用の詳細表示
   static String toDebugString() {
     final Map<String, dynamic> allStats = getAllStats();
-    final StringBuffer buffer = StringBuffer("LoggerPerformanceStats:\n");
-    
-    buffer.writeln("=== Basic Stats ===");
-    final Map<String, dynamic> basic = allStats["basic"] as Map<String, dynamic>;
-    basic.forEach((String key, dynamic value) {
+    final StringBuffer buffer = StringBuffer("LoggerPerformanceStats:\n")
+      ..writeln("=== Basic Stats ===");
+    (allStats["basic"] as Map<String, dynamic>).forEach((String key, dynamic value) {
       buffer.writeln("  $key: $value");
     });
     
     buffer.writeln("=== Performance Stats ===");
-    final Map<String, dynamic> performance = allStats["performance"] as Map<String, dynamic>;
-    performance.forEach((String key, dynamic value) {
+    (allStats["performance"] as Map<String, dynamic>).forEach((String key, dynamic value) {
       buffer.writeln("  $key: $value");
     });
     
     buffer.writeln("=== Health Check ===");
-    final Map<String, dynamic> health = getHealthCheck();
-    health.forEach((String key, dynamic value) {
+    getHealthCheck().forEach((String key, dynamic value) {
       buffer.writeln("  $key: $value");
     });
     

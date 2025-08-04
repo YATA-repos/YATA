@@ -288,7 +288,9 @@ class UnifiedRealtimeState extends _$UnifiedRealtimeState {
   /// 在庫監視の有効/無効を切り替え
   Future<void> toggleInventoryMonitoring() async {
     final String? userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
+    if (userId == null) {
+      return;
+    }
 
     final bool currentState = state["inventory"] ?? false;
     final UnifiedRealtimeManager manager = ref.read(unifiedRealtimeManagerProvider.notifier);
@@ -305,7 +307,9 @@ class UnifiedRealtimeState extends _$UnifiedRealtimeState {
   /// 注文監視の有効/無効を切り替え
   Future<void> toggleOrderMonitoring() async {
     final String? userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
+    if (userId == null) {
+      return;
+    }
 
     final bool currentState = state["orders"] ?? false;
     final UnifiedRealtimeManager manager = ref.read(unifiedRealtimeManagerProvider.notifier);
@@ -322,7 +326,9 @@ class UnifiedRealtimeState extends _$UnifiedRealtimeState {
   /// 全監視を有効化
   Future<void> enableAllMonitoring() async {
     final String? userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
+    if (userId == null) {
+      return;
+    }
 
     final UnifiedRealtimeManager manager = ref.read(unifiedRealtimeManagerProvider.notifier);
     
@@ -348,17 +354,37 @@ class UnifiedRealtimeState extends _$UnifiedRealtimeState {
 }
 
 /// 統合リアルタイムストリームプロバイダー
+/// メモリリーク対策強化版
 @riverpod
 Stream<List<RealtimeUpdateEvent>> unifiedRealtimeStream(Ref ref, String userId) async* {
   // 統合監視を自動開始
   final UnifiedRealtimeState state = ref.read(unifiedRealtimeStateProvider.notifier);
   await state.enableAllMonitoring();
 
-  // 5秒間隔でイベントを配信
-  while (true) {
-    await Future<void>.delayed(const Duration(seconds: 5));
+  // キャンセレーション用のCompleter
+  final Completer<void> cancelCompleter = Completer<void>();
+  
+  // ref.onDispose でキャンセレーションを設定
+  ref.onDispose(() {
+    if (!cancelCompleter.isCompleted) {
+      cancelCompleter.complete();
+    }
+  });
 
+  // 5秒間隔でイベントを配信（キャンセレーション対応）
+  while (!cancelCompleter.isCompleted) {
     try {
+      // キャンセレーションかタイムアウトのいずれかを待機
+      await Future.any(<Future<void>>[
+        Future<void>.delayed(const Duration(seconds: 5)),
+        cancelCompleter.future,
+      ]);
+
+      // キャンセルされた場合はループを終了
+      if (cancelCompleter.isCompleted) {
+        break;
+      }
+
       final Map<String, RealtimeUpdateEvent> events = ref.read(unifiedRealtimeManagerProvider);
       final List<RealtimeUpdateEvent> sortedEvents = events.values.toList()
         ..sort((RealtimeUpdateEvent a, RealtimeUpdateEvent b) => 
@@ -366,9 +392,17 @@ Stream<List<RealtimeUpdateEvent>> unifiedRealtimeStream(Ref ref, String userId) 
 
       yield sortedEvents;
     } catch (e) {
+      // エラーの場合は空のリストを返すが、キャンセル例外は再スロー
+      if (e is StateError && cancelCompleter.isCompleted) {
+        // キャンセルによる正常終了
+        break;
+      }
       yield <RealtimeUpdateEvent>[];
     }
   }
+  
+  // 監視終了時のクリーンアップ
+  await state.disableAllMonitoring();
 }
 
 /// 統合リアルタイム統計プロバイダー
@@ -411,7 +445,9 @@ class RealtimeStats {
 
   /// アクティビティレベル（0-100）
   double get activityLevel {
-    if (totalUpdates == 0) return 0.0;
+    if (totalUpdates == 0) {
+      return 0.0;
+    }
     
     final int criticalScore = criticalInventoryChanges * 3 + importantOrderChanges * 2;
     return (criticalScore / totalUpdates * 100).clamp(0.0, 100.0);

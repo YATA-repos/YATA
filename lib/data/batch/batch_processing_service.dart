@@ -519,7 +519,9 @@ class InventoryStats {
   final int criticalStock;
 
   double get healthScore {
-    if (totalMaterials == 0) return 100.0;
+    if (totalMaterials == 0) {
+      return 100.0;
+    }
     final double sufficientRatio = sufficientStock / totalMaterials;
     final double criticalRatio = criticalStock / totalMaterials;
     return ((sufficientRatio * 100) - (criticalRatio * 50)).clamp(0.0, 100.0);

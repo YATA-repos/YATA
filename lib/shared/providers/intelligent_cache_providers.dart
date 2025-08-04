@@ -92,8 +92,8 @@ class IntelligentCacheManager extends _$IntelligentCacheManager {
     _lastAccess.remove(providerId);
     
     // 状態から削除
-    final Map<String, CacheEntry> newState = Map<String, CacheEntry>.from(state);
-    newState.remove(providerId);
+    final Map<String, CacheEntry> newState = Map<String, CacheEntry>.from(state)
+      ..remove(providerId);
     state = newState;
 
     // 実際のプロバイダー無効化は外部で実装
@@ -118,7 +118,9 @@ class IntelligentCacheManager extends _$IntelligentCacheManager {
   /// 依存関係による連動無効化
   void invalidateWithDependencies(String sourceProviderId) {
     final EnhancedCacheConfig? sourceConfig = _cacheConfigs[sourceProviderId];
-    if (sourceConfig == null) return;
+    if (sourceConfig == null) {
+      return;
+    }
 
     // 直接の依存関係を無効化
     for (final String dependentId in sourceConfig.dependsOn) {
@@ -290,14 +292,10 @@ class SmartCacheController extends _$SmartCacheController {
 
   /// 最適化実行
   void _performOptimization() {
-    final IntelligentCacheManager cacheManager = 
-        ref.read(intelligentCacheManagerProvider.notifier);
-
-    // 使用されていないキャッシュを削除
-    cacheManager.evictUnusedCache();
-
-    // メモリ最適化（仮想的なメモリ使用量）
-    cacheManager.optimizeForMemory(30.0); // 30MB available と仮定
+    // 使用されていないキャッシュを削除とメモリ最適化
+    ref.read(intelligentCacheManagerProvider.notifier)
+      ..evictUnusedCache()
+      ..optimizeForMemory(30.0); // 30MB available と仮定
   }
 
   /// 手動最適化トリガー
@@ -307,11 +305,9 @@ class SmartCacheController extends _$SmartCacheController {
 
   /// ユーザー変更時の全キャッシュクリア
   void clearUserCache() {
-    final IntelligentCacheManager cacheManager = 
-        ref.read(intelligentCacheManagerProvider.notifier);
-
-    cacheManager.invalidateByDataType(DataType.userDynamicData);
-    cacheManager.invalidateByDataType(DataType.userSemiStaticData);
+    ref.read(intelligentCacheManagerProvider.notifier)
+      ..invalidateByDataType(DataType.userDynamicData)
+      ..invalidateByDataType(DataType.userSemiStaticData);
   }
 
   void dispose() {
@@ -328,18 +324,14 @@ mixin SmartCacheMixin {
     DataType dataType, {
     EnhancedCacheConfig? customConfig,
   }) {
-    final IntelligentCacheManager cacheManager = 
-        ref.read(intelligentCacheManagerProvider.notifier);
-    
-    cacheManager.registerProvider(providerId, dataType, customConfig: customConfig);
+    ref.read(intelligentCacheManagerProvider.notifier)
+      .registerProvider(providerId, dataType, customConfig: customConfig);
   }
 
   /// アクセス記録
   void recordCacheAccess(Ref ref, String providerId) {
-    final IntelligentCacheManager cacheManager = 
-        ref.read(intelligentCacheManagerProvider.notifier);
-    
-    cacheManager.recordAccess(providerId);
+    ref.read(intelligentCacheManagerProvider.notifier)
+      .recordAccess(providerId);
   }
 }
 
@@ -353,9 +345,8 @@ class AuthChangeWatcher extends _$AuthChangeWatcher {
     // ユーザー変更時にキャッシュクリア
     ref.listen<String?>(currentUserIdProvider, (String? previous, String? current) {
       if (previous != null && previous != current) {
-        final SmartCacheController controller = 
-            ref.read(smartCacheControllerProvider.notifier);
-        controller.clearUserCache();
+        ref.read(smartCacheControllerProvider.notifier)
+          .clearUserCache();
       }
     });
     

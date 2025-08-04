@@ -58,9 +58,8 @@ class OptimizedMaterialCategories extends _$OptimizedMaterialCategories with Sma
     // 関連キャッシュを無効化
     ref.invalidateSelf();
     
-    final IntelligentCacheManager cacheManager = 
-        ref.read(intelligentCacheManagerProvider.notifier);
-    cacheManager.invalidateWithDependencies("material_categories");
+    ref.read(intelligentCacheManagerProvider.notifier)
+      .invalidateWithDependencies("material_categories");
   }
 }
 
