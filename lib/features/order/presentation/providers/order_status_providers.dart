@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
@@ -485,17 +487,37 @@ Future<List<Order>> filteredOrders(Ref ref, String userId) async {
 
 /// リアルタイム注文ストリームプロバイダー
 /// 統合リアルタイム監視システムを使用
+/// メモリリーク対策強化版
 @riverpod
 Stream<List<Order>> realTimeOrdersStream(Ref ref, String userId) async* {
   // 統合リアルタイム監視を自動開始
   final UnifiedRealtimeManager unifiedManager = ref.read(unifiedRealtimeManagerProvider.notifier);
   await unifiedManager.startOrderMonitoring(userId);
 
-  // 5秒間隔で注文データを配信
-  while (true) {
-    await Future<void>.delayed(const Duration(seconds: 5));
+  // キャンセレーション用のCompleter
+  final Completer<void> cancelCompleter = Completer<void>();
+  
+  // ref.onDispose でキャンセレーションを設定
+  ref.onDispose(() {
+    if (!cancelCompleter.isCompleted) {
+      cancelCompleter.complete();
+    }
+  });
 
+  // 5秒間隔で注文データを配信（キャンセレーション対応）
+  while (!cancelCompleter.isCompleted) {
     try {
+      // キャンセレーションかタイムアウトのいずれかを待機
+      await Future.any(<Future<void>>[
+        Future<void>.delayed(const Duration(seconds: 5)),
+        cancelCompleter.future,
+      ]);
+
+      // キャンセルされた場合はループを終了
+      if (cancelCompleter.isCompleted) {
+        break;
+      }
+
       final Map<OrderStatus, List<Order>> ordersByStatus = await ref.read(
         activeOrdersByStatusProvider(userId).future,
       );
@@ -508,8 +530,15 @@ Stream<List<Order>> realTimeOrdersStream(Ref ref, String userId) async* {
       allOrders.sort((Order a, Order b) => b.orderedAt.compareTo(a.orderedAt));
       yield allOrders;
     } catch (e) {
-      // エラーの場合は空のリストを返す
+      // エラーの場合は空のリストを返すが、キャンセル例外は再スロー
+      if (e is StateError && cancelCompleter.isCompleted) {
+        // キャンセルによる正常終了
+        break;
+      }
       yield <Order>[];
     }
   }
+  
+  // 監視終了時のクリーンアップ
+  await unifiedManager.stopMonitoring("order_monitoring");
 }

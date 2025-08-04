@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:riverpod_annotation/riverpod_annotation.dart";
 
@@ -367,17 +369,37 @@ class InventoryDashboardData {
 
 /// 在庫変更ストリームプロバイダー
 /// 統合リアルタイム監視システムを使用
+/// メモリリーク対策強化版
 @riverpod
 Stream<List<InventoryUpdate>> inventoryChangesStream(Ref ref, String userId) async* {
   // 統合リアルタイム監視を自動開始
   final UnifiedRealtimeManager unifiedManager = ref.read(unifiedRealtimeManagerProvider.notifier);
   await unifiedManager.startInventoryMonitoring(userId);
 
-  // 15秒間隔で在庫変更をチェック
-  while (true) {
-    await Future<void>.delayed(const Duration(seconds: 15));
+  // キャンセレーション用のCompleter
+  final Completer<void> cancelCompleter = Completer<void>();
+  
+  // ref.onDispose でキャンセレーションを設定
+  ref.onDispose(() {
+    if (!cancelCompleter.isCompleted) {
+      cancelCompleter.complete();
+    }
+  });
 
+  // 15秒間隔で在庫変更をチェック（キャンセレーション対応）
+  while (!cancelCompleter.isCompleted) {
     try {
+      // キャンセレーションかタイムアウトのいずれかを待機
+      await Future.any(<Future<void>>[
+        Future<void>.delayed(const Duration(seconds: 15)),
+        cancelCompleter.future,
+      ]);
+
+      // キャンセルされた場合はループを終了
+      if (cancelCompleter.isCompleted) {
+        break;
+      }
+
       // 統合システムから在庫更新イベントを取得
       final List<InventoryUpdateEvent> realtimeEvents = unifiedManager.getRecentInventoryUpdates();
       
@@ -395,8 +417,15 @@ Stream<List<InventoryUpdate>> inventoryChangesStream(Ref ref, String userId) asy
 
       yield updates;
     } catch (e) {
-      // エラーの場合は空のリストを返す
+      // エラーの場合は空のリストを返すが、キャンセル例外は再スロー
+      if (e is StateError && cancelCompleter.isCompleted) {
+        // キャンセルによる正常終了
+        break;
+      }
       yield <InventoryUpdate>[];
     }
   }
+  
+  // 監視終了時のクリーンアップ
+  await unifiedManager.stopMonitoring("inventory_monitoring");
 }
