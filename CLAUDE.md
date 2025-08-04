@@ -10,7 +10,9 @@
 - **ファイルの存在確認・ディレクトリ構造の確認は、必ず`tree`コマンドを使用すること。gitからこのような情報を取得することを禁止する。**
 - **`TODO.md`を積極的に活用する。使用方法は`TODO.md`内に記載されています。**
 - **常に、既存実装が存在しないかを確認すること。また明らかな間違いである場合を除いてプロジェクトの方式・手法・思想を踏襲すること。**
+- **迂回や別アプローチを勝手に行わず、最初の計画が失敗したら次の計画の確認を取ること。**
 - **中立的立場を維持し、自らが作成したコード、およびユーザーに対しても批判的思考をもって常に改善を試みること。**
+- **以上の原則を、すべての回答の冒頭に記載すること。**
 
 ## 1. プロジェクト基本情報
 
@@ -90,10 +92,19 @@ lib/
 ├── core/                    # コア機能
 │   ├── base/               # 基底クラス（BaseModel, BaseRepository）
 │   ├── constants/          # 定数・設定
+│   │   ├── app_strings/    # アプリケーション文字列定数
 │   │   ├── exceptions/     # 例外クラス（フィーチャー別分類）
+│   │   │   ├── analytics/  # 分析機能例外
+│   │   │   ├── auth/       # 認証機能例外
+│   │   │   ├── base/       # 基底例外クラス
+│   │   │   ├── inventory/  # 在庫管理例外
+│   │   │   ├── kitchen/    # キッチン機能例外
+│   │   │   ├── menu/       # メニュー管理例外
+│   │   │   ├── order/      # 注文管理例外
+│   │   │   ├── repository/ # リポジトリ例外
+│   │   │   └── service/    # サービス例外
 │   │   └── log_enums/      # ログ関連列挙型
 │   ├── logging/            # ログサービス
-│   ├── providers/          # コアプロバイダー
 │   ├── utils/              # ユーティリティ（クエリ、エラーハンドラー）
 │   └── validation/         # 入力バリデーション
 ├── data/                   # データ層（新アーキテクチャ）
@@ -102,7 +113,8 @@ lib/
 │   │   ├── cache/          # キャッシュ機能（旧 core/cache）
 │   │   └── offline_queue/  # オフライン機能
 │   ├── realtime/           # リアルタイム機能（旧 core/realtime）
-│   └── remote/             # リモートデータアクセス（旧 core/infrastructure/supabase）
+│   ├── remote/             # リモートデータアクセス（旧 core/infrastructure/supabase）
+│   └── repositories/       # データ層リポジトリ
 ├── features/               # 機能別ディレクトリ
 │   ├── analytics/          # 分析機能
 │   │   ├── dto/            # Data Transfer Objects
@@ -173,26 +185,6 @@ lib/
         ├── navigation/     # ナビゲーション
         └── tables/         # テーブル系ウィジェット
 ```
-
-#### データ層（lib/data/）について
-
-プロジェクトの進化に伴い、データアクセスに関する機能を`lib/data/`ディレクトリに集約しました。これにより、より明確な責務分離と保守性の向上を実現しています。
-
-- **`lib/data/batch/`** - バッチ処理サービス
-  - 大量データの一括処理
-  - 非同期タスクの管理
-
-- **`lib/data/local/`** - ローカルデータアクセス
-  - `cache/` - キャッシュ機能（旧 `lib/core/cache/`）
-  - `offline_queue/` - オフライン時のデータキューイング
-
-- **`lib/data/realtime/`** - リアルタイム機能（旧 `lib/core/realtime/`）
-  - WebSocketベースのリアルタイム通信
-  - 接続管理とリアルタイムデータ同期
-
-- **`lib/data/remote/`** - リモートデータアクセス（旧 `lib/core/infrastructure/supabase/`）
-  - Supabaseクライアント
-  - 外部APIとの通信
 
 #### DTOに関する注意点
 

@@ -4,6 +4,37 @@
 
 ## Ready
 
+### [Bugfix] テストファイルのコンパイルエラー修正
+
+- **Priority**: P0
+- **Size**: S
+- **Area**: Testing
+- **Dependencies**: None
+- **Goal**: test/performance/benchmarks/ui_performance_test.dartの9箇所のコンパイルエラーを修正し、テストが実行可能な状態にする
+- **Steps**:
+  1. undefined_named_parameter エラーの修正（enabled, labelパラメータ）
+  2. undefined_function エラーの修正（BaseCard関数の定義または代替実装）
+  3. const_with_non_constant_argument エラーの修正
+  4. undefined_getter エラーの修正（Icons.item → 適切なアイコンに変更）
+  5. 修正後のテスト実行確認
+- **Description**: テストファイルに存在する9箇所のコンパイルエラーにより、プロジェクトのビルドやテスト実行が阻害されている。これらのエラーはundefined_named_parameter、undefined_function、const_with_non_constant_argument、undefined_getterなどの基本的なDart言語エラーであり、即座に修正が必要
+
+### [Bugfix] 重要エラーハンドリング箇所へのログ実装
+
+- **Priority**: P1
+- **Size**: M
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: 認証、在庫管理、システム初期化の重要エラーハンドリング箇所にログ出力を実装し、エラー追跡を可能にする
+- **Steps**:
+  1. 認証エラーのログ実装（auth_providers.dart:73-76）
+  2. 在庫不足エラーのログ実装（cart_providers.dart:74-78, 84-87）
+  3. システム初期化エラーのログ実装（system_providers.dart:35-41）
+  4. ログイン画面認証エラーのログ実装（login_screen.dart:212-223）
+  5. 在庫データ取得エラーのログ実装（detailed_inventory_screen.dart:73-76）
+  6. その他のProvider層エラーハンドリング箇所へのログ追加
+- **Description**: logger_usage_report.mdで特定された重要なエラーハンドリング箇所でログ出力が実装されていない問題を解決。認証エラー、在庫不足エラー、システム初期化エラーなど、本格運用時にエラー追跡が不可欠な箇所にYataLoggerまたはLoggerMixinを使用したログ出力を実装する
+
 ### [Performance] Phase 3: オフライン機能の最適化
 
 - **Priority**: P2
@@ -35,22 +66,6 @@
   5. 統合リアルタイム監視システムへの統合
   6. 機能別パフォーマンス指標の設定と監視
 - **Description**: 在庫管理機能で実証されたパフォーマンス最適化手法を、注文・メニュー・分析の各機能に体系的に適用。アプリケーション全体の一貫したパフォーマンス向上を実現する
-
-### [Testing] パフォーマンス回帰テストの構築
-
-- **Priority**: P2
-- **Size**: M
-- **Area**: Testing
-- **Dependencies**: パフォーマンス最適化実装の検証とテスト
-- **Goal**: パフォーマンス最適化の効果を継続的に監視し、回帰を検出する自動テスト体制を構築する
-- **Steps**:
-  1. パフォーマンス指標の基準値設定（メモリ使用量、応答時間等）
-  2. 自動パフォーマンステストの実装
-  3. CI/CDパイプラインへのパフォーマンステスト組み込み
-  4. パフォーマンス回帰アラート機能の実装
-  5. パフォーマンス監視ダッシュボードの作成
-  6. 定期的なパフォーマンスレポート生成機能
-- **Description**: パフォーマンス最適化の効果を継続的に監視し、新機能追加や修正による性能劣化を早期検出するためのテスト基盤を構築。開発チームがパフォーマンスを意識した開発を継続できる環境を整備する
 
 ### [Enhancement] パフォーマンス監視とアナリティクス強化
 
@@ -89,6 +104,7 @@
   6. 警告コメントの削除と改善内容の文書化
 - **Description**: コード内の重要警告コメント3箇所を調査・解決し、併せてanalyze_result.mdで特定された命名規則の軽微な違反も修正。要件の明確化、認証設定の検証、ログ機能の代替実装、命名の一貫性向上を通じて、コード品質を総合的に改善する
 
+
 ---
 
 ## Backlog
@@ -107,6 +123,8 @@
   4. プロジェクトの開発理念とベストプラクティスを明文化
   5. 新規開発者向けのオンボーディングガイドとして整備
 - **Description**: フィーチャーベース・サービスレイヤーアーキテクチャの設計思想とUIデザイン原則を含む開発理念ドキュメントの作成。lintルールとは分離し、設計哲学に焦点を当てる
+
+
 
 ### [Refactor] base_repository.dart設計課題の解決
 
