@@ -19,7 +19,7 @@ dependencies:
   json_annotation: ^4.9.0
   mutex: ^3.1.0
   google_fonts: ^6.2.1
-  go_router: ^14.6.1
+  go_router: ^16.1.0
   lucide_icons: ^0.257.0
   shelf: ^1.4.2
   shelf_router: ^1.1.0
@@ -28,6 +28,7 @@ dependencies:
   csv: ^6.0.0
   window_manager: ^0.5.1
   logger: ^2.0.2+1
+  crypto: ^3.0.3
   # intl: ^0.20.2
 
 dev_dependencies:
@@ -43,6 +44,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
+  mocktail: any
 flutter:
   uses-material-design: true
   assets:

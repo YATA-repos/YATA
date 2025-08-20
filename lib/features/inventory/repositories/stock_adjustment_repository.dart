@@ -3,16 +3,15 @@ import "../../../data/repositories/base_repository.dart";
 import "../models/transaction_model.dart";
 
 class StockAdjustmentRepository extends BaseRepository<StockAdjustment, String> {
-  StockAdjustmentRepository() : super(tableName: "stock_adjustments");
+  StockAdjustmentRepository({required super.ref}) : super(tableName: "stock_adjustments", enableMultiTenant: true);
 
   @override
   StockAdjustment fromJson(Map<String, dynamic> json) => StockAdjustment.fromJson(json);
 
   /// 材料IDで調整履歴を取得
-  Future<List<StockAdjustment>> findByMaterialId(String materialId, String userId) async {
+  Future<List<StockAdjustment>> findByMaterialId(String materialId) async {
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("material_id", materialId),
-      QueryConditionBuilder.eq("user_id", userId),
     ];
 
     // 調整日時で降順ソート
@@ -24,13 +23,12 @@ class StockAdjustmentRepository extends BaseRepository<StockAdjustment, String> 
   }
 
   /// 最近の調整履歴を取得
-  Future<List<StockAdjustment>> findRecent(int days, String userId) async {
+  Future<List<StockAdjustment>> findRecent(int days) async {
     // 過去N日間の開始日を計算
     final DateTime startDate = DateTime.now().subtract(Duration(days: days));
     final DateTime startDateNormalized = DateTime(startDate.year, startDate.month, startDate.day);
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("adjusted_at", startDateNormalized.toIso8601String()),
     ];
 

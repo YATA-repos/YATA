@@ -3,7 +3,7 @@ import "../../../data/repositories/base_repository.dart";
 import "../models/transaction_model.dart";
 
 class PurchaseItemRepository extends BaseRepository<PurchaseItem, String> {
-  PurchaseItemRepository() : super(tableName: "purchase_items");
+  PurchaseItemRepository({required super.ref}) : super(tableName: "purchase_items", enableMultiTenant: true);
 
   @override
   PurchaseItem fromJson(Map<String, dynamic> json) => PurchaseItem.fromJson(json);

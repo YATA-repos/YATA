@@ -3,12 +3,13 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/logging/logger_mixin.dart";
 import "../../../core/utils/error_handler.dart";
-import "../../../data/realtime/realtime_config.dart";
-import "../../../data/realtime/realtime_service_mixin.dart";
+import "../../../infrastructure/realtime/realtime_config.dart";
+import "../../../infrastructure/realtime/realtime_service_mixin.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
+import "../models/transaction_model.dart";
 import "material_management_service.dart";
 import "order_stock_service.dart";
 import "stock_level_service.dart";
@@ -346,3 +347,7 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
     return null;
   }
 }
+
+/// InventoryService のプロバイダー定義
+final Provider<InventoryService> inventoryServiceProvider =
+    Provider<InventoryService>((Ref ref) => InventoryService(ref: ref));

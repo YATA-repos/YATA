@@ -1,9 +1,9 @@
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_multitenant_repository.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/analytics_model.dart";
 
-class DailySummaryRepository extends BaseMultiTenantRepository<DailySummary, String> {
-  DailySummaryRepository({required super.ref}) : super(tableName: "daily_summaries");
+class DailySummaryRepository extends BaseRepository<DailySummary, String> {
+  DailySummaryRepository({required super.ref}) : super(tableName: "daily_summaries", enableMultiTenant: true);
 
   @override
   DailySummary fromJson(Map<String, dynamic> json) => DailySummary.fromJson(json);

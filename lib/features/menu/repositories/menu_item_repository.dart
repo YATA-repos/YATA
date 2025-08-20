@@ -1,9 +1,9 @@
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_multitenant_repository.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/menu_model.dart";
 
-class MenuItemRepository extends BaseMultiTenantRepository<MenuItem, String> {
-  MenuItemRepository({required super.ref}) : super(tableName: "menu_items");
+class MenuItemRepository extends BaseRepository<MenuItem, String> {
+  MenuItemRepository({required super.ref}) : super(tableName: "menu_items", enableMultiTenant: true);
 
   @override
   MenuItem fromJson(Map<String, dynamic> json) => MenuItem.fromJson(json);

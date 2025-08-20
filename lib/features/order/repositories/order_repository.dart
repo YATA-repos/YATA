@@ -1,11 +1,11 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_multitenant_repository.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/order_model.dart";
 
 /// 注文リポジトリ
-class OrderRepository extends BaseMultiTenantRepository<Order, String> {
-  OrderRepository({required super.ref}) : super(tableName: "orders");
+class OrderRepository extends BaseRepository<Order, String> {
+  OrderRepository({required super.ref}) : super(tableName: "orders", enableMultiTenant: true);
 
   @override
   Order fromJson(Map<String, dynamic> json) => Order.fromJson(json);
@@ -273,7 +273,7 @@ class OrderRepository extends BaseMultiTenantRepository<Order, String> {
   }
 
   /// アクティブ注文をステータス別に取得
-  Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(String userId) async {
+  Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus() async {
     final List<OrderStatus> activeStatuses = <OrderStatus>[
       OrderStatus.pending,
       OrderStatus.confirmed,

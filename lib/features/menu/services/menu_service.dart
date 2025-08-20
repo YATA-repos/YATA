@@ -440,3 +440,7 @@ class MenuService with LoggerMixin {
     }
   }
 }
+
+/// MenuService のプロバイダー定義
+final Provider<MenuService> menuServiceProvider =
+    Provider<MenuService>((Ref ref) => MenuService(ref: ref));

@@ -4,7 +4,7 @@ import "../../../data/repositories/base_repository.dart";
 import "../models/transaction_model.dart";
 
 class StockTransactionRepository extends BaseRepository<StockTransaction, String> {
-  StockTransactionRepository() : super(tableName: "stock_transactions");
+  StockTransactionRepository({required super.ref}) : super(tableName: "stock_transactions", enableMultiTenant: true);
 
   @override
   StockTransaction fromJson(Map<String, dynamic> json) => StockTransaction.fromJson(json);
@@ -17,12 +17,10 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
   Future<List<StockTransaction>> findByReference(
     ReferenceType referenceType,
     String referenceId,
-    String userId,
   ) async {
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("reference_type", referenceType.value),
       QueryConditionBuilder.eq("reference_id", referenceId),
-      QueryConditionBuilder.eq("user_id", userId),
     ];
 
     // 作成日時で降順ソート
@@ -38,7 +36,6 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
     String materialId,
     DateTime dateFrom,
     DateTime dateTo,
-    String userId,
   ) async {
     // 日付を正規化
     final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
@@ -54,7 +51,6 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
 
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("material_id", materialId),
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("created_at", dateFromNormalized.toIso8601String()),
       QueryConditionBuilder.lte("created_at", dateToNormalized.toIso8601String()),
     ];
@@ -71,7 +67,6 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
   Future<List<StockTransaction>> findConsumptionTransactions(
     DateTime dateFrom,
     DateTime dateTo,
-    String userId,
   ) async {
     // 日付を正規化
     final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
@@ -86,7 +81,6 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
     );
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("created_at", dateFromNormalized.toIso8601String()),
       QueryConditionBuilder.lte("created_at", dateToNormalized.toIso8601String()),
       QueryConditionBuilder.lt("change_amount", 0),
@@ -99,4 +93,5 @@ class StockTransactionRepository extends BaseRepository<StockTransaction, String
 
     return find(filters: filters, orderBy: orderBy);
   }
+
 }

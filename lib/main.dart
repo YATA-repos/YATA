@@ -10,7 +10,7 @@ import "app/app.dart";
 import "core/logging/logger_mixin.dart";
 import "core/logging/yata_logger.dart";
 import "core/validation/env_validator.dart";
-import "data/remote/supabase_client.dart";
+import "infrastructure/supabase/supabase_client.dart";
 
 void main() async {
   // flutter初期化

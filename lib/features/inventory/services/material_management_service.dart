@@ -193,4 +193,5 @@ class MaterialManagementService with LoggerMixin {
       "critical_threshold": criticalThreshold,
     });
   }
+
 }

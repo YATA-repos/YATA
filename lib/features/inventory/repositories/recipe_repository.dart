@@ -1,10 +1,10 @@
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_multitenant_repository.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/inventory_model.dart";
 
 /// レシピリポジトリ
-class RecipeRepository extends BaseMultiTenantRepository<Recipe, String> {
-  RecipeRepository({required super.ref}) : super(tableName: "recipes");
+class RecipeRepository extends BaseRepository<Recipe, String> {
+  RecipeRepository({required super.ref}) : super(tableName: "recipes", enableMultiTenant: true);
 
   @override
   Recipe fromJson(Map<String, dynamic> json) => Recipe.fromJson(json);

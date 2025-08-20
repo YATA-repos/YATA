@@ -57,7 +57,7 @@ final data = AnalyticsInfo.dailyStatsCompleted.toStructuredData({
   'totalRevenue': '10000',
   'totalOrders': '50'
 });
-service.logStructured(LogLevel.info, data);
+service.logStructured(Level.info, data);
 ```
     """;
   

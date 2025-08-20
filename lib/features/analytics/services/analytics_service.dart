@@ -260,6 +260,7 @@ class AnalyticsService with LoggerMixin {
     }
   }
 
+
   /// 材料消費分析を取得
   Future<Map<String, dynamic>> getMaterialConsumptionAnalysis(
     String materialId,
@@ -427,3 +428,7 @@ class AnalyticsService with LoggerMixin {
     return null;
   }
 }
+
+/// AnalyticsService のプロバイダー定義
+final Provider<AnalyticsService> analyticsServiceProvider =
+    Provider<AnalyticsService>((Ref ref) => AnalyticsService(ref: ref));

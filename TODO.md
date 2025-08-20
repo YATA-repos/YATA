@@ -2,112 +2,97 @@
 
 ---
 
-## Ready
+## Backlog
 
-### [Bugfix] テストファイルのコンパイルエラー修正
-
-- **Priority**: P0
-- **Size**: S
-- **Area**: Testing
-- **Dependencies**: None
-- **Goal**: test/performance/benchmarks/ui_performance_test.dartの9箇所のコンパイルエラーを修正し、テストが実行可能な状態にする
-- **Steps**:
-  1. undefined_named_parameter エラーの修正（enabled, labelパラメータ）
-  2. undefined_function エラーの修正（BaseCard関数の定義または代替実装）
-  3. const_with_non_constant_argument エラーの修正
-  4. undefined_getter エラーの修正（Icons.item → 適切なアイコンに変更）
-  5. 修正後のテスト実行確認
-- **Description**: テストファイルに存在する9箇所のコンパイルエラーにより、プロジェクトのビルドやテスト実行が阻害されている。これらのエラーはundefined_named_parameter、undefined_function、const_with_non_constant_argument、undefined_getterなどの基本的なDart言語エラーであり、即座に修正が必要
-
-### [Bugfix] 重要エラーハンドリング箇所へのログ実装
+### [Routing] 初期ルート/home切替と/menuエイリアス化、/menu-management移設
 
 - **Priority**: P1
 - **Size**: M
-- **Area**: Core
-- **Dependencies**: None
-- **Goal**: 認証、在庫管理、システム初期化の重要エラーハンドリング箇所にログ出力を実装し、エラー追跡を可能にする
+- **Area**: Routing
+- **Dependencies**: [Feature] POSメニュー選択画面の実装
+- **Goal**: 初期ルートを`/home`へ切替し、`/menu`を`/home`のエイリアスとして扱う。既存のメニュー管理画面は`/menu-management`へ移設する
 - **Steps**:
-  1. 認証エラーのログ実装（auth_providers.dart:73-76）
-  2. 在庫不足エラーのログ実装（cart_providers.dart:74-78, 84-87）
-  3. システム初期化エラーのログ実装（system_providers.dart:35-41）
-  4. ログイン画面認証エラーのログ実装（login_screen.dart:212-223）
-  5. 在庫データ取得エラーのログ実装（detailed_inventory_screen.dart:73-76）
-  6. その他のProvider層エラーハンドリング箇所へのログ追加
-- **Description**: logger_usage_report.mdで特定された重要なエラーハンドリング箇所でログ出力が実装されていない問題を解決。認証エラー、在庫不足エラー、システム初期化エラーなど、本格運用時にエラー追跡が不可欠な箇所にYataLoggerまたはLoggerMixinを使用したログ出力を実装する
+  1. `lib/app/routes.dart`の`initialLocation`を`/home`へ変更
+  2. `/home`ルートを追加しメニュー選択画面へ紐付け、`/menu`を同一画面のエイリアス化
+  3. 既存`/menu`（MenuManagementScreen）を`/menu-management`へ移設
+  4. ナビゲーションリンク・ガード・エラーページの遷移先を再確認
+  5. 主要導線のリグレッション確認
+- **Description**: 実装計画（Option B）に基づくルーティング切替。破壊的変更のため移設とリンク更新を同時に行う
 
-### [Performance] Phase 3: オフライン機能の最適化
+### [Feature] POSメニュー選択画面の実装（/home, /menu alias）
 
-- **Priority**: P2
+- **Priority**: P1
 - **Size**: L
-- **Area**: Core
-- **Dependencies**: パフォーマンス最適化実装の検証とテスト
-- **Goal**: オフライン機能におけるパフォーマンス最適化を実装し、オフライン⇔オンライン切り替え時の効率性を向上させる
+- **Area**: UI/UX
+- **Dependencies**: None（共通UI・DTOは実装済み）
+- **Goal**: 左カタログ/右注文サマリー構成のメニュー選択画面を新設し、注文ドラフト/会計導線を提供する
 - **Steps**:
-  1. 現在のオフライン機能実装状況の調査
-  2. オフライン時のキャッシュ戦略最適化
-  3. 同期処理のバッチ最適化
-  4. オフライン時のメモリ管理改善
-  5. オンライン復帰時の差分同期最適化
-  6. オフライン機能のパフォーマンス監視実装
-- **Description**: Phase 1・2で確立されたパフォーマンス最適化の知見をオフライン機能に適用。オフライン⇔オンライン切り替え時のスムーズな動作とリソース効率の向上を実現する
+  1. `features/menu/presentation/screens/menu_selection_screen.dart`新設
+  2. 商品検索/グリッド/フィルタのUI実装（Provider連動）
+  3. 注文サマリー（InfoBadge, 小計/税/合計, 会計/クリア）実装
+  4. `product_controller`/`order_draft`のProvider実装とサービスへの接続
+  5. 画面遷移・戻り導線の確認
+- **Description**: 仕様書のUIスニペットに準拠してPOS用途のメイン画面を構築する
 
-### [Performance] 他機能への最適化展開
 
-- **Priority**: P2
-- **Size**: L
-- **Area**: Core
-- **Dependencies**: パフォーマンス最適化実装の検証とテスト
-- **Goal**: Phase 1・2で実装された最適化手法を、注文・メニュー・分析機能に適用し、アプリ全体のパフォーマンスを向上させる
-- **Steps**:
-  1. 注文管理機能のプロバイダー最適化（keepAlive削除、重複データ取得解消）
-  2. メニュー管理機能のUIレイヤー最適化
-  3. 分析機能のバッチ処理とキャッシュ戦略適用
-  4. 各機能でのconst constructor適用
-  5. 統合リアルタイム監視システムへの統合
-  6. 機能別パフォーマンス指標の設定と監視
-- **Description**: 在庫管理機能で実証されたパフォーマンス最適化手法を、注文・メニュー・分析の各機能に体系的に適用。アプリケーション全体の一貫したパフォーマンス向上を実現する
 
-### [Enhancement] パフォーマンス監視とアナリティクス強化
+### [Enhancement] 注文履歴の仕様差分反映（±1日ナッジャ/表示設定/エクスポート/ページネーション）
 
-- **Priority**: P3
+- **Priority**: P1
 - **Size**: M
-- **Area**: Analytics
-- **Dependencies**: パフォーマンス最適化実装の検証とテスト
-- **Goal**: より詳細なパフォーマンス分析機能を実装し、ユーザー体験とシステム効率の継続的改善を実現する
+- **Area**: UI/UX
+- **Dependencies**: None（共通DTO・UIは実装済み）
+- **Goal**: `OrderHistoryScreen`に仕様差分を反映し、UI→Service接続を完了させる
 - **Steps**:
-  1. ユーザー操作レベルでのパフォーマンス追跡
-  2. 機能別・画面別の詳細パフォーマンス分析
-  3. リアルタイムパフォーマンス監視ダッシュボード
-  4. パフォーマンス異常検知とアラート機能
-  5. ユーザー体験指標（UX metrics）の測定
-  6. パフォーマンス改善提案の自動生成
-- **Description**: パフォーマンス最適化を一過性の取り組みではなく、継続的改善プロセスとして確立。詳細な監視とアナリティクスにより、データドリブンなパフォーマンス改善を実現する
+  1. 日付±1日ナッジャボタンと左右キー操作を追加
+  2. 表示設定ダイアログ（列表示ON/OFF）の実装
+  3. エクスポート導線を`OrderService.exportCsv`へ接続
+  4. ページネーション/ソートを`OrderService.list(PageReq)`へ接続
+  5. ローディング/エラー/リトライのUX整備
+- **Description**: temp.md v0.2の差分を忠実に反映し、機能の完成度を高める
 
+### [Enhancement] 在庫管理のCSV入出力導線/ページネーション/StatusPill統合
 
----
+- **Priority**: P1
+- **Size**: M
+- **Area**: UI/UX, Core
+- **Dependencies**: None（共通DTO・UIは実装済み）
+- **Goal**: 在庫画面にCSVインポート/エクスポート、ページング、状態表示を統合する
+- **Steps**:
+  1. AppBarツールバーにupload/download/refreshを追加
+  2. `csv_import_service`ラッパー経由で`InventoryService.importCsv/exportCsv`へ接続
+  3. 行の状態表示を`StatusPill`へ統一
+  4. ページネーションを`InventoryService.list(PageReq)`へ接続
+  5. Snackbarで取込件数/失敗ログURLを通知
+- **Description**: 仕様I/Oに沿った実用的な在庫運用導線を整備する
 
-## In Progress
+### [Enhancement] 売上分析 Granularity/KPI 接続（チャートはプレースホルダ維持）
 
-### [Enhancement] コード品質改善（警告コメント解決・命名規則修正）
+- **Priority**: P2
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: None（共通DTOは実装済み）
+- **Goal**: `daily|weekly|monthly`の粒度切替とKPI取得をProvider/Serviceに接続する
+- **Steps**:
+  1. Providerへ`granularity`を追加し、フィルタ適用時に各APIを同一DateRangeで呼出
+  2. `AnalyticsService.getKpis/getDailySalesSeries/getCategorySales`を型合わせ
+  3. KPIカード表示の確定（チャートはplaceholder継続）
+  4. ローディング/エラー処理の整備
+- **Description**: 仕様I/Oの確定値に準拠し、分析画面の基礎機能を完成させる
 
-- **Priority**: P2  
+### [Chore] DoD検証と最終微調整
+
+- **Priority**: P2
 - **Size**: S
-- **Area**: Core
-- **Dependencies**: None
-- **Goal**: 重要警告コメント3箇所の解決とDart命名規則違反の修正を行い、コード品質の一貫性を向上させる
+- **Area**: QA
+- **Dependencies**: 上記全タスク
+- **Goal**: DoD準拠の確認と視覚差異/UXの最終調整を行う
 - **Steps**:
-  1. menu_service.dart:256の要件調整事項を確認・解決
-  2. auth_config.dart:83の認証設定妥当性を検証・修正
-  3. query_utils.dart:5のLoggerMixin使用不可問題の代替案実装
-  4. コードベース全体での命名規則違反箇所を特定・修正
-  5. 各修正点の影響範囲確認とテスト実施
-  6. 警告コメントの削除と改善内容の文書化
-- **Description**: コード内の重要警告コメント3箇所を調査・解決し、併せてanalyze_result.mdで特定された命名規則の軽微な違反も修正。要件の明確化、認証設定の検証、ログ機能の代替実装、命名の一貫性向上を通じて、コード品質を総合的に改善する
-
-
----
-
-## Backlog
+  1. 4画面の視覚差異・操作導線の確認
+  2. ページネーション/ソート/フィルタ/CSV入出力の一連動作確認
+  3. ログ/リトライ導線の確認と不足箇所の補完
+  4. 影響範囲のドキュメント反映（必要最小限）
+- **Description**: 実装計画のDoDに基づき、品質の底上げと完成度の最終チェックを実施
 
 ### [Documentation] 開発原則・理念ドキュメントの整備
 
@@ -123,8 +108,6 @@
   4. プロジェクトの開発理念とベストプラクティスを明文化
   5. 新規開発者向けのオンボーディングガイドとして整備
 - **Description**: フィーチャーベース・サービスレイヤーアーキテクチャの設計思想とUIデザイン原則を含む開発理念ドキュメントの作成。lintルールとは分離し、設計哲学に焦点を当てる
-
-
 
 ### [Refactor] base_repository.dart設計課題の解決
 
@@ -172,7 +155,6 @@
   6. 改善点の実装とテストケース追加
 - **Description**: shared/widgets配下のコンポーネントの一貫性、ユーザビリティ、アクセシビリティの見直しと改善
 
-
 ### [Feature] エクスポート機能の実装
 
 - **Priority**: P2
@@ -187,7 +169,6 @@
   5. PDF形式エクスポート（pdf パッケージ使用）
   6. エクスポート履歴管理機能
 - **Description**: 在庫データと注文履歴の実際のファイルエクスポート機能。CSV、Excel、PDF形式をサポート
-
 
 ### [Feature] 本格的チャート機能の実装
 
@@ -221,16 +202,137 @@
   5. 使用ガイドラインの文書化
 - **Description**: lib/core/utils/stream_manager_mixin.dartでのStreamSubscriptionとStreamControllerの管理は適切に実装されているが、使用箇所での適切なdisposeがメモリリーク防止に重要。さらなる安全性向上のための対策を実施
 
+### [Performance] Phase 3: オフライン機能の最適化
+
+- **Priority**: P2
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: オフライン機能の基本実装完了
+- **Goal**: オフライン機能におけるパフォーマンス最適化を実装し、オフライン⇔オンライン切り替え時の効率性を向上させる
+- **Steps**:
+  1. lib/data/local/offline_queue/にオフライン機能を実装
+  2. オフライン時のキャッシュ戦略最適化
+  3. 同期処理のバッチ最適化
+  4. オフライン時のメモリ管理改善
+  5. オンライン復帰時の差分同期最適化
+  6. オフライン機能のパフォーマンス監視実装
+- **Description**: オフライン機能の基本実装が完了次第、パフォーマンス最適化を適用。オフライン⇔オンライン切り替え時のスムーズな動作とリソース効率の向上を実現する
+
+### [Performance] 他機能への最適化展開
+
+- **Priority**: P2
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: パフォーマンス最適化実装の検証とテスト
+- **Goal**: Phase 1・2で実装された最適化手法を、注文・メニュー・分析機能に適用し、アプリ全体のパフォーマンスを向上させる
+- **Steps**:
+  1. 注文管理機能のプロバイダー最適化（keepAlive削除、重複データ取得解消）
+  2. メニュー管理機能のUIレイヤー最適化
+  3. 分析機能のバッチ処理とキャッシュ戦略適用
+  4. 各機能でのconst constructor適用
+  5. 統合リアルタイム監視システムへの統合
+  6. 機能別パフォーマンス指標の設定と監視
+- **Description**: 在庫管理機能で実証されたパフォーマンス最適化手法を、注文・メニュー・分析の各機能に体系的に適用。アプリケーション全体の一貫したパフォーマンス向上を実現する
+
+### [Enhancement] パフォーマンス監視とアナリティクス強化
+
+- **Priority**: P3
+- **Size**: M
+- **Area**: Analytics
+- **Dependencies**: パフォーマンス最適化実装の検証とテスト
+- **Goal**: より詳細なパフォーマンス分析機能を実装し、ユーザー体験とシステム効率の継続的改善を実現する
+- **Steps**:
+  1. ユーザー操作レベルでのパフォーマンス追跡
+  2. 機能別・画面別の詳細パフォーマンス分析
+  3. リアルタイムパフォーマンス監視ダッシュボード
+  4. パフォーマンス異常検知とアラート機能
+  5. ユーザー体験指標（UX metrics）の測定
+  6. パフォーマンス改善提案の自動生成
+- **Description**: パフォーマンス最適化を一過性の取り組みではなく、継続的改善プロセスとして確立。詳細な監視とアナリティクスにより、データドリブンなパフォーマンス改善を実現する
+
 ---
 
-## 使用法ドキュメント
+## Ready
 
-### 注意点
+### [Bugfix] routes.dartのコンパイルエラー修正
+
+- **Priority**: P0
+- **Size**: M
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: 削除されたスクリーンファイルへの参照を現在存在するスクリーンファイルに置き換えてコンパイルエラーを解消する
+- **Steps**:
+  1. 削除されたスクリーンファイルのインポート文を削除（8ファイル）
+  2. 現在存在するスクリーン（InventoryDemoScreen、MenuSelectionDemoScreen、OrderHistoryDemoScreen）のインポートを追加
+  3. ルート定義を現在存在するスクリーンクラスに置き換え
+  4. 削除されたクラスへの参照を修正（OrderDetailScreenメソッド呼び出し等）
+  5. flutter analyzeでエラー解消を確認
+- **Description**: lib/app/routes.dartで発生している16個のコンパイルエラーを修正。削除されたanalyticsScreen、loginScreen、dashboardScreenなどの参照を現在のスクリーン構成に合わせて修正する
+
+### [Refactor] base_repository.dartのTODOコメント解決
+
+- **Priority**: P1
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: base_repository.dartに存在する14個のTODOコメントを解決し、Repository層の設計を確定させる
+- **Steps**:
+  1. エラーハンドリングの詳細化（12箇所のTODOコメント）
+  2. 存在チェック用の効率的なメソッド調査・実装（2箇所のTODOコメント）
+  3. 各修正内容の動作確認とテスト
+  4. Repository層のベストプラクティス文書化
+  5. 修正完了後のコードレビュー実施
+- **Description**: base_repository.dartの設計検討事項を体系的に解決。主にエラーハンドリングの詳細化とクエリメソッドの最適化を行い、Repository層の一貫性を確保する
+
+### [Style] lintルール違反の修正
+
+- **Priority**: P2
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: 1188個のlintルール違反を修正し、コード品質の統一性を確保する
+- **Steps**:
+  1. prefer_double_quotes違反の修正（シングルクォート→ダブルクォート）
+  2. prefer_relative_imports違反の修正（絶対インポート→相対インポート）
+  3. その他のlintルール違反の段階的修正
+  4. flutter analyzeでの違反数削減確認
+  5. CIでのlintチェック通過確認
+- **Description**: プロジェクト全体のコード品質向上のため、large量のlintルール違反を段階的に修正。特にクォート形式とインポート形式の統一化を優先的に実施する
+
+
+---
+
+## In Progress
+
+
+---
+
+# 使用法ドキュメント
+
+### 基本原則
 - タスクは、Backlog, In Progress, Readyの3つのセクションに分類される
 - タスクは、タイトル, Priority, Size, Area, Dependencies, Goal, Steps, Descriptionの各フィールドを持つ
-- タスクは、Backlogセクションに追加され、タスクの完成度が高まるとReadyセクションに移動される。その後実行中のタスクはIn Progressセクションに移動され、完了したら削除される
 - タスクは可能な限り少ない関心事を保持するように分割され、各タスクは独立して遂行可能であることが望ましい
 - タスクの内容は、他のタスクと重複しないように注意する
+
+### タスクの移動ルール
+1. Backlog
+2. Ready
+3. In Progress
+4. 完了(削除)
+  の順に移動される。各セクションの移動時に必要な条件は以下の通り。
+  - `1. ~ 2.`: 
+   - タスクの基本フォーマットに従っている
+   - タスクの内容が他のタスクと重複していない
+   - タスクの関心事が必要程度まで分解済みである
+  - `2. ~ 3.`:
+   - タスクの内容が明確で、実行可能な状態である
+   - タスクのGoalフィールドに達成条件が記載されている
+   - タスクのStepsフィールドに実行計画が記載されている
+  - `3. ~ 4.`:
+   - タスクのGoalフィールドに記載された達成条件を満たしている
+   - タスクのStepsフィールドに記載された実行計画が完了している
+
 
 ### 基本運用ワークフロー
 

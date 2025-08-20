@@ -1,10 +1,10 @@
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_multitenant_repository.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/order_model.dart";
 
 /// 注文明細リポジトリ
-class OrderItemRepository extends BaseMultiTenantRepository<OrderItem, String> {
-  OrderItemRepository({required super.ref}) : super(tableName: "order_items");
+class OrderItemRepository extends BaseRepository<OrderItem, String> {
+  OrderItemRepository({required super.ref}) : super(tableName: "order_items", enableMultiTenant: true);
 
   @override
   OrderItem fromJson(Map<String, dynamic> json) => OrderItem.fromJson(json);

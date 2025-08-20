@@ -1,10 +1,10 @@
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_multitenant_repository.dart";
+import "../../../data/repositories/base_repository.dart";
 import "../models/inventory_model.dart";
 
 /// 材料カテゴリリポジトリ
-class MaterialCategoryRepository extends BaseMultiTenantRepository<MaterialCategory, String> {
-  MaterialCategoryRepository({required super.ref}) : super(tableName: "material_categories");
+class MaterialCategoryRepository extends BaseRepository<MaterialCategory, String> {
+  MaterialCategoryRepository({required super.ref}) : super(tableName: "material_categories", enableMultiTenant: true);
 
   @override
   MaterialCategory fromJson(Map<String, dynamic> json) => MaterialCategory.fromJson(json);

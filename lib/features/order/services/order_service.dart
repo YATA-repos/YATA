@@ -42,4 +42,8 @@ class OrderService with LoggerMixin {
   /// 注文と注文明細を一括取得
   Future<Map<String, dynamic>?> getOrderWithItems(String orderId, String userId) async =>
       _orderManagementService.getOrderWithItems(orderId, userId);
+
+/// OrderService のプロバイダー定義
+final Provider<OrderService> orderServiceProvider =
+    Provider<OrderService>((Ref ref) => OrderService(ref: ref));
 }

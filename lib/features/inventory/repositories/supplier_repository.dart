@@ -4,15 +4,14 @@ import "../models/supplier_model.dart";
 
 /// 供給業者リポジトリ
 class SupplierRepository extends BaseRepository<Supplier, String> {
-  SupplierRepository() : super(tableName: "suppliers");
+  SupplierRepository({required super.ref}) : super(tableName: "suppliers", enableMultiTenant: true);
 
   @override
   Supplier fromJson(Map<String, dynamic> json) => Supplier.fromJson(json);
 
   /// アクティブな供給業者一覧を取得
-  Future<List<Supplier>> findActive(String userId) async {
+  Future<List<Supplier>> findActive() async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("is_active", true),
     ];
 
@@ -24,9 +23,8 @@ class SupplierRepository extends BaseRepository<Supplier, String> {
   }
 
   /// 名前で供給業者を検索
-  Future<List<Supplier>> findByName(String name, String userId) async {
+  Future<List<Supplier>> findByName(String name) async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.ilike("name", "%$name%"),
     ];
 
@@ -52,15 +50,14 @@ class SupplierRepository extends BaseRepository<Supplier, String> {
 
 /// 材料-供給業者関連リポジトリ
 class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String> {
-  MaterialSupplierRepository() : super(tableName: "material_suppliers");
+  MaterialSupplierRepository({required super.ref}) : super(tableName: "material_suppliers", enableMultiTenant: true);
 
   @override
   MaterialSupplier fromJson(Map<String, dynamic> json) => MaterialSupplier.fromJson(json);
 
   /// 材料の供給業者一覧を取得
-  Future<List<MaterialSupplier>> findByMaterialId(String materialId, String userId) async {
+  Future<List<MaterialSupplier>> findByMaterialId(String materialId) async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("material_id", materialId),
     ];
 
@@ -73,9 +70,8 @@ class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String
   }
 
   /// 供給業者が扱う材料一覧を取得
-  Future<List<MaterialSupplier>> findBySupplierId(String supplierId, String userId) async {
+  Future<List<MaterialSupplier>> findBySupplierId(String supplierId) async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("supplier_id", supplierId),
     ];
 
@@ -83,9 +79,8 @@ class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String
   }
 
   /// 材料の優先供給業者を取得
-  Future<MaterialSupplier?> findPreferredSupplier(String materialId, String userId) async {
+  Future<MaterialSupplier?> findPreferredSupplier(String materialId) async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("material_id", materialId),
       QueryConditionBuilder.eq("is_preferred", true),
     ];
@@ -98,14 +93,12 @@ class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String
   Future<void> setPreferredSupplier(
     String materialId,
     String supplierId,
-    String userId,
   ) async {
     // 既存の優先設定を全て解除
-    await _clearPreferredSuppliers(materialId, userId);
+    await _clearPreferredSuppliers(materialId);
 
     // 指定された供給業者を優先に設定
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("material_id", materialId),
       QueryConditionBuilder.eq("supplier_id", supplierId),
     ];
@@ -120,11 +113,10 @@ class MaterialSupplierRepository extends BaseRepository<MaterialSupplier, String
   }
 
   /// 材料の優先供給業者設定を全て解除
-  Future<void> _clearPreferredSuppliers(String materialId, String userId) async {
+  Future<void> _clearPreferredSuppliers(String materialId) async {
     // 注意: BaseRepositoryにバッチ更新機能が追加された時にパフォーマンス改善を検討
     // 現在の実装: 個別更新（小規模データでは許容範囲）
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("material_id", materialId),
       QueryConditionBuilder.eq("is_preferred", true),
     ];

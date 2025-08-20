@@ -1,7 +1,7 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
-import "../../../data/local/cache/cache_strategy.dart";
-import "../../../data/local/cache/repository_cache_mixin.dart";
+import "../../../infrastructure/local/cache/cache_strategy.dart";
+import "../../../infrastructure/local/cache/repository_cache_mixin.dart";
 import "../../../data/repositories/base_multitenant_repository.dart";
 import "../dto/inventory_dto.dart";
 import "../models/inventory_model.dart";
