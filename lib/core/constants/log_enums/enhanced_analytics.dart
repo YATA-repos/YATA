@@ -1,6 +1,4 @@
-import "package:logger/logger.dart";
-
-import "../enums.dart";
+import "../../logging/levels.dart";
 
 /// 分析サービス関連の情報メッセージ定義 (logger パッケージ準拠)
 enum AnalyticsInfo {
@@ -54,7 +52,7 @@ enum AnalyticsInfo {
 extension AnalyticsInfoExtension on AnalyticsInfo {
   Level get recommendedLevel => Level.info;
   
-  LogLevel get yataLogLevel => LogLevel.info;
+  Level get yataLevel => Level.info;
 }
 
 /// 分析サービス関連のデバッグメッセージ定義 (logger パッケージ準拠)
@@ -99,7 +97,7 @@ enum AnalyticsDebug {
 extension AnalyticsDebugExtension on AnalyticsDebug {
   Level get recommendedLevel => Level.debug;
   
-  LogLevel get yataLogLevel => LogLevel.debug;
+  Level get yataLevel => Level.debug;
 }
 
 /// 分析サービス関連の警告メッセージ定義 (logger パッケージ準拠)
@@ -127,9 +125,9 @@ enum AnalyticsWarning {
 
 /// AnalyticsWarning enum extension for EnhancedLogMessage features
 extension AnalyticsWarningExtension on AnalyticsWarning {
-  Level get recommendedLevel => Level.warning;
+  Level get recommendedLevel => Level.warn;
   
-  LogLevel get yataLogLevel => LogLevel.warning;
+  Level get yataLevel => Level.warn;
 }
 
 /// 分析サービス関連のエラーメッセージ定義 (logger パッケージ準拠)
@@ -174,7 +172,7 @@ enum AnalyticsError {
 extension AnalyticsErrorExtension on AnalyticsError {
   Level get recommendedLevel => Level.error;
   
-  LogLevel get yataLogLevel => LogLevel.error;
+  Level get yataLevel => Level.error;
 }
 
 /// 分析サービス関連のファタルメッセージ定義 (logger パッケージ準拠)
@@ -199,7 +197,7 @@ enum AnalyticsFatal {
 extension AnalyticsFatalExtension on AnalyticsFatal {
   Level get recommendedLevel => Level.fatal;
   
-  LogLevel get yataLogLevel => LogLevel.error; // YATAではerrorにマッピング
+  Level get yataLevel => Level.fatal; // 統合enumでfatalを直接サポート
 }
 
 /// 分析サービス関連のトレースメッセージ定義 (logger パッケージ準拠)
@@ -229,5 +227,5 @@ enum AnalyticsTrace {
 extension AnalyticsTraceExtension on AnalyticsTrace {
   Level get recommendedLevel => Level.trace;
   
-  LogLevel get yataLogLevel => LogLevel.debug; // YATAではdebugにマッピング
+  Level get yataLevel => Level.trace; // 統合enumでtraceを直接サポート
 }

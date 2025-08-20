@@ -1,6 +1,7 @@
 import "package:flutter/foundation.dart";
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:json_annotation/json_annotation.dart";
+
+import "../../../core/validation/env_validator.dart";
 
 part "auth_config.g.dart";
 
@@ -73,22 +74,22 @@ class AuthConfig {
       // Web環境の場合
       if (kDebugMode) {
         // 開発環境
-        return dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_DEV"] ?? "http://localhost:8080";
+        return EnvValidator.getEnv("SUPABASE_OAUTH_CALLBACK_URL_DEV", defaultValue: "http://localhost:8080");
       } else {
         // 本番環境
-        return dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_PROD"] ?? "https://example.invalid";
+        return EnvValidator.getEnv("SUPABASE_OAUTH_CALLBACK_URL_PROD", defaultValue: "https://example.invalid");
       }
     } else {
       // Desktop/Mobile環境 - カスタムURLスキーム使用
       // 環境変数から取得、未設定の場合はデフォルトスキームを使用
-      return dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_MOBILE"] ?? "com.example.yata://login";
+      return EnvValidator.getEnv("SUPABASE_OAUTH_CALLBACK_URL_MOBILE", defaultValue: "com.example.yata://login");
     }
   }
 
   /// Supabase URL取得
   static String _getSupabaseUrl() {
-    final String? url = dotenv.env["SUPABASE_URL"];
-    if (url == null || url.isEmpty) {
+    final String url = EnvValidator.supabaseUrl;
+    if (url.isEmpty) {
       throw AuthConfigException("SUPABASE_URL is not configured");
     }
     return url;
@@ -96,8 +97,8 @@ class AuthConfig {
 
   /// Supabase Anonymous Key取得
   static String _getSupabaseAnonKey() {
-    final String? key = dotenv.env["SUPABASE_ANON_KEY"];
-    if (key == null || key.isEmpty) {
+    final String key = EnvValidator.supabaseAnonKey;
+    if (key.isEmpty) {
       throw AuthConfigException("SUPABASE_ANON_KEY is not configured");
     }
     return key;

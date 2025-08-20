@@ -1,6 +1,6 @@
-import "package:logger/logger.dart";
+import "package:logger/logger.dart" as logger;
 
-import "../constants/enums.dart";
+import "../logging/levels.dart";
 
 /// logger パッケージ準拠の拡張LogMessage基底クラス
 /// 
@@ -11,10 +11,10 @@ abstract class EnhancedLogMessage {
   String get message;
   
   /// 推奨されるログレベル（logger パッケージ準拠）
-  Level get recommendedLevel;
+  logger.Level get recommendedLevel;
   
-  /// YATA LogLevelとの対応（後方互換性）
-  LogLevel get yataLogLevel;
+  /// YATA Levelとの対応（統合レベル）
+  Level get yataLevel;
 }
 
 /// EnhancedLogMessage用の拡張機能
@@ -38,13 +38,13 @@ extension EnhancedLogMessageExtension on EnhancedLogMessage {
   Map<String, dynamic> toStructuredData([Map<String, String>? params]) => <String, dynamic>{
       "message": toLoggerMessage(params),
       "level": recommendedLevel.name,
-      "yataLevel": yataLogLevel.value,
-      "priority": yataLogLevel.priority,
+      "yataLevel": yataLevel.value,
+      "priority": yataLevel.priority,
       "timestamp": DateTime.now().toIso8601String(),
     };
   
   /// logger パッケージの特定レベルでの出力が適切かチェック
-  bool isAppropriateForLevel(Level targetLevel) =>
+  bool isAppropriateForLevel(logger.Level targetLevel) =>
       // logger パッケージのLevel値で比較
       recommendedLevel.value <= targetLevel.value;
 }
@@ -52,53 +52,53 @@ extension EnhancedLogMessageExtension on EnhancedLogMessage {
 /// 情報レベル用のEnhancedLogMessage基底クラス
 abstract class InfoLogMessage implements EnhancedLogMessage {
   @override
-  Level get recommendedLevel => Level.info;
+  logger.Level get recommendedLevel => logger.Level.info;
   
   @override
-  LogLevel get yataLogLevel => LogLevel.info;
+  Level get yataLevel => Level.info;
 }
 
 /// 警告レベル用のEnhancedLogMessage基底クラス  
 abstract class WarningLogMessage implements EnhancedLogMessage {
   @override
-  Level get recommendedLevel => Level.warning;
+  logger.Level get recommendedLevel => logger.Level.warning;
   
   @override
-  LogLevel get yataLogLevel => LogLevel.warning;
+  Level get yataLevel => Level.warn;
 }
 
 /// エラーレベル用のEnhancedLogMessage基底クラス
 abstract class ErrorLogMessage implements EnhancedLogMessage {
   @override
-  Level get recommendedLevel => Level.error;
+  logger.Level get recommendedLevel => logger.Level.error;
   
   @override
-  LogLevel get yataLogLevel => LogLevel.error;
+  Level get yataLevel => Level.error;
 }
 
 /// デバッグレベル用のEnhancedLogMessage基底クラス
 abstract class DebugLogMessage implements EnhancedLogMessage {
   @override
-  Level get recommendedLevel => Level.debug;
+  logger.Level get recommendedLevel => logger.Level.debug;
   
   @override
-  LogLevel get yataLogLevel => LogLevel.debug;
+  Level get yataLevel => Level.debug;
 }
 
 /// ファタルレベル用のEnhancedLogMessage基底クラス
 abstract class FatalLogMessage implements EnhancedLogMessage {
   @override
-  Level get recommendedLevel => Level.fatal;
+  logger.Level get recommendedLevel => logger.Level.fatal;
   
   @override
-  LogLevel get yataLogLevel => LogLevel.error; // YATAではerrorにマッピング
+  Level get yataLevel => Level.fatal; // 統合enumでfatalを直接サポート
 }
 
 /// トレースレベル用のEnhancedLogMessage基底クラス
 abstract class TraceLogMessage implements EnhancedLogMessage {
   @override
-  Level get recommendedLevel => Level.trace;
+  logger.Level get recommendedLevel => logger.Level.trace;
   
   @override
-  LogLevel get yataLogLevel => LogLevel.debug; // YATAではdebugにマッピング
+  Level get yataLevel => Level.trace; // 統合enumでtraceを直接サポート
 }

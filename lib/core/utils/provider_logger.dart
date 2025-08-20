@@ -1,7 +1,5 @@
-import "package:logger/logger.dart";
-
 import "../base/base_error_msg.dart";
-import "../constants/enums.dart";
+import "../logging/levels.dart";
 import "../logging/yata_logger.dart";
 
 /// Riverpod Provider専用ログユーティリティクラス
@@ -321,7 +319,7 @@ class ProviderLogger {
   /// [level] ログレベル
   /// [component] プロバイダークラス名やコンポーネント名
   /// [data] 構造化データ
-  static void structured(LogLevel level, String component, Map<String, dynamic> data) {
+  static void structured(Level level, String component, Map<String, dynamic> data) {
     YataLogger.structured(level, component, data);
   }
 

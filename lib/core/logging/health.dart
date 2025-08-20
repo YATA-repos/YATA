@@ -1,0 +1,1 @@
+enum HealthStatus { ok, warn, fail }
