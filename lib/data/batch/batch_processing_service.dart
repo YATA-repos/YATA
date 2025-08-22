@@ -10,6 +10,8 @@ import "../../features/inventory/repositories/material_repository.dart";
 import "../../features/order/models/order_model.dart";
 import "../../features/order/repositories/order_repository.dart";
 
+// ! 適切に分割 -> 再配置
+
 /// バッチ処理の種類
 enum BatchOperationType {
   /// 在庫データ取得バッチ

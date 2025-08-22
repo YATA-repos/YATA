@@ -1,6 +1,6 @@
 import "package:supabase_flutter/supabase_flutter.dart";
-import "../constants/query_types.dart";
-import "../logging/yata_logger.dart";
+import "../core/constants/query_types.dart";
+import "../core/logging/yata_logger.dart";
 
 /// Supabaseクエリ構築用ユーティリティクラス
 ///

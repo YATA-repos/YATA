@@ -2,7 +2,7 @@ import "dart:async";
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../../core/logging/logger_mixin.dart";
-import "../../../core/utils/stream_manager_mixin.dart";
+import "../../../utils/stream_manager_mixin.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";
 import "../models/auth_state.dart";

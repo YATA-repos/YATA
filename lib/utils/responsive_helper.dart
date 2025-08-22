@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
 
-import "../constants/enums.dart";
+import "../core/constants/enums.dart";
 
 /// レスポンシブデザイン支援ユーティリティクラス
 ///

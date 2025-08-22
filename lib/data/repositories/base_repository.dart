@@ -5,7 +5,7 @@ import "../../core/base/base_model.dart";
 import "../../core/constants/exceptions/exceptions.dart";
 import "../../core/constants/query_types.dart";
 // import "../../core/logging/logger_mixin.dart";
-import "../../core/utils/query_utils.dart";
+import "../../utils/query_utils.dart";
 import "../../core/validation/type_validator.dart";
 import "../../features/auth/presentation/providers/auth_providers.dart";
 import "../../infrastructure/supabase/supabase_client.dart";
