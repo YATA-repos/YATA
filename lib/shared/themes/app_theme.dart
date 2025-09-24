@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import "package:flutter/material.dart";
+import "package:google_fonts/google_fonts.dart";
 
-import '../foundations/tokens/color_tokens.dart';
-import '../foundations/tokens/elevetion_token.dart';
-import '../foundations/tokens/radius_tokens.dart';
-import '../foundations/tokens/spacing_tokens.dart';
-import '../foundations/tokens/typography_tokens.dart';
+import "../foundations/tokens/color_tokens.dart";
+import "../foundations/tokens/elevetion_token.dart";
+import "../foundations/tokens/radius_tokens.dart";
+import "../foundations/tokens/spacing_tokens.dart";
+import "../foundations/tokens/typography_tokens.dart";
 
 class AppTheme {
   const AppTheme._();
@@ -27,7 +27,7 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
       fontFamily: GoogleFonts.notoSansJp().fontFamily,
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       canvasColor: colorScheme.surface,
       shadowColor: colorScheme.shadow,
       dividerColor: colorScheme.outlineVariant,
@@ -94,8 +94,7 @@ class AppTheme {
         );
   }
 
-  static AppBarTheme _buildAppBarTheme(ColorScheme colorScheme) {
-    return AppBarTheme(
+  static AppBarTheme _buildAppBarTheme(ColorScheme colorScheme) => AppBarTheme(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -107,7 +106,6 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
     );
-  }
 
   static CardThemeData _buildCardTheme(ColorScheme colorScheme) {
     final BoxShadow cardShadow = YataElevationTokens.level1.first;
@@ -125,127 +123,119 @@ class AppTheme {
     );
   }
 
-  static FilledButtonThemeData _buildFilledButtonTheme(ColorScheme colorScheme) {
-    return FilledButtonThemeData(style: _buildPrimaryFilledButtonStyle(colorScheme));
-  }
+  static FilledButtonThemeData _buildFilledButtonTheme(ColorScheme colorScheme) => FilledButtonThemeData(style: _buildPrimaryFilledButtonStyle(colorScheme));
 
   static ButtonStyle _buildPrimaryFilledButtonStyle(ColorScheme colorScheme) {
     final BoxShadow buttonShadow = YataElevationTokens.level2.first;
 
     return ButtonStyle(
-      textStyle: MaterialStateProperty.all(YataTypographyTokens.labelLarge),
-      padding: MaterialStateProperty.all(
+      textStyle: WidgetStateProperty.all(YataTypographyTokens.labelLarge),
+      padding: WidgetStateProperty.all(
         const EdgeInsets.symmetric(
           horizontal: YataSpacingTokens.lg,
           vertical: YataSpacingTokens.sm,
         ),
       ),
-      shape: MaterialStateProperty.all(
+      shape: WidgetStateProperty.all(
         const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
         ),
       ),
-      elevation: MaterialStateProperty.all(0),
-      shadowColor: MaterialStateProperty.all(buttonShadow.color),
+      elevation: WidgetStateProperty.all(0),
+      shadowColor: WidgetStateProperty.all(buttonShadow.color),
     );
   }
 
-  static ElevatedButtonThemeData _buildElevatedButtonTheme(ColorScheme colorScheme) {
-    return ElevatedButtonThemeData(
+  static ElevatedButtonThemeData _buildElevatedButtonTheme(ColorScheme colorScheme) => ElevatedButtonThemeData(
       style: _buildPrimaryFilledButtonStyle(colorScheme).copyWith(
-        backgroundColor: MaterialStateProperty.resolveWith(
-          (states) => states.contains(MaterialState.disabled)
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
               ? colorScheme.primary.withOpacity(0.45)
               : colorScheme.primary,
         ),
-        foregroundColor: MaterialStateProperty.resolveWith(
-          (states) => states.contains(MaterialState.disabled)
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
               ? colorScheme.onSurface.withOpacity(0.4)
               : colorScheme.onPrimary,
         ),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.disabled)) {
+        overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
             return Colors.transparent;
           }
-          if (states.contains(MaterialState.pressed)) {
+          if (states.contains(WidgetState.pressed)) {
             return colorScheme.primary.withOpacity(0.18);
           }
-          if (states.contains(MaterialState.hovered)) {
+          if (states.contains(WidgetState.hovered)) {
             return colorScheme.primary.withOpacity(0.1);
           }
           return null;
         }),
       ),
     );
-  }
 
-  static OutlinedButtonThemeData _buildOutlinedButtonTheme(ColorScheme colorScheme) {
-    return OutlinedButtonThemeData(
+  static OutlinedButtonThemeData _buildOutlinedButtonTheme(ColorScheme colorScheme) => OutlinedButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: MaterialStateProperty.resolveWith(
-          (states) => states.contains(MaterialState.disabled)
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
               ? colorScheme.onSurface.withOpacity(0.4)
               : colorScheme.primary,
         ),
-        textStyle: MaterialStateProperty.all(
+        textStyle: WidgetStateProperty.all(
           YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
         ),
-        padding: MaterialStateProperty.all(
+        padding: WidgetStateProperty.all(
           const EdgeInsets.symmetric(
             horizontal: YataSpacingTokens.lg,
             vertical: YataSpacingTokens.sm,
           ),
         ),
-        shape: MaterialStateProperty.all(
+        shape: WidgetStateProperty.all(
           const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
           ),
         ),
-        side: MaterialStateProperty.resolveWith(
-          (states) => BorderSide(
-            color: states.contains(MaterialState.disabled)
+        side: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => BorderSide(
+            color: states.contains(WidgetState.disabled)
                 ? colorScheme.outlineVariant
                 : colorScheme.primary,
           ),
         ),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.disabled)) {
+        overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
             return Colors.transparent;
           }
-          final double opacity = states.contains(MaterialState.pressed) ? 0.1 : 0.05;
+          final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
           return colorScheme.primary.withOpacity(opacity);
         }),
       ),
     );
-  }
 
-  static TextButtonThemeData _buildTextButtonTheme(ColorScheme colorScheme) {
-    return TextButtonThemeData(
+  static TextButtonThemeData _buildTextButtonTheme(ColorScheme colorScheme) => TextButtonThemeData(
       style: ButtonStyle(
-        foregroundColor: MaterialStateProperty.resolveWith(
-          (states) => states.contains(MaterialState.disabled)
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
               ? colorScheme.onSurface.withOpacity(0.4)
               : colorScheme.primary,
         ),
-        textStyle: MaterialStateProperty.all(
+        textStyle: WidgetStateProperty.all(
           YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
         ),
-        padding: MaterialStateProperty.all(
+        padding: WidgetStateProperty.all(
           const EdgeInsets.symmetric(
             horizontal: YataSpacingTokens.md,
             vertical: YataSpacingTokens.xs,
           ),
         ),
-        overlayColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.disabled)) {
+        overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+          if (states.contains(WidgetState.disabled)) {
             return Colors.transparent;
           }
-          final double opacity = states.contains(MaterialState.pressed) ? 0.1 : 0.05;
+          final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
           return colorScheme.primary.withOpacity(opacity);
         }),
       ),
     );
-  }
 
   static InputDecorationTheme _buildInputDecorationTheme(ColorScheme colorScheme) {
     const BorderRadius inputRadius = BorderRadius.all(Radius.circular(YataRadiusTokens.medium));
@@ -281,10 +271,9 @@ class AppTheme {
     );
   }
 
-  static ChipThemeData _buildChipTheme(ColorScheme colorScheme, TextTheme textTheme) {
-    return ChipThemeData(
-      backgroundColor: colorScheme.surfaceVariant,
-      disabledColor: colorScheme.surfaceVariant.withOpacity(0.4),
+  static ChipThemeData _buildChipTheme(ColorScheme colorScheme, TextTheme textTheme) => ChipThemeData(
+      backgroundColor: colorScheme.surfaceContainerHighest,
+      disabledColor: colorScheme.surfaceContainerHighest.withOpacity(0.4),
       selectedColor: colorScheme.primary.withOpacity(0.12),
       secondarySelectedColor: colorScheme.primary.withOpacity(0.18),
       padding: const EdgeInsets.symmetric(
@@ -297,49 +286,41 @@ class AppTheme {
       brightness: colorScheme.brightness,
       side: BorderSide(color: colorScheme.outlineVariant),
     );
-  }
 
-  static CheckboxThemeData _buildCheckboxTheme(ColorScheme colorScheme) {
-    return CheckboxThemeData(
+  static CheckboxThemeData _buildCheckboxTheme(ColorScheme colorScheme) => CheckboxThemeData(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.small)),
       ),
       side: BorderSide(color: colorScheme.outlineVariant),
-      fillColor: MaterialStateProperty.resolveWith(
-        (states) =>
-            states.contains(MaterialState.selected) ? colorScheme.primary : colorScheme.surface,
+      fillColor: WidgetStateProperty.resolveWith(
+        (Set<WidgetState> states) =>
+            states.contains(WidgetState.selected) ? colorScheme.primary : colorScheme.surface,
       ),
-      checkColor: MaterialStateProperty.all(colorScheme.onPrimary),
+      checkColor: WidgetStateProperty.all(colorScheme.onPrimary),
     );
-  }
 
-  static RadioThemeData _buildRadioTheme(ColorScheme colorScheme) {
-    return RadioThemeData(
-      fillColor: MaterialStateProperty.resolveWith(
-        (states) => states.contains(MaterialState.selected)
+  static RadioThemeData _buildRadioTheme(ColorScheme colorScheme) => RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.selected)
             ? colorScheme.primary
             : colorScheme.outlineVariant,
       ),
     );
-  }
 
-  static SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) {
-    return SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith(
-        (states) => states.contains(MaterialState.selected)
+  static SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) => SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.selected)
             ? colorScheme.primary
             : colorScheme.outlineVariant,
       ),
-      trackColor: MaterialStateProperty.resolveWith(
-        (states) => states.contains(MaterialState.selected)
+      trackColor: WidgetStateProperty.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.selected)
             ? colorScheme.primary.withOpacity(0.35)
             : colorScheme.outlineVariant.withOpacity(0.5),
       ),
     );
-  }
 
-  static FloatingActionButtonThemeData _buildFabTheme(ColorScheme colorScheme) {
-    return FloatingActionButtonThemeData(
+  static FloatingActionButtonThemeData _buildFabTheme(ColorScheme colorScheme) => FloatingActionButtonThemeData(
       backgroundColor: colorScheme.primary,
       foregroundColor: colorScheme.onPrimary,
       elevation: 0,
@@ -355,10 +336,8 @@ class AppTheme {
       hoverColor: colorScheme.primary.withOpacity(0.12),
       iconSize: 24,
     );
-  }
 
-  static DialogThemeData _buildDialogTheme(ColorScheme colorScheme, TextTheme textTheme) {
-    return DialogThemeData(
+  static DialogThemeData _buildDialogTheme(ColorScheme colorScheme, TextTheme textTheme) => DialogThemeData(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shadowColor: YataElevationTokens.level4.first.color,
@@ -368,10 +347,8 @@ class AppTheme {
       titleTextStyle: textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface),
       contentTextStyle: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
     );
-  }
 
-  static BottomSheetThemeData _buildBottomSheetTheme(ColorScheme colorScheme) {
-    return BottomSheetThemeData(
+  static BottomSheetThemeData _buildBottomSheetTheme(ColorScheme colorScheme) => BottomSheetThemeData(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
@@ -380,10 +357,8 @@ class AppTheme {
       showDragHandle: true,
       dragHandleColor: colorScheme.outlineVariant,
     );
-  }
 
-  static ListTileThemeData _buildListTileTheme(ColorScheme colorScheme) {
-    return ListTileThemeData(
+  static ListTileThemeData _buildListTileTheme(ColorScheme colorScheme) => ListTileThemeData(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
       ),
@@ -396,7 +371,6 @@ class AppTheme {
         vertical: YataSpacingTokens.xs,
       ),
     );
-  }
 
   static const ColorScheme _lightColorScheme = ColorScheme(
     brightness: Brightness.light,
@@ -416,11 +390,9 @@ class AppTheme {
     onError: YataColorTokens.neutral0,
     errorContainer: YataColorTokens.dangerSoft,
     onErrorContainer: YataColorTokens.danger,
-    background: YataColorTokens.background,
-    onBackground: YataColorTokens.textPrimary,
     surface: YataColorTokens.surface,
     onSurface: YataColorTokens.textPrimary,
-    surfaceVariant: YataColorTokens.surfaceAlt,
+    surfaceContainerHighest: YataColorTokens.surfaceAlt,
     onSurfaceVariant: YataColorTokens.textSecondary,
     outline: YataColorTokens.border,
     outlineVariant: YataColorTokens.neutral300,
@@ -450,11 +422,9 @@ class AppTheme {
     onError: YataColorTokens.neutral0,
     errorContainer: Color(0xFF7F1D1D),
     onErrorContainer: YataColorTokens.dangerSoft,
-    background: YataColorTokens.neutral900,
-    onBackground: YataColorTokens.neutral0,
     surface: YataColorTokens.neutral800,
     onSurface: YataColorTokens.neutral0,
-    surfaceVariant: YataColorTokens.neutral700,
+    surfaceContainerHighest: YataColorTokens.neutral700,
     onSurfaceVariant: YataColorTokens.neutral200,
     outline: YataColorTokens.neutral600,
     outlineVariant: YataColorTokens.neutral700,

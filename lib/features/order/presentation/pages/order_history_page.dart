@@ -1,8 +1,9 @@
 import "package:flutter/material.dart";
+
+import "../../../../shared/components/layout/page_container.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
-import "../../../../shared/components/layout/page_container.dart";
 import "../../../../shared/patterns/patterns.dart";
 
 /// 注文履歴のスタブページ。

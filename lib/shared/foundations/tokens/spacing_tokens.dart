@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import "package:flutter/widgets.dart";
 
 /// コンポーネント間の余白スケールを提供するトークン。
 class YataSpacingTokens {

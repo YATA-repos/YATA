@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+import "package:flutter/material.dart";
 
 /// YATAで使用するテキストスタイルのトークン定義。
 class YataTypographyTokens {
   const YataTypographyTokens._();
 
-  static const _fontFamily = 'Noto Sans JP';
+  static const String _fontFamily = "Noto Sans JP";
 
   /// 主要な見出しやヒーロー部分で使用。
   static const TextStyle displayLarge = TextStyle(

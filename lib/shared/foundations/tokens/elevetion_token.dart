@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import "package:flutter/material.dart";
 
 /// 影の強さを表すエレベーショントークン。
 class YataElevationTokens {
@@ -6,7 +6,7 @@ class YataElevationTokens {
 
   /// フラットな状態。影なし。
   static const List<BoxShadow> level0 = <BoxShadow>[
-    BoxShadow(color: Colors.transparent, blurRadius: 0, offset: Offset.zero, spreadRadius: 0),
+    BoxShadow(color: Colors.transparent),
   ];
 
   /// カードやリストで使用する最小の影。

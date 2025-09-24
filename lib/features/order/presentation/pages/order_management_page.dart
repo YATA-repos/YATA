@@ -131,7 +131,6 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
       expandChild: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
         children: <Widget>[
           YataSearchField(controller: searchController, hintText: "メニュー検索..."),
           const SizedBox(height: YataSpacingTokens.md),
@@ -280,7 +279,6 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
                         Expanded(flex: 6, child: Text("品名", style: headerStyle)),
                         const SizedBox(width: YataSpacingTokens.md),
@@ -353,7 +351,7 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                             ),
                             itemBuilder: (BuildContext context, int index) {
                               final CartItemViewData item = state.cartItems[index];
-                              _itemKeys.putIfAbsent(item.menuItem.id, () => GlobalKey());
+                              _itemKeys.putIfAbsent(item.menuItem.id, GlobalKey.new);
                               final bool isHighlighted =
                                   state.highlightedItemId == item.menuItem.id;
                               return KeyedSubtree(
@@ -515,7 +513,7 @@ class _HighlightWrapper extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor),
         boxShadow: highlighted
             ? <BoxShadow>[
                 BoxShadow(
@@ -620,7 +618,6 @@ class _OrderRow extends StatelessWidget {
 
           // 1行レイアウト（できるだけ品名を優先して表示）
           return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               // 品名
               Expanded(

@@ -66,7 +66,6 @@ class YataAppTopBar extends StatelessWidget implements PreferredSizeWidget {
       left: YataSpacingTokens.xl,
       right: YataSpacingTokens.xl,
       top: YataSpacingTokens.xs,
-      bottom: 0,
     ),
     decoration: BoxDecoration(
       color: YataColorTokens.surface,
@@ -158,7 +157,6 @@ class _NavItem extends StatelessWidget {
             children: <Widget>[
               Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   if (item.icon != null) ...<Widget>[
                     Icon(item.icon, size: 18, color: foreground),

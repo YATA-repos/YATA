@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import "package:flutter/widgets.dart";
 
 /// 角丸表現の統一トークン。
 class YataRadiusTokens {
