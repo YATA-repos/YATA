@@ -47,7 +47,7 @@ enum AuthProvider {
 }
 
 /// 認証リクエストDTO
-/// 
+///
 /// OAuth認証リクエストのパラメータを管理します。
 /// 認証プロバイダーや設定情報を含みます。
 @JsonSerializable()
@@ -70,12 +70,12 @@ class AuthRequest {
     String? state,
     Map<String, String>? queryParams,
   }) => AuthRequest(
-      provider: AuthProvider.google,
-      redirectTo: redirectTo,
-      scopes: scopes ?? <String>["email", "openid", "profile"],
-      state: state,
-      queryParams: queryParams ?? <String, String>{},
-    );
+    provider: AuthProvider.google,
+    redirectTo: redirectTo,
+    scopes: scopes ?? <String>["email", "openid", "profile"],
+    state: state,
+    queryParams: queryParams ?? <String, String>{},
+  );
 
   /// 認証プロバイダー
   final AuthProvider provider;
@@ -97,24 +97,23 @@ class AuthRequest {
 
   /// Supabase OAuth用パラメータに変換
   Map<String, dynamic> toSupabaseOAuthParams() => <String, dynamic>{
-      "provider": provider.providerName,
-      "options": <String, dynamic>{
-        "redirectTo": redirectTo,
-        if (scopes.isNotEmpty) "scopes": scopes.join(" "),
-        if (state != null) "state": state,
-        "queryParams": <String, dynamic>{
-          ...queryParams,
-        },
-      },
-    };
+    "provider": provider.providerName,
+    "options": <String, dynamic>{
+      "redirectTo": redirectTo,
+      if (scopes.isNotEmpty) "scopes": scopes.join(" "),
+      if (state != null) "state": state,
+      "queryParams": <String, dynamic>{...queryParams},
+    },
+  };
 
   /// デバッグ用文字列表現
   @override
-  String toString() => "AuthRequest("
-        "provider: ${provider.displayName}, "
-        "redirectTo: $redirectTo, "
-        "scopes: ${scopes.join(", ")}"
-        ")";
+  String toString() =>
+      "AuthRequest("
+      "provider: ${provider.displayName}, "
+      "redirectTo: $redirectTo, "
+      "scopes: ${scopes.join(", ")}"
+      ")";
 
   @override
   bool operator ==(Object other) {
@@ -131,21 +130,20 @@ class AuthRequest {
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
-      provider,
-      redirectTo,
-      Object.hashAll(scopes),
-      state,
-      Object.hashAll(queryParams.entries.map((MapEntry<String, String> e) => Object.hash(e.key, e.value))),
-    ]);
+    provider,
+    redirectTo,
+    Object.hashAll(scopes),
+    state,
+    Object.hashAll(
+      queryParams.entries.map((MapEntry<String, String> e) => Object.hash(e.key, e.value)),
+    ),
+  ]);
 }
 
 /// ログアウトリクエストDTO
 @JsonSerializable()
 class LogoutRequest {
-  LogoutRequest({
-    this.allDevices = false,
-    this.redirectTo,
-  });
+  LogoutRequest({this.allDevices = false, this.redirectTo});
 
   /// JSONからインスタンスを作成
   factory LogoutRequest.fromJson(Map<String, dynamic> json) => _$LogoutRequestFromJson(json);
@@ -161,8 +159,8 @@ class LogoutRequest {
 
   /// Supabase signOut用パラメータに変換
   Map<String, dynamic> toSupabaseSignOutParams() => <String, dynamic>{
-      "scope": allDevices ? "global" : "local",
-    };
+    "scope": allDevices ? "global" : "local",
+  };
 
   @override
   String toString() => "LogoutRequest(allDevices: $allDevices, redirectTo: $redirectTo)";

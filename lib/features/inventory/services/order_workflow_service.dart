@@ -1,10 +1,9 @@
-import "package:flutter_riverpod/flutter_riverpod.dart";
-
-import "../../../core/logging/logger_mixin.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/purchase_repository_contract.dart";
+import "../../../core/logging/compat.dart" as log;
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
-import "../repositories/material_repository.dart";
-import "../repositories/purchase_repository.dart";
 import "usage_analysis_service.dart";
 
 /// 発注提案データ
@@ -35,13 +34,13 @@ class OrderSuggestion {
 enum OrderPriority {
   /// 緊急（危険閾値以下）
   critical,
-  
+
   /// 高（アラート閾値以下）
   high,
-  
+
   /// 中（推定使用可能日数が短い）
   medium,
-  
+
   /// 低（念のため）
   low,
 }
@@ -62,27 +61,25 @@ class OrderCalculationResult {
 
   /// 緊急発注が必要かどうか
   bool get hasCriticalOrders => criticalCount > 0;
-  
+
   /// 発注提案があるかどうか
   bool get hasOrderSuggestions => totalSuggestions > 0;
 }
 
 /// 発注ワークフローサービス
-class OrderWorkflowService with LoggerMixin {
+class OrderWorkflowService {
   OrderWorkflowService({
-    required Ref ref,
-    MaterialRepository? materialRepository,
-    PurchaseRepository? purchaseRepository,
-    UsageAnalysisService? usageAnalysisService,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
-       _purchaseRepository = purchaseRepository ?? PurchaseRepository(),
-       _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService(ref: ref);
+    required MaterialRepositoryContract<Material> materialRepository,
+    required PurchaseRepositoryContract<Purchase> purchaseRepository,
+    required UsageAnalysisService usageAnalysisService,
+  }) : _materialRepository = materialRepository,
+       _purchaseRepository = purchaseRepository,
+       _usageAnalysisService = usageAnalysisService;
 
-  final MaterialRepository _materialRepository;
-  final PurchaseRepository _purchaseRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final PurchaseRepositoryContract<Purchase> _purchaseRepository;
   final UsageAnalysisService _usageAnalysisService;
 
-  @override
   String get loggerComponent => "OrderWorkflowService";
 
   /// 発注提案を計算
@@ -92,14 +89,14 @@ class OrderWorkflowService with LoggerMixin {
     int analysisdays = 30,
     double safetyStockMultiplier = 1.5,
   }) async {
-    logInfo("Starting order suggestion calculation for user: $userId");
+    log.i("Starting order suggestion calculation for user: $userId", tag: loggerComponent);
 
     try {
       // 材料一覧を取得
       final List<Material> materials = await _materialRepository.findByCategoryId(categoryId);
-      
+
       if (materials.isEmpty) {
-        logInfo("No materials found for user: $userId");
+        log.i("No materials found for user: $userId", tag: loggerComponent);
         return const OrderCalculationResult(
           suggestions: <OrderSuggestion>[],
           totalSuggestions: 0,
@@ -109,7 +106,9 @@ class OrderWorkflowService with LoggerMixin {
       }
 
       // 使用量分析データを一括取得
-      final Map<String, int?> usageDays = await _usageAnalysisService.bulkCalculateUsageDays(userId);
+      final Map<String, int?> usageDays = await _usageAnalysisService.bulkCalculateUsageDays(
+        userId,
+      );
       final Map<String, double?> dailyUsageRates = await _usageAnalysisService
           .bulkCalculateDailyUsageRates(userId);
 
@@ -128,7 +127,7 @@ class OrderWorkflowService with LoggerMixin {
 
         if (suggestion != null && suggestion.needsOrder) {
           suggestions.add(suggestion);
-          
+
           switch (suggestion.priority) {
             case OrderPriority.critical:
               criticalCount++;
@@ -144,7 +143,9 @@ class OrderWorkflowService with LoggerMixin {
       }
 
       // 優先度でソート
-      suggestions.sort((OrderSuggestion a, OrderSuggestion b) => a.priority.index.compareTo(b.priority.index));
+      suggestions.sort(
+        (OrderSuggestion a, OrderSuggestion b) => a.priority.index.compareTo(b.priority.index),
+      );
 
       final OrderCalculationResult result = OrderCalculationResult(
         suggestions: suggestions,
@@ -153,12 +154,20 @@ class OrderWorkflowService with LoggerMixin {
         highPriorityCount: highPriorityCount,
       );
 
-      logInfo("Order calculation completed. Total suggestions: ${result.totalSuggestions}, "
-              "Critical: ${result.criticalCount}, High: ${result.highPriorityCount}");
+      log.i(
+        "Order calculation completed. Total suggestions: ${result.totalSuggestions}, "
+        "Critical: ${result.criticalCount}, High: ${result.highPriorityCount}",
+        tag: loggerComponent,
+      );
 
       return result;
     } catch (e, stackTrace) {
-      logError("Failed to calculate order suggestions", e, stackTrace);
+      log.e(
+        "Failed to calculate order suggestions",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -229,16 +238,13 @@ class OrderWorkflowService with LoggerMixin {
   }
 
   /// 発注履歴を取得
-  Future<List<Purchase>> getOrderHistory(
-    String userId, {
-    int days = 30,
-  }) async {
-    logInfo("Fetching order history for user: $userId, days: $days");
+  Future<List<Purchase>> getOrderHistory(String userId, {int days = 30}) async {
+    log.i("Fetching order history for user: $userId, days: $days", tag: loggerComponent);
 
     try {
-      return _purchaseRepository.findRecent(days, userId);
+      return _purchaseRepository.findRecent(days);
     } catch (e, stackTrace) {
-      logError("Failed to fetch order history", e, stackTrace);
+      log.e("Failed to fetch order history", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -249,40 +255,46 @@ class OrderWorkflowService with LoggerMixin {
     DateTime dateTo,
     String userId,
   ) async {
-    logInfo("Fetching order history by date range for user: $userId");
+    log.i("Fetching order history by date range for user: $userId", tag: loggerComponent);
 
     try {
-      return _purchaseRepository.findByDateRange(dateFrom, dateTo, userId);
+      return _purchaseRepository.findByDateRange(dateFrom, dateTo);
     } catch (e, stackTrace) {
-      logError("Failed to fetch order history by date range", e, stackTrace);
+      log.e(
+        "Failed to fetch order history by date range",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
 
   /// 発注量の統計情報を取得
-  Future<Map<String, dynamic>> getOrderStatistics(
-    String userId, {
-    int days = 30,
-  }) async {
-    logInfo("Calculating order statistics for user: $userId");
+  Future<Map<String, dynamic>> getOrderStatistics(String userId, {int days = 30}) async {
+    log.i("Calculating order statistics for user: $userId", tag: loggerComponent);
 
     try {
-      final List<Purchase> recentPurchases = await _purchaseRepository.findRecent(days, userId);
-      
+      final List<Purchase> recentPurchases = await _purchaseRepository.findRecent(days);
+
       final int totalOrders = recentPurchases.length;
 
       return <String, dynamic>{
         "totalOrders": totalOrders,
         "analysisDate": DateTime.now(),
         "analysisPeriodDays": days,
-        "recentPurchases": recentPurchases.map((Purchase p) => <String, Object?>{
-          "id": p.id,
-          "purchaseDate": p.purchaseDate,
-          "notes": p.notes,
-        }).toList(),
+        "recentPurchases": recentPurchases
+            .map(
+              (Purchase p) => <String, Object?>{
+                "id": p.id,
+                "purchaseDate": p.purchaseDate,
+                "notes": p.notes,
+              },
+            )
+            .toList(),
       };
     } catch (e, stackTrace) {
-      logError("Failed to calculate order statistics", e, stackTrace);
+      log.e("Failed to calculate order statistics", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }

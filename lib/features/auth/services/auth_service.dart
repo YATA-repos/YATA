@@ -1,8 +1,10 @@
 import "dart:async";
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
-import "../../../core/logging/logger_mixin.dart";
-import "../../../utils/stream_manager_mixin.dart";
+import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
+import "../../../core/utils/stream_manager_mixin.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";
 import "../models/auth_state.dart";
@@ -10,25 +12,21 @@ import "../models/user_profile.dart";
 import "../repositories/auth_repository.dart";
 
 /// 認証サービス
-/// 
+///
 /// 認証のビジネスロジックを管理します。
 /// AuthRepositoryを使用してSupabase Authとやり取りし、
 /// アプリケーション全体の認証状態を管理します。
-class AuthService with LoggerMixin, StreamControllerManagerMixin {
+class AuthService with StreamControllerManagerMixin {
   AuthService({
-    AuthRepository? authRepository,
+    contract.AuthRepositoryContract<UserProfile, local.AuthResponse>? authRepository,
     AuthConfig? config,
   }) : _authRepository = authRepository ?? AuthRepository(config: config),
        _config = config ?? AuthConfig.forCurrentPlatform() {
     // StreamControllerを管理対象に追加
-    addController(
-      _stateController,
-      debugName: "auth_state_controller",
-      source: "AuthService",
-    );
+    addController(_stateController, debugName: "auth_state_controller", source: "AuthService");
   }
 
-  final AuthRepository _authRepository;
+  final contract.AuthRepositoryContract<UserProfile, local.AuthResponse> _authRepository;
   final AuthConfig _config;
 
   /// 現在の認証状態
@@ -37,7 +35,6 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
   /// 認証状態の変更を通知するStreamController
   final StreamController<AuthState> _stateController = StreamController<AuthState>.broadcast();
 
-  @override
   String get loggerComponent => "AuthService";
 
   // =================================================================
@@ -54,7 +51,7 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
   void _updateState(AuthState newState) {
     _currentState = newState;
     _stateController.add(newState);
-    logDebug("Auth state updated: ${newState.status}");
+    log.d("Auth state updated: ${newState.status}", tag: loggerComponent);
   }
 
   /// 認証済みかどうか
@@ -76,7 +73,7 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
   /// Google OAuth認証を開始
   Future<void> signInWithGoogle() async {
     try {
-      logInfo("Starting Google OAuth authentication");
+      log.i("Starting Google OAuth authentication", tag: loggerComponent);
       _updateState(AuthState.loading());
 
       final local.AuthResponse response = await _authRepository.signInWithGoogle();
@@ -84,16 +81,16 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
       if (response.isSuccess && response.user != null) {
         final UserProfile user = response.user!;
         _updateState(AuthState.authenticated(user));
-        logInfo("Google OAuth authentication successful: ${user.email}");
+        log.i("Google OAuth authentication successful: ${user.email}", tag: loggerComponent);
       } else {
         final String error = response.error ?? "Authentication failed";
         _updateState(AuthState.error(error));
-        logError("Google OAuth authentication failed: $error");
+        log.e("Google OAuth authentication failed: $error", tag: loggerComponent);
       }
     } catch (e) {
       final String errorMessage = e is AuthException ? e.message : e.toString();
       _updateState(AuthState.error(errorMessage));
-      logError("Google OAuth authentication error: $errorMessage", e);
+      log.e("Google OAuth authentication error: $errorMessage", tag: loggerComponent, error: e);
       rethrow;
     }
   }
@@ -101,7 +98,7 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
   /// OAuth認証のコールバックを処理
   Future<void> handleOAuthCallback(String callbackUrl) async {
     try {
-      logDebug("Handling OAuth callback");
+      log.d("Handling OAuth callback", tag: loggerComponent);
       _updateState(AuthState.loading());
 
       final local.AuthResponse response = await _authRepository.handleOAuthCallback(callbackUrl);
@@ -109,16 +106,16 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
       if (response.isSuccess && response.user != null) {
         final UserProfile user = response.user!;
         _updateState(AuthState.authenticated(user));
-        logInfo("OAuth callback processed successfully: ${user.email}");
+        log.i("OAuth callback processed successfully: ${user.email}", tag: loggerComponent);
       } else {
         final String error = response.error ?? "OAuth callback failed";
         _updateState(AuthState.error(error));
-        logError("OAuth callback failed: $error");
+        log.e("OAuth callback failed: $error", tag: loggerComponent);
       }
     } catch (e) {
       final String errorMessage = e is AuthException ? e.message : e.toString();
       _updateState(AuthState.error(errorMessage));
-      logError("OAuth callback error: $errorMessage", e);
+      log.e("OAuth callback error: $errorMessage", tag: loggerComponent, error: e);
       rethrow;
     }
   }
@@ -126,46 +123,46 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
   /// 現在のセッションからユーザー情報を復元
   Future<void> restoreSession() async {
     try {
-      logDebug("Attempting to restore user session");
+      log.d("Attempting to restore user session", tag: loggerComponent);
       _updateState(AuthState.loading());
 
       final UserProfile? userProfile = await _authRepository.getCurrentUserProfile();
 
       if (userProfile != null) {
         _updateState(AuthState.authenticated(userProfile));
-        logInfo("Session restored successfully: ${userProfile.email}");
+        log.i("Session restored successfully: ${userProfile.email}", tag: loggerComponent);
       } else {
         _updateState(AuthState.initial());
-        logDebug("No valid session found");
+        log.d("No valid session found", tag: loggerComponent);
       }
     } catch (e) {
       final String errorMessage = e is AuthException ? e.message : e.toString();
       _updateState(AuthState.error(errorMessage));
-      logError("Session restoration failed: $errorMessage", e);
+      log.e("Session restoration failed: $errorMessage", tag: loggerComponent, error: e);
     }
   }
 
   /// セッションを更新
   Future<void> refreshSession() async {
     try {
-      logInfo("Refreshing user session");
+      log.i("Refreshing user session", tag: loggerComponent);
 
       final local.AuthResponse response = await _authRepository.refreshSession();
 
       if (response.isSuccess && response.user != null) {
         final UserProfile user = response.user!;
         _updateState(AuthState.authenticated(user));
-        logInfo("Session refreshed successfully: ${user.email}");
+        log.i("Session refreshed successfully: ${user.email}", tag: loggerComponent);
       } else {
         final String error = response.error ?? "Session refresh failed";
         _updateState(AuthState.error(error));
-        logError("Session refresh failed: $error");
+        log.e("Session refresh failed: $error", tag: loggerComponent);
       }
     } catch (e) {
       final String errorMessage = e is AuthException ? e.message : e.toString();
       _updateState(AuthState.error(errorMessage));
-      logError("Session refresh error: $errorMessage", e);
-      
+      log.e("Session refresh error: $errorMessage", tag: loggerComponent, error: e);
+
       // セッション更新に失敗した場合は未認証状態にする
       _updateState(AuthState.initial());
     }
@@ -175,16 +172,16 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
   Future<void> signOut({bool allDevices = false}) async {
     try {
       final String? userEmail = currentUser?.email;
-      logInfo("Signing out user: ${userEmail ?? 'unknown'}");
+      log.i("Signing out user: ${userEmail ?? 'unknown'}", tag: loggerComponent);
 
       await _authRepository.signOut(allDevices: allDevices);
-      
+
       _updateState(AuthState.initial());
-      logInfo("User signed out successfully: ${userEmail ?? 'unknown'}");
+      log.i("User signed out successfully: ${userEmail ?? 'unknown'}", tag: loggerComponent);
     } catch (e) {
       final String errorMessage = e is AuthException ? e.message : e.toString();
-      logError("Sign out failed: $errorMessage", e);
-      
+      log.e("Sign out failed: $errorMessage", tag: loggerComponent, error: e);
+
       // ログアウトに失敗しても状態は初期化する（安全のため）
       _updateState(AuthState.initial());
       rethrow;
@@ -209,29 +206,29 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
 
   void startAutoRefresh() {
     _refreshTimer?.cancel();
-    
+
     // 5分ごとにセッションの有効性をチェック
     _refreshTimer = Timer.periodic(const Duration(minutes: 5), (Timer timer) async {
       if (isAuthenticated && isSessionExpiringSoon()) {
         try {
           await refreshSession();
-          logDebug("Auto session refresh completed");
+          log.d("Auto session refresh completed", tag: loggerComponent);
         } catch (e) {
-          logError("Auto session refresh failed: $e", e);
+          log.e("Auto session refresh failed: $e", tag: loggerComponent, error: e);
           // 自動更新に失敗した場合はタイマーを停止
           stopAutoRefresh();
         }
       }
     });
-    
-    logDebug("Auto session refresh started");
+
+    log.d("Auto session refresh started", tag: loggerComponent);
   }
 
   /// 自動セッション更新を停止
   void stopAutoRefresh() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
-    logDebug("Auto session refresh stopped");
+    log.d("Auto session refresh stopped", tag: loggerComponent);
   }
 
   // =================================================================
@@ -243,24 +240,35 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
 
   /// デバッグ情報を取得
   Map<String, dynamic> getDebugInfo() => <String, dynamic>{
-      "state": <String, dynamic>{
-        "status": _currentState.status.name,
-        "isAuthenticated": isAuthenticated,
-        "isAuthenticating": isAuthenticating,
-        "hasError": _currentState.hasError,
-        "error": _currentState.error,
-        "userId": currentUserId,
-        "userEmail": currentUser?.email,
-      },
-      "session": <String, dynamic>{
-        "isValid": isSessionValid(),
-        "remainingSeconds": getSessionRemainingSeconds(),
-        "expiringSoon": isSessionExpiringSoon(),
-        "autoRefreshActive": _refreshTimer != null,
-      },
-      "stream_controllers": getControllerDebugInfo(),
-      "repository": _authRepository.getDebugInfo(),
-    };
+    "state": <String, dynamic>{
+      "status": _currentState.status.name,
+      "isAuthenticated": isAuthenticated,
+      "isAuthenticating": isAuthenticating,
+      "hasError": _currentState.hasError,
+      "error": _currentState.error,
+      "userId": currentUserId,
+      "userEmail": currentUser?.email,
+    },
+    "session": <String, dynamic>{
+      "isValid": isSessionValid(),
+      "remainingSeconds": getSessionRemainingSeconds(),
+      "expiringSoon": isSessionExpiringSoon(),
+      "autoRefreshActive": _refreshTimer != null,
+    },
+    "stream_controllers": getControllerDebugInfo(),
+    "repository": _repositoryDebugInfo(),
+  };
+
+  Map<String, dynamic>? _repositoryDebugInfo() {
+    try {
+      if (_authRepository is AuthRepository) {
+        return _authRepository.getDebugInfo();
+      }
+      return <String, dynamic>{"type": _authRepository.runtimeType.toString()};
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// サービスを破棄
   void dispose() {
@@ -268,15 +276,15 @@ class AuthService with LoggerMixin, StreamControllerManagerMixin {
     if (hasControllerMemoryLeak) {
       final String? warning = controllerMemoryLeakWarningMessage;
       if (warning != null) {
-        logWarning("AuthService dispose時にメモリリーク警告: $warning");
+        log.w("AuthService dispose時にメモリリーク警告: $warning", tag: loggerComponent);
       }
     }
-    
+
     stopAutoRefresh();
-    
+
     // StreamControllerManagerMixinを使用してStreamControllerを安全に破棄
     disposeControllers();
-    
-    logDebug("AuthService disposed");
+
+    log.d("AuthService disposed", tag: loggerComponent);
   }
 }

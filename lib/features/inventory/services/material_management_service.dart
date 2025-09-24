@@ -1,25 +1,23 @@
-import "package:flutter_riverpod/flutter_riverpod.dart";
-
+import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
-import "../../../core/logging/logger_mixin.dart";
+import "../../../core/contracts/repositories/inventory/material_category_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
 import "../../../core/validation/input_validator.dart";
 import "../models/inventory_model.dart";
-import "../repositories/material_category_repository.dart";
-import "../repositories/material_repository.dart";
 
 /// 材料管理サービス
-class MaterialManagementService with LoggerMixin {
+class MaterialManagementService {
   MaterialManagementService({
-    required Ref ref,
-    MaterialRepository? materialRepository,
-    MaterialCategoryRepository? materialCategoryRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
-       _materialCategoryRepository = materialCategoryRepository ?? MaterialCategoryRepository(ref: ref);
+    required MaterialRepositoryContract<Material> materialRepository,
+    required MaterialCategoryRepositoryContract<MaterialCategory> materialCategoryRepository,
+  }) : _materialRepository = materialRepository,
+       _materialCategoryRepository = materialCategoryRepository;
 
-  final MaterialRepository _materialRepository;
-  final MaterialCategoryRepository _materialCategoryRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final MaterialCategoryRepositoryContract<MaterialCategory> _materialCategoryRepository;
 
-  @override
   String get loggerComponent => "MaterialManagementService";
 
   /// 材料を作成
@@ -45,34 +43,48 @@ class MaterialManagementService with LoggerMixin {
     final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
     if (errors.isNotEmpty) {
       final List<String> errorMessages = InputValidator.getErrorMessages(errors);
-      logError("Validation failed for material creation: ${errorMessages.join(', ')}");
+      log.e(
+        "Validation failed for material creation: ${errorMessages.join(', ')}",
+        tag: loggerComponent,
+      );
       throw ValidationException(errorMessages);
     }
 
-    logInfoMessage(ServiceInfo.materialCreationStarted, <String, String>{
-      "materialName": material.name,
-    });
+    log.i(
+      ServiceInfo.materialCreationStarted.withParams(<String, String>{
+        "materialName": material.name,
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       final Material? createdMaterial = await _materialRepository.create(material);
 
       if (createdMaterial != null) {
-        logInfoMessage(ServiceInfo.materialCreationSuccessful, <String, String>{
-          "materialName": material.name,
-        });
+        log.i(
+          ServiceInfo.materialCreationSuccessful.withParams(<String, String>{
+            "materialName": material.name,
+          }),
+          tag: loggerComponent,
+        );
       } else {
-        logWarningMessage(ServiceWarning.creationFailed, <String, String>{
-          "entityType": "material: ${material.name}",
-        });
+        log.w(
+          ServiceWarning.creationFailed.withParams(<String, String>{
+            "entityType": "material: ${material.name}",
+          }),
+          tag: loggerComponent,
+        );
       }
 
       return createdMaterial;
     } catch (e, stackTrace) {
-      logErrorMessage(
-        ServiceError.materialCreationFailed,
-        <String, String>{"materialName": material.name},
-        e,
-        stackTrace,
+      log.e(
+        ServiceError.materialCreationFailed.withParams(<String, String>{
+          "materialName": material.name,
+        }),
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
       );
       rethrow;
     }
@@ -119,14 +131,20 @@ class MaterialManagementService with LoggerMixin {
     final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
     if (errors.isNotEmpty) {
       final List<String> errorMessages = InputValidator.getErrorMessages(errors);
-      logError("Validation failed for material update: ${errorMessages.join(', ')}");
+      log.e(
+        "Validation failed for material update: ${errorMessages.join(', ')}",
+        tag: loggerComponent,
+      );
       throw ValidationException(errorMessages);
     }
 
-    logInfoMessage(ServiceInfo.materialCreationStarted, <String, String>{
-      "materialId": material.id!,
-      "materialName": material.name,
-    });
+    log.i(
+      ServiceInfo.materialCreationStarted.withParams(<String, String>{
+        "materialId": material.id!,
+        "materialName": material.name,
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       // 材料を更新
@@ -136,26 +154,32 @@ class MaterialManagementService with LoggerMixin {
       );
 
       if (updatedMaterial != null) {
-        logInfoMessage(ServiceInfo.materialCreationSuccessful, <String, String>{
-          "materialId": material.id!,
-          "materialName": material.name,
-        });
+        log.i(
+          ServiceInfo.materialCreationSuccessful.withParams(<String, String>{
+            "materialId": material.id!,
+            "materialName": material.name,
+          }),
+          tag: loggerComponent,
+        );
       } else {
-        logWarningMessage(ServiceWarning.updateFailed, <String, String>{
-          "entityType": "material: ${material.name}",
-        });
+        log.w(
+          ServiceWarning.updateFailed.withParams(<String, String>{
+            "entityType": "material: ${material.name}",
+          }),
+          tag: loggerComponent,
+        );
       }
 
       return updatedMaterial;
     } catch (e, stackTrace) {
-      logErrorMessage(
-        ServiceError.materialCreationFailed,
-        <String, String>{
+      log.e(
+        ServiceError.materialCreationFailed.withParams(<String, String>{
           "materialId": material.id!,
           "materialName": material.name,
-        },
-        e,
-        stackTrace,
+        }),
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
       );
       rethrow;
     }
@@ -193,5 +217,4 @@ class MaterialManagementService with LoggerMixin {
       "critical_threshold": criticalThreshold,
     });
   }
-
 }

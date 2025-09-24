@@ -1,37 +1,124 @@
 import "dart:math" as math;
+
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/constants.dart";
-import "../../../core/logging/logger_mixin.dart";
+import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
+import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
+import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/validation/input_validator.dart";
+import "../../auth/presentation/providers/auth_providers.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
-import "../../inventory/repositories/material_repository.dart";
-import "../../inventory/repositories/recipe_repository.dart";
 import "../dto/menu_dto.dart";
 import "../models/menu_model.dart";
-import "../repositories/menu_category_repository.dart";
-import "../repositories/menu_item_repository.dart";
 
-class MenuService with LoggerMixin {
+class MenuService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   MenuService({
     required Ref ref,
-    MenuItemRepository? menuItemRepository,
-    MenuCategoryRepository? menuCategoryRepository,
-    MaterialRepository? materialRepository,
-    RecipeRepository? recipeRepository,
-  }) : _menuItemRepository = menuItemRepository ?? MenuItemRepository(ref: ref),
-       _menuCategoryRepository = menuCategoryRepository ?? MenuCategoryRepository(ref: ref),
-       _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
-       _recipeRepository = recipeRepository ?? RecipeRepository(ref: ref);
+    required r_contract.RealtimeManagerContract realtimeManager,
+    required MenuItemRepositoryContract<MenuItem> menuItemRepository,
+    required MenuCategoryRepositoryContract<MenuCategory> menuCategoryRepository,
+    required MaterialRepositoryContract<Material> materialRepository,
+    required RecipeRepositoryContract<Recipe> recipeRepository,
+  }) : _ref = ref,
+       _realtimeManager = realtimeManager,
+       _menuItemRepository = menuItemRepository,
+       _menuCategoryRepository = menuCategoryRepository,
+       _materialRepository = materialRepository,
+       _recipeRepository = recipeRepository;
 
-  final MenuItemRepository _menuItemRepository;
-  final MenuCategoryRepository _menuCategoryRepository;
-  final MaterialRepository _materialRepository;
-  final RecipeRepository _recipeRepository;
+  final Ref _ref;
+  final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
+  final MenuCategoryRepositoryContract<MenuCategory> _menuCategoryRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final RecipeRepositoryContract<Recipe> _recipeRepository;
+  final r_contract.RealtimeManagerContract _realtimeManager;
+
+  String get loggerComponent => "MenuService";
+
+  // 契約Mixin用の依存提供
+  @override
+  r_contract.RealtimeManagerContract get realtimeManager => _realtimeManager;
 
   @override
-  String get loggerComponent => "MenuService";
+  String? get currentUserId => _ref.read(currentUserIdProvider);
+
+  // ===== Realtime: メニュー・カテゴリの監視 =====
+  @override
+  Future<void> enableRealtimeFeatures() async => startRealtimeMonitoring();
+
+  @override
+  Future<void> disableRealtimeFeatures() async => stopRealtimeMonitoring();
+
+  @override
+  bool isFeatureRealtimeEnabled(String featureName) => isMonitoringFeature(featureName);
+
+  @override
+  bool isRealtimeConnected() => isRealtimeHealthy();
+
+  @override
+  Map<String, dynamic> getRealtimeInfo() => getRealtimeStats();
+
+  Future<void> startRealtimeMonitoring() async {
+    try {
+      log.i("Starting menu realtime monitoring", tag: loggerComponent);
+      await startFeatureMonitoring(
+        "menu",
+        "menu_items",
+        _handleMenuItemUpdate,
+        eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
+      );
+      await startFeatureMonitoring(
+        "menu",
+        "menu_categories",
+        _handleMenuCategoryUpdate,
+        eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
+      );
+      log.i("Menu realtime monitoring started", tag: loggerComponent);
+    } catch (e) {
+      log.e("Failed to start menu realtime monitoring", tag: loggerComponent, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> stopRealtimeMonitoring() async {
+    try {
+      log.i("Stopping menu realtime monitoring", tag: loggerComponent);
+      await stopFeatureMonitoring("menu");
+      log.i("Menu realtime monitoring stopped", tag: loggerComponent);
+    } catch (e) {
+      log.e("Failed to stop menu realtime monitoring", tag: loggerComponent, error: e);
+      rethrow;
+    }
+  }
+
+  void _handleMenuItemUpdate(Map<String, dynamic> data) {
+    final String eventType = data["event_type"] as String? ?? "unknown";
+    final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
+    final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
+    log.d(
+      "MenuItem event: $eventType",
+      tag: loggerComponent,
+      fields: <String, dynamic>{"item": newRecord ?? oldRecord},
+    );
+  }
+
+  void _handleMenuCategoryUpdate(Map<String, dynamic> data) {
+    final String eventType = data["event_type"] as String? ?? "unknown";
+    final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
+    final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
+    log.d(
+      "MenuCategory event: $eventType",
+      tag: loggerComponent,
+      fields: <String, dynamic>{"category": newRecord ?? oldRecord},
+    );
+  }
 
   /// メニューカテゴリ一覧を取得
   Future<List<MenuCategory>> getMenuCategories() async =>
@@ -45,7 +132,12 @@ class MenuService with LoggerMixin {
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
     // 入力検証
     final List<ValidationResult> validationResults = <ValidationResult>[
-      InputValidator.validateString(keyword, required: true, maxLength: AppConfig.maxItemNameLength, fieldName: "検索キーワード"),
+      InputValidator.validateString(
+        keyword,
+        required: true,
+        maxLength: AppConfig.maxItemNameLength,
+        fieldName: "検索キーワード",
+      ),
       InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
     ];
 
@@ -55,13 +147,13 @@ class MenuService with LoggerMixin {
       throw ValidationException(InputValidator.getErrorMessages(errors));
     }
 
-    logDebug("Started menu item search: keyword=\"$keyword\"");
+    log.d("Started menu item search: keyword=\"$keyword\"", tag: loggerComponent);
 
     try {
       // まずユーザーのメニューアイテムを取得してから手動検索
       final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null);
 
-      logDebug("Retrieved ${userItems.length} menu items for search");
+      log.d("Retrieved ${userItems.length} menu items for search", tag: loggerComponent);
 
       // 手動でキーワード検索（Supabaseの制限回避）
       final List<MenuItem> matchingItems = <MenuItem>[];
@@ -74,10 +166,10 @@ class MenuService with LoggerMixin {
         }
       }
 
-      logDebug("Menu search completed: ${matchingItems.length} items found");
+      log.d("Menu search completed: ${matchingItems.length} items found", tag: loggerComponent);
       return matchingItems;
     } catch (e, stackTrace) {
-      logErrorMessage(MenuError.searchFailed, null, e, stackTrace);
+      log.e(MenuError.searchFailed.message, tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -91,7 +183,13 @@ class MenuService with LoggerMixin {
     // 入力検証
     final List<ValidationResult> validationResults = <ValidationResult>[
       InputValidator.validateString(menuItemId, required: true, fieldName: "メニューアイテムID"),
-      InputValidator.validateNumber(quantity, required: true, min: AppConfig.minQuantity, max: AppConfig.maxQuantity, fieldName: "数量"),
+      InputValidator.validateNumber(
+        quantity,
+        required: true,
+        min: AppConfig.minQuantity,
+        max: AppConfig.maxQuantity,
+        fieldName: "数量",
+      ),
       InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
     ];
 
@@ -101,14 +199,14 @@ class MenuService with LoggerMixin {
       throw ValidationException(InputValidator.getErrorMessages(errors));
     }
 
-    logDebug("Checking menu availability: quantity=$quantity");
+    log.d("Checking menu availability: quantity=$quantity", tag: loggerComponent);
 
     try {
       // メニューアイテムを取得
       final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
 
       if (menuItem == null || menuItem.userId != userId) {
-        logWarningMessage(MenuWarning.menuItemNotFound);
+        log.w(MenuWarning.menuItemNotFound.message, tag: loggerComponent);
         return MenuAvailabilityInfo(
           menuItemId: menuItemId,
           isAvailable: false,
@@ -119,7 +217,10 @@ class MenuService with LoggerMixin {
 
       // メニューアイテムが無効になっている場合
       if (!menuItem.isAvailable) {
-        logInfoMessage(MenuInfo.menuItemDisabled, <String, String>{"itemName": menuItem.name});
+        log.i(
+          MenuInfo.menuItemDisabled.withParams(<String, String>{"itemName": menuItem.name}),
+          tag: loggerComponent,
+        );
         return MenuAvailabilityInfo(
           menuItemId: menuItemId,
           isAvailable: false,
@@ -133,7 +234,7 @@ class MenuService with LoggerMixin {
 
       if (recipes.isEmpty) {
         // レシピがない場合は作成可能とみなす
-        logDebug(MenuDebug.noRecipesFound.message);
+        log.d(MenuDebug.noRecipesFound.message, tag: loggerComponent);
         return MenuAvailabilityInfo(
           menuItemId: menuItemId,
           isAvailable: true,
@@ -142,7 +243,7 @@ class MenuService with LoggerMixin {
         );
       }
 
-      logDebug("Checking ${recipes.length} recipes for availability");
+      log.d("Checking ${recipes.length} recipes for availability", tag: loggerComponent);
 
       final List<String> missingMaterials = <String>[];
       double maxServings = double.infinity;
@@ -178,14 +279,18 @@ class MenuService with LoggerMixin {
       final bool isAvailable = missingMaterials.isEmpty && maxServings >= quantity;
 
       if (!isAvailable) {
-        logDebug(
+        log.d(
           "Menu item not available: ${menuItem.name}, missing materials: ${missingMaterials.join(", ")}",
+          tag: loggerComponent,
         );
       } else {
-        logInfoMessage(MenuInfo.menuItemEnabled, <String, String>{
-          "itemName": menuItem.name,
-          "maxServings": maxServings.round().toString(),
-        });
+        log.i(
+          MenuInfo.menuItemEnabled.withParams(<String, String>{
+            "itemName": menuItem.name,
+            "maxServings": maxServings.round().toString(),
+          }),
+          tag: loggerComponent,
+        );
       }
 
       return MenuAvailabilityInfo(
@@ -195,7 +300,12 @@ class MenuService with LoggerMixin {
         estimatedServings: maxServings.round(),
       );
     } catch (e, stackTrace) {
-      logErrorMessage(MenuError.availabilityCheckFailed, null, e, stackTrace);
+      log.e(
+        MenuError.availabilityCheckFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -338,16 +448,19 @@ class MenuService with LoggerMixin {
       throw ValidationException(InputValidator.getErrorMessages(errors));
     }
 
-    logInfoMessage(MenuInfo.toggleAvailabilityStarted, <String, String>{
-      "isAvailable": isAvailable.toString(),
-    });
+    log.i(
+      MenuInfo.toggleAvailabilityStarted.withParams(<String, String>{
+        "isAvailable": isAvailable.toString(),
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       // メニューアイテムを取得
       final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
 
       if (menuItem == null || menuItem.userId != userId) {
-        logWarningMessage(MenuWarning.accessDenied);
+        log.w(MenuWarning.accessDenied.message, tag: loggerComponent);
         throw Exception("Menu item not found or access denied: $menuItemId");
       }
 
@@ -358,17 +471,25 @@ class MenuService with LoggerMixin {
       final MenuItem? updatedItem = await _menuItemRepository.updateById(menuItemId, updateData);
 
       if (updatedItem != null) {
-        logInfoMessage(MenuInfo.toggleAvailabilityCompleted, <String, String>{
-          "itemName": menuItem.name,
-          "status": isAvailable ? "available" : "unavailable",
-        });
+        log.i(
+          MenuInfo.toggleAvailabilityCompleted.withParams(<String, String>{
+            "itemName": menuItem.name,
+            "status": isAvailable ? "available" : "unavailable",
+          }),
+          tag: loggerComponent,
+        );
       } else {
-        logDebug("Failed to update menu item availability: ${menuItem.name}");
+        log.d("Failed to update menu item availability: ${menuItem.name}", tag: loggerComponent);
       }
 
       return updatedItem;
     } catch (e, stackTrace) {
-      logErrorMessage(MenuError.toggleAvailabilityFailed, null, e, stackTrace);
+      log.e(
+        MenuError.toggleAvailabilityFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -395,7 +516,7 @@ class MenuService with LoggerMixin {
 
   /// 在庫状況に基づいてメニューの販売可否を自動更新
   Future<Map<String, bool>> autoUpdateMenuAvailabilityByStock(String userId) async {
-    logInfo("Started auto-updating menu availability by stock");
+    log.i("Started auto-updating menu availability by stock", tag: loggerComponent);
 
     try {
       // 全メニューアイテムの在庫状況をチェック
@@ -403,7 +524,7 @@ class MenuService with LoggerMixin {
         userId,
       );
 
-      logDebug("Checked availability for ${availabilityInfo.length} menu items");
+      log.d("Checked availability for ${availabilityInfo.length} menu items", tag: loggerComponent);
 
       final Map<String, bool> updates = <String, bool>{};
       final Map<String, bool> results = <String, bool>{};
@@ -423,24 +544,33 @@ class MenuService with LoggerMixin {
         }
       }
 
-      logDebug("Found ${updates.length} menu items requiring availability updates");
+      log.d(
+        "Found ${updates.length} menu items requiring availability updates",
+        tag: loggerComponent,
+      );
 
       // 一括更新
       if (updates.isNotEmpty) {
         results.addAll(await bulkUpdateMenuAvailability(updates, userId));
-        logInfo("Auto-updated menu availability: ${results.length} items updated");
+        log.i(
+          "Auto-updated menu availability: ${results.length} items updated",
+          tag: loggerComponent,
+        );
       } else {
-        logInfo("No menu availability updates required");
+        log.i("No menu availability updates required", tag: loggerComponent);
       }
 
       return results;
     } catch (e, stackTrace) {
-      logError("Failed to auto-update menu availability by stock", e, stackTrace);
+      log.e(
+        "Failed to auto-update menu availability by stock",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
 }
 
-/// MenuService のプロバイダー定義
-final Provider<MenuService> menuServiceProvider =
-    Provider<MenuService>((Ref ref) => MenuService(ref: ref));
+// Providerは app/wiring/provider.dart 側で合成し公開する

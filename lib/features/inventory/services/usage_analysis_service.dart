@@ -1,24 +1,19 @@
-import "package:flutter_riverpod/flutter_riverpod.dart";
-
-import "../../../core/logging/logger_mixin.dart";
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
-import "../repositories/material_repository.dart";
-import "../repositories/stock_transaction_repository.dart";
 
 /// 使用量分析・予測サービス
-class UsageAnalysisService with LoggerMixin {
+class UsageAnalysisService {
   UsageAnalysisService({
-    required Ref ref,
-    MaterialRepository? materialRepository,
-    StockTransactionRepository? stockTransactionRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref),
-       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
+    required MaterialRepositoryContract<Material> materialRepository,
+    required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
+  }) : _materialRepository = materialRepository,
+       _stockTransactionRepository = stockTransactionRepository;
 
-  final MaterialRepository _materialRepository;
-  final StockTransactionRepository _stockTransactionRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final StockTransactionRepositoryContract<StockTransaction> _stockTransactionRepository;
 
-  @override
   String get loggerComponent => "UsageAnalysisService";
 
   /// 材料の平均使用量を計算（日次）
@@ -29,7 +24,7 @@ class UsageAnalysisService with LoggerMixin {
 
     // 期間内の消費取引を取得（負の値のみ）
     final List<StockTransaction> transactions = await _stockTransactionRepository
-        .findByMaterialAndDateRange(materialId, startDate, endDate, userId);
+        .findByMaterialAndDateRange(materialId, startDate, endDate);
 
     // 消費取引のみをフィルタ（負の値）
     final List<StockTransaction> consumptionTransactions = transactions

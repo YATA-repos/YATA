@@ -1,50 +1,46 @@
 import "dart:math" as math;
 
-import "package:flutter_riverpod/flutter_riverpod.dart";
-
 import "../../../core/constants/enums.dart";
-import "../../../core/logging/logger_mixin.dart";
+import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
 import "../../menu/models/menu_model.dart";
-import "../../menu/repositories/menu_item_repository.dart";
 import "../models/order_model.dart";
-import "../repositories/order_item_repository.dart";
-import "../repositories/order_repository.dart";
 import "kitchen_operation_service.dart";
 
 /// キッチン分析・予測サービス
-class KitchenAnalysisService with LoggerMixin {
+class KitchenAnalysisService {
   KitchenAnalysisService({
-    required Ref ref,
-    OrderRepository? orderRepository,
-    OrderItemRepository? orderItemRepository,
-    MenuItemRepository? menuItemRepository,
-    KitchenOperationService? kitchenOperationService,
-  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref),
-       _menuItemRepository = menuItemRepository ?? MenuItemRepository(ref: ref),
-       _kitchenOperationService = kitchenOperationService ?? KitchenOperationService(ref: ref);
+    required OrderRepositoryContract<Order> orderRepository,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+    required MenuItemRepositoryContract<MenuItem> menuItemRepository,
+    required KitchenOperationService kitchenOperationService,
+  }) : _orderRepository = orderRepository,
+       _orderItemRepository = orderItemRepository,
+       _menuItemRepository = menuItemRepository,
+       _kitchenOperationService = kitchenOperationService;
 
-  final OrderRepository _orderRepository;
-  final OrderItemRepository _orderItemRepository;
-  final MenuItemRepository _menuItemRepository;
+  final OrderRepositoryContract<Order> _orderRepository;
+  final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
+  final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
   final KitchenOperationService _kitchenOperationService;
 
-  @override
   String get loggerComponent => "KitchenAnalysisService";
 
   /// 完成予定時刻を計算
   Future<DateTime?> calculateEstimatedCompletionTime(String orderId, String userId) async {
-    logDebug("Calculating estimated completion time for order: $orderId");
+    log.d("Calculating estimated completion time for order: $orderId", tag: loggerComponent);
 
     try {
       final Order? order = await _orderRepository.getById(orderId);
       if (order == null || order.userId != userId) {
-        logWarning("Order not found or access denied");
+        log.w("Order not found or access denied", tag: loggerComponent);
         return null;
       }
 
       if (order.status == OrderStatus.completed) {
-        logDebug("Order already completed, returning completion time");
+        log.d("Order already completed, returning completion time", tag: loggerComponent);
         return order.completedAt;
       }
 
@@ -59,7 +55,7 @@ class KitchenAnalysisService with LoggerMixin {
         }
       }
 
-      logDebug("Total estimated prep time: $totalPrepTime minutes");
+      log.d("Total estimated prep time: $totalPrepTime minutes", tag: loggerComponent);
 
       // 基準時刻（調理開始時刻または注文時刻）
       final DateTime baseTime = order.startedPreparingAt ?? order.orderedAt;
@@ -68,21 +64,26 @@ class KitchenAnalysisService with LoggerMixin {
       if (order.startedPreparingAt == null) {
         final int queueWaitTime = await calculateQueueWaitTime(userId);
         totalPrepTime += queueWaitTime;
-        logDebug("Added queue wait time: $queueWaitTime minutes");
+        log.d("Added queue wait time: $queueWaitTime minutes", tag: loggerComponent);
       }
 
       final DateTime estimatedTime = baseTime.add(Duration(minutes: totalPrepTime));
-      logDebug("Estimated completion time: $estimatedTime");
+      log.d("Estimated completion time: $estimatedTime", tag: loggerComponent);
       return estimatedTime;
     } catch (e, stackTrace) {
-      logError("Failed to calculate estimated completion time", e, stackTrace);
+      log.e(
+        "Failed to calculate estimated completion time",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       return null;
     }
   }
 
   /// キッチンの負荷状況を取得
   Future<Map<String, dynamic>> getKitchenWorkload(String userId) async {
-    logDebug("Retrieving kitchen workload");
+    log.d("Retrieving kitchen workload", tag: loggerComponent);
 
     try {
       final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
@@ -123,17 +124,20 @@ class KitchenAnalysisService with LoggerMixin {
         "average_wait_time_minutes": await calculateQueueWaitTime(userId),
       };
 
-      logDebug("Kitchen workload calculated: ${workload['total_active_orders']} active orders");
+      log.d(
+        "Kitchen workload calculated: ${workload['total_active_orders']} active orders",
+        tag: loggerComponent,
+      );
       return workload;
     } catch (e, stackTrace) {
-      logError("Failed to retrieve kitchen workload", e, stackTrace);
+      log.e("Failed to retrieve kitchen workload", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// 注文キューの待ち時間を計算（分）
   Future<int> calculateQueueWaitTime(String userId) async {
-    logDebug("Calculating queue wait time");
+    log.d("Calculating queue wait time", tag: loggerComponent);
 
     try {
       final List<Order> queue = await _kitchenOperationService.getOrderQueue(userId);
@@ -154,17 +158,17 @@ class KitchenAnalysisService with LoggerMixin {
 
       // 簡単な計算（実際はより複雑な計算が必要）
       final int waitTime = queue.isNotEmpty ? totalWaitTime ~/ math.max(1, queue.length) : 0;
-      logDebug("Queue wait time calculated: $waitTime minutes");
+      log.d("Queue wait time calculated: $waitTime minutes", tag: loggerComponent);
       return waitTime;
     } catch (e, stackTrace) {
-      logError("Failed to calculate queue wait time", e, stackTrace);
+      log.e("Failed to calculate queue wait time", tag: loggerComponent, error: e, st: stackTrace);
       return 0;
     }
   }
 
   /// 調理順序を最適化（注文IDリストを返す）
   Future<List<String>> optimizeCookingOrder(String userId) async {
-    logDebug("Optimizing cooking order");
+    log.d("Optimizing cooking order", tag: loggerComponent);
 
     try {
       final List<Order> notStartedOrders = await _orderRepository.findByStatusList(<OrderStatus>[
@@ -200,17 +204,17 @@ class KitchenAnalysisService with LoggerMixin {
       final List<String> optimizedOrder = orderPrepTimes
           .map(((String, int, DateTime) record) => record.$1)
           .toList();
-      logDebug("Cooking order optimized: ${optimizedOrder.length} orders");
+      log.d("Cooking order optimized: ${optimizedOrder.length} orders", tag: loggerComponent);
       return optimizedOrder;
     } catch (e, stackTrace) {
-      logError("Failed to optimize cooking order", e, stackTrace);
+      log.e("Failed to optimize cooking order", tag: loggerComponent, error: e, st: stackTrace);
       return <String>[];
     }
   }
 
   /// 全注文の完成予定時刻を予測
   Future<Map<String, DateTime>> predictCompletionTimes(String userId) async {
-    logDebug("Predicting completion times for all active orders");
+    log.d("Predicting completion times for all active orders", tag: loggerComponent);
 
     try {
       final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
@@ -225,10 +229,13 @@ class KitchenAnalysisService with LoggerMixin {
         }
       }
 
-      logDebug("Completion times predicted for ${completionTimes.length} orders");
+      log.d(
+        "Completion times predicted for ${completionTimes.length} orders",
+        tag: loggerComponent,
+      );
       return completionTimes;
     } catch (e, stackTrace) {
-      logError("Failed to predict completion times", e, stackTrace);
+      log.e("Failed to predict completion times", tag: loggerComponent, error: e, st: stackTrace);
       return <String, DateTime>{};
     }
   }
@@ -238,16 +245,14 @@ class KitchenAnalysisService with LoggerMixin {
     DateTime targetDate,
     String userId,
   ) async {
-    logDebug("Retrieving kitchen performance metrics for date: $targetDate");
+    log.d("Retrieving kitchen performance metrics for date: $targetDate", tag: loggerComponent);
 
     try {
       // 指定日の完了注文を取得
-      final List<Order> completedOrders = await _orderRepository.findCompletedByDate(
-        targetDate,
-      );
+      final List<Order> completedOrders = await _orderRepository.findCompletedByDate(targetDate);
 
       if (completedOrders.isEmpty) {
-        logDebug("No completed orders found for the specified date");
+        log.d("No completed orders found for the specified date", tag: loggerComponent);
         return <String, dynamic>{
           "total_orders": 0,
           "average_prep_time_minutes": 0.0,
@@ -289,10 +294,18 @@ class KitchenAnalysisService with LoggerMixin {
         "orders_per_hour": completedOrders.isNotEmpty ? completedOrders.length / 24.0 : 0.0,
       };
 
-      logDebug("Performance metrics calculated: ${metrics['total_orders']} orders processed");
+      log.d(
+        "Performance metrics calculated: ${metrics['total_orders']} orders processed",
+        tag: loggerComponent,
+      );
       return metrics;
     } catch (e, stackTrace) {
-      logError("Failed to retrieve kitchen performance metrics", e, stackTrace);
+      log.e(
+        "Failed to retrieve kitchen performance metrics",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }

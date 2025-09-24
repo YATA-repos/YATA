@@ -1,10 +1,10 @@
 import "dart:io";
 import "package:csv/csv.dart";
-import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
-import "../../../core/logging/logger_mixin.dart";
+// Using final logging API directly
+import "../../../core/logging/compat.dart" as log;
 import "../models/inventory_model.dart";
 import "material_management_service.dart";
 
@@ -60,16 +60,13 @@ class CSVImportPreview {
 }
 
 /// CSVインポートサービス
-class CSVImportService with LoggerMixin {
-  CSVImportService({
-    required Ref ref,
-    MaterialManagementService? materialManagementService,
-  }) : _materialManagementService = materialManagementService ?? MaterialManagementService(ref: ref);
+class CSVImportService {
+  CSVImportService({required MaterialManagementService materialManagementService})
+    : _materialManagementService = materialManagementService;
 
   final MaterialManagementService _materialManagementService;
 
-  @override
-  String get loggerComponent => "CSVImportService";
+  // String get loggerComponent => "CSVImportService"; // deprecated
 
   /// 期待されるCSVヘッダー
   static const List<String> expectedHeaders = <String>[
@@ -84,7 +81,7 @@ class CSVImportService with LoggerMixin {
 
   /// CSVファイルをプレビュー用に解析
   Future<CSVImportPreview> previewCSVFile(File csvFile) async {
-    logInfo("Starting CSV preview for file: ${csvFile.path}");
+    log.i("Starting CSV preview for file: ${csvFile.path}");
 
     try {
       final String csvContent = await csvFile.readAsString();
@@ -96,7 +93,7 @@ class CSVImportService with LoggerMixin {
 
       // ヘッダー行を取得
       final List<String> headers = csvData.first.map((dynamic e) => e.toString()).toList();
-      
+
       // ヘッダーの検証
       final List<CSVImportError> headerErrors = _validateHeaders(headers);
       if (headerErrors.isNotEmpty) {
@@ -114,7 +111,7 @@ class CSVImportService with LoggerMixin {
       for (int i = 1; i < csvData.length; i++) {
         final List<dynamic> row = csvData[i];
         final Map<String, dynamic> rowData = _rowToMap(headers, row);
-        
+
         try {
           final Material material = _createMaterialFromRow(rowData, i + 1);
           materials.add(material);
@@ -122,17 +119,21 @@ class CSVImportService with LoggerMixin {
           if (e is List<CSVImportError>) {
             validationErrors.addAll(e);
           } else {
-            validationErrors.add(CSVImportError(
-              row: i + 1,
-              column: null,
-              value: row.toString(),
-              message: e.toString(),
-            ));
+            validationErrors.add(
+              CSVImportError(
+                row: i + 1,
+                column: null,
+                value: row.toString(),
+                message: e.toString(),
+              ),
+            );
           }
         }
       }
 
-      logInfo("CSV preview completed. Materials: ${materials.length}, Errors: ${validationErrors.length}");
+      log.i(
+        "CSV preview completed. Materials: ${materials.length}, Errors: ${validationErrors.length}",
+      );
 
       return CSVImportPreview(
         headers: headers,
@@ -140,7 +141,7 @@ class CSVImportService with LoggerMixin {
         validationErrors: validationErrors,
       );
     } catch (e, stackTrace) {
-      logError("Failed to preview CSV file", e, stackTrace);
+      log.e("Failed to preview CSV file", error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -151,15 +152,13 @@ class CSVImportService with LoggerMixin {
     String userId, {
     bool skipInvalidRows = false,
   }) async {
-    logInfo("Starting CSV import for file: ${csvFile.path}");
+    log.i("Starting CSV import for file: ${csvFile.path}");
 
     try {
       final CSVImportPreview preview = await previewCSVFile(csvFile);
-      
+
       if (preview.hasValidationErrors && !skipInvalidRows) {
-        throw ValidationException(<String>[
-          "CSVファイルに検証エラーがあります。プレビューで確認してください。",
-        ]);
+        throw ValidationException(<String>["CSVファイルに検証エラーがあります。プレビューで確認してください。"]);
       }
 
       final List<Material> importedMaterials = <Material>[];
@@ -169,29 +168,31 @@ class CSVImportService with LoggerMixin {
       // 有効な材料のみをインポート
       for (final Material material in preview.materials) {
         try {
-          final Material? imported = await _materialManagementService.createMaterial(
-            material,
-          );
-          
+          final Material? imported = await _materialManagementService.createMaterial(material);
+
           if (imported != null) {
             importedMaterials.add(imported);
             successCount++;
-            logInfo("Successfully imported material: ${material.name}");
+            log.i("Successfully imported material: ${material.name}");
           } else {
-            errors.add(CSVImportError(
-              row: 0, // 行番号は追跡困難
-              column: null,
-              value: material.name,
-              message: "材料の作成に失敗しました",
-            ));
+            errors.add(
+              CSVImportError(
+                row: 0, // 行番号は追跡困難
+                column: null,
+                value: material.name,
+                message: "材料の作成に失敗しました",
+              ),
+            );
           }
         } catch (e) {
-          errors.add(CSVImportError(
-            row: 0,
-            column: null,
-            value: material.name,
-            message: "インポートエラー: ${e.toString()}",
-          ));
+          errors.add(
+            CSVImportError(
+              row: 0,
+              column: null,
+              value: material.name,
+              message: "インポートエラー: ${e.toString()}",
+            ),
+          );
         }
       }
 
@@ -205,10 +206,10 @@ class CSVImportService with LoggerMixin {
         importedMaterials: importedMaterials,
       );
 
-      logInfo("CSV import completed. Success: $successCount, Errors: ${errors.length}");
+      log.i("CSV import completed. Success: $successCount, Errors: ${errors.length}");
       return result;
     } catch (e, stackTrace) {
-      logError("Failed to import CSV file", e, stackTrace);
+      log.e("Failed to import CSV file", error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -218,27 +219,36 @@ class CSVImportService with LoggerMixin {
     final List<CSVImportError> errors = <CSVImportError>[];
 
     // 必須ヘッダーのチェック
-    final List<String> requiredHeaders = <String>["name", "category_id", "unit_type", "current_stock"];
+    final List<String> requiredHeaders = <String>[
+      "name",
+      "category_id",
+      "unit_type",
+      "current_stock",
+    ];
     for (final String required in requiredHeaders) {
       if (!headers.contains(required)) {
-        errors.add(CSVImportError(
-          row: 1,
-          column: required,
-          value: "",
-          message: "必須ヘッダー \"$required\" が見つかりません",
-        ));
+        errors.add(
+          CSVImportError(
+            row: 1,
+            column: required,
+            value: "",
+            message: "必須ヘッダー \"$required\" が見つかりません",
+          ),
+        );
       }
     }
 
     // 未知のヘッダーの警告
     for (final String header in headers) {
       if (!expectedHeaders.contains(header)) {
-        errors.add(CSVImportError(
-          row: 1,
-          column: header,
-          value: header,
-          message: '未知のヘッダー "$header" です（無視されます）',
-        ));
+        errors.add(
+          CSVImportError(
+            row: 1,
+            column: header,
+            value: header,
+            message: '未知のヘッダー "$header" です（無視されます）',
+          ),
+        );
       }
     }
 
@@ -248,11 +258,11 @@ class CSVImportService with LoggerMixin {
   /// 行データをMapに変換
   Map<String, dynamic> _rowToMap(List<String> headers, List<dynamic> row) {
     final Map<String, dynamic> rowData = <String, dynamic>{};
-    
+
     for (int i = 0; i < headers.length && i < row.length; i++) {
       rowData[headers[i]] = row[i];
     }
-    
+
     return rowData;
   }
 
@@ -263,34 +273,40 @@ class CSVImportService with LoggerMixin {
     // 必須フィールドの検証
     final String? name = rowData["name"]?.toString().trim();
     if (name == null || name.isEmpty) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "name",
-        value: rowData["name"]?.toString() ?? "",
-        message: "材料名は必須です",
-      ));
+      errors.add(
+        CSVImportError(
+          row: rowNumber,
+          column: "name",
+          value: rowData["name"]?.toString() ?? "",
+          message: "材料名は必須です",
+        ),
+      );
     }
 
     final String? categoryId = rowData["category_id"]?.toString().trim();
     if (categoryId == null || categoryId.isEmpty) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "category_id",
-        value: rowData["category_id"]?.toString() ?? "",
-        message: "カテゴリIDは必須です",
-      ));
+      errors.add(
+        CSVImportError(
+          row: rowNumber,
+          column: "category_id",
+          value: rowData["category_id"]?.toString() ?? "",
+          message: "カテゴリIDは必須です",
+        ),
+      );
     }
 
     // 単位タイプの解析
     UnitType? unitType;
     final String? unitTypeStr = rowData["unit_type"]?.toString().trim().toLowerCase();
     if (unitTypeStr == null || unitTypeStr.isEmpty) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "unit_type",
-        value: rowData["unit_type"]?.toString() ?? "",
-        message: "単位タイプは必須です",
-      ));
+      errors.add(
+        CSVImportError(
+          row: rowNumber,
+          column: "unit_type",
+          value: rowData["unit_type"]?.toString() ?? "",
+          message: "単位タイプは必須です",
+        ),
+      );
     } else {
       switch (unitTypeStr) {
         case "piece":
@@ -304,12 +320,14 @@ class CSVImportService with LoggerMixin {
           unitType = UnitType.gram;
           break;
         default:
-          errors.add(CSVImportError(
-            row: rowNumber,
-            column: "unit_type",
-            value: unitTypeStr,
-            message: "単位タイプは 'piece' または 'gram' である必要があります",
-          ));
+          errors.add(
+            CSVImportError(
+              row: rowNumber,
+              column: "unit_type",
+              value: unitTypeStr,
+              message: "単位タイプは 'piece' または 'gram' である必要があります",
+            ),
+          );
       }
     }
 
@@ -318,70 +336,84 @@ class CSVImportService with LoggerMixin {
     try {
       currentStock = double.parse(rowData["current_stock"]?.toString() ?? "0");
       if (currentStock < 0) {
-        errors.add(CSVImportError(
+        errors.add(
+          CSVImportError(
+            row: rowNumber,
+            column: "current_stock",
+            value: rowData["current_stock"]?.toString() ?? "",
+            message: "現在在庫量は0以上である必要があります",
+          ),
+        );
+      }
+    } catch (e) {
+      errors.add(
+        CSVImportError(
           row: rowNumber,
           column: "current_stock",
           value: rowData["current_stock"]?.toString() ?? "",
-          message: "現在在庫量は0以上である必要があります",
-        ));
-      }
-    } catch (e) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "current_stock",
-        value: rowData["current_stock"]?.toString() ?? "",
-        message: "現在在庫量は数値で入力してください",
-      ));
+          message: "現在在庫量は数値で入力してください",
+        ),
+      );
     }
 
     double alertThreshold = 10.0;
     try {
       alertThreshold = double.parse(rowData["alert_threshold"]?.toString() ?? "10.0");
       if (alertThreshold < 0) {
-        errors.add(CSVImportError(
+        errors.add(
+          CSVImportError(
+            row: rowNumber,
+            column: "alert_threshold",
+            value: rowData["alert_threshold"]?.toString() ?? "",
+            message: "アラート閾値は0以上である必要があります",
+          ),
+        );
+      }
+    } catch (e) {
+      errors.add(
+        CSVImportError(
           row: rowNumber,
           column: "alert_threshold",
           value: rowData["alert_threshold"]?.toString() ?? "",
-          message: "アラート閾値は0以上である必要があります",
-        ));
-      }
-    } catch (e) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "alert_threshold",
-        value: rowData["alert_threshold"]?.toString() ?? "",
-        message: "アラート閾値は数値で入力してください",
-      ));
+          message: "アラート閾値は数値で入力してください",
+        ),
+      );
     }
 
     double criticalThreshold = 5.0;
     try {
       criticalThreshold = double.parse(rowData["critical_threshold"]?.toString() ?? "5.0");
       if (criticalThreshold < 0) {
-        errors.add(CSVImportError(
+        errors.add(
+          CSVImportError(
+            row: rowNumber,
+            column: "critical_threshold",
+            value: rowData["critical_threshold"]?.toString() ?? "",
+            message: "危険閾値は0以上である必要があります",
+          ),
+        );
+      }
+    } catch (e) {
+      errors.add(
+        CSVImportError(
           row: rowNumber,
           column: "critical_threshold",
           value: rowData["critical_threshold"]?.toString() ?? "",
-          message: "危険閾値は0以上である必要があります",
-        ));
-      }
-    } catch (e) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "critical_threshold",
-        value: rowData["critical_threshold"]?.toString() ?? "",
-        message: "危険閾値は数値で入力してください",
-      ));
+          message: "危険閾値は数値で入力してください",
+        ),
+      );
     }
 
     // 閾値の関係性チェック
     if (criticalThreshold > alertThreshold) {
-      errors.add(CSVImportError(
-        row: rowNumber,
-        column: "critical_threshold",
-        value: criticalThreshold.toString(),
-        message: "危険閾値はアラート閾値以下である必要があります",
-      ));
+      errors.add(
+        CSVImportError(
+          row: rowNumber,
+          column: "critical_threshold",
+          value: criticalThreshold.toString(),
+          message: "危険閾値はアラート閾値以下である必要があります",
+        ),
+      );
     }
 
     if (errors.isNotEmpty) {

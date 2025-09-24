@@ -6,7 +6,7 @@ import "../../../core/base/base_model.dart";
 part "user_profile.g.dart";
 
 /// ユーザープロフィールモデル
-/// 
+///
 /// Supabase認証で取得したユーザー情報を管理します。
 /// Google OAuthからの情報も含みます。
 @JsonSerializable()
@@ -33,7 +33,7 @@ class UserProfile extends BaseModel {
   factory UserProfile.fromSupabaseUser(User user) {
     final Map<String, dynamic> appMetadata = user.appMetadata;
     final Map<String, dynamic> userMetadata = user.userMetadata ?? <String, dynamic>{};
-    
+
     return UserProfile(
       id: user.id,
       userId: user.id, // Supabaseの場合、userIdは自分自身のID
@@ -46,10 +46,7 @@ class UserProfile extends BaseModel {
       createdAt: DateTime.parse(user.createdAt),
       updatedAt: user.updatedAt != null ? DateTime.parse(user.updatedAt!) : null,
       lastSignInAt: user.lastSignInAt != null ? DateTime.parse(user.lastSignInAt!) : null,
-      metadata: <String, dynamic>{
-        ...appMetadata,
-        ...userMetadata,
-      },
+      metadata: <String, dynamic>{...appMetadata, ...userMetadata},
     );
   }
 
@@ -137,29 +134,30 @@ class UserProfile extends BaseModel {
     bool clearAvatarUrl = false,
     bool clearMetadata = false,
   }) => UserProfile(
-      email: email ?? this.email,
-      displayName: clearDisplayName ? null : (displayName ?? this.displayName),
-      avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
-      provider: provider ?? this.provider,
-      providerId: providerId ?? this.providerId,
-      emailVerified: emailVerified ?? this.emailVerified,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      lastSignInAt: lastSignInAt ?? this.lastSignInAt,
-      metadata: clearMetadata ? null : (metadata ?? this.metadata),
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-    );
+    email: email ?? this.email,
+    displayName: clearDisplayName ? null : (displayName ?? this.displayName),
+    avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
+    provider: provider ?? this.provider,
+    providerId: providerId ?? this.providerId,
+    emailVerified: emailVerified ?? this.emailVerified,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    lastSignInAt: lastSignInAt ?? this.lastSignInAt,
+    metadata: clearMetadata ? null : (metadata ?? this.metadata),
+    id: id ?? this.id,
+    userId: userId ?? this.userId,
+  );
 
   /// デバッグ用文字列表現
   @override
-  String toString() => "UserProfile("
-        "id: $id, "
-        "email: $email, "
-        "displayName: $displayName, "
-        "provider: $provider, "
-        "emailVerified: $emailVerified"
-        ")";
+  String toString() =>
+      "UserProfile("
+      "id: $id, "
+      "email: $email, "
+      "displayName: $displayName, "
+      "provider: $provider, "
+      "emailVerified: $emailVerified"
+      ")";
 
   @override
   bool operator ==(Object other) {
@@ -176,30 +174,32 @@ class UserProfile extends BaseModel {
   }
 
   @override
-  int get hashCode => Object.hashAll(<Object?>[
-      id,
-      email,
-      displayName,
-      avatarUrl,
-      provider,
-      emailVerified,
-    ]);
+  int get hashCode =>
+      Object.hashAll(<Object?>[id, email, displayName, avatarUrl, provider, emailVerified]);
 
   // =====================================
   // プライベートヘルパーメソッド
   // =====================================
 
   /// 表示名を抽出
-  static String? _extractDisplayName(Map<String, dynamic> appMetadata, Map<String, dynamic> userMetadata) => appMetadata["full_name"] as String? ??
-           appMetadata["name"] as String? ??
-           userMetadata["full_name"] as String? ??
-           userMetadata["name"] as String?;
+  static String? _extractDisplayName(
+    Map<String, dynamic> appMetadata,
+    Map<String, dynamic> userMetadata,
+  ) =>
+      appMetadata["full_name"] as String? ??
+      appMetadata["name"] as String? ??
+      userMetadata["full_name"] as String? ??
+      userMetadata["name"] as String?;
 
   /// アバターURLを抽出
-  static String? _extractAvatarUrl(Map<String, dynamic> appMetadata, Map<String, dynamic> userMetadata) => appMetadata["avatar_url"] as String? ??
-           appMetadata["picture"] as String? ??
-           userMetadata["avatar_url"] as String? ??
-           userMetadata["picture"] as String?;
+  static String? _extractAvatarUrl(
+    Map<String, dynamic> appMetadata,
+    Map<String, dynamic> userMetadata,
+  ) =>
+      appMetadata["avatar_url"] as String? ??
+      appMetadata["picture"] as String? ??
+      userMetadata["avatar_url"] as String? ??
+      userMetadata["picture"] as String?;
 
   /// 認証プロバイダーを抽出
   static String? _extractProvider(User user) {

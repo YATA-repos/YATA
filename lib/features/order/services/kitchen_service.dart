@@ -1,25 +1,20 @@
-import "package:flutter_riverpod/flutter_riverpod.dart";
-
 import "../../../core/constants/enums.dart";
-import "../../../core/logging/logger_mixin.dart";
 import "../models/order_model.dart";
 import "kitchen_analysis_service.dart";
 import "kitchen_operation_service.dart";
 
 /// キッチンサービス統合クラス
 /// KitchenOperationServiceとKitchenAnalysisServiceを組み合わせて使用
-class KitchenService with LoggerMixin {
+class KitchenService {
   KitchenService({
-    required Ref ref,
-    KitchenOperationService? kitchenOperationService,
-    KitchenAnalysisService? kitchenAnalysisService,
-  }) : _kitchenOperationService = kitchenOperationService ?? KitchenOperationService(ref: ref),
-       _kitchenAnalysisService = kitchenAnalysisService ?? KitchenAnalysisService(ref: ref);
+    required KitchenOperationService kitchenOperationService,
+    required KitchenAnalysisService kitchenAnalysisService,
+  }) : _kitchenOperationService = kitchenOperationService,
+       _kitchenAnalysisService = kitchenAnalysisService;
 
   final KitchenOperationService _kitchenOperationService;
   final KitchenAnalysisService _kitchenAnalysisService;
 
-  @override
   String get loggerComponent => "KitchenService";
 
   // ===== キッチン操作関連メソッド =====

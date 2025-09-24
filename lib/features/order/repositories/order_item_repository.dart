@@ -1,15 +1,17 @@
 import "../../../core/constants/query_types.dart";
-import "../../../data/repositories/base_repository.dart";
+import "../../../core/contracts/repositories/crud_repository.dart" as repo_contract;
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
 import "../models/order_model.dart";
 
 /// 注文明細リポジトリ
-class OrderItemRepository extends BaseRepository<OrderItem, String> {
-  OrderItemRepository({required super.ref}) : super(tableName: "order_items", enableMultiTenant: true);
+class OrderItemRepository implements OrderItemRepositoryContract<OrderItem> {
+  OrderItemRepository({required repo_contract.CrudRepository<OrderItem, String> delegate})
+    : _delegate = delegate;
 
-  @override
-  OrderItem fromJson(Map<String, dynamic> json) => OrderItem.fromJson(json);
+  final repo_contract.CrudRepository<OrderItem, String> _delegate;
 
   /// 注文IDに紐づく明細一覧を取得
+  @override
   Future<List<OrderItem>> findByOrderId(String orderId) async {
     final List<QueryFilter> filters = <QueryFilter>[QueryConditionBuilder.eq("order_id", orderId)];
 
@@ -18,28 +20,30 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
       const OrderByCondition(column: "created_at"),
     ];
 
-    return find(filters: filters, orderBy: orderBy);
+    return _delegate.find(filters: filters, orderBy: orderBy);
   }
 
   /// 注文内の既存アイテムを取得（重複チェック用）
+  @override
   Future<OrderItem?> findExistingItem(String orderId, String menuItemId) async {
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("order_id", orderId),
       QueryConditionBuilder.eq("menu_item_id", menuItemId),
     ];
 
-    final List<OrderItem> results = await find(filters: filters, limit: 1);
+    final List<OrderItem> results = await _delegate.find(filters: filters, limit: 1);
     return results.isNotEmpty ? results[0] : null;
   }
 
   /// 注文IDに紐づく明細を全削除
+  @override
   Future<bool> deleteByOrderId(String orderId) async {
     try {
       // 対象の明細を取得
       final List<QueryFilter> filters = <QueryFilter>[
         QueryConditionBuilder.eq("order_id", orderId),
       ];
-      final List<OrderItem> orderItems = await find(filters: filters);
+      final List<OrderItem> orderItems = await _delegate.find(filters: filters);
 
       if (orderItems.isEmpty) {
         return true; // 削除対象がなければ成功とみなす
@@ -52,7 +56,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
           .toList();
 
       if (itemIds.isNotEmpty) {
-        await bulkDelete(itemIds);
+        await _delegate.bulkDelete(itemIds);
       }
 
       return true;
@@ -62,6 +66,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
   }
 
   /// 期間内の特定メニューアイテムの注文明細を取得
+  @override
   Future<List<OrderItem>> findByMenuItemAndDateRange(
     String menuItemId,
     DateTime dateFrom,
@@ -95,6 +100,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
   }
 
   /// メニューアイテム別売上集計を取得
+  @override
   Future<List<Map<String, dynamic>>> getMenuItemSalesSummary(int days) async {
     // 過去N日間の日付範囲を計算
     final DateTime endDate = DateTime.now();
@@ -118,7 +124,7 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
       QueryConditionBuilder.lte("created_at", endDateNormalized.toIso8601String()),
     ];
 
-    final List<OrderItem> filteredItems = await find(filters: filters);
+    final List<OrderItem> filteredItems = await _delegate.find(filters: filters);
 
     // メニューアイテム別に集計
     final Map<String, Map<String, int>> salesSummary = <String, Map<String, int>>{};
@@ -150,4 +156,49 @@ class OrderItemRepository extends BaseRepository<OrderItem, String> {
 
     return result;
   }
+
+  // ==== CrudRepository delegation (explicit implementations) ====
+  @override
+  Future<OrderItem?> create(OrderItem entity) => _delegate.create(entity);
+
+  @override
+  Future<List<OrderItem>> bulkCreate(List<OrderItem> entities) => _delegate.bulkCreate(entities);
+
+  @override
+  Future<OrderItem?> getById(String id) => _delegate.getById(id);
+
+  @override
+  Future<OrderItem?> getByPrimaryKey(Map<String, dynamic> keyMap) =>
+      _delegate.getByPrimaryKey(keyMap);
+
+  @override
+  Future<OrderItem?> updateById(String id, Map<String, dynamic> updates) =>
+      _delegate.updateById(id, updates);
+
+  @override
+  Future<OrderItem?> updateByPrimaryKey(
+    Map<String, dynamic> keyMap,
+    Map<String, dynamic> updates,
+  ) => _delegate.updateByPrimaryKey(keyMap, updates);
+
+  @override
+  Future<void> deleteById(String id) => _delegate.deleteById(id);
+
+  @override
+  Future<void> deleteByPrimaryKey(Map<String, dynamic> keyMap) =>
+      _delegate.deleteByPrimaryKey(keyMap);
+
+  @override
+  Future<void> bulkDelete(List<String> keys) => _delegate.bulkDelete(keys);
+
+  @override
+  Future<List<OrderItem>> find({
+    List<QueryFilter>? filters,
+    List<OrderByCondition>? orderBy,
+    int limit = 100,
+    int offset = 0,
+  }) => _delegate.find(filters: filters, orderBy: orderBy, limit: limit, offset: offset);
+
+  @override
+  Future<int> count({List<QueryFilter>? filters}) => _delegate.count(filters: filters);
 }

@@ -1,48 +1,55 @@
-import "package:flutter_riverpod/flutter_riverpod.dart";
+// Riverpod not required here; DI is provided via app wiring
 
+import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/analytics.dart";
-import "../../../core/logging/logger_mixin.dart";
+import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag instead
+import "../../../core/logging/compat.dart" as log;
 import "../../inventory/models/transaction_model.dart";
-import "../../inventory/repositories/stock_transaction_repository.dart";
 import "../../order/models/order_model.dart";
-import "../../order/repositories/order_item_repository.dart";
-import "../../order/repositories/order_repository.dart";
 import "../dto/analytics_dto.dart";
 
-class AnalyticsService with LoggerMixin {
+class AnalyticsService {
   AnalyticsService({
-    required Ref ref,
-    OrderRepository? orderRepository,
-    OrderItemRepository? orderItemRepository,
-    StockTransactionRepository? stockTransactionRepository,
-  }) : _orderRepository = orderRepository ?? OrderRepository(ref: ref),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(ref: ref),
-       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
+    required OrderRepositoryContract<Order> orderRepository,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+    required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
+  }) : _orderRepository = orderRepository,
+       _orderItemRepository = orderItemRepository,
+       _stockTransactionRepository = stockTransactionRepository;
 
-  final OrderRepository _orderRepository;
-  final OrderItemRepository _orderItemRepository;
-  final StockTransactionRepository _stockTransactionRepository;
+  final OrderRepositoryContract<Order> _orderRepository;
+  final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
+  final StockTransactionRepositoryContract<StockTransaction> _stockTransactionRepository;
 
-  @override
   String get loggerComponent => "AnalyticsService";
 
   /// リアルタイム日次統計を取得
   Future<DailyStatsResult> getRealTimeDailyStats(DateTime targetDate, String userId) async {
-    logInfoMessage(AnalyticsInfo.dailyStatsStarted);
+    log.i(AnalyticsInfo.dailyStatsStarted.message, tag: loggerComponent);
 
     try {
-      // 指定日の注文数を取得
-      final Map<OrderStatus, int> statusCounts = await _orderRepository.countByStatusAndDate(
+      // 指定日の注文数を取得（findByDateRangeから集計）
+      final List<Order> targetDayOrders = await _orderRepository.findByDateRange(
+        targetDate,
         targetDate,
       );
+      final Map<OrderStatus, int> statusCounts = <OrderStatus, int>{
+        for (final OrderStatus s in OrderStatus.values) s: 0,
+      };
+      for (final Order o in targetDayOrders) {
+        statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1;
+      }
 
       // 完了注文を取得して売上計算
-      final List<Order> completedOrders = await _orderRepository.findCompletedByDate(
-        targetDate,
-      );
+      final List<Order> completedOrders = await _orderRepository.findCompletedByDate(targetDate);
 
-      logDebug("Retrieved ${completedOrders.length} completed orders for stats calculation");
+      log.d(
+        "Retrieved ${completedOrders.length} completed orders for stats calculation",
+        tag: loggerComponent,
+      );
 
       final int totalRevenue = completedOrders.fold(
         0,
@@ -72,10 +79,13 @@ class AnalyticsService with LoggerMixin {
           ? popularItems[0]
           : null;
 
-      logInfoMessage(AnalyticsInfo.dailyStatsCompleted, <String, String>{
-        "totalRevenue": totalRevenue.toString(),
-        "totalOrders": completedOrders.length.toString(),
-      });
+      log.i(
+        AnalyticsInfo.dailyStatsCompleted.withParams(<String, String>{
+          "totalRevenue": totalRevenue.toString(),
+          "totalOrders": completedOrders.length.toString(),
+        }),
+        tag: loggerComponent,
+      );
 
       return DailyStatsResult(
         completedOrders: statusCounts[OrderStatus.completed] ?? 0,
@@ -85,7 +95,12 @@ class AnalyticsService with LoggerMixin {
         mostPopularItem: mostPopularItem,
       );
     } catch (e, stackTrace) {
-      logErrorMessage(AnalyticsError.dailyStatsRetrievalFailed, null, e, stackTrace);
+      log.e(
+        AnalyticsError.dailyStatsRetrievalFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -96,17 +111,20 @@ class AnalyticsService with LoggerMixin {
     int limit,
     String userId,
   ) async {
-    logInfoMessage(AnalyticsInfo.popularItemsStarted, <String, String>{
-      "days": days.toString(),
-      "limit": limit.toString(),
-    });
+    log.i(
+      AnalyticsInfo.popularItemsStarted.withParams(<String, String>{
+        "days": days.toString(),
+        "limit": limit.toString(),
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       // 売上集計を取得
       final List<Map<String, dynamic>> salesSummary = await _orderItemRepository
           .getMenuItemSalesSummary(days);
 
-      logDebug("Retrieved sales summary for ${salesSummary.length} menu items");
+      log.d("Retrieved sales summary for ${salesSummary.length} menu items", tag: loggerComponent);
 
       // 上位N件を取得
       final List<Map<String, dynamic>> topItems = salesSummary.take(limit).toList();
@@ -123,12 +141,20 @@ class AnalyticsService with LoggerMixin {
         });
       }
 
-      logInfoMessage(AnalyticsInfo.popularItemsCompleted, <String, String>{
-        "itemCount": ranking.length.toString(),
-      });
+      log.i(
+        AnalyticsInfo.popularItemsCompleted.withParams(<String, String>{
+          "itemCount": ranking.length.toString(),
+        }),
+        tag: loggerComponent,
+      );
       return ranking;
     } catch (e, stackTrace) {
-      logErrorMessage(AnalyticsError.popularItemsRetrievalFailed, null, e, stackTrace);
+      log.e(
+        AnalyticsError.popularItemsRetrievalFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -185,10 +211,7 @@ class AnalyticsService with LoggerMixin {
   /// 時間帯別注文分布を取得
   Future<Map<int, int>> getHourlyOrderDistribution(DateTime targetDate, String userId) async {
     // 指定日の全注文を取得
-    final List<Order> orders = await _orderRepository.findByDateRange(
-      targetDate,
-      targetDate,
-    );
+    final List<Order> orders = await _orderRepository.findByDateRange(targetDate, targetDate);
 
     // 時間帯別に集計
     final Map<int, int> hourlyDistribution = <int, int>{};
@@ -212,7 +235,7 @@ class AnalyticsService with LoggerMixin {
     DateTime dateTo,
     String userId,
   ) async {
-    logInfoMessage(AnalyticsInfo.revenueCalculationStarted);
+    log.i(AnalyticsInfo.revenueCalculationStarted.message, tag: loggerComponent);
 
     try {
       // 期間内の完了注文を取得
@@ -221,7 +244,7 @@ class AnalyticsService with LoggerMixin {
           .where((Order order) => order.status == OrderStatus.completed)
           .toList();
 
-      logDebug("Found ${completedOrders.length} completed orders in date range");
+      log.d("Found ${completedOrders.length} completed orders in date range", tag: loggerComponent);
 
       // 売上計算
       final int totalRevenue = completedOrders.fold(
@@ -241,10 +264,13 @@ class AnalyticsService with LoggerMixin {
         dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + order.totalAmount;
       }
 
-      logInfoMessage(AnalyticsInfo.revenueCalculationCompleted, <String, String>{
-        "totalRevenue": totalRevenue.toString(),
-        "totalOrders": totalOrders.toString(),
-      });
+      log.i(
+        AnalyticsInfo.revenueCalculationCompleted.withParams(<String, String>{
+          "totalRevenue": totalRevenue.toString(),
+          "totalOrders": totalOrders.toString(),
+        }),
+        tag: loggerComponent,
+      );
 
       return <String, dynamic>{
         "total_revenue": totalRevenue,
@@ -255,11 +281,15 @@ class AnalyticsService with LoggerMixin {
         "period_end": dateTo.toIso8601String(),
       };
     } catch (e, stackTrace) {
-      logErrorMessage(AnalyticsError.revenueCalculationFailed, null, e, stackTrace);
+      log.e(
+        AnalyticsError.revenueCalculationFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
-
 
   /// 材料消費分析を取得
   Future<Map<String, dynamic>> getMaterialConsumptionAnalysis(
@@ -273,7 +303,7 @@ class AnalyticsService with LoggerMixin {
 
     // 材料の消費取引を取得
     final List<StockTransaction> transactions = await _stockTransactionRepository
-        .findByMaterialAndDateRange(materialId, startDate, endDate, userId);
+        .findByMaterialAndDateRange(materialId, startDate, endDate);
 
     // 消費取引のみを抽出（負の値）
     final List<StockTransaction> consumptionTransactions = transactions
@@ -428,7 +458,3 @@ class AnalyticsService with LoggerMixin {
     return null;
   }
 }
-
-/// AnalyticsService のプロバイダー定義
-final Provider<AnalyticsService> analyticsServiceProvider =
-    Provider<AnalyticsService>((Ref ref) => AnalyticsService(ref: ref));

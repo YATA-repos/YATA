@@ -1,43 +1,42 @@
-import "package:flutter_riverpod/flutter_riverpod.dart";
-
 import "../../../core/constants/enums.dart";
-import "../../../core/logging/logger_mixin.dart";
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../dto/inventory_dto.dart";
 import "../models/inventory_model.dart";
-import "../repositories/material_repository.dart";
 
 /// 在庫レベル判定・アラートサービス
-class StockLevelService with LoggerMixin {
-  StockLevelService({
-    required Ref ref,
-    MaterialRepository? materialRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(ref: ref);
+class StockLevelService {
+  StockLevelService({required MaterialRepositoryContract<Material> materialRepository})
+    : _materialRepository = materialRepository;
 
-  final MaterialRepository _materialRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
 
-  @override
   String get loggerComponent => "StockLevelService";
 
   /// 在庫レベル別アラート材料を取得
   Future<Map<StockLevel, List<Material>>> getStockAlertsByLevel() async {
-    final List<Material> criticalMaterials = await _materialRepository.findBelowCriticalThreshold();
-    final List<Material> alertMaterials = await _materialRepository.findBelowAlertThreshold();
-
-    // アラートレベルからクリティカルを除外
-    final List<Material> alertOnly = alertMaterials
-        .where((Material m) => !criticalMaterials.contains(m))
-        .toList();
-
+    // 全材料を取得してローカルでしきい値判定
+    final List<Material> all = await _materialRepository.findByCategoryId(null);
+    final List<Material> critical = <Material>[];
+    final List<Material> low = <Material>[];
+    for (final Material m in all) {
+      if (m.currentStock <= m.criticalThreshold) {
+        critical.add(m);
+      } else if (m.currentStock <= m.alertThreshold) {
+        low.add(m);
+      }
+    }
     return <StockLevel, List<Material>>{
-      StockLevel.critical: criticalMaterials,
-      StockLevel.low: alertOnly,
+      StockLevel.critical: critical,
+      StockLevel.low: low,
       StockLevel.sufficient: <Material>[],
     };
   }
 
   /// 緊急レベルの材料一覧を取得
-  Future<List<Material>> getCriticalStockMaterials() async =>
-      _materialRepository.findBelowCriticalThreshold();
+  Future<List<Material>> getCriticalStockMaterials() async {
+    final List<Material> all = await _materialRepository.findByCategoryId(null);
+    return all.where((Material m) => m.currentStock <= m.criticalThreshold).toList();
+  }
 
   /// 材料一覧を在庫レベル・使用可能日数付きで取得
   /// 注意: 使用可能日数の計算にはUsageAnalysisServiceが必要

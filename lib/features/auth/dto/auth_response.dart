@@ -6,7 +6,7 @@ import "../models/user_profile.dart";
 part "auth_response.g.dart";
 
 /// 認証レスポンスDTO
-/// 
+///
 /// OAuth認証の結果を管理します。
 /// ユーザー情報、セッション情報、エラー情報を含みます。
 @JsonSerializable()
@@ -24,24 +24,12 @@ class AuthResponse {
   factory AuthResponse.fromJson(Map<String, dynamic> json) => _$AuthResponseFromJson(json);
 
   /// 認証成功レスポンス
-  factory AuthResponse.success({
-    required UserProfile user,
-    AuthSession? session,
-  }) => AuthResponse(
-      success: true,
-      user: user,
-      session: session,
-    );
+  factory AuthResponse.success({required UserProfile user, AuthSession? session}) =>
+      AuthResponse(success: true, user: user, session: session);
 
   /// 認証失敗レスポンス
-  factory AuthResponse.failure({
-    required String error,
-    String? errorDescription,
-  }) => AuthResponse(
-      success: false,
-      error: error,
-      errorDescription: errorDescription,
-    );
+  factory AuthResponse.failure({required String error, String? errorDescription}) =>
+      AuthResponse(success: false, error: error, errorDescription: errorDescription);
 
   /// Supabase AuthResponse から作成
   factory AuthResponse.fromSupabase(dynamic supabaseResponse) {
@@ -125,13 +113,7 @@ class AuthResponse {
   }
 
   @override
-  int get hashCode => Object.hashAll(<Object?>[
-      success,
-      user,
-      session,
-      error,
-      errorDescription,
-    ]);
+  int get hashCode => Object.hashAll(<Object?>[success, user, session, error, errorDescription]);
 }
 
 /// 認証セッション情報
@@ -153,19 +135,19 @@ class AuthSession {
 
   /// Supabase Session から作成
   factory AuthSession.fromSupabase(dynamic supabaseSession) => AuthSession(
-      accessToken: supabaseSession.accessToken as String,
-      tokenType: supabaseSession.tokenType as String? ?? "bearer",
-      expiresIn: supabaseSession.expiresIn as int? ?? 3600,
-      expiresAt: supabaseSession.expiresAt != null
-          ? DateTime.fromMillisecondsSinceEpoch((supabaseSession.expiresAt as int) * 1000)
-          : DateTime.now().add(const Duration(seconds: 3600)),
-      refreshToken: supabaseSession.refreshToken as String?,
-      user: supabaseSession.user != null
-          ? UserProfile.fromSupabaseUser(supabaseSession.user as User)
-          : null,
-      providerToken: supabaseSession.providerToken as String?,
-      providerRefreshToken: supabaseSession.providerRefreshToken as String?,
-    );
+    accessToken: supabaseSession.accessToken as String,
+    tokenType: supabaseSession.tokenType as String? ?? "bearer",
+    expiresIn: supabaseSession.expiresIn as int? ?? 3600,
+    expiresAt: supabaseSession.expiresAt != null
+        ? DateTime.fromMillisecondsSinceEpoch((supabaseSession.expiresAt as int) * 1000)
+        : DateTime.now().add(const Duration(seconds: 3600)),
+    refreshToken: supabaseSession.refreshToken as String?,
+    user: supabaseSession.user != null
+        ? UserProfile.fromSupabaseUser(supabaseSession.user as User)
+        : null,
+    providerToken: supabaseSession.providerToken as String?,
+    providerRefreshToken: supabaseSession.providerRefreshToken as String?,
+  );
 
   /// アクセストークン
   final String accessToken;
@@ -210,12 +192,13 @@ class AuthSession {
   String get authorizationHeader => "$tokenType $accessToken";
 
   @override
-  String toString() => "AuthSession("
-        "tokenType: $tokenType, "
-        "expiresAt: $expiresAt, "
-        "isValid: $isValid, "
-        "hasRefreshToken: ${refreshToken != null}"
-        ")";
+  String toString() =>
+      "AuthSession("
+      "tokenType: $tokenType, "
+      "expiresAt: $expiresAt, "
+      "isValid: $isValid, "
+      "hasRefreshToken: ${refreshToken != null}"
+      ")";
 
   @override
   bool operator ==(Object other) {
@@ -231,11 +214,6 @@ class AuthSession {
   }
 
   @override
-  int get hashCode => Object.hashAll(<Object?>[
-      accessToken,
-      tokenType,
-      expiresAt,
-      refreshToken,
-      user,
-    ]);
+  int get hashCode =>
+      Object.hashAll(<Object?>[accessToken, tokenType, expiresAt, refreshToken, user]);
 }

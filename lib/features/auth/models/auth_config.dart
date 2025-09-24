@@ -6,7 +6,7 @@ import "../../../core/validation/env_validator.dart";
 part "auth_config.g.dart";
 
 /// 認証設定モデル
-/// 
+///
 /// プラットフォーム別の認証設定を管理します。
 /// Callback URLの自動判定やOAuth設定を提供します。
 @JsonSerializable()
@@ -24,11 +24,11 @@ class AuthConfig {
 
   /// 現在のプラットフォーム用の設定を作成
   factory AuthConfig.forCurrentPlatform() => AuthConfig(
-      supabaseUrl: _getSupabaseUrl(),
-      supabaseAnonKey: _getSupabaseAnonKey(),
-      callbackUrl: _getCallbackUrl(),
-      platform: _getCurrentPlatform(),
-    );
+    supabaseUrl: _getSupabaseUrl(),
+    supabaseAnonKey: _getSupabaseAnonKey(),
+    callbackUrl: _getCallbackUrl(),
+    platform: _getCurrentPlatform(),
+  );
 
   /// Supabase URL
   final String supabaseUrl;
@@ -74,15 +74,24 @@ class AuthConfig {
       // Web環境の場合
       if (kDebugMode) {
         // 開発環境
-        return EnvValidator.getEnv("SUPABASE_OAUTH_CALLBACK_URL_DEV", defaultValue: "http://localhost:8080");
+        return EnvValidator.getEnv(
+          "SUPABASE_OAUTH_CALLBACK_URL_DEV",
+          defaultValue: "http://localhost:8080",
+        );
       } else {
         // 本番環境
-        return EnvValidator.getEnv("SUPABASE_OAUTH_CALLBACK_URL_PROD", defaultValue: "https://example.invalid");
+        return EnvValidator.getEnv(
+          "SUPABASE_OAUTH_CALLBACK_URL_PROD",
+          defaultValue: "https://example.invalid",
+        );
       }
     } else {
       // Desktop/Mobile環境 - カスタムURLスキーム使用
       // 環境変数から取得、未設定の場合はデフォルトスキームを使用
-      return EnvValidator.getEnv("SUPABASE_OAUTH_CALLBACK_URL_MOBILE", defaultValue: "com.example.yata://login");
+      return EnvValidator.getEnv(
+        "SUPABASE_OAUTH_CALLBACK_URL_MOBILE",
+        defaultValue: "com.example.yata://login",
+      );
     }
   }
 
@@ -147,7 +156,8 @@ enum AuthPlatform {
   }
 
   /// Deep Link対応プラットフォームかどうか
-  bool get supportsDeepLink => this == AuthPlatform.android || this == AuthPlatform.ios || this == AuthPlatform.desktop;
+  bool get supportsDeepLink =>
+      this == AuthPlatform.android || this == AuthPlatform.ios || this == AuthPlatform.desktop;
 }
 
 /// 認証設定例外

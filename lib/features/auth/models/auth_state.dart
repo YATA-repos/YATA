@@ -5,7 +5,7 @@ import "user_profile.dart";
 part "auth_state.g.dart";
 
 /// 認証状態モデル
-/// 
+///
 /// 現在の認証状態とユーザー情報を管理します。
 /// Riverpodプロバイダーで使用されます。
 @JsonSerializable()
@@ -22,28 +22,17 @@ class AuthState {
   factory AuthState.fromJson(Map<String, dynamic> json) => _$AuthStateFromJson(json);
 
   /// 初期状態（未認証）
-  factory AuthState.initial() => AuthState(
-    status: AuthStatus.unauthenticated,
-  );
+  factory AuthState.initial() => AuthState(status: AuthStatus.unauthenticated);
 
   /// 認証中状態
-  factory AuthState.loading() => AuthState(
-    status: AuthStatus.authenticating,
-    isLoading: true,
-  );
+  factory AuthState.loading() => AuthState(status: AuthStatus.authenticating, isLoading: true);
 
   /// 認証成功状態
-  factory AuthState.authenticated(UserProfile user) => AuthState(
-    status: AuthStatus.authenticated,
-    user: user,
-    lastLoginAt: DateTime.now(),
-  );
+  factory AuthState.authenticated(UserProfile user) =>
+      AuthState(status: AuthStatus.authenticated, user: user, lastLoginAt: DateTime.now());
 
   /// 認証エラー状態
-  factory AuthState.error(String error) => AuthState(
-    status: AuthStatus.error,
-    error: error,
-  );
+  factory AuthState.error(String error) => AuthState(status: AuthStatus.error, error: error);
 
   /// 認証状態
   final AuthStatus status;
@@ -88,22 +77,23 @@ class AuthState {
     bool clearError = false,
     bool clearUser = false,
   }) => AuthState(
-      status: status ?? this.status,
-      user: clearUser ? null : (user ?? this.user),
-      error: clearError ? null : (error ?? this.error),
-      isLoading: isLoading ?? this.isLoading,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-    );
+    status: status ?? this.status,
+    user: clearUser ? null : (user ?? this.user),
+    error: clearError ? null : (error ?? this.error),
+    isLoading: isLoading ?? this.isLoading,
+    lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+  );
 
   /// デバッグ用文字列表現
   @override
-  String toString() => "AuthState("
-        "status: $status, "
-        "isAuthenticated: $isAuthenticated, "
-        "isLoading: $isLoading, "
-        "hasError: $hasError, "
-        "userId: $userId"
-        ")";
+  String toString() =>
+      "AuthState("
+      "status: $status, "
+      "isAuthenticated: $isAuthenticated, "
+      "isLoading: $isLoading, "
+      "hasError: $hasError, "
+      "userId: $userId"
+      ")";
 
   @override
   bool operator ==(Object other) {
@@ -119,13 +109,7 @@ class AuthState {
   }
 
   @override
-  int get hashCode => Object.hashAll(<Object?>[
-      status,
-      user,
-      error,
-      isLoading,
-      lastLoginAt,
-    ]);
+  int get hashCode => Object.hashAll(<Object?>[status, user, error, isLoading, lastLoginAt]);
 }
 
 /// 認証ステータス

@@ -1,15 +1,15 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
-import "../../../core/logging/logger_mixin.dart";
-import "../../../utils/error_handler.dart";
-import "../../../infrastructure/realtime/realtime_config.dart";
-import "../../../infrastructure/realtime/realtime_service_mixin.dart";
+import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
+import "../../../core/realtime/realtime_service_mixin.dart";
+import "../../../core/utils/error_handler.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
-import "../models/transaction_model.dart";
 import "material_management_service.dart";
 import "order_stock_service.dart";
 import "stock_level_service.dart";
@@ -18,21 +18,22 @@ import "usage_analysis_service.dart";
 
 /// 在庫管理統合サービス（リアルタイム対応）
 /// 複数のサービスを組み合わせて在庫管理の全機能を提供
-class InventoryService with LoggerMixin, RealtimeServiceMixin 
-    implements RealtimeServiceControl {
+class InventoryService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   InventoryService({
     required Ref ref,
-    MaterialManagementService? materialManagementService,
-    StockLevelService? stockLevelService,
-    StockOperationService? stockOperationService,
-    UsageAnalysisService? usageAnalysisService,
-    OrderStockService? orderStockService,
+    required r_contract.RealtimeManagerContract realtimeManager,
+    required MaterialManagementService materialManagementService,
+    required StockLevelService stockLevelService,
+    required StockOperationService stockOperationService,
+    required UsageAnalysisService usageAnalysisService,
+    required OrderStockService orderStockService,
   }) : _ref = ref,
-       _materialManagementService = materialManagementService ?? MaterialManagementService(ref: ref),
-       _stockLevelService = stockLevelService ?? StockLevelService(ref: ref),
-       _stockOperationService = stockOperationService ?? StockOperationService(ref: ref),
-       _usageAnalysisService = usageAnalysisService ?? UsageAnalysisService(ref: ref),
-       _orderStockService = orderStockService ?? OrderStockService(ref: ref);
+       _realtimeManager = realtimeManager,
+       _materialManagementService = materialManagementService,
+       _stockLevelService = stockLevelService,
+       _stockOperationService = stockOperationService,
+       _usageAnalysisService = usageAnalysisService,
+       _orderStockService = orderStockService;
 
   final Ref _ref;
   final MaterialManagementService _materialManagementService;
@@ -40,9 +41,13 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
   final StockOperationService _stockOperationService;
   final UsageAnalysisService _usageAnalysisService;
   final OrderStockService _orderStockService;
+  final r_contract.RealtimeManagerContract _realtimeManager;
 
-  @override
   String get loggerComponent => "InventoryService";
+
+  // 契約Mixin用の依存提供
+  @override
+  r_contract.RealtimeManagerContract get realtimeManager => _realtimeManager;
 
   // ===== RealtimeServiceMixin 必須実装 =====
 
@@ -58,14 +63,13 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
   @override
   String get serviceName => "InventoryService";
 
-  @override
   Future<void> startRealtimeMonitoring() async {
     try {
-      logInfo("Starting inventory realtime monitoring");
+      log.i("Starting inventory realtime monitoring", tag: loggerComponent);
 
       // 材料テーブルの監視開始
       await startFeatureMonitoring(
-        RealtimeFeature.inventory,
+        "inventory",
         "materials",
         _handleMaterialUpdate,
         eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
@@ -73,27 +77,26 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
 
       // 在庫テーブルの監視開始
       await startFeatureMonitoring(
-        RealtimeFeature.inventory,
-        "stock_levels", 
+        "inventory",
+        "stock_levels",
         _handleStockLevelUpdate,
         eventTypes: const <String>["UPDATE"], // 在庫レベル変更のみ
       );
 
-      logInfo("Inventory realtime monitoring started");
+      log.i("Inventory realtime monitoring started", tag: loggerComponent);
     } catch (e) {
-      logError("Failed to start inventory realtime monitoring", e);
+      log.e("Failed to start inventory realtime monitoring", tag: loggerComponent, error: e);
       rethrow;
     }
   }
 
-  @override
   Future<void> stopRealtimeMonitoring() async {
     try {
-      logInfo("Stopping inventory realtime monitoring");
-      await stopFeatureMonitoring(RealtimeFeature.inventory);
-      logInfo("Inventory realtime monitoring stopped");
+      log.i("Stopping inventory realtime monitoring", tag: loggerComponent);
+      await stopFeatureMonitoring("inventory");
+      log.i("Inventory realtime monitoring stopped", tag: loggerComponent);
     } catch (e) {
-      logError("Failed to stop inventory realtime monitoring", e);
+      log.e("Failed to stop inventory realtime monitoring", tag: loggerComponent, error: e);
       rethrow;
     }
   }
@@ -111,7 +114,7 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
   }
 
   @override
-  bool isFeatureRealtimeEnabled(RealtimeFeature feature) => isMonitoringFeature(feature);
+  bool isFeatureRealtimeEnabled(String featureName) => isMonitoringFeature(featureName);
 
   @override
   bool isRealtimeConnected() => isRealtimeHealthy();
@@ -127,7 +130,7 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
       final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
       final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
 
-      logDebug("Material update received: $eventType");
+      log.d("Material update received: $eventType", tag: loggerComponent);
 
       switch (eventType) {
         case "INSERT":
@@ -147,7 +150,11 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
           break;
       }
     } catch (e) {
-      logError("Error processing material update - continuing operation", e);
+      log.e(
+        "Error processing material update - continuing operation",
+        tag: loggerComponent,
+        error: e,
+      );
       // リアルタイム更新の内部処理エラーは継続可能なため、エラーを記録して処理を継続
     }
   }
@@ -161,38 +168,42 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
         _handleStockLevelChanged(newRecord, oldRecord);
       }
     } catch (e) {
-      logError("Error processing stock level update - continuing operation", e);
+      log.e(
+        "Error processing stock level update - continuing operation",
+        tag: loggerComponent,
+        error: e,
+      );
       // リアルタイム更新の内部処理エラーは継続可能なため、エラーを記録して処理を継続
     }
   }
 
   void _handleMaterialCreated(Map<String, dynamic> data) {
-    logInfo("New material created: ${data['name']}");
+    log.i("New material created: ${data['name']}", tag: loggerComponent);
     _notifyInventoryChanged("material_created", data);
   }
 
   void _handleMaterialUpdated(Map<String, dynamic> newData, Map<String, dynamic> oldData) {
-    logInfo("Material updated: ${newData['name']}");
-    _notifyInventoryChanged("material_updated", <String, dynamic>{
-      "new": newData,
-      "old": oldData,
-    });
+    log.i("Material updated: ${newData['name']}", tag: loggerComponent);
+    _notifyInventoryChanged("material_updated", <String, dynamic>{"new": newData, "old": oldData});
   }
 
   void _handleMaterialDeleted(Map<String, dynamic> data) {
-    logInfo("Material deleted: ${data['name']}");
+    log.i("Material deleted: ${data['name']}", tag: loggerComponent);
     _notifyInventoryChanged("material_deleted", data);
   }
 
   void _handleStockLevelChanged(Map<String, dynamic> newData, Map<String, dynamic> oldData) {
     final double oldLevel = _parseToDouble(oldData["current_stock"]) ?? 0.0;
     final double newLevel = _parseToDouble(newData["current_stock"]) ?? 0.0;
-    
-    logInfo("Stock level changed: ${newData['material_id']} ($oldLevel -> $newLevel)");
-    
+
+    log.i(
+      "Stock level changed: ${newData['material_id']} ($oldLevel -> $newLevel)",
+      tag: loggerComponent,
+    );
+
     // 在庫アラートの確認
     _checkStockAlert(newData, oldLevel, newLevel);
-    
+
     // UI層への間接通知
     _notifyInventoryChanged("stock_level_updated", <String, dynamic>{
       "material_id": newData["material_id"],
@@ -204,7 +215,7 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
 
   void _notifyInventoryChanged(String eventType, Map<String, dynamic> data) {
     // ログ経由でUI層に間接通知
-    logInfo("INVENTORY_EVENT: $eventType - $data");
+    log.i("INVENTORY_EVENT: $eventType - $data", tag: loggerComponent);
   }
 
   void _checkStockAlert(Map<String, dynamic> stockData, double oldLevel, double newLevel) {
@@ -212,10 +223,16 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
     final double criticalThreshold = (stockData["critical_threshold"] as num?)?.toDouble() ?? 0.0;
 
     if (newLevel <= criticalThreshold && oldLevel > criticalThreshold) {
-      logWarning("CRITICAL STOCK ALERT: ${stockData["material_id"]} - $newLevel units remaining");
+      log.w(
+        "CRITICAL STOCK ALERT: ${stockData["material_id"]} - $newLevel units remaining",
+        tag: loggerComponent,
+      );
       _notifyInventoryChanged("critical_stock_alert", stockData);
     } else if (newLevel <= minThreshold && oldLevel > minThreshold) {
-      logWarning("LOW STOCK ALERT: ${stockData["material_id"]} - $newLevel units remaining");
+      log.w(
+        "LOW STOCK ALERT: ${stockData["material_id"]} - $newLevel units remaining",
+        tag: loggerComponent,
+      );
       _notifyInventoryChanged("low_stock_alert", stockData);
     }
   }
@@ -223,7 +240,7 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
   /// Service終了時の処理
   Future<void> dispose() async {
     await stopAllMonitoring();
-    logInfo("InventoryService disposed");
+    log.i("InventoryService disposed", tag: loggerComponent);
   }
 
   // ===== 材料管理関連メソッド =====
@@ -348,6 +365,4 @@ class InventoryService with LoggerMixin, RealtimeServiceMixin
   }
 }
 
-/// InventoryService のプロバイダー定義
-final Provider<InventoryService> inventoryServiceProvider =
-    Provider<InventoryService>((Ref ref) => InventoryService(ref: ref));
+// Providerは app/wiring/provider.dart 側で合成し公開する
