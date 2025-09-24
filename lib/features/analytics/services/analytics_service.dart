@@ -1,48 +1,55 @@
+// Riverpod not required here; DI is provided via app wiring
+
+import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/analytics.dart";
-import "../../../core/utils/logger_mixin.dart";
-
+import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag instead
+import "../../../core/logging/compat.dart" as log;
+import "../../inventory/models/transaction_model.dart";
 import "../../order/models/order_model.dart";
-import "../../order/repositories/order_item_repository.dart";
-import "../../order/repositories/order_repository.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
 import "../dto/analytics_dto.dart";
 
-class AnalyticsService with LoggerMixin {
+class AnalyticsService {
   AnalyticsService({
-    OrderRepository? orderRepository,
-    OrderItemRepository? orderItemRepository,
-    StockTransactionRepository? stockTransactionRepository,
-  }) : _orderRepository = orderRepository ?? OrderRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
-       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
+    required OrderRepositoryContract<Order> orderRepository,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+    required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
+  }) : _orderRepository = orderRepository,
+       _orderItemRepository = orderItemRepository,
+       _stockTransactionRepository = stockTransactionRepository;
 
-  final OrderRepository _orderRepository;
-  final OrderItemRepository _orderItemRepository;
-  final StockTransactionRepository _stockTransactionRepository;
+  final OrderRepositoryContract<Order> _orderRepository;
+  final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
+  final StockTransactionRepositoryContract<StockTransaction> _stockTransactionRepository;
 
-  @override
   String get loggerComponent => "AnalyticsService";
 
   /// リアルタイム日次統計を取得
   Future<DailyStatsResult> getRealTimeDailyStats(DateTime targetDate, String userId) async {
-    logInfoMessage(AnalyticsInfo.dailyStatsStarted);
+    log.i(AnalyticsInfo.dailyStatsStarted.message, tag: loggerComponent);
 
     try {
-      // 指定日の注文数を取得
-      final Map<OrderStatus, int> statusCounts = await _orderRepository.countByStatusAndDate(
+      // 指定日の注文数を取得（findByDateRangeから集計）
+      final List<Order> targetDayOrders = await _orderRepository.findByDateRange(
         targetDate,
-        userId,
+        targetDate,
       );
+      final Map<OrderStatus, int> statusCounts = <OrderStatus, int>{
+        for (final OrderStatus s in OrderStatus.values) s: 0,
+      };
+      for (final Order o in targetDayOrders) {
+        statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1;
+      }
 
       // 完了注文を取得して売上計算
-      final List<Order> completedOrders = await _orderRepository.findCompletedByDate(
-        targetDate,
-        userId,
-      );
+      final List<Order> completedOrders = await _orderRepository.findCompletedByDate(targetDate);
 
-      logDebug("Retrieved ${completedOrders.length} completed orders for stats calculation");
+      log.d(
+        "Retrieved ${completedOrders.length} completed orders for stats calculation",
+        tag: loggerComponent,
+      );
 
       final int totalRevenue = completedOrders.fold(
         0,
@@ -52,8 +59,10 @@ class AnalyticsService with LoggerMixin {
       // 平均調理時間を計算
       final List<int> prepTimes = <int>[];
       for (final Order order in completedOrders) {
-        if (order.startedPreparingAt != null && order.readyAt != null) {
-          final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
+        final DateTime? startedAt = order.startedPreparingAt;
+        final DateTime? readyAt = order.readyAt;
+        if (startedAt != null && readyAt != null) {
+          final Duration delta = readyAt.difference(startedAt);
           prepTimes.add((delta.inSeconds / 60).floor());
         }
       }
@@ -70,10 +79,13 @@ class AnalyticsService with LoggerMixin {
           ? popularItems[0]
           : null;
 
-      logInfoMessage(AnalyticsInfo.dailyStatsCompleted, <String, String>{
-        "totalRevenue": totalRevenue.toString(),
-        "totalOrders": completedOrders.length.toString(),
-      });
+      log.i(
+        AnalyticsInfo.dailyStatsCompleted.withParams(<String, String>{
+          "totalRevenue": totalRevenue.toString(),
+          "totalOrders": completedOrders.length.toString(),
+        }),
+        tag: loggerComponent,
+      );
 
       return DailyStatsResult(
         completedOrders: statusCounts[OrderStatus.completed] ?? 0,
@@ -83,7 +95,12 @@ class AnalyticsService with LoggerMixin {
         mostPopularItem: mostPopularItem,
       );
     } catch (e, stackTrace) {
-      logErrorMessage(AnalyticsError.dailyStatsRetrievalFailed, null, e, stackTrace);
+      log.e(
+        AnalyticsError.dailyStatsRetrievalFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -94,17 +111,20 @@ class AnalyticsService with LoggerMixin {
     int limit,
     String userId,
   ) async {
-    logInfoMessage(AnalyticsInfo.popularItemsStarted, <String, String>{
-      "days": days.toString(),
-      "limit": limit.toString(),
-    });
+    log.i(
+      AnalyticsInfo.popularItemsStarted.withParams(<String, String>{
+        "days": days.toString(),
+        "limit": limit.toString(),
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       // 売上集計を取得
       final List<Map<String, dynamic>> salesSummary = await _orderItemRepository
-          .getMenuItemSalesSummary(days, userId);
+          .getMenuItemSalesSummary(days);
 
-      logDebug("Retrieved sales summary for ${salesSummary.length} menu items");
+      log.d("Retrieved sales summary for ${salesSummary.length} menu items", tag: loggerComponent);
 
       // 上位N件を取得
       final List<Map<String, dynamic>> topItems = salesSummary.take(limit).toList();
@@ -121,12 +141,20 @@ class AnalyticsService with LoggerMixin {
         });
       }
 
-      logInfoMessage(AnalyticsInfo.popularItemsCompleted, <String, String>{
-        "itemCount": ranking.length.toString(),
-      });
+      log.i(
+        AnalyticsInfo.popularItemsCompleted.withParams(<String, String>{
+          "itemCount": ranking.length.toString(),
+        }),
+        tag: loggerComponent,
+      );
       return ranking;
     } catch (e, stackTrace) {
-      logErrorMessage(AnalyticsError.popularItemsRetrievalFailed, null, e, stackTrace);
+      log.e(
+        AnalyticsError.popularItemsRetrievalFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -145,7 +173,6 @@ class AnalyticsService with LoggerMixin {
     final List<Order> completedOrders = await _orderRepository.findOrdersByCompletionTimeRange(
       startDate,
       endDate,
-      userId,
     );
 
     // 特定メニューアイテムの場合はフィルタ
@@ -168,8 +195,10 @@ class AnalyticsService with LoggerMixin {
     // 調理時間を計算
     final List<double> prepTimes = <double>[];
     for (final Order order in completedOrders) {
-      if (order.startedPreparingAt != null && order.readyAt != null) {
-        final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
+      final DateTime? startedAt = order.startedPreparingAt;
+      final DateTime? readyAt = order.readyAt;
+      if (startedAt != null && readyAt != null) {
+        final Duration delta = readyAt.difference(startedAt);
         prepTimes.add(delta.inSeconds / 60.0); // 分単位
       }
     }
@@ -182,11 +211,7 @@ class AnalyticsService with LoggerMixin {
   /// 時間帯別注文分布を取得
   Future<Map<int, int>> getHourlyOrderDistribution(DateTime targetDate, String userId) async {
     // 指定日の全注文を取得
-    final List<Order> orders = await _orderRepository.findByDateRange(
-      targetDate,
-      targetDate,
-      userId,
-    );
+    final List<Order> orders = await _orderRepository.findByDateRange(targetDate, targetDate);
 
     // 時間帯別に集計
     final Map<int, int> hourlyDistribution = <int, int>{};
@@ -210,16 +235,16 @@ class AnalyticsService with LoggerMixin {
     DateTime dateTo,
     String userId,
   ) async {
-    logInfoMessage(AnalyticsInfo.revenueCalculationStarted);
+    log.i(AnalyticsInfo.revenueCalculationStarted.message, tag: loggerComponent);
 
     try {
       // 期間内の完了注文を取得
-      final List<Order> orders = await _orderRepository.findByDateRange(dateFrom, dateTo, userId);
+      final List<Order> orders = await _orderRepository.findByDateRange(dateFrom, dateTo);
       final List<Order> completedOrders = orders
           .where((Order order) => order.status == OrderStatus.completed)
           .toList();
 
-      logDebug("Found ${completedOrders.length} completed orders in date range");
+      log.d("Found ${completedOrders.length} completed orders in date range", tag: loggerComponent);
 
       // 売上計算
       final int totalRevenue = completedOrders.fold(
@@ -232,16 +257,20 @@ class AnalyticsService with LoggerMixin {
       // 日別売上を計算
       final Map<String, int> dailyRevenue = <String, int>{};
       for (final Order order in completedOrders) {
-        final String dateKey = order.completedAt != null
-            ? order.completedAt!.toIso8601String().split("T")[0]
+        final DateTime? completedAt = order.completedAt;
+        final String dateKey = completedAt != null
+            ? completedAt.toIso8601String().split("T")[0]
             : order.orderedAt.toIso8601String().split("T")[0];
         dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + order.totalAmount;
       }
 
-      logInfoMessage(AnalyticsInfo.revenueCalculationCompleted, <String, String>{
-        "totalRevenue": totalRevenue.toString(),
-        "totalOrders": totalOrders.toString(),
-      });
+      log.i(
+        AnalyticsInfo.revenueCalculationCompleted.withParams(<String, String>{
+          "totalRevenue": totalRevenue.toString(),
+          "totalOrders": totalOrders.toString(),
+        }),
+        tag: loggerComponent,
+      );
 
       return <String, dynamic>{
         "total_revenue": totalRevenue,
@@ -252,7 +281,12 @@ class AnalyticsService with LoggerMixin {
         "period_end": dateTo.toIso8601String(),
       };
     } catch (e, stackTrace) {
-      logErrorMessage(AnalyticsError.revenueCalculationFailed, null, e, stackTrace);
+      log.e(
+        AnalyticsError.revenueCalculationFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -269,7 +303,7 @@ class AnalyticsService with LoggerMixin {
 
     // 材料の消費取引を取得
     final List<StockTransaction> transactions = await _stockTransactionRepository
-        .findByMaterialAndDateRange(materialId, startDate, endDate, userId);
+        .findByMaterialAndDateRange(materialId, startDate, endDate);
 
     // 消費取引のみを抽出（負の値）
     final List<StockTransaction> consumptionTransactions = transactions
@@ -284,8 +318,9 @@ class AnalyticsService with LoggerMixin {
     final Map<String, double> dailyConsumption = <String, double>{};
 
     for (final StockTransaction tx in consumptionTransactions) {
-      final String dateKey = tx.createdAt != null
-          ? tx.createdAt!.toIso8601String().split("T")[0]
+      final DateTime? createdAt = tx.createdAt;
+      final String dateKey = createdAt != null
+          ? createdAt.toIso8601String().split("T")[0]
           : DateTime.now().toIso8601String().split("T")[0];
       dailyConsumption[dateKey] = (dailyConsumption[dateKey] ?? 0.0) + tx.changeAmount.abs();
     }
@@ -317,7 +352,6 @@ class AnalyticsService with LoggerMixin {
       menuItemId,
       startDate,
       endDate,
-      userId,
     );
 
     // 売上統計を計算
@@ -328,12 +362,14 @@ class AnalyticsService with LoggerMixin {
     // 日別売上を計算
     final Map<String, Map<String, int>> dailySales = <String, Map<String, int>>{};
     for (final OrderItem item in orderItems) {
-      final String dateKey = item.createdAt != null
-          ? item.createdAt!.toIso8601String().split("T")[0]
+      final DateTime? createdAt = item.createdAt;
+      final String dateKey = createdAt != null
+          ? createdAt.toIso8601String().split("T")[0]
           : DateTime.now().toIso8601String().split("T")[0];
       dailySales[dateKey] ??= <String, int>{"quantity": 0, "revenue": 0};
-      dailySales[dateKey]!["quantity"] = dailySales[dateKey]!["quantity"]! + item.quantity;
-      dailySales[dateKey]!["revenue"] = dailySales[dateKey]!["revenue"]! + item.subtotal;
+      final Map<String, int> dailyData = dailySales[dateKey]!;
+      dailyData["quantity"] = dailyData["quantity"]! + item.quantity;
+      dailyData["revenue"] = dailyData["revenue"]! + item.subtotal;
     }
 
     return <String, dynamic>{
@@ -368,14 +404,14 @@ class AnalyticsService with LoggerMixin {
 
     // トレンド計算
     final double avgDailyRevenue = comparisonDays > 0
-        ? (comparisonRevenue["total_revenue"] as int) / comparisonDays
+        ? (_parseToInt(comparisonRevenue["total_revenue"]) ?? 0) / comparisonDays
         : 0.0;
     final double revenueTrend = avgDailyRevenue > 0
         ? ((targetStats.totalRevenue - avgDailyRevenue) / avgDailyRevenue * 100)
         : 0.0;
 
     final double avgDailyOrders = comparisonDays > 0
-        ? (comparisonRevenue["total_orders"] as int) / comparisonDays
+        ? (_parseToInt(comparisonRevenue["total_orders"]) ?? 0) / comparisonDays
         : 0.0;
     final double orderTrend = avgDailyOrders > 0
         ? ((targetStats.completedOrders - avgDailyOrders) / avgDailyOrders * 100)
@@ -400,5 +436,25 @@ class AnalyticsService with LoggerMixin {
         "avg_daily_orders": (avgDailyOrders * 100).round() / 100.0,
       },
     };
+  }
+
+  /// 安全なint変換ヘルパー
+  int? _parseToInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is double) {
+      return value.toInt();
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 }

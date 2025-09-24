@@ -1,0 +1,13 @@
+{
+    "dart.flutterSdkPath": "~/dev/sdk/flutter",
+    "dart.flutterRunAdditionalArgs": [
+        "--web-port=8080"
+    ],
+    "dart.debugExtensionBackendProtocol": "ws",
+    "dart.previewFlutterUiGuides": true,
+    "dart.previewFlutterUiGuidesCustomTracking": true,
+    "dart.warnWhenEditingFilesOutsideWorkspace": false,
+    "flutter.experimentalRefactors": true,
+    "markdown.validate.enabled": true,
+    "remote.autoForwardPortsFallback": 0
+}

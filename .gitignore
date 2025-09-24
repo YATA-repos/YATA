@@ -47,12 +47,12 @@ app.*.map.json
 /android/app/release
 
 # temp
-__temp/
-.idx/
-.vscode/
-_old_py_project/
-_old_py_docs/
-docs/
+_temp/
+_temp_images/
+_temp_log/
+_reports/
+_images/
+
 # Generated files
 *.g.dart
 *.freezed.dart
@@ -60,6 +60,3 @@ docs/
 
 # dotenv
 .env
-
-# Claude Code
-# CLAUDE.md

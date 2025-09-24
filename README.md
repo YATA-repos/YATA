@@ -1,46 +1,60 @@
 # YATA
 
-小規模レストラン向けの在庫・注文管理システム
+小規模飲食店・屋台・露店向け統合管理アプリケーション
 
-**開発中**: このプロジェクトは現在開発中であり、機能は未完成です。フィードバックやコントリビューションは大歓迎です！
+## 主要機能
 
-[![GitBook](https://img.shields.io/badge/docs-GitBook-blue)](https://pennes-organization.gitbook.io/yata-dev-documents/)
-[![License](https://img.shields.io/github/license/pennes-organization/yata)]
+- **在庫管理** - シンプルで直感的な在庫追跡
+- **売上分析** - 分かりやすいレポートと統計
+- **注文管理** - 注文の作成・キューイング・管理
+- **メニュー管理** - 柔軟なメニュー作成と編集
 
-## 概要
+## 特徴
 
-YATA（日本語の「屋台」から命名）は、小規模レストラン事業者向けの在庫・注文管理システムです。**フィーチャーベースのサービスレイヤーアーキテクチャ**を採用し、Clean Architectureとは異なり**依存性の逆転を使わず、UI→Service→Repositoryの直線的な依存関係**で構築されています。
+- **クロスプラットフォーム対応** - Android、Windows、Linuxで動作
+- **小規模店舗特化** - 屋台や露店の規模感に最適化された機能設計
+- **ちょうどよいサイズ感** - 複雑すぎず、機能不足でもない適切な機能範囲
+- **シンプルな操作性** - 直感的なインターフェースで素早い操作が可能
 
-## 主要機能(予定)
+## 開発状況
 
-- **在庫追跡**:
-- **注文管理**: 下書き→アクティブ→完了の状態管理による注文処理
-- **分析機能**: 日次summaryとビジネス洞察の自動生成
-- **オフラインサポート**: 操作queueと再接続時同期
+🚧 **開発中** - 現在アクティブに開発が進行中です
 
-## プロジェクト固有の設計思想
+## 技術仕様
 
-### アーキテクチャ特徴
+- **フレームワーク**: Flutter & Dart
+- **バックエンド**: Supabase
+- **状態管理**: Riverpod
+- **ルーティング**: go_router
 
-**直線的レイヤードアーキテクチャ**（依存性逆転なし）
+## 開発環境構築
 
-```text
-UI Layer (Flutter Widgets/Pages)
-    ↓
-Business Services Layer  
-    ↓
-Repository Layer (Data Access)
+🚧 **WIP** - 開発環境のセットアップ手順は現在整備中です。
+
+### 必要な環境
+
+- Flutter SDK (3.0以上)
+- Dart SDK
+- 各プラットフォーム用開発環境
+
+### 基本的なセットアップ
+
+```bash
+# リポジトリのクローン
+git clone https://github.com/YATA-repos/YATA
+cd yata
+
+# 依存関係のインストール
+flutter pub get
+
+# アプリケーションの実行
+flutter run
 ```
 
-**重要な基底クラス設計**:
+## ライセンス
 
-- `BaseModel`: JSONシリアライゼーション機能を持つモデル基底クラス
-- `BaseRepository<T>`: 複雑なフィルタリング（AND/OR）を提供するCRUD基底クラス
-- **DTO設計思想**: Entityとの変換を前提とせず、高度なdictのように振る舞う
+[MIT License](LICENSE.txt)
 
-## ドキュメント
+## コントリビューション
 
-- **[docs/guides/](./docs/guides/)**: 開発手順・ベストプラクティス
-- **[docs/references/](./docs/references/)**: API仕様・技術詳細
-
-- **[GitBook](https://pennes-organization.gitbook.io/yata-docs/)**: 見やすいオンラインドキュメント
+🚧 **未確定** - コントリビューション方法は現在検討中です。

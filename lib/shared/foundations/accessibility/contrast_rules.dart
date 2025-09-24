@@ -1,0 +1,1 @@
+// 正直これをしっかり実装するかは不明。当面はcolor_tokenやthemeで普通に定義したcolor,typoを使用する予定

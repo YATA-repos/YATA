@@ -1,57 +1,61 @@
+import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
-import "../../../core/utils/logger_mixin.dart";
-import "../../stock/dto/stock_dto.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/purchase_item_repository.dart";
-import "../../stock/repositories/purchase_repository.dart";
-import "../../stock/repositories/stock_adjustment_repository.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/purchase_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/stock_adjustment_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
+import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
-import "../repositories/material_repository.dart";
+import "../models/transaction_model.dart";
 
 /// 在庫操作サービス（手動更新・仕入れ記録）
-class StockOperationService with LoggerMixin {
+class StockOperationService {
   StockOperationService({
-    MaterialRepository? materialRepository,
-    PurchaseRepository? purchaseRepository,
-    PurchaseItemRepository? purchaseItemRepository,
-    StockAdjustmentRepository? stockAdjustmentRepository,
-    StockTransactionRepository? stockTransactionRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
-       _purchaseRepository = purchaseRepository ?? PurchaseRepository(),
-       _purchaseItemRepository = purchaseItemRepository ?? PurchaseItemRepository(),
-       _stockAdjustmentRepository = stockAdjustmentRepository ?? StockAdjustmentRepository(),
-       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
+    required MaterialRepositoryContract<Material> materialRepository,
+    required PurchaseRepositoryContract<Purchase> purchaseRepository,
+    required PurchaseItemRepositoryContract<PurchaseItem> purchaseItemRepository,
+    required StockAdjustmentRepositoryContract<StockAdjustment> stockAdjustmentRepository,
+    required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
+  }) : _materialRepository = materialRepository,
+       _purchaseRepository = purchaseRepository,
+       _purchaseItemRepository = purchaseItemRepository,
+       _stockAdjustmentRepository = stockAdjustmentRepository,
+       _stockTransactionRepository = stockTransactionRepository;
 
-  final MaterialRepository _materialRepository;
-  final PurchaseRepository _purchaseRepository;
-  final PurchaseItemRepository _purchaseItemRepository;
-  final StockAdjustmentRepository _stockAdjustmentRepository;
-  final StockTransactionRepository _stockTransactionRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final PurchaseRepositoryContract<Purchase> _purchaseRepository;
+  final PurchaseItemRepositoryContract<PurchaseItem> _purchaseItemRepository;
+  final StockAdjustmentRepositoryContract<StockAdjustment> _stockAdjustmentRepository;
+  final StockTransactionRepositoryContract<StockTransaction> _stockTransactionRepository;
 
-  @override
   String get loggerComponent => "StockOperationService";
 
   /// 材料在庫を手動更新
   Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId) async {
-    logInfoMessage(ServiceInfo.stockUpdateStarted, <String, String>{
-      "newQuantity": request.newQuantity.toString(),
-    });
+    log.i(
+      ServiceInfo.stockUpdateStarted.withParams(<String, String>{
+        "newQuantity": request.newQuantity.toString(),
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       // 材料を取得
       final Material? material = await _materialRepository.getById(request.materialId);
-      if (material == null || material.userId != userId) {
-        logWarningMessage(ServiceWarning.accessDenied);
-        throw Exception("Material not found or access denied");
+      if (material == null) {
+        log.w(ServiceWarning.accessDenied.message, tag: loggerComponent);
+        throw Exception("Material not found");
       }
 
       final double oldStock = material.currentStock;
       final double adjustmentAmount = request.newQuantity - oldStock;
 
-      logDebug(
+      log.d(
         "Stock adjustment: oldStock=$oldStock, newStock=${request.newQuantity}, adjustment=$adjustmentAmount",
+        tag: loggerComponent,
       );
 
       // 在庫調整を記録
@@ -83,21 +87,27 @@ class StockOperationService with LoggerMixin {
         <String, dynamic>{"current_stock": request.newQuantity},
       );
 
-      logInfoMessage(ServiceInfo.stockUpdateSuccessful, <String, String>{
-        "materialName": material.name,
-      });
+      log.i(
+        ServiceInfo.stockUpdateSuccessful.withParams(<String, String>{
+          "materialName": material.name,
+        }),
+        tag: loggerComponent,
+      );
       return updatedMaterial;
     } catch (e, stackTrace) {
-      logErrorMessage(ServiceError.stockUpdateFailed, null, e, stackTrace);
+      log.e(ServiceError.stockUpdateFailed.message, tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// 仕入れを記録し、在庫を増加
   Future<String?> recordPurchase(PurchaseRequest request, String userId) async {
-    logInfoMessage(ServiceInfo.purchaseRecordingStarted, <String, String>{
-      "itemCount": request.items.length.toString(),
-    });
+    log.i(
+      ServiceInfo.purchaseRecordingStarted.withParams(<String, String>{
+        "itemCount": request.items.length.toString(),
+      }),
+      tag: loggerComponent,
+    );
 
     try {
       // 仕入れを作成
@@ -109,11 +119,11 @@ class StockOperationService with LoggerMixin {
       final Purchase? createdPurchase = await _purchaseRepository.create(purchase);
 
       if (createdPurchase?.id == null) {
-        logWarningMessage(ServiceWarning.purchaseCreationFailed);
+        log.w(ServiceWarning.purchaseCreationFailed.message, tag: loggerComponent);
         throw Exception("Failed to create purchase");
       }
 
-      logDebug("Purchase record created: ${createdPurchase!.id}");
+      log.d("Purchase record created: ${createdPurchase!.id}", tag: loggerComponent);
 
       // 仕入れ明細を作成
       final List<PurchaseItem> purchaseItems = <PurchaseItem>[];
@@ -128,7 +138,7 @@ class StockOperationService with LoggerMixin {
       }
 
       await _purchaseItemRepository.createBatch(purchaseItems);
-      logDebug("Purchase items created: ${purchaseItems.length} items");
+      log.d("Purchase items created: ${purchaseItems.length} items", tag: loggerComponent);
 
       // 各材料の在庫を増加し、取引を記録
       final List<StockTransaction> transactions = <StockTransaction>[];
@@ -137,7 +147,7 @@ class StockOperationService with LoggerMixin {
       for (final PurchaseItemDto itemData in request.items) {
         // 材料を取得して在庫更新
         final Material? material = await _materialRepository.getById(itemData.materialId);
-        if (material != null && material.userId == userId) {
+        if (material != null) {
           final double oldStock = material.currentStock;
           material.currentStock += itemData.quantity;
           await _materialRepository.updateById(material.id!, <String, dynamic>{
@@ -145,8 +155,9 @@ class StockOperationService with LoggerMixin {
           });
 
           updatedMaterials++;
-          logDebug(
+          log.d(
             "Material stock increased: ${material.name} from $oldStock to ${material.currentStock}",
+            tag: loggerComponent,
           );
 
           // 取引記録を作成
@@ -164,12 +175,20 @@ class StockOperationService with LoggerMixin {
 
       await _stockTransactionRepository.createBatch(transactions);
 
-      logInfoMessage(ServiceInfo.purchaseRecordingSuccessful, <String, String>{
-        "materialCount": updatedMaterials.toString(),
-      });
+      log.i(
+        ServiceInfo.purchaseRecordingSuccessful.withParams(<String, String>{
+          "materialCount": updatedMaterials.toString(),
+        }),
+        tag: loggerComponent,
+      );
       return createdPurchase.id!;
     } catch (e, stackTrace) {
-      logErrorMessage(ServiceError.purchaseRecordingFailed, null, e, stackTrace);
+      log.e(
+        ServiceError.purchaseRecordingFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }

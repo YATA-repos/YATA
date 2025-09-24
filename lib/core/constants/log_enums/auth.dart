@@ -2,113 +2,122 @@ import "../../base/base_error_msg.dart";
 
 /// 認証関連のエラーメッセージ定義
 enum AuthError implements LogMessage {
-  /// Supabaseクライアントの初期化に失敗
+  /// 認証初期化に失敗
   initializationFailed,
 
-  /// Google認証がタイムアウト
-  googleAuthTimeout,
+  /// OAuth認証に失敗
+  oauthFailed,
 
-  /// Google認証に失敗
-  googleAuthFailed,
+  /// ユーザーセッションが無効
+  invalidSession,
 
-  /// Google認証で例外が発生
-  googleAuthException,
+  /// ユーザー情報の取得に失敗
+  userInfoFetchFailed,
 
-  /// 認証コールバックの処理に失敗
-  callbackProcessingFailed,
+  /// ログアウトに失敗
+  logoutFailed,
 
-  /// コールバックURLに認証コードが見つからない
-  authorizationCodeNotFound,
+  /// 認証プロバイダーが無効
+  invalidProvider,
 
-  /// 認証後のユーザー情報取得に失敗
-  userRetrievalFailed,
+  /// 認証トークンが期限切れ
+  tokenExpired,
 
-  /// セッションの更新に失敗
-  sessionRefreshFailed,
+  /// 認証トークンが無効
+  invalidToken,
 
-  /// サインアウトに失敗
-  signOutFailed,
+  /// 認証がキャンセルされた
+  authenticationCancelled,
 
-  /// サインアウト時に例外が発生
-  signOutException;
+  /// ネットワークエラー
+  networkError,
+
+  /// 認証サービスが利用不可
+  serviceUnavailable;
 
   @override
   String get message {
     switch (this) {
       case AuthError.initializationFailed:
-        return "Failed to initialize Supabase client: {error}";
-      case AuthError.googleAuthTimeout:
-        return "Google authentication timed out";
-      case AuthError.googleAuthFailed:
-        return "Google authentication failed: {message}";
-      case AuthError.googleAuthException:
-        return "Google auth exception: {error}";
-      case AuthError.callbackProcessingFailed:
-        return "Failed to handle authentication callback: {message}";
-      case AuthError.authorizationCodeNotFound:
-        return "Authorization code not found in callback URL";
-      case AuthError.userRetrievalFailed:
-        return "Failed to retrieve user after authentication";
-      case AuthError.sessionRefreshFailed:
-        return "Failed to refresh session: {error}";
-      case AuthError.signOutFailed:
-        return "Failed to sign out: {message}";
-      case AuthError.signOutException:
-        return "Error during sign out: {error}";
+        return "Authentication initialization failed: {error}";
+      case AuthError.oauthFailed:
+        return "OAuth authentication failed: {error}";
+      case AuthError.invalidSession:
+        return "Invalid user session: {session}";
+      case AuthError.userInfoFetchFailed:
+        return "Failed to fetch user information: {error}";
+      case AuthError.logoutFailed:
+        return "Logout failed: {error}";
+      case AuthError.invalidProvider:
+        return "Invalid authentication provider: {provider}";
+      case AuthError.tokenExpired:
+        return "Authentication token has expired: {token}";
+      case AuthError.invalidToken:
+        return "Invalid authentication token: {token}";
+      case AuthError.authenticationCancelled:
+        return "Authentication was cancelled by user";
+      case AuthError.networkError:
+        return "Network error during authentication: {error}";
+      case AuthError.serviceUnavailable:
+        return "Authentication service is unavailable: {service}";
     }
   }
 }
 
 /// 認証関連の情報メッセージ定義
 enum AuthInfo implements LogMessage {
-  /// Supabaseクライアントが正常に初期化された
+  /// 認証クライアント初期化完了
   clientInitialized,
 
-  /// Google認証が開始された
-  googleAuthStarted,
+  /// 認証成功
+  authenticationSuccess,
 
-  /// Google OAuthの応答を受信
-  googleOAuthResponse,
+  /// ログアウト成功
+  logoutSuccess,
 
-  /// 認証コールバックを処理中
-  callbackProcessing,
-
-  /// 認証コールバックの処理が完了
-  callbackProcessed,
-
-  /// セッションを更新中
-  sessionRefreshing,
-
-  /// セッションの更新が完了
+  /// セッション更新成功
   sessionRefreshed,
 
-  /// ユーザーがサインアウト中
-  userSigningOut,
-
-  /// ユーザーのサインアウトが完了
-  userSignedOut;
+  /// ユーザー情報取得成功
+  userInfoFetched;
 
   @override
   String get message {
     switch (this) {
       case AuthInfo.clientInitialized:
-        return "Supabase client initialized successfully";
-      case AuthInfo.googleAuthStarted:
-        return "Starting Google OAuth authentication";
-      case AuthInfo.googleOAuthResponse:
-        return "Google OAuth response received: {response}";
-      case AuthInfo.callbackProcessing:
-        return "Processing auth callback: {url}";
-      case AuthInfo.callbackProcessed:
-        return "Auth callback processed successfully for user: {userId}";
-      case AuthInfo.sessionRefreshing:
-        return "Refreshing auth session";
+        return "Authentication client initialized successfully";
+      case AuthInfo.authenticationSuccess:
+        return "User authentication successful: {user}";
+      case AuthInfo.logoutSuccess:
+        return "User logout successful: {user}";
       case AuthInfo.sessionRefreshed:
-        return "Session refreshed successfully";
-      case AuthInfo.userSigningOut:
-        return "Signing out user";
-      case AuthInfo.userSignedOut:
-        return "User signed out successfully";
+        return "User session refreshed successfully: {user}";
+      case AuthInfo.userInfoFetched:
+        return "User information fetched successfully: {user}";
+    }
+  }
+}
+
+/// 認証関連の警告メッセージ定義
+enum AuthWarning implements LogMessage {
+  /// セッション期限が近い
+  sessionExpiringSoon,
+
+  /// 認証プロバイダーの変更
+  providerChanged,
+
+  /// 複数セッション検出
+  multipleSessionsDetected;
+
+  @override
+  String get message {
+    switch (this) {
+      case AuthWarning.sessionExpiringSoon:
+        return "User session will expire soon: {expires_at}";
+      case AuthWarning.providerChanged:
+        return "Authentication provider changed: {old_provider} -> {new_provider}";
+      case AuthWarning.multipleSessionsDetected:
+        return "Multiple active sessions detected for user: {user}";
     }
   }
 }

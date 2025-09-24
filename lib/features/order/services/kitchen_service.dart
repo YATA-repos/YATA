@@ -1,22 +1,20 @@
 import "../../../core/constants/enums.dart";
-import "../../../core/utils/logger_mixin.dart";
 import "../models/order_model.dart";
 import "kitchen_analysis_service.dart";
 import "kitchen_operation_service.dart";
 
 /// キッチンサービス統合クラス
 /// KitchenOperationServiceとKitchenAnalysisServiceを組み合わせて使用
-class KitchenService with LoggerMixin {
+class KitchenService {
   KitchenService({
-    KitchenOperationService? kitchenOperationService,
-    KitchenAnalysisService? kitchenAnalysisService,
-  }) : _kitchenOperationService = kitchenOperationService ?? KitchenOperationService(),
-       _kitchenAnalysisService = kitchenAnalysisService ?? KitchenAnalysisService();
+    required KitchenOperationService kitchenOperationService,
+    required KitchenAnalysisService kitchenAnalysisService,
+  }) : _kitchenOperationService = kitchenOperationService,
+       _kitchenAnalysisService = kitchenAnalysisService;
 
   final KitchenOperationService _kitchenOperationService;
   final KitchenAnalysisService _kitchenAnalysisService;
 
-  @override
   String get loggerComponent => "KitchenService";
 
   // ===== キッチン操作関連メソッド =====

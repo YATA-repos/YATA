@@ -12,7 +12,7 @@ class CartItemRequest {
   /// JSONからオブジェクトを生成
   factory CartItemRequest.fromJson(Map<String, dynamic> json) => CartItemRequest(
     menuItemId: json["menu_item_id"] as String,
-    quantity: json["quantity"] as int,
+    quantity: (json["quantity"] as num?)?.toInt() ?? 1,
     selectedOptions: json["selected_options"] as Map<String, String>?,
     specialRequest: json["special_request"] as String?,
   );
@@ -53,7 +53,7 @@ class OrderCheckoutRequest {
       (PaymentMethod method) => method.value == json["payment_method"] as String,
     ),
     customerName: json["customer_name"] as String?,
-    discountAmount: json["discount_amount"] as int,
+    discountAmount: (json["discount_amount"] as num?)?.toInt() ?? 0,
     notes: json["notes"] as String?,
   );
 
@@ -88,6 +88,7 @@ class OrderSearchRequest {
     this.statusFilter,
     this.customerName,
     this.menuItemName,
+    this.searchQuery,
   });
 
   /// JSONからオブジェクトを生成
@@ -104,8 +105,9 @@ class OrderSearchRequest {
               .toList(),
     customerName: json["customer_name"] as String?,
     menuItemName: json["menu_item_name"] as String?,
-    page: json["page"] as int,
-    limit: json["limit"] as int,
+    searchQuery: json["search_query"] as String?,
+    page: (json["page"] as num?)?.toInt() ?? 1,
+    limit: (json["limit"] as num?)?.toInt() ?? 20,
   );
 
   /// 開始日
@@ -123,6 +125,9 @@ class OrderSearchRequest {
   /// メニューアイテム名
   String? menuItemName;
 
+  /// 検索クエリ（顧客名や注文番号など）
+  String? searchQuery;
+
   /// ページ番号
   int page;
 
@@ -136,9 +141,60 @@ class OrderSearchRequest {
     "status_filter": statusFilter?.map((OrderStatus status) => status.value).toList(),
     "customer_name": customerName,
     "menu_item_name": menuItemName,
+    "search_query": searchQuery,
     "page": page,
     "limit": limit,
   };
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    if (other is! OrderSearchRequest) {
+      return false;
+    }
+
+    return dateFrom == other.dateFrom &&
+        dateTo == other.dateTo &&
+        _listEquals(statusFilter, other.statusFilter) &&
+        customerName == other.customerName &&
+        menuItemName == other.menuItemName &&
+        searchQuery == other.searchQuery &&
+        page == other.page &&
+        limit == other.limit;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    dateFrom,
+    dateTo,
+    statusFilter,
+    customerName,
+    menuItemName,
+    searchQuery,
+    page,
+    limit,
+  );
+
+  /// List equality check
+  bool _listEquals(List<OrderStatus>? a, List<OrderStatus>? b) {
+    if (a == null) {
+      return b == null;
+    }
+    if (b == null) {
+      return false;
+    }
+    if (a.length != b.length) {
+      return false;
+    }
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 /// 注文金額計算結果
@@ -152,10 +208,10 @@ class OrderCalculationResult {
 
   /// JSONからオブジェクトを生成
   factory OrderCalculationResult.fromJson(Map<String, dynamic> json) => OrderCalculationResult(
-    subtotal: json["subtotal"] as int,
-    taxAmount: json["tax_amount"] as int,
-    discountAmount: json["discount_amount"] as int,
-    totalAmount: json["total_amount"] as int,
+    subtotal: (json["subtotal"] as num?)?.toInt() ?? 0,
+    taxAmount: (json["tax_amount"] as num?)?.toInt() ?? 0,
+    discountAmount: (json["discount_amount"] as num?)?.toInt() ?? 0,
+    totalAmount: (json["total_amount"] as num?)?.toInt() ?? 0,
   );
 
   /// 小計

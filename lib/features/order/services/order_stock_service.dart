@@ -1,28 +1,35 @@
-import "../../../core/utils/logger_mixin.dart";
+// Riverpod not required here; DI is handled by provider wiring
+
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
+// Using final logging API directly
+import "../../../core/logging/compat.dart" as log;
 import "../../inventory/models/inventory_model.dart";
-import "../../inventory/repositories/material_repository.dart";
-import "../../inventory/repositories/recipe_repository.dart";
 import "../models/order_model.dart";
 
 /// 注文関連在庫操作サービス（在庫確認・材料消費・復元）
-class OrderStockService with LoggerMixin {
-  OrderStockService({MaterialRepository? materialRepository, RecipeRepository? recipeRepository})
-    : _materialRepository = materialRepository ?? MaterialRepository(),
-      _recipeRepository = recipeRepository ?? RecipeRepository();
+class OrderStockService {
+  OrderStockService({
+    required MaterialRepositoryContract<Material> materialRepository,
+    required RecipeRepositoryContract<Recipe> recipeRepository,
+  }) : _materialRepository = materialRepository,
+       _recipeRepository = recipeRepository;
 
-  final MaterialRepository _materialRepository;
-  final RecipeRepository _recipeRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final RecipeRepositoryContract<Recipe> _recipeRepository;
 
-  @override
   String get loggerComponent => "OrderStockService";
 
   /// メニューアイテムの在庫充足を確認
-  Future<bool> checkMenuItemStock(String menuItemId, int quantity, String userId) async {
-    logDebug("Checking stock for menu item: $menuItemId, quantity: $quantity");
+  Future<bool> checkMenuItemStock(String menuItemId, int quantity) async {
+    log.d(
+      "Checking stock for menu item: $menuItemId, quantity: $quantity",
+      tag: "OrderStockService",
+    );
 
     try {
       // レシピを取得
-      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId, userId);
+      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
 
       for (final Recipe recipe in recipes) {
         if (recipe.isOptional) {
@@ -35,31 +42,32 @@ class OrderStockService with LoggerMixin {
         // 材料の在庫を確認
         final Material? material = await _materialRepository.getById(recipe.materialId);
         if (material == null || material.currentStock < requiredAmount) {
-          logWarning(
+          log.w(
             "Insufficient stock for material: ${recipe.materialId}, required: $requiredAmount, available: ${material?.currentStock ?? 0}",
+            tag: "OrderStockService",
           );
           return false;
         }
       }
 
-      logDebug("Stock check passed for menu item: $menuItemId");
+      log.d("Stock check passed for menu item: $menuItemId", tag: "OrderStockService");
       return true;
     } catch (e, stackTrace) {
-      logError("Failed to check menu item stock", e, stackTrace);
+      log.e("Failed to check menu item stock", tag: "OrderStockService", error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// カート内全商品の在庫を検証（戻り値: {order_item_id: 在庫充足フラグ}）
-  Future<Map<String, bool>> validateCartStock(List<OrderItem> cartItems, String userId) async {
-    logInfo("Started validating cart stock for ${cartItems.length} items");
+  Future<Map<String, bool>> validateCartStock(List<OrderItem> cartItems) async {
+    log.i("Started validating cart stock for ${cartItems.length} items", tag: "OrderStockService");
 
     try {
       final Map<String, bool> stockValidation = <String, bool>{};
       int insufficientItems = 0;
 
       for (final OrderItem item in cartItems) {
-        final bool isSufficient = await checkMenuItemStock(item.menuItemId, item.quantity, userId);
+        final bool isSufficient = await checkMenuItemStock(item.menuItemId, item.quantity);
         stockValidation[item.id!] = isSufficient;
         if (!isSufficient) {
           insufficientItems++;
@@ -67,31 +75,34 @@ class OrderStockService with LoggerMixin {
       }
 
       if (insufficientItems > 0) {
-        logWarning("Stock validation found $insufficientItems items with insufficient stock");
+        log.w(
+          "Stock validation found $insufficientItems items with insufficient stock",
+          tag: "OrderStockService",
+        );
       } else {
-        logInfo("Cart stock validation completed: all items have sufficient stock");
+        log.i(
+          "Cart stock validation completed: all items have sufficient stock",
+          tag: "OrderStockService",
+        );
       }
 
       return stockValidation;
     } catch (e, stackTrace) {
-      logError("Failed to validate cart stock", e, stackTrace);
+      log.e("Failed to validate cart stock", tag: "OrderStockService", error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// 注文に対する材料消費を実行
-  Future<void> consumeMaterialsForOrder(List<OrderItem> orderItems, String userId) async {
-    logInfo("Started consuming materials for order");
+  Future<void> consumeMaterialsForOrder(List<OrderItem> orderItems) async {
+    log.i("Started consuming materials for order", tag: "OrderStockService");
 
     try {
       final Map<String, double> materialConsumption = <String, double>{};
 
       // 必要な材料量を集計
       for (final OrderItem item in orderItems) {
-        final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-          item.menuItemId,
-          userId,
-        );
+        final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(item.menuItemId);
         for (final Recipe recipe in recipes) {
           if (!recipe.isOptional) {
             final double requiredAmount = recipe.requiredAmount * item.quantity;
@@ -101,8 +112,9 @@ class OrderStockService with LoggerMixin {
         }
       }
 
-      logDebug(
+      log.d(
         "Material consumption calculated: ${materialConsumption.length} materials to consume",
+        tag: "OrderStockService",
       );
 
       // 材料在庫を消費
@@ -113,31 +125,36 @@ class OrderStockService with LoggerMixin {
         final Material? material = await _materialRepository.getById(materialId);
         if (material != null) {
           final double newStock = material.currentStock - consumedAmount;
-          await _materialRepository.updateStockAmount(materialId, newStock, userId);
-          logDebug("Material consumed: $materialId, amount: $consumedAmount, newStock: $newStock");
+          await _materialRepository.updateStockAmount(materialId, newStock);
+          log.d(
+            "Material consumed: $materialId, amount: $consumedAmount, newStock: $newStock",
+            tag: "OrderStockService",
+          );
         }
       }
 
-      logInfo("Materials consumed successfully for order");
+      log.i("Materials consumed successfully for order", tag: "OrderStockService");
     } catch (e, stackTrace) {
-      logError("Failed to consume materials for order", e, stackTrace);
+      log.e(
+        "Failed to consume materials for order",
+        tag: "OrderStockService",
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
 
   /// 注文キャンセル時の材料在庫復元
-  Future<void> restoreMaterialsFromOrder(List<OrderItem> orderItems, String userId) async {
-    logInfo("Started restoring materials from canceled order");
+  Future<void> restoreMaterialsFromOrder(List<OrderItem> orderItems) async {
+    log.i("Started restoring materials from canceled order", tag: "OrderStockService");
 
     try {
       final Map<String, double> materialRestoration = <String, double>{};
 
       // 復元する材料量を集計
       for (final OrderItem item in orderItems) {
-        final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-          item.menuItemId,
-          userId,
-        );
+        final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(item.menuItemId);
         for (final Recipe recipe in recipes) {
           if (!recipe.isOptional) {
             final double restoredAmount = recipe.requiredAmount * item.quantity;
@@ -147,8 +164,9 @@ class OrderStockService with LoggerMixin {
         }
       }
 
-      logDebug(
+      log.d(
         "Material restoration calculated: ${materialRestoration.length} materials to restore",
+        tag: "OrderStockService",
       );
 
       // 材料在庫を復元
@@ -159,14 +177,22 @@ class OrderStockService with LoggerMixin {
         final Material? material = await _materialRepository.getById(materialId);
         if (material != null) {
           final double newStock = material.currentStock + restoredAmount;
-          await _materialRepository.updateStockAmount(materialId, newStock, userId);
-          logDebug("Material restored: $materialId, amount: $restoredAmount, newStock: $newStock");
+          await _materialRepository.updateStockAmount(materialId, newStock);
+          log.d(
+            "Material restored: $materialId, amount: $restoredAmount, newStock: $newStock",
+            tag: "OrderStockService",
+          );
         }
       }
 
-      logInfo("Materials restored successfully from canceled order");
+      log.i("Materials restored successfully from canceled order", tag: "OrderStockService");
     } catch (e, stackTrace) {
-      logError("Failed to restore materials from order", e, stackTrace);
+      log.e(
+        "Failed to restore materials from order",
+        tag: "OrderStockService",
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }

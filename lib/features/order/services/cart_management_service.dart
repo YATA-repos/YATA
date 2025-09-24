@@ -1,52 +1,51 @@
 import "../../../core/constants/enums.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
 import "../../menu/models/menu_model.dart";
-import "../../menu/repositories/menu_item_repository.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
-import "../repositories/order_item_repository.dart";
-import "../repositories/order_repository.dart";
 import "order_calculation_service.dart";
 import "order_stock_service.dart";
 
 /// カート管理サービス
-class CartManagementService with LoggerMixin {
+class CartManagementService {
   CartManagementService({
-    OrderRepository? orderRepository,
-    OrderItemRepository? orderItemRepository,
-    MenuItemRepository? menuItemRepository,
-    OrderCalculationService? orderCalculationService,
-    OrderStockService? orderStockService,
-  }) : _orderRepository = orderRepository ?? OrderRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository(),
-       _menuItemRepository = menuItemRepository ?? MenuItemRepository(),
-       _orderCalculationService = orderCalculationService ?? OrderCalculationService(),
-       _orderStockService = orderStockService ?? OrderStockService();
+    required OrderRepositoryContract<Order> orderRepository,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+    required MenuItemRepositoryContract<MenuItem> menuItemRepository,
+    required OrderCalculationService orderCalculationService,
+    required OrderStockService orderStockService,
+  }) : _orderRepository = orderRepository,
+       _orderItemRepository = orderItemRepository,
+       _menuItemRepository = menuItemRepository,
+       _orderCalculationService = orderCalculationService,
+       _orderStockService = orderStockService;
 
-  final OrderRepository _orderRepository;
-  final OrderItemRepository _orderItemRepository;
-  final MenuItemRepository _menuItemRepository;
+  final OrderRepositoryContract<Order> _orderRepository;
+  final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
+  final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
   final OrderCalculationService _orderCalculationService;
   final OrderStockService _orderStockService;
 
-  @override
   String get loggerComponent => "CartManagementService";
 
   /// アクティブなカート（下書き注文）を取得または作成
   Future<Order?> getOrCreateActiveCart(String userId) async {
-    logInfo("Started retrieving or creating active cart for user");
+    log.i("Started retrieving or creating active cart for user", tag: loggerComponent);
 
     try {
       // 既存のアクティブカートを検索
-      final Order? existingCart = await _orderRepository.findActiveDraftByUser(userId);
+      final Order? existingCart = await _orderRepository.findActiveDraftByUser();
 
       if (existingCart != null) {
-        logInfo("Active cart found and returned");
+        log.i("Active cart found and returned", tag: loggerComponent);
         return existingCart;
       }
 
       // 新しいカートを作成
-      logDebug("Creating new cart for user");
+      log.d("Creating new cart for user", tag: loggerComponent);
       final Order newCart = Order(
         totalAmount: 0,
         status: OrderStatus.preparing,
@@ -59,14 +58,14 @@ class CartManagementService with LoggerMixin {
       final Order? createdCart = await _orderRepository.create(newCart);
 
       if (createdCart != null) {
-        logInfo("New cart created successfully");
+        log.i("New cart created successfully", tag: loggerComponent);
       } else {
-        logError("Failed to create new cart");
+        log.e("Failed to create new cart", tag: loggerComponent);
       }
 
       return createdCart;
     } catch (e, stackTrace) {
-      logError("Failed to get or create active cart", e, stackTrace);
+      log.e("Failed to get or create active cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -77,33 +76,32 @@ class CartManagementService with LoggerMixin {
     CartItemRequest request,
     String userId,
   ) async {
-    logInfo("Started adding item to cart: quantity=${request.quantity}");
+    log.i("Started adding item to cart: quantity=${request.quantity}", tag: loggerComponent);
 
     try {
       // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
-        logError("Cart access denied or cart not found");
+        log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
       // メニューアイテムの取得
       final MenuItem? menuItem = await _menuItemRepository.getById(request.menuItemId);
       if (menuItem == null || menuItem.userId != userId) {
-        logError("Menu item access denied or menu item not found");
+        log.e("Menu item access denied or menu item not found", tag: loggerComponent);
         throw Exception("Menu item ${request.menuItemId} not found");
       }
 
       // 在庫確認
-      logDebug("Checking stock availability for menu item");
+      log.d("Checking stock availability for menu item", tag: loggerComponent);
       final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
         request.menuItemId,
         request.quantity,
-        userId,
       );
 
       if (!isStockSufficient) {
-        logWarning("Stock insufficient for requested quantity");
+        log.w("Stock insufficient for requested quantity", tag: loggerComponent);
       }
 
       // 既存のアイテムがあるかチェック
@@ -114,7 +112,7 @@ class CartManagementService with LoggerMixin {
 
       if (existingItem != null) {
         // 既存アイテムの数量を更新
-        logDebug("Updating existing cart item quantity");
+        log.d("Updating existing cart item quantity", tag: loggerComponent);
         final int newQuantity = existingItem.quantity + request.quantity;
         final int newSubtotal = _orderCalculationService.calculateItemSubtotal(
           menuItem.price,
@@ -132,11 +130,11 @@ class CartManagementService with LoggerMixin {
         // カート合計を更新
         await _updateCartTotal(cartId);
 
-        logInfo("Cart item quantity updated successfully");
+        log.i("Cart item quantity updated successfully", tag: loggerComponent);
         return (updatedItem, isStockSufficient);
       } else {
         // 新しいアイテムを作成
-        logDebug("Creating new cart item");
+        log.d("Creating new cart item", tag: loggerComponent);
         final int subtotal = _orderCalculationService.calculateItemSubtotal(
           menuItem.price,
           request.quantity,
@@ -159,11 +157,11 @@ class CartManagementService with LoggerMixin {
         // カート合計を更新
         await _updateCartTotal(cartId);
 
-        logInfo("New cart item created successfully");
+        log.i("New cart item created successfully", tag: loggerComponent);
         return (createdItem, isStockSufficient);
       }
     } catch (e, stackTrace) {
-      logError("Failed to add item to cart", e, stackTrace);
+      log.e("Failed to add item to cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -175,44 +173,43 @@ class CartManagementService with LoggerMixin {
     int newQuantity,
     String userId,
   ) async {
-    logInfo("Started updating cart item quantity: newQuantity=$newQuantity");
+    log.i("Started updating cart item quantity: newQuantity=$newQuantity", tag: loggerComponent);
 
     try {
       if (newQuantity <= 0) {
-        logError("Invalid quantity provided: must be greater than 0");
+        log.e("Invalid quantity provided: must be greater than 0", tag: loggerComponent);
         throw Exception("Quantity must be greater than 0");
       }
 
       // カートと注文アイテムの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
-        logError("Cart access denied or cart not found");
+        log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
       final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
       if (orderItem == null || orderItem.orderId != cartId) {
-        logError("Order item not found in cart");
+        log.e("Order item not found in cart", tag: loggerComponent);
         throw Exception("Order item $orderItemId not found in cart");
       }
 
       // メニューアイテムの取得（価格情報のため）
       final MenuItem? menuItem = await _menuItemRepository.getById(orderItem.menuItemId);
       if (menuItem == null) {
-        logError("Menu item not found for order item");
+        log.e("Menu item not found for order item", tag: loggerComponent);
         throw Exception("Menu item ${orderItem.menuItemId} not found");
       }
 
       // 在庫確認
-      logDebug("Checking stock availability for updated quantity");
+      log.d("Checking stock availability for updated quantity", tag: loggerComponent);
       final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
         orderItem.menuItemId,
         newQuantity,
-        userId,
       );
 
       if (!isStockSufficient) {
-        logWarning("Stock insufficient for updated quantity");
+        log.w("Stock insufficient for updated quantity", tag: loggerComponent);
       }
 
       // 数量と小計を更新
@@ -228,30 +225,30 @@ class CartManagementService with LoggerMixin {
       // カート合計を更新
       await _updateCartTotal(cartId);
 
-      logInfo("Cart item quantity updated successfully");
+      log.i("Cart item quantity updated successfully", tag: loggerComponent);
       return (updatedItem, isStockSufficient);
     } catch (e, stackTrace) {
-      logError("Failed to update cart item quantity", e, stackTrace);
+      log.e("Failed to update cart item quantity", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// カートから商品を削除
   Future<bool> removeItemFromCart(String cartId, String orderItemId, String userId) async {
-    logInfo("Started removing item from cart");
+    log.i("Started removing item from cart", tag: loggerComponent);
 
     try {
       // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
-        logError("Cart access denied or cart not found");
+        log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
       // 注文アイテムの存在確認
       final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
       if (orderItem == null || orderItem.orderId != cartId) {
-        logError("Order item not found in cart");
+        log.e("Order item not found in cart", tag: loggerComponent);
         throw Exception("Order item $orderItemId not found in cart");
       }
 
@@ -261,23 +258,23 @@ class CartManagementService with LoggerMixin {
       // カート合計を更新
       await _updateCartTotal(cartId);
 
-      logInfo("Cart item removed successfully");
+      log.i("Cart item removed successfully", tag: loggerComponent);
       return true;
     } catch (e, stackTrace) {
-      logError("Failed to remove item from cart", e, stackTrace);
+      log.e("Failed to remove item from cart", tag: loggerComponent, error: e, st: stackTrace);
       return false;
     }
   }
 
   /// カートを空にする
   Future<bool> clearCart(String cartId, String userId) async {
-    logInfo("Started clearing cart");
+    log.i("Started clearing cart", tag: loggerComponent);
 
     try {
       // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
-        logError("Cart access denied or cart not found");
+        log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
@@ -287,39 +284,39 @@ class CartManagementService with LoggerMixin {
       if (success) {
         // カートの合計金額をリセット
         await _orderRepository.updateById(cartId, <String, dynamic>{"total_amount": 0});
-        logInfo("Cart cleared successfully");
+        log.i("Cart cleared successfully", tag: loggerComponent);
       } else {
-        logWarning("Failed to clear cart items");
+        log.w("Failed to clear cart items", tag: loggerComponent);
       }
 
       return success;
     } catch (e, stackTrace) {
-      logError("Failed to clear cart", e, stackTrace);
+      log.e("Failed to clear cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// カート内全商品の在庫を検証（戻り値: {order_item_id: 在庫充足フラグ}）
   Future<Map<String, bool>> validateCartStock(String cartId, String userId) async {
-    logInfo("Started validating cart stock");
+    log.i("Started validating cart stock", tag: loggerComponent);
 
     try {
       // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
-        logError("Cart access denied or cart not found");
+        log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
       // カート内のアイテムを取得
       final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
 
-      logDebug("Validating stock for ${cartItems.length} cart items");
+      log.d("Validating stock for ${cartItems.length} cart items", tag: loggerComponent);
 
       // 在庫検証サービスを使用
-      return _orderStockService.validateCartStock(cartItems, userId);
+      return _orderStockService.validateCartStock(cartItems);
     } catch (e, stackTrace) {
-      logError("Failed to validate cart stock", e, stackTrace);
+      log.e("Failed to validate cart stock", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }

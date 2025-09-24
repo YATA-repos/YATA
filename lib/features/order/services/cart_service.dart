@@ -1,4 +1,3 @@
-import "../../../core/utils/logger_mixin.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "cart_management_service.dart";
@@ -6,17 +5,16 @@ import "order_calculation_service.dart";
 
 /// カートサービス統合クラス
 /// CartManagementServiceとOrderCalculationServiceを組み合わせて使用
-class CartService with LoggerMixin {
+class CartService {
   CartService({
-    CartManagementService? cartManagementService,
-    OrderCalculationService? orderCalculationService,
-  }) : _cartManagementService = cartManagementService ?? CartManagementService(),
-       _orderCalculationService = orderCalculationService ?? OrderCalculationService();
+    required CartManagementService cartManagementService,
+    required OrderCalculationService orderCalculationService,
+  }) : _cartManagementService = cartManagementService,
+       _orderCalculationService = orderCalculationService;
 
   final CartManagementService _cartManagementService;
   final OrderCalculationService _orderCalculationService;
 
-  @override
   String get loggerComponent => "CartService";
 
   // ===== カート管理関連メソッド =====

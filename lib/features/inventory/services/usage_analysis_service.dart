@@ -1,21 +1,19 @@
-import "../../../core/utils/logger_mixin.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
 import "../models/inventory_model.dart";
-import "../repositories/material_repository.dart";
+import "../models/transaction_model.dart";
 
 /// 使用量分析・予測サービス
-class UsageAnalysisService with LoggerMixin {
+class UsageAnalysisService {
   UsageAnalysisService({
-    MaterialRepository? materialRepository,
-    StockTransactionRepository? stockTransactionRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
-       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository();
+    required MaterialRepositoryContract<Material> materialRepository,
+    required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
+  }) : _materialRepository = materialRepository,
+       _stockTransactionRepository = stockTransactionRepository;
 
-  final MaterialRepository _materialRepository;
-  final StockTransactionRepository _stockTransactionRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final StockTransactionRepositoryContract<StockTransaction> _stockTransactionRepository;
 
-  @override
   String get loggerComponent => "UsageAnalysisService";
 
   /// 材料の平均使用量を計算（日次）
@@ -26,7 +24,7 @@ class UsageAnalysisService with LoggerMixin {
 
     // 期間内の消費取引を取得（負の値のみ）
     final List<StockTransaction> transactions = await _stockTransactionRepository
-        .findByMaterialAndDateRange(materialId, startDate, endDate, userId);
+        .findByMaterialAndDateRange(materialId, startDate, endDate);
 
     // 消費取引のみをフィルタ（負の値）
     final List<StockTransaction> consumptionTransactions = transactions
@@ -51,7 +49,7 @@ class UsageAnalysisService with LoggerMixin {
   Future<int?> calculateEstimatedUsageDays(String materialId, String userId) async {
     // 材料を取得
     final Material? material = await _materialRepository.getById(materialId);
-    if (material == null || material.userId != userId) {
+    if (material == null) {
       return null;
     }
 
@@ -71,7 +69,7 @@ class UsageAnalysisService with LoggerMixin {
   /// 全材料の使用可能日数を一括計算
   Future<Map<String, int?>> bulkCalculateUsageDays(String userId) async {
     // 全材料を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(null, userId);
+    final List<Material> materials = await _materialRepository.findByCategoryId(null);
 
     // 各材料の使用可能日数を計算
     final Map<String, int?> usageDays = <String, int?>{};
@@ -88,7 +86,7 @@ class UsageAnalysisService with LoggerMixin {
   /// 全材料の日次使用量を一括計算
   Future<Map<String, double?>> bulkCalculateDailyUsageRates(String userId, {int days = 30}) async {
     // 全材料を取得
-    final List<Material> materials = await _materialRepository.findByCategoryId(null, userId);
+    final List<Material> materials = await _materialRepository.findByCategoryId(null);
 
     // 各材料の日次使用量を計算
     final Map<String, double?> dailyUsageRates = <String, double?>{};

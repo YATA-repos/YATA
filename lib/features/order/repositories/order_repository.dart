@@ -1,19 +1,20 @@
-import "../../../core/base/base_repository.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/query_types.dart";
+import "../../../core/contracts/repositories/crud_repository.dart" as repo_contract;
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
 import "../models/order_model.dart";
 
 /// 注文リポジトリ
-class OrderRepository extends BaseRepository<Order, String> {
-  OrderRepository() : super(tableName: "orders");
+class OrderRepository implements OrderRepositoryContract<Order> {
+  OrderRepository({required repo_contract.CrudRepository<Order, String> delegate})
+    : _delegate = delegate;
 
-  @override
-  Order fromJson(Map<String, dynamic> json) => Order.fromJson(json);
+  final repo_contract.CrudRepository<Order, String> _delegate;
 
   /// ユーザーのアクティブな下書き注文（カート）を取得
-  Future<Order?> findActiveDraftByUser(String userId) async {
+  @override
+  Future<Order?> findActiveDraftByUser() async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("status", OrderStatus.preparing.value),
     ];
 
@@ -22,12 +23,13 @@ class OrderRepository extends BaseRepository<Order, String> {
       const OrderByCondition(column: "created_at", ascending: false),
     ];
 
-    final List<Order> results = await find(filters: filters, orderBy: orderBy, limit: 1);
+    final List<Order> results = await _delegate.find(filters: filters, orderBy: orderBy, limit: 1);
     return results.isNotEmpty ? results[0] : null;
   }
 
   /// 指定ステータスリストの注文一覧を取得
-  Future<List<Order>> findByStatusList(List<OrderStatus> statusList, String userId) async {
+  @override
+  Future<List<Order>> findByStatusList(List<OrderStatus> statusList) async {
     if (statusList.isEmpty) {
       return <Order>[];
     }
@@ -35,7 +37,6 @@ class OrderRepository extends BaseRepository<Order, String> {
     final List<String> statusValues = statusList.map((OrderStatus status) => status.value).toList();
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.inList("status", statusValues),
     ];
 
@@ -44,17 +45,18 @@ class OrderRepository extends BaseRepository<Order, String> {
       const OrderByCondition(column: "ordered_at", ascending: false),
     ];
 
-    return find(filters: filters, orderBy: orderBy);
+    return _delegate.find(filters: filters, orderBy: orderBy);
   }
 
   /// 注文を検索（戻り値: (注文一覧, 総件数)）
+  @override
   Future<(List<Order>, int)> searchWithPagination(
     List<QueryFilter> filters,
     int page,
     int limit,
   ) async {
     // 総件数を取得
-    final int totalCount = await count(filters: filters);
+    final int totalCount = await _delegate.count(filters: filters);
 
     // ページネーション計算
     final int offset = (page - 1) * limit;
@@ -65,7 +67,7 @@ class OrderRepository extends BaseRepository<Order, String> {
     ];
 
     // データを取得
-    final List<Order> orders = await find(
+    final List<Order> orders = await _delegate.find(
       filters: filters,
       orderBy: orderBy,
       limit: limit,
@@ -76,7 +78,8 @@ class OrderRepository extends BaseRepository<Order, String> {
   }
 
   /// 期間指定で注文一覧を取得
-  Future<List<Order>> findByDateRange(DateTime dateFrom, DateTime dateTo, String userId) async {
+  @override
+  Future<List<Order>> findByDateRange(DateTime dateFrom, DateTime dateTo) async {
     // 日付を正規化（日の開始と終了時刻に設定）
     final DateTime dateFromNormalized = DateTime(dateFrom.year, dateFrom.month, dateFrom.day);
     final DateTime dateToNormalized = DateTime(
@@ -90,7 +93,6 @@ class OrderRepository extends BaseRepository<Order, String> {
     );
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("ordered_at", dateFromNormalized.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", dateToNormalized.toIso8601String()),
     ];
@@ -99,11 +101,12 @@ class OrderRepository extends BaseRepository<Order, String> {
       const OrderByCondition(column: "ordered_at", ascending: false),
     ];
 
-    return find(filters: filters, orderBy: orderBy);
+    return _delegate.find(filters: filters, orderBy: orderBy);
   }
 
   /// 指定日の完了注文を取得
-  Future<List<Order>> findCompletedByDate(DateTime targetDate, String userId) async {
+  @override
+  Future<List<Order>> findCompletedByDate(DateTime targetDate) async {
     // 日付を正規化（日の開始と終了時刻に設定）
     final DateTime dateStart = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final DateTime dateEnd = DateTime(
@@ -117,7 +120,6 @@ class OrderRepository extends BaseRepository<Order, String> {
     );
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("status", OrderStatus.completed.value),
       QueryConditionBuilder.gte("completed_at", dateStart.toIso8601String()),
       QueryConditionBuilder.lte("completed_at", dateEnd.toIso8601String()),
@@ -128,11 +130,11 @@ class OrderRepository extends BaseRepository<Order, String> {
       const OrderByCondition(column: "completed_at", ascending: false),
     ];
 
-    return find(filters: filters, orderBy: orderBy);
+    return _delegate.find(filters: filters, orderBy: orderBy);
   }
 
   /// 指定日のステータス別注文数を取得
-  Future<Map<OrderStatus, int>> countByStatusAndDate(DateTime targetDate, String userId) async {
+  Future<Map<OrderStatus, int>> countByStatusAndDate(DateTime targetDate) async {
     // 日付を正規化（日の開始と終了時刻に設定）
     final DateTime dateStart = DateTime(targetDate.year, targetDate.month, targetDate.day);
     final DateTime dateEnd = DateTime(
@@ -147,12 +149,11 @@ class OrderRepository extends BaseRepository<Order, String> {
 
     // 指定日のユーザー注文を取得
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("ordered_at", dateStart.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", dateEnd.toIso8601String()),
     ];
 
-    final List<Order> targetDateOrders = await find(filters: filters);
+    final List<Order> targetDateOrders = await _delegate.find(filters: filters);
 
     // ステータス別に集計
     final Map<OrderStatus, int> statusCounts = <OrderStatus, int>{
@@ -167,7 +168,8 @@ class OrderRepository extends BaseRepository<Order, String> {
   }
 
   /// 次の注文番号を生成
-  Future<String> generateNextOrderNumber(String userId) async {
+  @override
+  Future<String> generateNextOrderNumber() async {
     // 今日の日付を取得
     final DateTime today = DateTime.now();
     final String todayPrefix =
@@ -180,12 +182,11 @@ class OrderRepository extends BaseRepository<Order, String> {
     final DateTime todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59, 999);
 
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.gte("ordered_at", todayStart.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", todayEnd.toIso8601String()),
     ];
 
-    final List<Order> todayOrders = await find(filters: filters);
+    final List<Order> todayOrders = await _delegate.find(filters: filters);
 
     // 今日の注文数を基に次の番号を生成
     final int nextNumber = todayOrders.length + 1;
@@ -194,13 +195,9 @@ class OrderRepository extends BaseRepository<Order, String> {
   }
 
   /// 完了時間範囲で注文を取得（調理時間分析用）
-  Future<List<Order>> findOrdersByCompletionTimeRange(
-    DateTime startTime,
-    DateTime endTime,
-    String userId,
-  ) async {
+  @override
+  Future<List<Order>> findOrdersByCompletionTimeRange(DateTime startTime, DateTime endTime) async {
     final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("user_id", userId),
       QueryConditionBuilder.eq("status", OrderStatus.completed.value),
       QueryConditionBuilder.gte("completed_at", startTime.toIso8601String()),
       QueryConditionBuilder.lte("completed_at", endTime.toIso8601String()),
@@ -211,6 +208,140 @@ class OrderRepository extends BaseRepository<Order, String> {
       const OrderByCondition(column: "completed_at"),
     ];
 
+    return _delegate.find(filters: filters, orderBy: orderBy);
+  }
+
+  /// アクティブな注文を取得
+  @override
+  Future<List<Order>> findActiveOrders() async {
+    final List<OrderStatus> activeStatuses = <OrderStatus>[
+      OrderStatus.pending,
+      OrderStatus.confirmed,
+      OrderStatus.preparing,
+      OrderStatus.ready,
+    ];
+
+    return findByStatusList(activeStatuses);
+  }
+
+  /// 最近の注文を取得
+  @override
+  Future<List<Order>> findRecentOrders({int limit = 10}) async {
+    // 注文日時で降順
+    final List<OrderByCondition> orderBy = <OrderByCondition>[
+      const OrderByCondition(column: "ordered_at", ascending: false),
+    ];
+
+    return find(orderBy: orderBy, limit: limit);
+  }
+
+  /// 期間指定で完了注文を取得
+  @override
+  Future<List<Order>> findCompletedByDateRange(DateTime start, DateTime end) async {
+    final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("status", OrderStatus.completed.value),
+      QueryConditionBuilder.gte("completed_at", start.toIso8601String()),
+      QueryConditionBuilder.lte("completed_at", end.toIso8601String()),
+    ];
+
+    final List<OrderByCondition> orderBy = <OrderByCondition>[
+      const OrderByCondition(column: "completed_at", ascending: false),
+    ];
+
     return find(filters: filters, orderBy: orderBy);
   }
+
+  /// 期間とステータス別の注文数を取得
+  @override
+  Future<Map<OrderStatus, Map<DateTime, int>>> countByStatusAndDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.gte("ordered_at", start.toIso8601String()),
+      QueryConditionBuilder.lte("ordered_at", end.toIso8601String()),
+    ];
+
+    final List<Order> orders = await _delegate.find(filters: filters);
+
+    // ステータス別・日別に集計
+    final Map<OrderStatus, Map<DateTime, int>> result = <OrderStatus, Map<DateTime, int>>{};
+
+    for (final Order order in orders) {
+      final DateTime orderDate = DateTime(
+        order.orderedAt.year,
+        order.orderedAt.month,
+        order.orderedAt.day,
+      );
+
+      result[order.status] ??= <DateTime, int>{};
+      result[order.status]![orderDate] = (result[order.status]![orderDate] ?? 0) + 1;
+    }
+
+    return result;
+  }
+
+  /// アクティブ注文をステータス別に取得
+  @override
+  Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus() async {
+    final List<OrderStatus> activeStatuses = <OrderStatus>[
+      OrderStatus.pending,
+      OrderStatus.confirmed,
+      OrderStatus.preparing,
+      OrderStatus.ready,
+    ];
+
+    final List<Order> activeOrders = await findByStatusList(activeStatuses);
+
+    // ステータス別にグループ化
+    final Map<OrderStatus, List<Order>> result = <OrderStatus, List<Order>>{};
+
+    for (final OrderStatus status in activeStatuses) {
+      result[status] = activeOrders.where((Order order) => order.status == status).toList();
+    }
+
+    return result;
+  }
+
+  // ==== CrudRepository delegation (explicit implementations) ====
+  @override
+  Future<Order?> create(Order entity) => _delegate.create(entity);
+
+  @override
+  Future<List<Order>> bulkCreate(List<Order> entities) => _delegate.bulkCreate(entities);
+
+  @override
+  Future<Order?> getById(String id) => _delegate.getById(id);
+
+  @override
+  Future<Order?> getByPrimaryKey(Map<String, dynamic> keyMap) => _delegate.getByPrimaryKey(keyMap);
+
+  @override
+  Future<Order?> updateById(String id, Map<String, dynamic> updates) =>
+      _delegate.updateById(id, updates);
+
+  @override
+  Future<Order?> updateByPrimaryKey(Map<String, dynamic> keyMap, Map<String, dynamic> updates) =>
+      _delegate.updateByPrimaryKey(keyMap, updates);
+
+  @override
+  Future<void> deleteById(String id) => _delegate.deleteById(id);
+
+  @override
+  Future<void> deleteByPrimaryKey(Map<String, dynamic> keyMap) =>
+      _delegate.deleteByPrimaryKey(keyMap);
+
+  @override
+  Future<void> bulkDelete(List<String> keys) => _delegate.bulkDelete(keys);
+
+  @override
+  Future<List<Order>> find({
+    List<QueryFilter>? filters,
+    List<OrderByCondition>? orderBy,
+    int limit = 100,
+    int offset = 0,
+  }) => _delegate.find(filters: filters, orderBy: orderBy, limit: limit, offset: offset);
+
+  @override
+  Future<int> count({List<QueryFilter>? filters}) => _delegate.count(filters: filters);
 }

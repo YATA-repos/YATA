@@ -1,8 +1,10 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
-import "log_service.dart";
+import "../logging/compat.dart" as log;
 
-// ! 静的メソッドのためLoggerMixinは使用不可
+/// Supabaseクエリ構築用ユーティリティクラス
+///
+/// 静的メソッドのみを提供するため、YataLoggerの静的メソッドを直接使用
 class QueryUtils {
   QueryUtils._();
 
@@ -30,19 +32,19 @@ class QueryUtils {
   };
 
   /// 単一フィルタ条件をクエリに適用
-  static PostgrestFilterBuilder<dynamic> _applySingleFilter(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applySingleFilter<T>(
+    PostgrestFilterBuilder<T> query,
     FilterCondition condition,
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
-      LogService.error("QueryUtils", "Unsupported operator: ${condition.operator}");
+      log.e("Unsupported operator: ${condition.operator}", tag: "QueryUtils");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
-    LogService.debug(
-      "QueryUtils",
+    log.d(
       "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
+      tag: "QueryUtils",
     );
 
     // NULL判定
@@ -57,10 +59,7 @@ class QueryUtils {
     if (condition.operator == FilterOperator.inList ||
         condition.operator == FilterOperator.notInList) {
       if (condition.value is! List) {
-        LogService.error(
-          "QueryUtils",
-          "List type value required for ${condition.operator} operator",
-        );
+        log.e("List type value required for ${condition.operator} operator", tag: "QueryUtils");
         throw ArgumentError("${condition.operator}演算子にはList型の値が必要です");
       }
       final List<dynamic> values = condition.value as List<dynamic>;
@@ -110,9 +109,9 @@ class QueryUtils {
       case FilterOperator.notInList:
         // これらは上記で処理済み
 
-        LogService.error(
-          "QueryUtils",
+        log.e(
           "This operator should be handled in preprocessing: ${condition.operator}",
+          tag: "QueryUtils",
         );
         throw ArgumentError("この演算子は事前処理で処理される必要があります: ${condition.operator}");
     }
@@ -124,10 +123,9 @@ class QueryUtils {
 
     for (final FilterCondition condition in conditions) {
       if (!_operatorMethodMap.containsKey(condition.operator)) {
-        LogService.error(
-          "QueryUtils",
-          "Unsupported operator in OR condition: ${condition.operator}",
-          "OR条件でサポートされていない演算子: ${condition.operator}",
+        log.e(
+          "Unsupported operator in OR condition: ${condition.operator} | OR条件でサポートされていない演算子: ${condition.operator}",
+          tag: "QueryUtils",
         );
         throw ArgumentError("サポートされていない演算子: ${condition.operator}");
       }
@@ -139,10 +137,9 @@ class QueryUtils {
         orParts.add("${condition.column}.not.is.null");
       } else if (condition.operator == FilterOperator.inList) {
         if (condition.value is! List) {
-          LogService.error(
-            "QueryUtils",
-            "List type value required for inList operator",
-            "inList演算子にはList型の値が必要です",
+          log.e(
+            "List type value required for inList operator | inList演算子にはList型の値が必要です",
+            tag: "QueryUtils",
           );
           throw ArgumentError("inList演算子にはList型の値が必要です");
         }
@@ -151,10 +148,9 @@ class QueryUtils {
         orParts.add("${condition.column}.in.($valueStr)");
       } else if (condition.operator == FilterOperator.notInList) {
         if (condition.value is! List) {
-          LogService.error(
-            "QueryUtils",
-            "List type value required for notInList operator",
-            "notInList演算子にはList型の値が必要です",
+          log.e(
+            "List type value required for notInList operator | notInList演算子にはList型の値が必要です",
+            tag: "QueryUtils",
           );
           throw ArgumentError("notInList演算子にはList型の値が必要です");
         }
@@ -170,8 +166,8 @@ class QueryUtils {
   }
 
   /// 論理条件をクエリに適用（階層化対応済み）
-  static PostgrestFilterBuilder<dynamic> _applyLogicalCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyLogicalCondition<T>(
+    PostgrestFilterBuilder<T> query,
     LogicalCondition condition,
   ) {
     if (condition is AndCondition) {
@@ -181,21 +177,20 @@ class QueryUtils {
     } else if (condition is ComplexCondition) {
       return _applyComplexCondition(query, condition);
     } else {
-      LogService.error(
-        "QueryUtils",
-        "Unknown logical condition type: ${condition.runtimeType}",
-        "不明な論理条件タイプ: ${condition.runtimeType}",
+      log.e(
+        "Unknown logical condition type: ${condition.runtimeType} | 不明な論理条件タイプ: ${condition.runtimeType}",
+        tag: "QueryUtils",
       );
       throw ArgumentError("不明な論理条件タイプ: ${condition.runtimeType}");
     }
   }
 
   /// AND条件を適用
-  static PostgrestFilterBuilder<dynamic> _applyAndCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyAndCondition<T>(
+    PostgrestFilterBuilder<T> query,
     AndCondition condition,
   ) {
-    PostgrestFilterBuilder<dynamic> result = query;
+    PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter cond in condition.conditions) {
       result = applyFilter(result, cond);
     }
@@ -203,8 +198,8 @@ class QueryUtils {
   }
 
   /// OR条件を適用
-  static PostgrestFilterBuilder<dynamic> _applyOrCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyOrCondition<T>(
+    PostgrestFilterBuilder<T> query,
     OrCondition condition,
   ) {
     final List<FilterCondition> filterConditions = <FilterCondition>[];
@@ -221,10 +216,9 @@ class QueryUtils {
           }
         }
       } else {
-        LogService.error(
-          "QueryUtils",
-          "Unsupported condition type in OR: ${cond.runtimeType}",
-          "OR条件内でサポートされていない条件タイプ: ${cond.runtimeType}",
+        log.e(
+          "Unsupported condition type in OR: ${cond.runtimeType} | OR条件内でサポートされていない条件タイプ: ${cond.runtimeType}",
+          tag: "QueryUtils",
         );
         throw ArgumentError("OR条件内でサポートされていない条件タイプ: ${cond.runtimeType}");
       }
@@ -236,13 +230,13 @@ class QueryUtils {
 
     final String orString = _buildOrConditionString(filterConditions);
 
-    LogService.debug("QueryUtils", "Applying OR condition: $orString");
+    log.d("Applying OR condition: $orString", tag: "QueryUtils");
     return query.or(orString);
   }
 
   /// 複合条件を適用
-  static PostgrestFilterBuilder<dynamic> _applyComplexCondition(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> _applyComplexCondition<T>(
+    PostgrestFilterBuilder<T> query,
     ComplexCondition condition,
   ) {
     if (condition.operator == LogicalOperator.and) {
@@ -253,8 +247,8 @@ class QueryUtils {
   }
 
   /// フィルタ条件をクエリに適用
-  static PostgrestFilterBuilder<dynamic> applyFilter(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> applyFilter<T>(
+    PostgrestFilterBuilder<T> query,
     QueryFilter filter,
   ) {
     if (filter is FilterCondition) {
@@ -262,22 +256,21 @@ class QueryUtils {
     } else if (filter is LogicalCondition) {
       return _applyLogicalCondition(query, filter);
     } else {
-      LogService.error(
-        "QueryUtils",
-        "Unsupported filter type: ${filter.runtimeType}",
-        "サポートされていないフィルタタイプ: ${filter.runtimeType}",
+      log.e(
+        "Unsupported filter type: ${filter.runtimeType} | サポートされていないフィルタタイプ: ${filter.runtimeType}",
+        tag: "QueryUtils",
       );
       throw ArgumentError("サポートされていないフィルタタイプ: ${filter.runtimeType}");
     }
   }
 
   /// 複数のフィルタ条件をクエリに適用（AND結合）
-  static PostgrestFilterBuilder<dynamic> applyFilters(
-    PostgrestFilterBuilder<dynamic> query,
+  static PostgrestFilterBuilder<T> applyFilters<T>(
+    PostgrestFilterBuilder<T> query,
     List<QueryFilter> filters,
   ) {
-    LogService.debug("QueryUtils", "Applying ${filters.length} filters with AND combination");
-    PostgrestFilterBuilder<dynamic> result = query;
+    log.d("Applying ${filters.length} filters with AND combination", tag: "QueryUtils");
+    PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter filter in filters) {
       result = applyFilter(result, filter);
     }
@@ -289,9 +282,9 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     OrderByCondition orderBy,
   ) {
-    LogService.debug(
-      "QueryUtils",
+    log.d(
       "Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}",
+      tag: "QueryUtils",
     );
     return query.order(orderBy.column, ascending: orderBy.ascending);
   }
@@ -301,84 +294,11 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
-    LogService.debug("QueryUtils", "Applying ${orderBys.length} order by conditions");
+    log.d("Applying ${orderBys.length} order by conditions", tag: "QueryUtils");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
       result = applyOrderBy(result, orderBy);
     }
     return result;
   }
-
-  // ! 以下のヘルパーの使用状況調査 & 使ってなかったら削除する
-
-  /// 後方互換性維持のためのヘルパー
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition eq(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.eq, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（不等号）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition neq(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.neq, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（より大きい）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition gt(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.gt, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（以上）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition gte(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.gte, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（より小さい）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition lt(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.lt, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（以下）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition lte(String column, dynamic value) =>
-      FilterCondition(column: column, operator: FilterOperator.lte, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（部分一致）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition like(String column, String value) =>
-      FilterCondition(column: column, operator: FilterOperator.like, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（部分一致・大文字小文字区別なし）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition ilike(String column, String value) =>
-      FilterCondition(column: column, operator: FilterOperator.ilike, value: value);
-
-  /// 簡単なフィルタ条件作成ヘルパー（配列に含まれる）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition inList(String column, List<dynamic> values) =>
-      FilterCondition(column: column, operator: FilterOperator.inList, value: values);
-
-  /// 簡単なフィルタ条件作成ヘルパー（NULL判定）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition isNull(String column) =>
-      FilterCondition(column: column, operator: FilterOperator.isNull, value: null);
-
-  /// 簡単なフィルタ条件作成ヘルパー（NULL以外判定）
-  @Deprecated("Use FilterCondition methods instead")
-  static FilterCondition isNotNull(String column) =>
-      FilterCondition(column: column, operator: FilterOperator.isNotNull, value: null);
-
-  /// 簡単なAND条件作成ヘルパー
-  @Deprecated("Use FilterCondition methods instead")
-  static AndCondition and(List<QueryFilter> conditions) => AndCondition(conditions);
-
-  /// 簡単なOR条件作成ヘルパー
-  @Deprecated("Use FilterCondition methods instead")
-  static OrCondition or(List<QueryFilter> conditions) => OrCondition(conditions);
-
-  /// 簡単なソート条件作成ヘルパー（昇順）
-  @Deprecated("Use FilterCondition methods instead")
-  static OrderByCondition asc(String column) => OrderByCondition(column: column);
-
-  /// 簡単なソート条件作成ヘルパー（降順）
-  @Deprecated("Use FilterCondition methods instead")
-  static OrderByCondition desc(String column) => OrderByCondition(column: column, ascending: false);
 }

@@ -1,7 +1,3 @@
-import "package:json_annotation/json_annotation.dart";
-
-part "base_model.g.dart";
-
 /// すべてのモデルクラスの基底クラス
 ///
 /// すべてのモデルクラスは、このクラスを継承し、
@@ -9,7 +5,6 @@ part "base_model.g.dart";
 /// - fromJsonファクトリーコンストラクタ
 /// - toJsonメソッド
 /// - tableNameゲッター
-@JsonSerializable()
 abstract class BaseModel {
   BaseModel({this.id, this.userId});
 

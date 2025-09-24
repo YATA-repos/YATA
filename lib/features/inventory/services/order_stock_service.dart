@@ -1,60 +1,61 @@
 import "dart:math" as math;
 
+import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
+import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
 import "../../order/models/order_model.dart";
-import "../../order/repositories/order_item_repository.dart";
-import "../../stock/models/stock_model.dart";
-import "../../stock/repositories/stock_transaction_repository.dart";
 import "../models/inventory_model.dart";
-import "../repositories/material_repository.dart";
-import "../repositories/recipe_repository.dart";
+import "../models/transaction_model.dart";
 
 /// 注文関連在庫操作サービス
-class OrderStockService with LoggerMixin {
+class OrderStockService {
   OrderStockService({
-    MaterialRepository? materialRepository,
-    RecipeRepository? recipeRepository,
-    StockTransactionRepository? stockTransactionRepository,
-    OrderItemRepository? orderItemRepository,
-  }) : _materialRepository = materialRepository ?? MaterialRepository(),
-       _recipeRepository = recipeRepository ?? RecipeRepository(),
-       _stockTransactionRepository = stockTransactionRepository ?? StockTransactionRepository(),
-       _orderItemRepository = orderItemRepository ?? OrderItemRepository();
+    required MaterialRepositoryContract<Material> materialRepository,
+    required RecipeRepositoryContract<Recipe> recipeRepository,
+    required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+  }) : _materialRepository = materialRepository,
+       _recipeRepository = recipeRepository,
+       _stockTransactionRepository = stockTransactionRepository,
+       _orderItemRepository = orderItemRepository;
 
-  final MaterialRepository _materialRepository;
-  final RecipeRepository _recipeRepository;
-  final StockTransactionRepository _stockTransactionRepository;
-  final OrderItemRepository _orderItemRepository;
+  final MaterialRepositoryContract<Material> _materialRepository;
+  final RecipeRepositoryContract<Recipe> _recipeRepository;
+  final StockTransactionRepositoryContract<StockTransaction> _stockTransactionRepository;
+  final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
 
-  @override
   String get loggerComponent => "OrderStockService";
 
   /// 注文に対する材料を消費（在庫減算）
   Future<bool> consumeMaterialsForOrder(String orderId, String userId) async {
-    logInfoMessage(ServiceInfo.materialConsumptionStarted);
+    log.i(ServiceInfo.materialConsumptionStarted.message, tag: loggerComponent);
 
     try {
       // 注文明細を取得
       final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
 
       if (orderItems.isEmpty) {
-        logDebug(ServiceDebug.consumptionCompletedSuccessfully.message);
+        log.d(ServiceDebug.consumptionCompletedSuccessfully.message, tag: loggerComponent);
         return true; // 注文明細がない場合は成功とみなす
       }
 
-      logDebug("Processing material consumption for ${orderItems.length} order items");
+      log.d(
+        "Processing material consumption for ${orderItems.length} order items",
+        tag: loggerComponent,
+      );
 
       // 注文明細から必要な材料を計算
       final Map<String, double> materialRequirements = <String, double>{};
 
       for (final OrderItem orderItem in orderItems) {
         // メニューアイテムのレシピを取得
-        final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(
-          orderItem.menuItemId,
-          userId,
-        );
+        final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(orderItem.menuItemId);
 
         for (final Recipe recipe in recipes) {
           // 必要量 = レシピの必要量 × 注文数量
@@ -64,7 +65,10 @@ class OrderStockService with LoggerMixin {
         }
       }
 
-      logDebug("Material requirements calculated: ${materialRequirements.length} materials needed");
+      log.d(
+        "Material requirements calculated: ${materialRequirements.length} materials needed",
+        tag: loggerComponent,
+      );
 
       // 各材料の在庫を減算し、取引を記録
       final List<StockTransaction> transactions = <StockTransaction>[];
@@ -76,7 +80,7 @@ class OrderStockService with LoggerMixin {
 
         // 材料を取得
         final Material? material = await _materialRepository.getById(materialId);
-        if (material == null || material.userId != userId) {
+        if (material == null) {
           continue;
         }
 
@@ -85,7 +89,10 @@ class OrderStockService with LoggerMixin {
         final double newStock = material.currentStock - requiredAmount;
         material.currentStock = math.max(newStock, 0.0); // 負の在庫は0にする
 
-        logDebug("Material consumed: ${material.name} from $oldStock to ${material.currentStock}");
+        log.d(
+          "Material consumed: ${material.name} from $oldStock to ${material.currentStock}",
+          tag: loggerComponent,
+        );
 
         // 材料を更新
         await _materialRepository.updateById(material.id!, <String, dynamic>{
@@ -111,24 +118,32 @@ class OrderStockService with LoggerMixin {
         await _stockTransactionRepository.createBatch(transactions);
       }
 
-      logInfoMessage(ServiceInfo.materialConsumptionSuccessful, <String, String>{
-        "materialCount": processedMaterials.toString(),
-      });
+      log.i(
+        ServiceInfo.materialConsumptionSuccessful.withParams(<String, String>{
+          "materialCount": processedMaterials.toString(),
+        }),
+        tag: loggerComponent,
+      );
       return true;
     } catch (e, stackTrace) {
-      logErrorMessage(ServiceError.materialConsumptionFailed, null, e, stackTrace);
+      log.e(
+        ServiceError.materialConsumptionFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       return false;
     }
   }
 
   /// 注文キャンセル時の材料を復元（在庫復旧）
   Future<bool> restoreMaterialsForOrder(String orderId, String userId) async {
-    logInfoMessage(ServiceInfo.materialRestorationStarted);
+    log.i(ServiceInfo.materialRestorationStarted.message, tag: loggerComponent);
 
     try {
       // 該当注文の消費取引を取得
       final List<StockTransaction> consumptionTransactions = await _stockTransactionRepository
-          .findByReference(ReferenceType.order, orderId, userId);
+          .findByReference(ReferenceType.order, orderId);
 
       // 消費取引（負の値）のみを対象
       final List<StockTransaction> consumptionOnly = consumptionTransactions
@@ -138,11 +153,14 @@ class OrderStockService with LoggerMixin {
           .toList();
 
       if (consumptionOnly.isEmpty) {
-        logDebug(ServiceDebug.restorationCompletedSuccessfully.message);
+        log.d(ServiceDebug.restorationCompletedSuccessfully.message, tag: loggerComponent);
         return true; // 消費取引がない場合は成功とみなす
       }
 
-      logDebug("Found ${consumptionOnly.length} consumption transactions to restore");
+      log.d(
+        "Found ${consumptionOnly.length} consumption transactions to restore",
+        tag: loggerComponent,
+      );
 
       // 復元取引を作成
       final List<StockTransaction> restoreTransactions = <StockTransaction>[];
@@ -151,7 +169,7 @@ class OrderStockService with LoggerMixin {
       for (final StockTransaction transaction in consumptionOnly) {
         // 材料を取得
         final Material? material = await _materialRepository.getById(transaction.materialId);
-        if (material == null || material.userId != userId) {
+        if (material == null) {
           continue;
         }
 
@@ -160,7 +178,10 @@ class OrderStockService with LoggerMixin {
         final double restoreAmount = transaction.changeAmount.abs();
         material.currentStock += restoreAmount;
 
-        logDebug("Material restored: ${material.name} from $oldStock to ${material.currentStock}");
+        log.d(
+          "Material restored: ${material.name} from $oldStock to ${material.currentStock}",
+          tag: loggerComponent,
+        );
 
         // 材料を更新
         await _materialRepository.updateById(material.id!, <String, dynamic>{
@@ -186,12 +207,20 @@ class OrderStockService with LoggerMixin {
         await _stockTransactionRepository.createBatch(restoreTransactions);
       }
 
-      logInfoMessage(ServiceInfo.materialRestorationSuccessful, <String, String>{
-        "materialCount": restoredMaterials.toString(),
-      });
+      log.i(
+        ServiceInfo.materialRestorationSuccessful.withParams(<String, String>{
+          "materialCount": restoredMaterials.toString(),
+        }),
+        tag: loggerComponent,
+      );
       return true;
     } catch (e, stackTrace) {
-      logErrorMessage(ServiceError.materialRestorationFailed, null, e, stackTrace);
+      log.e(
+        ServiceError.materialRestorationFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       return false;
     }
   }

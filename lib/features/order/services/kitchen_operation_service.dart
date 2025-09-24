@@ -1,29 +1,26 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/kitchen.dart";
-import "../../../core/utils/logger_mixin.dart";
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/logging/compat.dart" as log;
 import "../models/order_model.dart";
-import "../repositories/order_repository.dart";
 
 /// キッチン調理進行管理サービス
-class KitchenOperationService with LoggerMixin {
-  KitchenOperationService({OrderRepository? orderRepository})
-    : _orderRepository = orderRepository ?? OrderRepository();
+class KitchenOperationService {
+  KitchenOperationService({required OrderRepositoryContract<Order> orderRepository})
+    : _orderRepository = orderRepository;
 
-  final OrderRepository _orderRepository;
+  final OrderRepositoryContract<Order> _orderRepository;
 
-  @override
   String get loggerComponent => "KitchenOperationService";
 
   /// ステータス別進行中注文を取得
   Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus(String userId) async {
-    logDebug("Retrieving active orders by status");
+    log.d("Retrieving active orders by status", tag: loggerComponent);
 
     try {
       final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.preparing];
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(
-        activeStatuses,
-        userId,
-      );
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(activeStatuses);
 
       // ステータス別に分類
       final Map<OrderStatus, List<Order>> ordersByStatus = <OrderStatus, List<Order>>{};
@@ -32,22 +29,27 @@ class KitchenOperationService with LoggerMixin {
         ordersByStatus[order.status]!.add(order);
       }
 
-      logDebug("Retrieved ${activeOrders.length} active orders");
+      log.d("Retrieved ${activeOrders.length} active orders", tag: loggerComponent);
       return ordersByStatus;
     } catch (e, stackTrace) {
-      logError("Failed to retrieve active orders by status", e, stackTrace);
+      log.e(
+        "Failed to retrieve active orders by status",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
 
   /// 注文キューを取得（調理順序順）
   Future<List<Order>> getOrderQueue(String userId) async {
-    logDebug("Retrieving order queue");
+    log.d("Retrieving order queue", tag: loggerComponent);
 
     try {
       final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
         OrderStatus.preparing,
-      ], userId);
+      ]);
 
       // 調理開始前の注文を優先順位順に並べる
       final List<Order> notStarted = activeOrders
@@ -66,32 +68,32 @@ class KitchenOperationService with LoggerMixin {
       });
 
       final List<Order> queue = <Order>[...notStarted, ...inProgress];
-      logDebug("Order queue retrieved: ${queue.length} orders");
+      log.d("Order queue retrieved: ${queue.length} orders", tag: loggerComponent);
       return queue;
     } catch (e, stackTrace) {
-      logError("Failed to retrieve order queue", e, stackTrace);
+      log.e("Failed to retrieve order queue", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// 注文の調理を開始
   Future<Order?> startOrderPreparation(String orderId, String userId) async {
-    logInfoMessage(KitchenInfo.preparationStarted);
+    log.i(KitchenInfo.preparationStarted.message, tag: loggerComponent);
 
     try {
       final Order? order = await _orderRepository.getById(orderId);
       if (order == null || order.userId != userId) {
-        logErrorMessage(KitchenError.orderAccessDenied);
+        log.e(KitchenError.orderAccessDenied.message, tag: loggerComponent);
         throw Exception("Order $orderId not found or access denied");
       }
 
       if (order.status != OrderStatus.preparing) {
-        logErrorMessage(KitchenError.orderNotInPreparingStatus);
+        log.e(KitchenError.orderNotInPreparingStatus.message, tag: loggerComponent);
         throw Exception("Order is not in preparing status");
       }
 
       if (order.startedPreparingAt != null) {
-        logWarningMessage(KitchenWarning.preparationAlreadyStarted);
+        log.w(KitchenWarning.preparationAlreadyStarted.message, tag: loggerComponent);
         throw Exception("Order preparation already started");
       }
 
@@ -101,36 +103,41 @@ class KitchenOperationService with LoggerMixin {
       });
 
       if (updatedOrder != null) {
-        logInfoMessage(KitchenInfo.preparationStartedSuccessfully);
+        log.i(KitchenInfo.preparationStartedSuccessfully.message, tag: loggerComponent);
       } else {
-        logWarningMessage(KitchenWarning.preparationStartFailed);
+        log.w(KitchenWarning.preparationStartFailed.message, tag: loggerComponent);
       }
 
       return updatedOrder;
     } catch (e, stackTrace) {
-      logErrorMessage(KitchenError.startPreparationFailed, null, e, stackTrace);
+      log.e(
+        KitchenError.startPreparationFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
 
   /// 注文の調理を完了
   Future<Order?> completeOrderPreparation(String orderId, String userId) async {
-    logInfoMessage(KitchenInfo.preparationCompletionStarted);
+    log.i(KitchenInfo.preparationCompletionStarted.message, tag: loggerComponent);
 
     try {
       final Order? order = await _orderRepository.getById(orderId);
       if (order == null || order.userId != userId) {
-        logErrorMessage(KitchenError.orderAccessDenied);
+        log.e(KitchenError.orderAccessDenied.message, tag: loggerComponent);
         throw Exception("Order $orderId not found or access denied");
       }
 
       if (order.startedPreparingAt == null) {
-        logErrorMessage(KitchenError.preparationNotStarted);
+        log.e(KitchenError.preparationNotStarted.message, tag: loggerComponent);
         throw Exception("Order preparation not started");
       }
 
       if (order.readyAt != null) {
-        logWarningMessage(KitchenWarning.orderAlreadyCompleted);
+        log.w(KitchenWarning.orderAlreadyCompleted.message, tag: loggerComponent);
         throw Exception("Order already completed");
       }
 
@@ -140,14 +147,19 @@ class KitchenOperationService with LoggerMixin {
       });
 
       if (updatedOrder != null) {
-        logInfoMessage(KitchenInfo.preparationCompletedSuccessfully);
+        log.i(KitchenInfo.preparationCompletedSuccessfully.message, tag: loggerComponent);
       } else {
-        logWarningMessage(KitchenWarning.preparationCompletionFailed);
+        log.w(KitchenWarning.preparationCompletionFailed.message, tag: loggerComponent);
       }
 
       return updatedOrder;
     } catch (e, stackTrace) {
-      logErrorMessage(KitchenError.completePreparationFailed, null, e, stackTrace);
+      log.e(
+        KitchenError.completePreparationFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -159,22 +171,22 @@ class KitchenOperationService with LoggerMixin {
 
   /// 注文を提供完了
   Future<Order?> deliverOrder(String orderId, String userId) async {
-    logInfoMessage(KitchenInfo.deliveryStarted);
+    log.i(KitchenInfo.deliveryStarted.message, tag: loggerComponent);
 
     try {
       final Order? order = await _orderRepository.getById(orderId);
       if (order == null || order.userId != userId) {
-        logErrorMessage(KitchenError.orderAccessDenied);
+        log.e(KitchenError.orderAccessDenied.message, tag: loggerComponent);
         throw Exception("Order $orderId not found or access denied");
       }
 
       if (order.readyAt == null) {
-        logErrorMessage(KitchenError.orderNotReadyForDelivery);
+        log.e(KitchenError.orderNotReadyForDelivery.message, tag: loggerComponent);
         throw Exception("Order not ready for delivery");
       }
 
       if (order.status == OrderStatus.completed) {
-        logWarningMessage(KitchenWarning.orderAlreadyDelivered);
+        log.w(KitchenWarning.orderAlreadyDelivered.message, tag: loggerComponent);
         throw Exception("Order already delivered");
       }
 
@@ -185,14 +197,19 @@ class KitchenOperationService with LoggerMixin {
       });
 
       if (updatedOrder != null) {
-        logInfoMessage(KitchenInfo.deliverySuccessful);
+        log.i(KitchenInfo.deliverySuccessful.message, tag: loggerComponent);
       } else {
-        logWarningMessage(KitchenWarning.deliveryFailed);
+        log.w(KitchenWarning.deliveryFailed.message, tag: loggerComponent);
       }
 
       return updatedOrder;
     } catch (e, stackTrace) {
-      logErrorMessage(KitchenError.deliverOrderFailed, null, e, stackTrace);
+      log.e(
+        KitchenError.deliverOrderFailed.message,
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
@@ -203,7 +220,7 @@ class KitchenOperationService with LoggerMixin {
     int additionalMinutes,
     String userId,
   ) async {
-    logDebug("Adjusting estimated completion time");
+    log.d("Adjusting estimated completion time", tag: loggerComponent);
 
     try {
       final Order? order = await _orderRepository.getById(orderId);
@@ -220,30 +237,43 @@ class KitchenOperationService with LoggerMixin {
         "notes": newNotes,
       });
 
-      logInfo("Estimated completion time adjusted successfully");
+      log.i("Estimated completion time adjusted successfully", tag: loggerComponent);
       return updatedOrder;
     } catch (e, stackTrace) {
-      logError("Failed to adjust estimated completion time", e, stackTrace);
+      log.e(
+        "Failed to adjust estimated completion time",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
 
   /// キッチン状況を更新
   Future<bool> updateKitchenStatus(int activeStaffCount, String? notes, String userId) async {
-    logDebug("Updating kitchen status: $activeStaffCount staff");
+    log.d("Updating kitchen status: $activeStaffCount staff", tag: loggerComponent);
 
     // キッチン状況は別のモデルで管理されることを想定
     // ここでは簡単にログして成功を返す（実装は要件に応じて）
-    logInfo("Kitchen status updated for user $userId: $activeStaffCount staff, notes: $notes");
+    log.i(
+      "Kitchen status updated for user $userId: $activeStaffCount staff, notes: $notes",
+      tag: loggerComponent,
+    );
     return true;
   }
 
   /// 実際の調理時間を取得（分）
   double? getActualPrepTimeMinutes(Order order) {
-    if (order.startedPreparingAt != null && order.readyAt != null) {
-      final Duration delta = order.readyAt!.difference(order.startedPreparingAt!);
+    final DateTime? startedAt = order.startedPreparingAt;
+    final DateTime? readyAt = order.readyAt;
+    if (startedAt != null && readyAt != null) {
+      final Duration delta = readyAt.difference(startedAt);
       final double minutes = delta.inSeconds / 60.0;
-      logDebug("Actual prep time calculated: ${minutes.toStringAsFixed(1)} minutes");
+      log.d(
+        "Actual prep time calculated: ${minutes.toStringAsFixed(1)} minutes",
+        tag: loggerComponent,
+      );
       return minutes;
     }
     return null;

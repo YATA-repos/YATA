@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- OAuth認証用URL Schemes -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.example.yata.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.example.yata</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

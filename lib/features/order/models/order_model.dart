@@ -14,6 +14,7 @@ class Order extends BaseModel {
     required this.paymentMethod,
     required this.discountAmount,
     required this.orderedAt,
+    this.orderNumber,
     this.customerName,
     this.notes,
     this.startedPreparingAt,
@@ -30,6 +31,9 @@ class Order extends BaseModel {
 
   /// 合計金額
   int totalAmount;
+
+  /// 注文番号
+  String? orderNumber;
 
   /// 注文ステータス
   OrderStatus status;

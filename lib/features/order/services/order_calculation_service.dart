@@ -1,16 +1,16 @@
-import "../../../core/utils/logger_mixin.dart";
+// Removed LoggerComponent mixin; use local tag
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+import "../../../core/logging/compat.dart" as log;
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
-import "../repositories/order_item_repository.dart";
 
 /// 注文金額計算サービス
-class OrderCalculationService with LoggerMixin {
-  OrderCalculationService({OrderItemRepository? orderItemRepository})
-    : _orderItemRepository = orderItemRepository ?? OrderItemRepository();
+class OrderCalculationService {
+  OrderCalculationService({required OrderItemRepositoryContract<OrderItem> orderItemRepository})
+    : _orderItemRepository = orderItemRepository;
 
-  final OrderItemRepository _orderItemRepository;
+  final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
 
-  @override
   String get loggerComponent => "OrderCalculationService";
 
   /// 注文の金額を計算
@@ -18,12 +18,15 @@ class OrderCalculationService with LoggerMixin {
     String orderId, {
     int discountAmount = 0,
   }) async {
-    logDebug("Calculating order total for order: $orderId, discount: $discountAmount");
+    log.d(
+      "Calculating order total for order: $orderId, discount: $discountAmount",
+      tag: loggerComponent,
+    );
 
     try {
       final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
 
-      logDebug("Retrieved ${orderItems.length} items for calculation");
+      log.d("Retrieved ${orderItems.length} items for calculation", tag: loggerComponent);
 
       // 小計の計算
       final int subtotal = orderItems.fold(0, (int sum, OrderItem item) => sum + item.subtotal);
@@ -35,7 +38,10 @@ class OrderCalculationService with LoggerMixin {
       // 合計金額の計算
       final int totalAmount = subtotal + taxAmount - discountAmount;
 
-      logDebug("Order total calculated: subtotal=$subtotal, tax=$taxAmount, total=$totalAmount");
+      log.d(
+        "Order total calculated: subtotal=$subtotal, tax=$taxAmount, total=$totalAmount",
+        tag: loggerComponent,
+      );
 
       return OrderCalculationResult(
         subtotal: subtotal,
@@ -44,29 +50,29 @@ class OrderCalculationService with LoggerMixin {
         totalAmount: totalAmount > 0 ? totalAmount : 0, // マイナスにならないように
       );
     } catch (e, stackTrace) {
-      logError("Failed to calculate order total", e, stackTrace);
+      log.e("Failed to calculate order total", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
   /// カートの金額を計算（注文計算と同じロジック）
   Future<OrderCalculationResult> calculateCartTotal(String cartId, {int discountAmount = 0}) async {
-    logDebug("Calculating cart total with discount: $discountAmount");
+    log.d("Calculating cart total with discount: $discountAmount", tag: loggerComponent);
     return calculateOrderTotal(cartId, discountAmount: discountAmount);
   }
 
   /// カートの合計金額を更新（DBに保存）
   Future<int> updateCartTotal(String cartId) async {
-    logDebug("Updating cart total in database");
+    log.d("Updating cart total in database", tag: loggerComponent);
 
     try {
       final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
       final int totalAmount = cartItems.fold(0, (int sum, OrderItem item) => sum + item.subtotal);
 
-      logDebug("Cart total updated: $totalAmount");
+      log.d("Cart total updated: $totalAmount", tag: loggerComponent);
       return totalAmount;
     } catch (e, stackTrace) {
-      logError("Failed to update cart total", e, stackTrace);
+      log.e("Failed to update cart total", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -74,8 +80,9 @@ class OrderCalculationService with LoggerMixin {
   /// アイテムの小計を計算
   int calculateItemSubtotal(int unitPrice, int quantity) {
     final int subtotal = unitPrice * quantity;
-    logDebug(
+    log.d(
       "Item subtotal calculated: unitPrice=$unitPrice, quantity=$quantity, subtotal=$subtotal",
+      tag: loggerComponent,
     );
     return subtotal;
   }
@@ -83,7 +90,10 @@ class OrderCalculationService with LoggerMixin {
   /// 税額を計算
   int calculateTaxAmount(int subtotal, {double taxRate = 0.08}) {
     final int taxAmount = (subtotal * taxRate).round();
-    logDebug("Tax amount calculated: subtotal=$subtotal, rate=$taxRate, tax=$taxAmount");
+    log.d(
+      "Tax amount calculated: subtotal=$subtotal, rate=$taxRate, tax=$taxAmount",
+      tag: loggerComponent,
+    );
     return taxAmount;
   }
 }
