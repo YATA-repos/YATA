@@ -1,5 +1,5 @@
 import "../constants/exceptions/base/validation_exception.dart";
-import "../logging/yata_logger.dart";
+import "../logging/compat.dart" as log;
 
 /// 型検証用ヘルパークラス
 class TypeValidator {
@@ -9,7 +9,10 @@ class TypeValidator {
   /// IDの型を検証し、無効な場合は例外を投げる
   static void validateId(dynamic id) {
     if (!isValidIdType(id)) {
-      YataLogger.error("TypeValidator", "ID型検証エラー: 無効な型 ${id.runtimeType}が渡されました。expectedTypes: [String, int, Map<String, dynamic>], actualType: ${id.runtimeType}, value: $id");
+      log.e(
+        "ID型検証エラー: 無効な型 ${id.runtimeType}が渡されました。expectedTypes: [String, int, Map<String, dynamic>], actualType: ${id.runtimeType}, value: $id",
+        tag: "TypeValidator",
+      );
       throw InvalidIdTypeException(id.runtimeType, <Type>[String, int, Map]);
     }
   }
@@ -18,10 +21,13 @@ class TypeValidator {
   static T getValidatedId<T>(dynamic id) {
     try {
       validateId(id);
-      YataLogger.trace("TypeValidator", "ID型検証成功: 型=${id.runtimeType}, 値=$id");
+      log.t("ID型検証成功: 型=${id.runtimeType}, 値=$id", tag: "TypeValidator");
       return id as T;
     } catch (e) {
-      YataLogger.error("TypeValidator", "ID型キャストエラー: $T型へのキャストに失敗。sourceType: ${id.runtimeType}, targetType: $T, value: $id");
+      log.e(
+        "ID型キャストエラー: $T型へのキャストに失敗。sourceType: ${id.runtimeType}, targetType: $T, value: $id",
+        tag: "TypeValidator",
+      );
       rethrow;
     }
   }

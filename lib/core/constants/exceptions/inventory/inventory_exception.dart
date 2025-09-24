@@ -8,11 +8,7 @@ import "../base/exception_types.dart";
 /// InventoryErrorと連携して、型安全なエラーハンドリングを提供します。
 class InventoryException extends BaseContextException<InventoryError> {
   /// InventoryErrorを使用したコンストラクタ
-  InventoryException(
-    super.error, {
-    super.params,
-    super.code,
-  });
+  InventoryException(super.error, {super.params, super.code});
 
   /// アイテム未発見例外の作成
   factory InventoryException.itemNotFound(String itemId) =>

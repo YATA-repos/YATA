@@ -1,5 +1,5 @@
 /// logger パッケージ準拠の統一Log Enums
-/// 
+///
 /// 既存のlog_enumsをlogger パッケージと完全連携させた改良版
 /// 全レベル（trace, debug, info, warning, error, fatal）をサポート
 /// 構造化ログ・logger パッケージの機能を最大活用
@@ -25,7 +25,7 @@ class LogEnumsUtils {
   static bool get areEnhancedEnumsAvailable =>
       // 現在はAnalyticsのみ改良版が実装済み
       true;
-  
+
   /// 従来版から改良版への移行ガイド
   static String get migrationGuide => """
 # logger パッケージ準拠Log Enumsへの移行ガイド
@@ -38,16 +38,24 @@ class LogEnumsUtils {
 
 ## 移行方法
 ```dart
-// 従来版
-import 'package:yata/core/constants/log_enums/analytics.dart';
-service.logInfoMessage(AnalyticsInfo.dailyStatsStarted);
+// 従来版（参考: 旧API名は省略）
+import 'package:yata/core/constants/log_enums/analytics.dart' as legacy;
+// 例: 旧実装ではサービス経由のメッセージAPIを使用していました。
 
-// 改良版  
+// 改良版（最終API）
+import '../../logging/compat.dart' as log;
 import 'package:yata/core/constants/log_enums/enhanced_analytics.dart';
-service.logInfoMessage(AnalyticsInfo.dailyStatsStarted); // 同じAPI
-// または logger パッケージ直接使用
-logger.log(AnalyticsInfo.dailyStatsStarted.recommendedLevel, 
-           AnalyticsInfo.dailyStatsStarted.message);
+
+// 直接メッセージ文字列で出力
+log.i(AnalyticsInfo.dailyStatsStarted.message, tag: 'Analytics');
+
+// または withTag を利用
+final analyticsLog = log.withTag('Analytics');
+analyticsLog.i(AnalyticsInfo.dailyStatsStarted.message);
+
+// logger パッケージ互換（必要な場合）
+// logger.log(AnalyticsInfo.dailyStatsStarted.recommendedLevel,
+//            AnalyticsInfo.dailyStatsStarted.message);
 ```
 
 ## 構造化ログの活用
@@ -60,28 +68,28 @@ final data = AnalyticsInfo.dailyStatsCompleted.toStructuredData({
 service.logStructured(Level.info, data);
 ```
     """;
-  
+
   /// 各フィーチャーの改良版実装状況
   static Map<String, bool> get enhancementStatus => <String, bool>{
-      "analytics": true,    // 実装済み
-      "auth": false,        // 未実装
-      "inventory": false,   // 未実装  
-      "kitchen": false,     // 未実装
-      "menu": false,        // 未実装
-      "order": false,       // 未実装
-      "repository": false,  // 未実装
-      "service": false,     // 未実装
-    };
-  
+    "analytics": true, // 実装済み
+    "auth": false, // 未実装
+    "inventory": false, // 未実装
+    "kitchen": false, // 未実装
+    "menu": false, // 未実装
+    "order": false, // 未実装
+    "repository": false, // 未実装
+    "service": false, // 未実装
+  };
+
   /// 改良版への段階的移行プラン
   static List<String> get migrationPlan => <String>[
-      "1. Analytics (完了)",
-      "2. Auth (計画中)",
-      "3. Inventory (計画中)", 
-      "4. Order (計画中)",
-      "5. Menu (計画中)",
-      "6. Kitchen (計画中)",
-      "7. Repository (計画中)",
-      "8. Service (計画中)",
-    ];
+    "1. Analytics (完了)",
+    "2. Auth (計画中)",
+    "3. Inventory (計画中)",
+    "4. Order (計画中)",
+    "5. Menu (計画中)",
+    "6. Kitchen (計画中)",
+    "7. Repository (計画中)",
+    "8. Service (計画中)",
+  ];
 }

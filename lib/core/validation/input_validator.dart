@@ -1,5 +1,5 @@
 import "../constants/app_strings/app_strings.dart";
-import "../logging/yata_logger.dart";
+import "../logging/compat.dart" as log;
 
 /// 検証結果クラス
 class ValidationResult {
@@ -81,21 +81,25 @@ class InputValidator {
   /// メールアドレス検証
   static ValidationResult validateEmail(String? value, {bool required = false}) {
     if (value == null || value.isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationEmailRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationEmailRequired)
+          : ValidationResult.success();
     }
-    
+
     const String emailPattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
     if (!RegExp(emailPattern).hasMatch(value)) {
       return ValidationResult.error(AppStrings.validationEmailInvalidFormat);
     }
-    
+
     return ValidationResult.success();
   }
 
   /// パスワード検証
   static ValidationResult validatePassword(String? value, {bool required = false}) {
     if (value == null || value.isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationPasswordRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationPasswordRequired)
+          : ValidationResult.success();
     }
 
     if (value.length < 8) {
@@ -112,18 +116,20 @@ class InputValidator {
   /// URL検証
   static ValidationResult validateUrl(String? value, {bool required = false}) {
     if (value == null || value.isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationUrlRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationUrlRequired)
+          : ValidationResult.success();
     }
 
     try {
       final Uri uri = Uri.parse(value);
       if (!uri.hasScheme || (!uri.scheme.startsWith("http"))) {
-        YataLogger.warning("InputValidator", "URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value");
+        log.w("URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value", tag: "InputValidator");
         return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
       }
       return ValidationResult.success();
     } catch (e) {
-      YataLogger.warning("InputValidator", "URL検証中にURIパースエラーが発生: ${e.toString()}");
+      log.w("URL検証中にURIパースエラーが発生: ${e.toString()}", tag: "InputValidator");
       return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
     }
   }
@@ -137,7 +143,9 @@ class InputValidator {
     String fieldName = "日付",
   }) {
     if (value == null) {
-      return required ? ValidationResult.error(AppStrings.validationDateRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationDateRequired)
+          : ValidationResult.success();
     }
 
     late final DateTime dateValue;
@@ -166,9 +174,11 @@ class InputValidator {
 
   /// 複数の検証結果をまとめて確認
   static List<ValidationResult> validateAll(List<ValidationResult> results) {
-    final List<ValidationResult> errors = results.where((ValidationResult result) => !result.isValid).toList();
+    final List<ValidationResult> errors = results
+        .where((ValidationResult result) => !result.isValid)
+        .toList();
     if (errors.isNotEmpty) {
-      YataLogger.debug("InputValidator", "バリデーションエラーが${errors.length}件発見されました");
+      log.d("バリデーションエラーが${errors.length}件発見されました", tag: "InputValidator");
     }
     return errors;
   }
@@ -190,7 +200,9 @@ class InputValidator {
     String fieldName = "価格",
   }) {
     if (value == null || (value is String && value.isEmpty)) {
-      return required ? ValidationResult.error(AppStrings.validationPriceRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationPriceRequired)
+          : ValidationResult.success();
     }
 
     late final num numValue;
@@ -238,7 +250,9 @@ class InputValidator {
     bool allowDecimal = false,
   }) {
     if (value == null || (value is String && value.isEmpty)) {
-      return required ? ValidationResult.error(AppStrings.validationQuantityRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationQuantityRequired)
+          : ValidationResult.success();
     }
 
     late final num numValue;
@@ -282,7 +296,9 @@ class InputValidator {
     int maxLength = 50,
   }) {
     if (value == null || value.trim().isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationMaterialNameRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationMaterialNameRequired)
+          : ValidationResult.success();
     }
 
     final String trimmedValue = value.trim();
@@ -316,7 +332,9 @@ class InputValidator {
     int maxLength = 30,
   }) {
     if (value == null || value.trim().isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationCategoryNameRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationCategoryNameRequired)
+          : ValidationResult.success();
     }
 
     final String trimmedValue = value.trim();
@@ -350,7 +368,9 @@ class InputValidator {
     int maxLength = 60,
   }) {
     if (value == null || value.trim().isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationMenuNameRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationMenuNameRequired)
+          : ValidationResult.success();
     }
 
     final String trimmedValue = value.trim();
@@ -384,7 +404,9 @@ class InputValidator {
     int maxLength = 50,
   }) {
     if (value == null || value.trim().isEmpty) {
-      return required ? ValidationResult.error(AppStrings.validationCustomerNameRequired) : ValidationResult.success();
+      return required
+          ? ValidationResult.error(AppStrings.validationCustomerNameRequired)
+          : ValidationResult.success();
     }
 
     final String trimmedValue = value.trim();
@@ -415,33 +437,38 @@ class InputValidator {
       // 個別の値が有効かチェック
       final ValidationResult priceValidation = validatePrice(price, required: true);
       if (!priceValidation.isValid) {
-        YataLogger.debug("InputValidator", "価格バリデーションエラー: ${priceValidation.errorMessage}");
+        log.d("価格バリデーションエラー: ${priceValidation.errorMessage}", tag: "InputValidator");
         return priceValidation;
       }
 
       final ValidationResult quantityValidation = validateQuantity(quantity, required: true);
       if (!quantityValidation.isValid) {
-        YataLogger.debug("InputValidator", "数量バリデーションエラー: ${quantityValidation.errorMessage}");
+        log.d("数量バリデーションエラー: ${quantityValidation.errorMessage}", tag: "InputValidator");
         return quantityValidation;
       }
 
       // どちらも有効な場合、合計金額をチェック
       if (maxTotalAmount != null) {
-        final num priceValue = price is String ? num.parse(price.replaceAll(RegExp(r"[,¥￥\s]"), "")) : price as num;
+        final num priceValue = price is String
+            ? num.parse(price.replaceAll(RegExp(r"[,¥￥\s]"), ""))
+            : price as num;
         final num quantityValue = quantity is String ? num.parse(quantity) : quantity as num;
         final num totalAmount = priceValue * quantityValue;
 
         if (totalAmount > maxTotalAmount) {
-          YataLogger.warning("InputValidator", "合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円");
+          log.w("合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円", tag: "InputValidator");
           return ValidationResult.error("合計金額が上限（$maxTotalAmount円）を超えています");
         }
 
-        YataLogger.trace("InputValidator", "価格数量一貫性チェック成功: 価格=$priceValue, 数量=$quantityValue, 合計=$totalAmount");
+        log.t(
+          "価格数量一貫性チェック成功: 価格=$priceValue, 数量=$quantityValue, 合計=$totalAmount",
+          tag: "InputValidator",
+        );
       }
 
       return ValidationResult.success();
     } catch (e) {
-      YataLogger.error("InputValidator", "価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}");
+      log.e("価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}", tag: "InputValidator");
       return ValidationResult.error("バリデーション中にエラーが発生しました");
     }
   }

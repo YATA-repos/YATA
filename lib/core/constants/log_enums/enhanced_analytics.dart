@@ -51,7 +51,7 @@ enum AnalyticsInfo {
 /// AnalyticsInfo enum extension for EnhancedLogMessage features
 extension AnalyticsInfoExtension on AnalyticsInfo {
   Level get recommendedLevel => Level.info;
-  
+
   Level get yataLevel => Level.info;
 }
 
@@ -96,7 +96,7 @@ enum AnalyticsDebug {
 /// AnalyticsDebug enum extension for EnhancedLogMessage features
 extension AnalyticsDebugExtension on AnalyticsDebug {
   Level get recommendedLevel => Level.debug;
-  
+
   Level get yataLevel => Level.debug;
 }
 
@@ -104,10 +104,10 @@ extension AnalyticsDebugExtension on AnalyticsDebug {
 enum AnalyticsWarning {
   /// データ不整合検出
   dataInconsistencyDetected,
-  
+
   /// パフォーマンス劣化検出
   performanceDegradationDetected,
-  
+
   /// キャッシュミス多発
   frequentCacheMisses;
 
@@ -126,7 +126,7 @@ enum AnalyticsWarning {
 /// AnalyticsWarning enum extension for EnhancedLogMessage features
 extension AnalyticsWarningExtension on AnalyticsWarning {
   Level get recommendedLevel => Level.warn;
-  
+
   Level get yataLevel => Level.warn;
 }
 
@@ -171,7 +171,7 @@ enum AnalyticsError {
 /// AnalyticsError enum extension for EnhancedLogMessage features
 extension AnalyticsErrorExtension on AnalyticsError {
   Level get recommendedLevel => Level.error;
-  
+
   Level get yataLevel => Level.error;
 }
 
@@ -179,7 +179,7 @@ extension AnalyticsErrorExtension on AnalyticsError {
 enum AnalyticsFatal {
   /// システム全体の分析機能停止
   analyticsSystemFailure,
-  
+
   /// 重要データ損失
   criticalDataLoss;
 
@@ -196,7 +196,7 @@ enum AnalyticsFatal {
 /// AnalyticsFatal enum extension for EnhancedLogMessage features
 extension AnalyticsFatalExtension on AnalyticsFatal {
   Level get recommendedLevel => Level.fatal;
-  
+
   Level get yataLevel => Level.fatal; // 統合enumでfatalを直接サポート
 }
 
@@ -204,10 +204,10 @@ extension AnalyticsFatalExtension on AnalyticsFatal {
 enum AnalyticsTrace {
   /// 詳細実行トレース
   executionTrace,
-  
+
   /// SQL クエリトレース
   sqlQueryTrace,
-  
+
   /// キャッシュアクセストレース
   cacheAccessTrace;
 
@@ -226,6 +226,6 @@ enum AnalyticsTrace {
 /// AnalyticsTrace enum extension for EnhancedLogMessage features
 extension AnalyticsTraceExtension on AnalyticsTrace {
   Level get recommendedLevel => Level.trace;
-  
+
   Level get yataLevel => Level.trace; // 統合enumでtraceを直接サポート
 }

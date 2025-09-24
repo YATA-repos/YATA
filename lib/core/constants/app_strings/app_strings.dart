@@ -56,7 +56,7 @@ class AppStrings {
   static const String validationInvalidNumber = "は数値で入力してください";
   static const String validationMinValue = "以上で入力してください";
   static const String validationMaxValue = "以下で入力してください";
-  
+
   // 業務固有バリデーション
   static const String validationPriceRequired = "価格は必須です";
   static const String validationPriceInvalidNumber = "価格は有効な数値で入力してください";
@@ -64,52 +64,52 @@ class AppStrings {
   static const String validationPriceMinValue = "価格は{0}円以上で入力してください";
   static const String validationPriceMaxValue = "価格は{0}円以下で入力してください";
   static const String validationPriceInteger = "価格は整数で入力してください";
-  
+
   static const String validationQuantityRequired = "数量は必須です";
   static const String validationQuantityInvalidNumber = "数量は数値で入力してください";
   static const String validationQuantityNonNegative = "数量は0以上で入力してください";
   static const String validationQuantityMinValue = "数量は{0}以上で入力してください";
   static const String validationQuantityMaxValue = "数量は{0}以下で入力してください";
   static const String validationQuantityInteger = "数量は整数で入力してください";
-  
+
   static const String validationMaterialNameRequired = "材料名は必須です";
   static const String validationMaterialNameMinLength = "材料名は{0}文字以上で入力してください";
   static const String validationMaterialNameMaxLength = "材料名は{0}文字以下で入力してください";
   static const String validationMaterialNameInvalidChars = "材料名に使用できない文字が含まれています";
   static const String validationMaterialNameWhitespace = "材料名の前後に空白文字は入力できません";
-  
+
   static const String validationCategoryNameRequired = "カテゴリ名は必須です";
   static const String validationCategoryNameMinLength = "カテゴリ名は{0}文字以上で入力してください";
   static const String validationCategoryNameMaxLength = "カテゴリ名は{0}文字以下で入力してください";
   static const String validationCategoryNameInvalidChars = "カテゴリ名に使用できない文字が含まれています";
   static const String validationCategoryNameWhitespace = "カテゴリ名の前後に空白文字は入力できません";
-  
+
   static const String validationMenuNameRequired = "メニュー名は必須です";
   static const String validationMenuNameMinLength = "メニュー名は{0}文字以上で入力してください";
   static const String validationMenuNameMaxLength = "メニュー名は{0}文字以下で入力してください";
   static const String validationMenuNameInvalidChars = "メニュー名に使用できない文字が含まれています";
   static const String validationMenuNameWhitespace = "メニュー名の前後に空白文字は入力できません";
-  
+
   static const String validationCustomerNameRequired = "顧客名は必須です";
   static const String validationCustomerNameMinLength = "顧客名は{0}文字以上で入力してください";
   static const String validationCustomerNameMaxLength = "顧客名は{0}文字以下で入力してください";
   static const String validationCustomerNameInvalidChars = "顧客名に使用できない文字が含まれています";
-  
+
   static const String validationEmailRequired = "メールアドレスは必須です";
   static const String validationEmailInvalidFormat = "メールアドレスの形式が正しくありません";
-  
+
   static const String validationPasswordRequired = "パスワードは必須です";
   static const String validationPasswordMinLength = "パスワードは8文字以上で入力してください";
   static const String validationPasswordComplexity = "パスワードは大文字、小文字、数字を含む必要があります";
-  
+
   static const String validationUrlRequired = "URLは必須です";
   static const String validationUrlInvalidFormat = "有効なURLを入力してください";
-  
+
   static const String validationDateRequired = "日付は必須です";
   static const String validationDateInvalidFormat = "日付の形式が正しくありません";
   static const String validationDateMinDate = "日付は{0}以降を入力してください";
   static const String validationDateMaxDate = "日付は{0}以前を入力してください";
-  
+
   static const String validationTotalAmountExceeded = "合計金額が上限（{0}円）を超えています";
 
   // ======================== text ========================

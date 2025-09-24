@@ -35,7 +35,7 @@ class EnvValidationResult {
 }
 
 /// 環境変数検証ユーティリティ
-/// 
+///
 /// アプリケーション起動時に必要な環境変数が正しく設定されているかを検証します。
 class EnvValidator {
   EnvValidator._();
@@ -54,10 +54,7 @@ class EnvValidator {
   }
 
   /// 必須の環境変数リスト
-  static const List<String> _requiredVars = <String>[
-    "SUPABASE_URL",
-    "SUPABASE_ANON_KEY",
-  ];
+  static const List<String> _requiredVars = <String>["SUPABASE_URL", "SUPABASE_ANON_KEY"];
 
   /// オプションの環境変数リスト
   static const List<String> _optionalVars = <String>[
@@ -85,7 +82,7 @@ class EnvValidator {
     // 必須環境変数のチェック
     for (final String varName in _requiredVars) {
       final String? value = dotenv.env[varName];
-      
+
       if (value == null || value.isEmpty) {
         errors.add("必須環境変数 '$varName' が設定されていません");
         _log("必須環境変数が未設定: $varName");
@@ -100,7 +97,7 @@ class EnvValidator {
     // オプション環境変数のチェック
     for (final String varName in _optionalVars) {
       final String? value = dotenv.env[varName];
-      
+
       if (value == null || value.isEmpty) {
         warnings.add("オプション環境変数 '$varName' が設定されていません");
         _log("オプション環境変数が未設定: $varName");
@@ -120,8 +117,10 @@ class EnvValidator {
       warnings: warnings,
       info: info,
     );
-    
-    _log("環境変数検証完了: 結果=${result.isValid ? '成功' : '失敗'}, エラー数=${errors.length}, 警告数=${warnings.length}");
+
+    _log(
+      "環境変数検証完了: 結果=${result.isValid ? '成功' : '失敗'}, エラー数=${errors.length}, 警告数=${warnings.length}",
+    );
     return result;
   }
 
@@ -138,19 +137,19 @@ class EnvValidator {
           errors.add("SUPABASE_URLの形式が正しくありません: $value");
         }
         break;
-        
+
       case "SUPABASE_ANON_KEY":
         if (!value.startsWith("eyJ")) {
           errors.add("SUPABASE_ANON_KEYの形式が正しくありません（JWTトークンではない）");
         }
         break;
-        
+
       case "SUPABASE_OAUTH_CALLBACK_URL_DEV":
         if (!value.startsWith("http://localhost:")) {
           warnings.add("開発用コールバックURLは通常 http://localhost:8080 です");
         }
         break;
-        
+
       case "SUPABASE_OAUTH_CALLBACK_URL_PROD":
         if (value == "https://yourdomain.com") {
           warnings.add("本番用コールバックURLがデフォルト値のままです");
@@ -158,20 +157,27 @@ class EnvValidator {
           errors.add("本番用コールバックURLはHTTPS必須です: $value");
         }
         break;
-        
+
       case "DEBUG_MODE":
         if (value != "true" && value != "false") {
           warnings.add("DEBUG_MODEは 'true' または 'false' である必要があります: $value");
         }
         break;
-        
+
       case "LOG_LEVEL":
-        const List<String> validLevels = <String>["trace", "debug", "info", "warn", "error", "fatal"];
+        const List<String> validLevels = <String>[
+          "trace",
+          "debug",
+          "info",
+          "warn",
+          "error",
+          "fatal",
+        ];
         if (!validLevels.contains(value.toLowerCase())) {
           warnings.add("LOG_LEVELは ${validLevels.join(', ')} のいずれかである必要があります: $value");
         }
         break;
-        
+
       case "LOG_FLUSH_INTERVAL_MS":
       case "LOG_MAX_QUEUE":
       case "LOG_MAX_FILE_SIZE_MB":
@@ -182,7 +188,7 @@ class EnvValidator {
           warnings.add("$varName は正の整数である必要があります: $value");
         }
         break;
-        
+
       case "LOG_BACKPRESSURE":
         const List<String> validPolicies = <String>["drop-oldest", "drop-newest", "block"];
         if (!validPolicies.contains(value.toLowerCase())) {
@@ -212,8 +218,9 @@ class EnvValidator {
       }
     } else {
       final String platform = Platform.operatingSystem;
-      info..add("💻 プラットフォーム: $platform")
-      ..add("📱 カスタムスキーム: com.example.yata://login (自動設定)");
+      info
+        ..add("💻 プラットフォーム: $platform")
+        ..add("📱 カスタムスキーム: com.example.yata://login (自動設定)");
     }
 
     // 本番環境の準備状況
@@ -265,13 +272,13 @@ class EnvValidator {
   static List<String> getMissingVarsFromExample() {
     // 実装は簡略化（実際にはファイルを読み込んで解析）
     final List<String> missing = <String>[];
-    
+
     for (final String varName in _requiredVars) {
       if (dotenv.env[varName] == null) {
         missing.add(varName);
       }
     }
-    
+
     return missing;
   }
 
@@ -280,7 +287,7 @@ class EnvValidator {
   // =================================================================
 
   /// 環境変数の初期化（flutter_dotenv）
-  /// 
+  ///
   /// アプリケーション起動時に一度呼び出してください
   static Future<void> initialize() async {
     await dotenv.load();
@@ -288,7 +295,7 @@ class EnvValidator {
   }
 
   /// 汎用環境変数取得
-  /// 
+  ///
   /// [key] 環境変数名
   /// [defaultValue] デフォルト値（オプション）
   /// 戻り値: 環境変数の値またはデフォルト値
@@ -304,7 +311,7 @@ class EnvValidator {
   }
 
   /// boolean型環境変数の取得
-  /// 
+  ///
   /// [key] 環境変数名
   /// [defaultValue] デフォルト値（オプション）
   /// 戻り値: boolean値
@@ -315,7 +322,7 @@ class EnvValidator {
   }
 
   /// int型環境変数の取得
-  /// 
+  ///
   /// [key] 環境変数名
   /// [defaultValue] デフォルト値（オプション）
   /// 戻り値: int値
@@ -379,7 +386,7 @@ class EnvValidator {
   // =================================================================
 
   /// ファイルパスから直接環境変数を読み込み（flutter_dotenv の代替）
-  /// 
+  ///
   /// [path] .envファイルのパス（オプション、デフォルトは ".env"）
   /// 戻り値: 環境変数のMap
   static Map<String, String> loadFromFile({String? path}) {
@@ -394,35 +401,35 @@ class EnvValidator {
       final List<String> lines = file.readAsLinesSync();
       for (final String raw in lines) {
         final String line = raw.trim();
-        
+
         // 空行またはコメント行をスキップ
         if (line.isEmpty || line.startsWith("#")) continue;
-        
+
         // KEY=VALUE 形式の解析
         final int idx = line.indexOf("=");
         if (idx <= 0) continue;
-        
+
         final String key = line.substring(0, idx).trim();
         String value = line.substring(idx + 1).trim();
-        
+
         // ダブルクォート除去
         if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
           value = value.substring(1, value.length - 1);
         }
-        
+
         env[key] = value;
       }
-      
+
       _log("${env.length}個の環境変数を読み込みました: ${file.path}");
     } catch (e, stackTrace) {
       _log(".envファイルの読み込みエラー: ${file.path}", e, stackTrace);
     }
-    
+
     return env;
   }
 
   /// 環境変数をシステム環境とマージ
-  /// 
+  ///
   /// [fileEnv] ファイルから読み込んだ環境変数
   /// [overrideSystem] システム環境変数を上書きするかどうか
   /// 戻り値: マージされた環境変数Map
@@ -431,20 +438,20 @@ class EnvValidator {
     bool overrideSystem = false,
   }) {
     final Map<String, String> merged = <String, String>{};
-    
+
     // システム環境変数を追加
     if (!overrideSystem) {
       merged.addAll(Platform.environment);
     }
-    
+
     // ファイル環境変数を追加/上書き
     merged.addAll(fileEnv);
-    
+
     // システム環境変数で上書き（overrideSystem = false の場合）
     if (!overrideSystem) {
       merged.addAll(Platform.environment);
     }
-    
+
     return merged;
   }
 }

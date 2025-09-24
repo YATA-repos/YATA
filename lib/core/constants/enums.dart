@@ -269,7 +269,6 @@ enum OrderStatus {
   bool get isVisibleToCustomer => this != OrderStatus.refunded;
 }
 
-
 /// 優先度
 @JsonEnum()
 enum Priority {
