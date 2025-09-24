@@ -1,0 +1,443 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 85.0.0 (88.0.0 available)
+  analyzer 7.6.0 (8.1.1 available)
+  analyzer_plugin 0.13.4 (0.13.7 available)
+  build 2.5.4 (4.0.0 available)
+  build_config 1.1.2 (1.2.0 available)
+  build_resolvers 2.5.4 (3.0.4 available)
+  build_runner 2.5.4 (2.8.0 available)
+  build_runner_core 9.1.2 (9.3.2 available)
+  built_value 8.11.1 (8.12.0 available)
+  characters 1.4.0 (1.4.1 available)
+  custom_lint 0.7.6 (0.8.0 available)
+  custom_lint_builder 0.7.6 (0.8.0 available)
+  custom_lint_core 0.7.5 (0.8.0 available)
+  dart_style 3.1.1 (3.1.2 available)
+  file_picker 8.3.7 (10.3.2 available)
+  flutter_dotenv 5.2.1 (6.0.0 available)
+  flutter_plugin_android_lifecycle 2.0.29 (2.0.30 available)
+  functions_client 2.4.3 (2.4.4 available)
+  go_router 16.2.0 (16.2.1 available)
+  google_fonts 6.3.0 (6.3.1 available)
+  gotrue 2.13.0 (2.14.0 available)
+  json_serializable 6.9.5 (6.11.1 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.16.0 (1.17.0 available)
+  path_provider_android 2.2.17 (2.2.18 available)
+  realtime_client 2.5.1 (2.5.2 available)
+  shared_preferences_android 2.4.11 (2.4.12 available)
+  source_gen 2.0.0 (4.0.1 available)
+  source_helper 1.3.7 (1.3.8 available)
+  storage_client 2.4.0 (2.4.1 available)
+  supabase 2.8.0 (2.9.0 available)
+  supabase_flutter 2.9.1 (2.10.0 available)
+  test_api 0.7.6 (0.7.7 available)
+  url_launcher_android 6.3.17 (6.3.18 available)
+  watcher 1.1.2 (1.1.3 available)
+Got dependencies!
+35 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing YATA...                                               
+
+  error • Undefined name 'AppTheme' • lib/app/app.dart:15:12 • undefined_identifier
+  error • Undefined name 'AppTheme' • lib/app/app.dart:16:16 • undefined_identifier
+  error • Undefined name 'AppRouter' • lib/app/app.dart:17:19 • undefined_identifier
+  error • Target of URI doesn't exist: '../../data/repositories/base_repository.dart' • lib/core/base/base.dart:1:8 • uri_does_not_exist
+   info • Sort directive sections alphabetically • lib/core/logging/yata_logger.dart:5:1 • directives_ordering
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:230:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:231:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:232:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:235:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:237:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:242:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:244:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:249:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:251:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:255:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:257:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:259:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/validation/env_validator.dart:261:5 • avoid_print
+   info • Statement should be on a separate line • lib/core/validation/env_validator.dart:313:24 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/core/validation/env_validator.dart:399:51 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/core/validation/env_validator.dart:403:23 • always_put_control_body_on_new_line
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/analytics/repositories/daily_summary_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/analytics/repositories/daily_summary_repository.dart:5:38 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/analytics/repositories/daily_summary_repository.dart:6:42 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/analytics/repositories/daily_summary_repository.dart:6:56 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/analytics/repositories/daily_summary_repository.dart:6:86 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/analytics/repositories/daily_summary_repository.dart:9:16 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'DailySummaryRepository' • lib/features/analytics/repositories/daily_summary_repository.dart:25:46 • undefined_method
+  error • The method 'find' isn't defined for the type 'DailySummaryRepository' • lib/features/analytics/repositories/daily_summary_repository.dart:57:12 • undefined_method
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/analytics/services/analytics_service.dart:21:68 • missing_required_argument
+warning • The getter doesn't override an inherited getter • lib/features/analytics/services/analytics_service.dart:28:14 • override_on_non_overriding_member
+  error • The method 'logInfoMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:32:5 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:75:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:88:7 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:99:5 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:126:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:131:7 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:215:5 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:244:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'AnalyticsService' • lib/features/analytics/services/analytics_service.dart:258:7 • undefined_method
+  error • Too many positional arguments: 3 expected, but 4 found • lib/features/analytics/services/analytics_service.dart:276:69 • extra_positional_arguments
+  error • Target of URI doesn't exist: '../../../models/auth_state.dart' • lib/features/auth/presentation/providers/auth_providers.dart:4:8 • uri_does_not_exist
+  error • The name 'AuthState' isn't a type, so it can't be used as a type argument • lib/features/auth/presentation/providers/auth_providers.dart:8:21 • non_type_as_type_argument
+  error • The name 'AuthState' isn't a type, so it can't be used as a type argument • lib/features/auth/presentation/providers/auth_providers.dart:9:19 • non_type_as_type_argument
+  error • Undefined name 'AuthState' • lib/features/auth/presentation/providers/auth_providers.dart:9:43 • undefined_identifier
+  error • Undefined class 'AuthState' • lib/features/auth/presentation/providers/auth_providers.dart:14:11 • undefined_class
+warning • The getter doesn't override an inherited getter • lib/features/auth/services/auth_service.dart:41:14 • override_on_non_overriding_member
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/material_category_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/material_category_repository.dart:6:42 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/material_category_repository.dart:7:46 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/material_category_repository.dart:7:60 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/material_category_repository.dart:7:94 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/material_category_repository.dart:10:20 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'MaterialCategoryRepository' • lib/features/inventory/repositories/material_category_repository.dart:18:12 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_multitenant_repository.dart' • lib/features/inventory/repositories/material_repository.dart:3:8 • uri_does_not_exist
+  error • Missing concrete implementation of 'getter mixin RepositoryCacheMixin<T extends BaseModel, ID> on Object.currentUserId' • lib/features/inventory/repositories/material_repository.dart:10:7 • non_abstract_class_inherits_abstract_member
+  error • Mixin can only be applied to class • lib/features/inventory/repositories/material_repository.dart:10:34 • mixin_with_non_class_superclass
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/material_repository.dart:12:38 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/material_repository.dart:12:52 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/material_repository.dart:15:12 • override_on_non_overriding_member
+   info • Unnecessary use of a block function body • lib/features/inventory/repositories/material_repository.dart:145:55 • prefer_expression_function_bodies
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/purchase_item_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/purchase_item_repository.dart:5:38 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/purchase_item_repository.dart:6:42 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/purchase_item_repository.dart:6:56 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/purchase_item_repository.dart:6:85 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/purchase_item_repository.dart:9:16 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'PurchaseItemRepository' • lib/features/inventory/repositories/purchase_item_repository.dart:22:12 • undefined_method
+  error • The method 'bulkCreate' isn't defined for the type 'PurchaseItemRepository' • lib/features/inventory/repositories/purchase_item_repository.dart:27:7 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/purchase_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/purchase_repository.dart:5:34 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/purchase_repository.dart:6:38 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/purchase_repository.dart:6:52 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/purchase_repository.dart:6:76 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/purchase_repository.dart:9:12 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'PurchaseRepository' • lib/features/inventory/repositories/purchase_repository.dart:26:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'PurchaseRepository' • lib/features/inventory/repositories/purchase_repository.dart:53:12 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/recipe_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/recipe_repository.dart:6:32 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/recipe_repository.dart:7:36 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/recipe_repository.dart:7:50 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/recipe_repository.dart:7:72 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/recipe_repository.dart:10:10 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'RecipeRepository' • lib/features/inventory/repositories/recipe_repository.dart:18:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'RecipeRepository' • lib/features/inventory/repositories/recipe_repository.dart:27:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'RecipeRepository' • lib/features/inventory/repositories/recipe_repository.dart:40:12 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/stock_adjustment_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/stock_adjustment_repository.dart:5:41 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/stock_adjustment_repository.dart:6:45 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/stock_adjustment_repository.dart:6:59 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/stock_adjustment_repository.dart:6:91 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/stock_adjustment_repository.dart:9:19 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'StockAdjustmentRepository' • lib/features/inventory/repositories/stock_adjustment_repository.dart:22:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'StockAdjustmentRepository' • lib/features/inventory/repositories/stock_adjustment_repository.dart:40:12 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/stock_transaction_repository.dart:3:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/stock_transaction_repository.dart:6:42 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/stock_transaction_repository.dart:7:46 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/stock_transaction_repository.dart:7:60 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/stock_transaction_repository.dart:7:93 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/stock_transaction_repository.dart:10:20 • override_on_non_overriding_member
+  error • The method 'bulkCreate' isn't defined for the type 'StockTransactionRepository' • lib/features/inventory/repositories/stock_transaction_repository.dart:14:7 • undefined_method
+  error • The method 'find' isn't defined for the type 'StockTransactionRepository' • lib/features/inventory/repositories/stock_transaction_repository.dart:31:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'StockTransactionRepository' • lib/features/inventory/repositories/stock_transaction_repository.dart:63:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'StockTransactionRepository' • lib/features/inventory/repositories/stock_transaction_repository.dart:94:12 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/inventory/repositories/supplier_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/inventory/repositories/supplier_repository.dart:6:34 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/supplier_repository.dart:7:38 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/supplier_repository.dart:7:52 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/supplier_repository.dart:7:76 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/supplier_repository.dart:10:12 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'SupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:22:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'SupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:35:12 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'SupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:39:60 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'SupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:45:60 • undefined_method
+  error • Classes can only extend other classes • lib/features/inventory/repositories/supplier_repository.dart:52:42 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/inventory/repositories/supplier_repository.dart:53:46 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/inventory/repositories/supplier_repository.dart:53:60 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/inventory/repositories/supplier_repository.dart:53:93 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/inventory/repositories/supplier_repository.dart:56:20 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:69:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:78:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:88:50 • undefined_method
+  error • The method 'find' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:106:51 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:108:13 • undefined_method
+  error • The method 'find' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:124:61 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialSupplierRepository' • lib/features/inventory/repositories/supplier_repository.dart:128:13 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/inventory_service.dart:44:14 • override_on_non_overriding_member
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/material_management_service.dart:23:14 • override_on_non_overriding_member
+  error • The method 'logInfoMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:52:5 • undefined_method
+  error • The method 'create' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/material_management_service.dart:57:67 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:60:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:64:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:71:7 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/material_management_service.dart:96:66 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:126:5 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/material_management_service.dart:133:67 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:139:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:144:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'MaterialManagementService' • lib/features/inventory/services/material_management_service.dart:151:7 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/material_management_service.dart:171:58 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/material_management_service.dart:191:32 • undefined_method
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/order_stock_service.dart:25:68 • missing_required_argument
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/order_stock_service.dart:34:14 • override_on_non_overriding_member
+  error • The method 'logInfoMessage' isn't defined for the type 'OrderStockService' • lib/features/inventory/services/order_stock_service.dart:38:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/order_stock_service.dart:79:62 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/order_stock_service.dart:92:35 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'OrderStockService' • lib/features/inventory/services/order_stock_service.dart:115:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'OrderStockService' • lib/features/inventory/services/order_stock_service.dart:120:7 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'OrderStockService' • lib/features/inventory/services/order_stock_service.dart:127:5 • undefined_method
+  error • Too many positional arguments: 2 expected, but 3 found • lib/features/inventory/services/order_stock_service.dart:132:58 • extra_positional_arguments
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/order_stock_service.dart:154:62 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/order_stock_service.dart:167:35 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'OrderStockService' • lib/features/inventory/services/order_stock_service.dart:190:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'OrderStockService' • lib/features/inventory/services/order_stock_service.dart:195:7 • undefined_method
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/order_workflow_service.dart:78:52 • missing_required_argument
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/order_workflow_service.dart:86:14 • override_on_non_overriding_member
+  error • Too many positional arguments: 1 expected, but 2 found • lib/features/inventory/services/order_workflow_service.dart:239:51 • extra_positional_arguments
+  error • Too many positional arguments: 2 expected, but 3 found • lib/features/inventory/services/order_workflow_service.dart:255:68 • extra_positional_arguments
+  error • Too many positional arguments: 1 expected, but 2 found • lib/features/inventory/services/order_workflow_service.dart:270:89 • extra_positional_arguments
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/stock_level_service.dart:18:14 • override_on_non_overriding_member
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/stock_operation_service.dart:25:52 • missing_required_argument
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/stock_operation_service.dart:26:60 • missing_required_argument
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/stock_operation_service.dart:27:66 • missing_required_argument
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/stock_operation_service.dart:28:68 • missing_required_argument
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/stock_operation_service.dart:37:14 • override_on_non_overriding_member
+  error • The method 'logInfoMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:41:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/stock_operation_service.dart:47:60 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:49:9 • undefined_method
+  error • The method 'create' isn't defined for the type 'StockAdjustmentRepository' • lib/features/inventory/services/stock_operation_service.dart:68:40 • undefined_method
+  error • The method 'create' isn't defined for the type 'StockTransactionRepository' • lib/features/inventory/services/stock_operation_service.dart:80:41 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/stock_operation_service.dart:84:67 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:89:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:94:7 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:101:5 • undefined_method
+  error • The method 'create' isn't defined for the type 'PurchaseRepository' • lib/features/inventory/services/stock_operation_service.dart:112:67 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:115:9 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/stock_operation_service.dart:142:62 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/stock_operation_service.dart:146:37 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:170:7 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'StockOperationService' • lib/features/inventory/services/stock_operation_service.dart:175:7 • undefined_method
+  error • The named parameter 'ref' is required, but there's no corresponding argument • lib/features/inventory/services/usage_analysis_service.dart:15:68 • missing_required_argument
+warning • The getter doesn't override an inherited getter • lib/features/inventory/services/usage_analysis_service.dart:21:14 • override_on_non_overriding_member
+  error • Too many positional arguments: 3 expected, but 4 found • lib/features/inventory/services/usage_analysis_service.dart:31:69 • extra_positional_arguments
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/inventory/services/usage_analysis_service.dart:55:58 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/menu/repositories/menu_category_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/menu/repositories/menu_category_repository.dart:5:38 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/menu/repositories/menu_category_repository.dart:6:42 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/menu/repositories/menu_category_repository.dart:6:56 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/menu/repositories/menu_category_repository.dart:6:86 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/menu/repositories/menu_category_repository.dart:9:16 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'MenuCategoryRepository' • lib/features/menu/repositories/menu_category_repository.dart:17:12 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/menu/repositories/menu_item_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/menu/repositories/menu_item_repository.dart:5:34 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/menu/repositories/menu_item_repository.dart:6:38 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/menu/repositories/menu_item_repository.dart:6:52 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/menu/repositories/menu_item_repository.dart:6:77 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/menu/repositories/menu_item_repository.dart:9:12 • override_on_non_overriding_member
+  error • The method 'list' isn't defined for the type 'MenuItemRepository' • lib/features/menu/repositories/menu_item_repository.dart:18:14 • undefined_method
+  error • The method 'find' isn't defined for the type 'MenuItemRepository' • lib/features/menu/repositories/menu_item_repository.dart:25:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'MenuItemRepository' • lib/features/menu/repositories/menu_item_repository.dart:38:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'MenuItemRepository' • lib/features/menu/repositories/menu_item_repository.dart:69:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'MenuItemRepository' • lib/features/menu/repositories/menu_item_repository.dart:82:12 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/menu/services/menu_service.dart:34:14 • override_on_non_overriding_member
+  error • The method 'logErrorMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:80:7 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/menu/services/menu_service.dart:108:60 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:111:9 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:122:9 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/menu/services/menu_service.dart:152:62 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:185:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:198:7 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/menu/services/menu_service.dart:271:60 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/menu/services/menu_service.dart:301:60 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:341:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/menu/services/menu_service.dart:347:60 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:350:9 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'MenuItemRepository' • lib/features/menu/services/menu_service.dart:358:63 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:361:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'MenuService' • lib/features/menu/services/menu_service.dart:371:7 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/menu/services/menu_service.dart:419:62 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/order/repositories/order_item_repository.dart:2:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/order/repositories/order_item_repository.dart:6:35 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/order/repositories/order_item_repository.dart:7:39 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/order/repositories/order_item_repository.dart:7:53 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/order/repositories/order_item_repository.dart:7:79 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/order/repositories/order_item_repository.dart:10:13 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'OrderItemRepository' • lib/features/order/repositories/order_item_repository.dart:21:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderItemRepository' • lib/features/order/repositories/order_item_repository.dart:31:43 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderItemRepository' • lib/features/order/repositories/order_item_repository.dart:42:48 • undefined_method
+  error • The method 'bulkDelete' isn't defined for the type 'OrderItemRepository' • lib/features/order/repositories/order_item_repository.dart:55:15 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderItemRepository' • lib/features/order/repositories/order_item_repository.dart:94:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderItemRepository' • lib/features/order/repositories/order_item_repository.dart:121:49 • undefined_method
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/features/order/repositories/order_repository.dart:3:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/features/order/repositories/order_repository.dart:7:31 • extends_non_class
+  error • No associated named super constructor parameter • lib/features/order/repositories/order_repository.dart:8:35 • super_formal_parameter_without_associated_named
+  error • The named parameter 'tableName' isn't defined • lib/features/order/repositories/order_repository.dart:8:49 • undefined_named_parameter
+  error • The named parameter 'enableMultiTenant' isn't defined • lib/features/order/repositories/order_repository.dart:8:70 • undefined_named_parameter
+warning • The method doesn't override an inherited method • lib/features/order/repositories/order_repository.dart:11:9 • override_on_non_overriding_member
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:24:39 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:45:12 • undefined_method
+  error • The method 'count' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:55:34 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:66:38 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:99:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:127:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:150:48 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:182:43 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:206:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:228:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:243:12 • undefined_method
+  error • The method 'find' isn't defined for the type 'OrderRepository' • lib/features/order/repositories/order_repository.dart:256:38 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/order/services/cart_management_service.dart:36:14 • override_on_non_overriding_member
+  error • The method 'create' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:62:57 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:87:50 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/cart_management_service.dart:94:60 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderItemRepository' • lib/features/order/services/cart_management_service.dart:127:14 • undefined_method
+  error • The method 'create' isn't defined for the type 'OrderItemRepository' • lib/features/order/services/cart_management_service.dart:159:67 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:189:50 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderItemRepository' • lib/features/order/services/cart_management_service.dart:195:63 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/cart_management_service.dart:202:60 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderItemRepository' • lib/features/order/services/cart_management_service.dart:224:65 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:246:50 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderItemRepository' • lib/features/order/services/cart_management_service.dart:253:63 • undefined_method
+  error • The method 'deleteById' isn't defined for the type 'OrderItemRepository' • lib/features/order/services/cart_management_service.dart:260:34 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:279:50 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:290:32 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:309:50 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/cart_management_service.dart:331:28 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/order/services/cart_service.dart:22:14 • override_on_non_overriding_member
+warning • The getter doesn't override an inherited getter • lib/features/order/services/kitchen_analysis_service.dart:33:14 • override_on_non_overriding_member
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_analysis_service.dart:40:51 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/kitchen_analysis_service.dart:56:62 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/kitchen_analysis_service.dart:109:66 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/kitchen_analysis_service.dart:147:66 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/kitchen_analysis_service.dart:185:64 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/order/services/kitchen_operation_service.dart:19:14 • override_on_non_overriding_member
+  error • The method 'logInfoMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:82:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:85:51 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:87:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:92:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:97:9 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:102:58 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:107:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:109:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:114:7 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:121:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:124:51 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:126:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:131:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:136:9 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:141:58 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:146:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:148:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:153:7 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:165:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:168:51 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:170:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:175:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:180:9 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:185:58 • undefined_method
+  error • The method 'logInfoMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:191:9 • undefined_method
+  error • The method 'logWarningMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:193:9 • undefined_method
+  error • The method 'logErrorMessage' isn't defined for the type 'KitchenOperationService' • lib/features/order/services/kitchen_operation_service.dart:198:7 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:212:51 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/kitchen_operation_service.dart:222:58 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/order/services/kitchen_service.dart:22:14 • override_on_non_overriding_member
+warning • The getter doesn't override an inherited getter • lib/features/order/services/order_calculation_service.dart:18:14 • override_on_non_overriding_member
+warning • The getter doesn't override an inherited getter • lib/features/order/services/order_management_service.dart:38:14 • override_on_non_overriding_member
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/order_management_service.dart:69:50 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/order_management_service.dart:112:58 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/order_management_service.dart:126:30 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/order_management_service.dart:144:51 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'OrderRepository' • lib/features/order/services/order_management_service.dart:174:59 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/order_management_service.dart:229:66 • undefined_method
+  error • The method 'getById' isn't defined for the type 'OrderRepository' • lib/features/order/services/order_management_service.dart:265:51 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MenuItemRepository' • lib/features/order/services/order_management_service.dart:297:62 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/features/order/services/order_service.dart:18:14 • override_on_non_overriding_member
+warning • The getter doesn't override an inherited getter • lib/features/order/services/order_stock_service.dart:22:14 • override_on_non_overriding_member
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/order/services/order_stock_service.dart:41:62 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/order/services/order_stock_service.dart:117:62 • undefined_method
+  error • The method 'getById' isn't defined for the type 'MaterialRepository' • lib/features/order/services/order_stock_service.dart:162:62 • undefined_method
+warning • The getter doesn't override an inherited getter • lib/infra/batch/batch_processing_service.dart:79:14 • override_on_non_overriding_member
+  error • Too many positional arguments: 0 expected, but 1 found • lib/infra/batch/batch_processing_service.dart:397:52 • extra_positional_arguments
+warning • The getter doesn't override an inherited getter • lib/infra/local/cache/cache_manager.dart:32:14 • override_on_non_overriding_member
+  error • Target of URI doesn't exist: '../../../data/repositories/base_repository.dart' • lib/infra/local/cache/repository_cache_mixin.dart:3:8 • uri_does_not_exist
+  error • Only classes and mixins can be used as superclass constraints • lib/infra/local/cache/repository_cache_mixin.dart:22:56 • mixin_super_class_constraint_non_interface
+  error • Undefined class 'BaseRepository' • lib/infra/local/cache/repository_cache_mixin.dart:22:56 • undefined_class
+  error • Undefined name 'tableName' • lib/infra/local/cache/repository_cache_mixin.dart:41:15 • undefined_identifier
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:78:7 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:83:5 • undefined_method
+  error • The method 'find' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:84:34 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:88:5 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:101:7 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:106:5 • undefined_method
+  error • The method 'getById' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:107:29 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:112:7 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:128:7 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:133:5 • undefined_method
+  error • The method 'count' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:134:30 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:138:5 • undefined_method
+  error • The method 'create' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:146:29 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:151:7 • undefined_method
+  error • The method 'updateById' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:160:29 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:165:7 • undefined_method
+  error • The method 'deleteById' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:174:11 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:178:5 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:186:7 • undefined_method
+  error • The method 'logDebug' isn't defined for the type 'RepositoryCacheMixin' • lib/infra/local/cache/repository_cache_mixin.dart:189:7 • undefined_method
+  error • Undefined name 'tableName' • lib/infra/local/cache/repository_cache_mixin.dart:189:52 • undefined_identifier
+  error • Undefined name 'tableName' • lib/infra/local/cache/repository_cache_mixin.dart:219:24 • undefined_identifier
+  error • Undefined name 'tableName' • lib/infra/local/cache/repository_cache_mixin.dart:223:19 • undefined_identifier
+   info • Statement should be on a separate line • lib/infra/logging/context.dart:9:24 • always_put_control_body_on_new_line
+   info • Unnecessary use of an abstract class • lib/infra/logging/formatters.dart:6:16 • one_member_abstracts
+   info • Statement should be on a separate line • lib/infra/logging/log_config.dart:230:26 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:369:21 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:371:24 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:376:22 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:379:24 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:388:32 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:389:48 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:390:39 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:401:21 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:404:23 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:409:40 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:414:40 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:454:23 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:458:23 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:475:22 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:476:91 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:491:25 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:534:48 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/logger.dart:538:26 • always_put_control_body_on_new_line
+   info • Unnecessary duplication of receiver • lib/infra/logging/logger.dart:558:7 • cascade_invocations
+   info • Unnecessary duplication of receiver • lib/infra/logging/logger.dart:559:7 • cascade_invocations
+   info • Unnecessary use of an abstract class • lib/infra/logging/pii_masker.dart:11:16 • one_member_abstracts
+   info • Unnecessary use of an abstract class • lib/infra/logging/policies.dart:5:16 • one_member_abstracts
+   info • Unnecessary use of a block function body • lib/infra/logging/policies.dart:59:6 • prefer_expression_function_bodies
+   info • Unnecessary use of an abstract class • lib/infra/logging/policies.dart:93:16 • one_member_abstracts
+   info • Use interpolation to compose strings and values • lib/infra/logging/policies.dart:111:30 • prefer_interpolation_to_compose_strings
+   info • Statement should be on a separate line • lib/infra/logging/policies.dart:117:32 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/policies.dart:135:28 • always_put_control_body_on_new_line
+   info • Use interpolation to compose strings and values • lib/infra/logging/policies.dart:137:30 • prefer_interpolation_to_compose_strings
+   info • Statement should be on a separate line • lib/infra/logging/policies.dart:139:23 • always_put_control_body_on_new_line
+   info • Statement should be on a separate line • lib/infra/logging/policies.dart:140:50 • always_put_control_body_on_new_line
+   info • Unnecessary use of a block function body • lib/infra/logging/policies.dart:166:45 • prefer_expression_function_bodies
+   info • Use interpolation to compose strings and values • lib/infra/logging/sinks.dart:120:30 • prefer_interpolation_to_compose_strings
+   info • Use interpolation to compose strings and values • lib/infra/logging/sinks.dart:120:58 • prefer_interpolation_to_compose_strings
+   info • Statement should be on a separate line • lib/infra/logging/sinks.dart:130:29 • always_put_control_body_on_new_line
+  error • The expression doesn't evaluate to a function, so it can't be invoked • lib/main.dart:38:9 • invocation_of_non_function_expression
+  error • The expression doesn't evaluate to a function, so it can't be invoked • lib/main.dart:46:7 • invocation_of_non_function_expression
+  error • Target of URI doesn't exist: '../../core/constants/enums.dart' • lib/shared/foundations/layout/responsive_helper.dart:3:8 • uri_does_not_exist
+  error • Undefined class 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:44:10 • undefined_class
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:48:14 • undefined_identifier
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:50:14 • undefined_identifier
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:52:14 • undefined_identifier
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:54:14 • undefined_identifier
+  error • Undefined class 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:74:11 • undefined_class
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:77:7 • undefined_identifier
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:78:7 • undefined_identifier
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:79:7 • undefined_identifier
+  error • Undefined name 'DeviceType' • lib/shared/foundations/layout/responsive_helper.dart:80:7 • undefined_identifier
+warning • The asset file '.env' doesn't exist • pubspec.yaml:51:7 • asset_does_not_exist
+
