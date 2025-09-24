@@ -3,7 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../core/constants/constants.dart";
 import "../shared/themes/app_theme.dart";
-import "routes.dart";
+import "router/app_router.dart";
 
 /// YATAアプリケーションのメインクラス
 class YataApp extends ConsumerWidget {
