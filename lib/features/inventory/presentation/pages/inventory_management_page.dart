@@ -11,6 +11,7 @@ import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../../shared/utils/unit_config.dart";
 import "../controllers/inventory_management_controller.dart";
+import "../widgets/selection_toolbar.dart";
 
 /// 在庫管理画面。
 class InventoryManagementPage extends ConsumerStatefulWidget {
@@ -72,6 +73,8 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             const SizedBox(height: YataSpacingTokens.lg),
             _InventoryTable(key: _tableKey, state: state, controller: controller),
             const SizedBox(height: YataSpacingTokens.lg),
+            // 選択行がある場合のみ表示される一括操作ツールバー
+            const InventorySelectionToolbar(),
           ],
         ),
       ),

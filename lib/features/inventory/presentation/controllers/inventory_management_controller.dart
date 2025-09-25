@@ -379,6 +379,48 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
 
   /// 全件に対する未適用の調整をクリア。
   void clearAllAdjustments() => state = state.copyWith(pendingAdjustments: <String, int>{});
+
+  // * 以下は選択行向けの一括操作API（UIの選択ツールバーから利用）
+
+  /// 選択されている行すべての未適用差分に対して、[amount] を加算する。
+  /// 例: +5 なら各行の差分に +5、-3 なら -3 を加算。
+  void incrementSelectedBy(int amount) {
+    if (amount == 0 || state.selectedIds.isEmpty) return;
+    final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments);
+    for (final String id in state.selectedIds) {
+      final int current = map[id] ?? 0;
+      map[id] = current + amount;
+    }
+    state = state.copyWith(pendingAdjustments: map);
+  }
+
+  /// 選択行の未適用差分をクリア（0に）する。
+  void clearAdjustmentsForSelected() {
+    if (state.selectedIds.isEmpty) return;
+    final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments);
+    for (final String id in state.selectedIds) {
+      map.remove(id);
+    }
+    state = state.copyWith(pendingAdjustments: map);
+  }
+
+  /// 選択されている行を削除（モック実装）。
+  /// 実サービス接続後は Service -> Repository 経由に置換する。
+  void deleteSelected() {
+    if (state.selectedIds.isEmpty) return;
+    final Set<String> toDelete = state.selectedIds;
+    final List<InventoryItemViewData> remaining = state.items
+        .where((InventoryItemViewData i) => !toDelete.contains(i.id))
+        .toList(growable: false);
+    final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
+      ..removeWhere((String key, _) => toDelete.contains(key));
+    state = state.copyWith(
+      items: remaining,
+      pendingAdjustments: pending,
+      selectedIds: <String>{},
+    );
+    // TODO サービスレイヤー統合: まとめて削除APIに接続する
+  }
 }
 
 final StateNotifierProvider<InventoryManagementController, InventoryManagementState>
