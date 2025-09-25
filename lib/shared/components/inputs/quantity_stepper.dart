@@ -79,6 +79,13 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
     if (mounted) setState(() => _editing = false);
   }
 
+  void _cancelEdit() {
+    if (!_editing) return;
+    _controller.text = widget.value.toString();
+    _focusNode.unfocus();
+    if (mounted) setState(() => _editing = false);
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -126,27 +133,42 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
             child: _editing
                 ? SizedBox(
                     width: (widget.compact ? 36 : 48),
-                    child: Focus(
-                      onFocusChange: (bool hasFocus) {
-                        if (!hasFocus) _commitEdit();
+                    child: Shortcuts(
+                      shortcuts: <ShortcutActivator, Intent>{
+                        SingleActivator(LogicalKeyboardKey.escape): const _CancelEditIntent(),
                       },
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        autofocus: true,
-                        textAlign: TextAlign.center,
-                        style: valueStyle,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: <TextInputFormatter>[
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        onSubmitted: (_) => _commitEdit(),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
+                      child: Actions(
+                        actions: <Type, Action<Intent>>{
+                          _CancelEditIntent: CallbackAction<_CancelEditIntent>(
+                            onInvoke: (_CancelEditIntent intent) {
+                              _cancelEdit();
+                              return null;
+                            },
+                          ),
+                        },
+                        child: Focus(
+                          onFocusChange: (bool hasFocus) {
+                            if (!hasFocus) _commitEdit();
+                          },
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            autofocus: true,
+                            textAlign: TextAlign.center,
+                            style: valueStyle,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            onSubmitted: (_) => _commitEdit(),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              border: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -214,4 +236,8 @@ class _StepButton extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _CancelEditIntent extends Intent {
+  const _CancelEditIntent();
 }
