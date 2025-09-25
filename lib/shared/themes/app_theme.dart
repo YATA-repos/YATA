@@ -95,17 +95,17 @@ class AppTheme {
   }
 
   static AppBarTheme _buildAppBarTheme(ColorScheme colorScheme) => AppBarTheme(
-      backgroundColor: colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      centerTitle: false,
-      foregroundColor: colorScheme.onSurface,
-      titleTextStyle: GoogleFonts.notoSansJp(
-        textStyle: YataTypographyTokens.titleLarge.copyWith(color: colorScheme.onSurface),
-      ),
-      iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
-    );
+    backgroundColor: colorScheme.surface,
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    centerTitle: false,
+    foregroundColor: colorScheme.onSurface,
+    titleTextStyle: GoogleFonts.notoSansJp(
+      textStyle: YataTypographyTokens.titleLarge.copyWith(color: colorScheme.onSurface),
+    ),
+    iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
+  );
 
   static CardThemeData _buildCardTheme(ColorScheme colorScheme) {
     final BoxShadow cardShadow = YataElevationTokens.level1.first;
@@ -123,7 +123,8 @@ class AppTheme {
     );
   }
 
-  static FilledButtonThemeData _buildFilledButtonTheme(ColorScheme colorScheme) => FilledButtonThemeData(style: _buildPrimaryFilledButtonStyle(colorScheme));
+  static FilledButtonThemeData _buildFilledButtonTheme(ColorScheme colorScheme) =>
+      FilledButtonThemeData(style: _buildPrimaryFilledButtonStyle(colorScheme));
 
   static ButtonStyle _buildPrimaryFilledButtonStyle(ColorScheme colorScheme) {
     final BoxShadow buttonShadow = YataElevationTokens.level2.first;
@@ -146,96 +147,98 @@ class AppTheme {
     );
   }
 
-  static ElevatedButtonThemeData _buildElevatedButtonTheme(ColorScheme colorScheme) => ElevatedButtonThemeData(
-      style: _buildPrimaryFilledButtonStyle(colorScheme).copyWith(
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-              ? colorScheme.primary.withOpacity(0.45)
-              : colorScheme.primary,
-        ),
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-              ? colorScheme.onSurface.withOpacity(0.4)
-              : colorScheme.onPrimary,
-        ),
-        overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-          if (states.contains(WidgetState.disabled)) {
-            return Colors.transparent;
-          }
-          if (states.contains(WidgetState.pressed)) {
-            return colorScheme.primary.withOpacity(0.18);
-          }
-          if (states.contains(WidgetState.hovered)) {
-            return colorScheme.primary.withOpacity(0.1);
-          }
-          return null;
-        }),
-      ),
-    );
-
-  static OutlinedButtonThemeData _buildOutlinedButtonTheme(ColorScheme colorScheme) => OutlinedButtonThemeData(
-      style: ButtonStyle(
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-              ? colorScheme.onSurface.withOpacity(0.4)
-              : colorScheme.primary,
-        ),
-        textStyle: WidgetStateProperty.all(
-          YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
-        ),
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(
-            horizontal: YataSpacingTokens.lg,
-            vertical: YataSpacingTokens.sm,
-          ),
-        ),
-        shape: WidgetStateProperty.all(
-          const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-          ),
-        ),
-        side: WidgetStateProperty.resolveWith(
-          (Set<WidgetState> states) => BorderSide(
-            color: states.contains(WidgetState.disabled)
-                ? colorScheme.outlineVariant
+  static ElevatedButtonThemeData _buildElevatedButtonTheme(ColorScheme colorScheme) =>
+      ElevatedButtonThemeData(
+        style: _buildPrimaryFilledButtonStyle(colorScheme).copyWith(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+                ? colorScheme.primary.withOpacity(0.45)
                 : colorScheme.primary,
           ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+                ? colorScheme.onSurface.withOpacity(0.4)
+                : colorScheme.onPrimary,
+          ),
+          overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+            if (states.contains(WidgetState.disabled)) {
+              return Colors.transparent;
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.primary.withOpacity(0.18);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return colorScheme.primary.withOpacity(0.1);
+            }
+            return null;
+          }),
         ),
-        overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-          if (states.contains(WidgetState.disabled)) {
-            return Colors.transparent;
-          }
-          final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
-          return colorScheme.primary.withOpacity(opacity);
-        }),
-      ),
-    );
+      );
+
+  static OutlinedButtonThemeData _buildOutlinedButtonTheme(ColorScheme colorScheme) =>
+      OutlinedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+                ? colorScheme.onSurface.withOpacity(0.4)
+                : colorScheme.primary,
+          ),
+          textStyle: WidgetStateProperty.all(
+            YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
+          ),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(
+              horizontal: YataSpacingTokens.lg,
+              vertical: YataSpacingTokens.sm,
+            ),
+          ),
+          shape: WidgetStateProperty.all(
+            const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+            ),
+          ),
+          side: WidgetStateProperty.resolveWith(
+            (Set<WidgetState> states) => BorderSide(
+              color: states.contains(WidgetState.disabled)
+                  ? colorScheme.outlineVariant
+                  : colorScheme.primary,
+            ),
+          ),
+          overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+            if (states.contains(WidgetState.disabled)) {
+              return Colors.transparent;
+            }
+            final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
+            return colorScheme.primary.withOpacity(opacity);
+          }),
+        ),
+      );
 
   static TextButtonThemeData _buildTextButtonTheme(ColorScheme colorScheme) => TextButtonThemeData(
-      style: ButtonStyle(
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-              ? colorScheme.onSurface.withOpacity(0.4)
-              : colorScheme.primary,
-        ),
-        textStyle: WidgetStateProperty.all(
-          YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
-        ),
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(
-            horizontal: YataSpacingTokens.md,
-            vertical: YataSpacingTokens.xs,
-          ),
-        ),
-        overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
-          if (states.contains(WidgetState.disabled)) {
-            return Colors.transparent;
-          }
-          final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
-          return colorScheme.primary.withOpacity(opacity);
-        }),
+    style: ButtonStyle(
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+            ? colorScheme.onSurface.withOpacity(0.4)
+            : colorScheme.primary,
       ),
-    );
+      textStyle: WidgetStateProperty.all(
+        YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
+      ),
+      padding: WidgetStateProperty.all(
+        const EdgeInsets.symmetric(
+          horizontal: YataSpacingTokens.md,
+          vertical: YataSpacingTokens.xs,
+        ),
+      ),
+      overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+        if (states.contains(WidgetState.disabled)) {
+          return Colors.transparent;
+        }
+        final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
+        return colorScheme.primary.withOpacity(opacity);
+      }),
+    ),
+  );
 
   static InputDecorationTheme _buildInputDecorationTheme(ColorScheme colorScheme) {
     const BorderRadius inputRadius = BorderRadius.all(Radius.circular(YataRadiusTokens.medium));
@@ -271,106 +274,108 @@ class AppTheme {
     );
   }
 
-  static ChipThemeData _buildChipTheme(ColorScheme colorScheme, TextTheme textTheme) => ChipThemeData(
-      backgroundColor: colorScheme.surfaceContainerHighest,
-      disabledColor: colorScheme.surfaceContainerHighest.withOpacity(0.4),
-      selectedColor: colorScheme.primary.withOpacity(0.12),
-      secondarySelectedColor: colorScheme.primary.withOpacity(0.18),
-      padding: const EdgeInsets.symmetric(
-        horizontal: YataSpacingTokens.sm,
-        vertical: YataSpacingTokens.xs,
-      ),
-      shape: const StadiumBorder(),
-      labelStyle: textTheme.labelMedium,
-      secondaryLabelStyle: textTheme.labelMedium?.copyWith(color: colorScheme.primary),
-      brightness: colorScheme.brightness,
-      side: BorderSide(color: colorScheme.outlineVariant),
-    );
+  static ChipThemeData _buildChipTheme(ColorScheme colorScheme, TextTheme textTheme) =>
+      ChipThemeData(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        disabledColor: colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        selectedColor: colorScheme.primary.withOpacity(0.12),
+        secondarySelectedColor: colorScheme.primary.withOpacity(0.18),
+        padding: const EdgeInsets.symmetric(
+          horizontal: YataSpacingTokens.sm,
+          vertical: YataSpacingTokens.xs,
+        ),
+        shape: const StadiumBorder(),
+        labelStyle: textTheme.labelMedium,
+        secondaryLabelStyle: textTheme.labelMedium?.copyWith(color: colorScheme.primary),
+        brightness: colorScheme.brightness,
+        side: BorderSide(color: colorScheme.outlineVariant),
+      );
 
   static CheckboxThemeData _buildCheckboxTheme(ColorScheme colorScheme) => CheckboxThemeData(
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.small)),
-      ),
-      side: BorderSide(color: colorScheme.outlineVariant),
-      fillColor: WidgetStateProperty.resolveWith(
-        (Set<WidgetState> states) =>
-            states.contains(WidgetState.selected) ? colorScheme.primary : colorScheme.surface,
-      ),
-      checkColor: WidgetStateProperty.all(colorScheme.onPrimary),
-    );
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.small)),
+    ),
+    side: BorderSide(color: colorScheme.outlineVariant),
+    fillColor: WidgetStateProperty.resolveWith(
+      (Set<WidgetState> states) =>
+          states.contains(WidgetState.selected) ? colorScheme.primary : colorScheme.surface,
+    ),
+    checkColor: WidgetStateProperty.all(colorScheme.onPrimary),
+  );
 
   static RadioThemeData _buildRadioTheme(ColorScheme colorScheme) => RadioThemeData(
-      fillColor: WidgetStateProperty.resolveWith(
-        (Set<WidgetState> states) => states.contains(WidgetState.selected)
-            ? colorScheme.primary
-            : colorScheme.outlineVariant,
-      ),
-    );
+    fillColor: WidgetStateProperty.resolveWith(
+      (Set<WidgetState> states) =>
+          states.contains(WidgetState.selected) ? colorScheme.primary : colorScheme.outlineVariant,
+    ),
+  );
 
   static SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) => SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith(
-        (Set<WidgetState> states) => states.contains(WidgetState.selected)
-            ? colorScheme.primary
-            : colorScheme.outlineVariant,
-      ),
-      trackColor: WidgetStateProperty.resolveWith(
-        (Set<WidgetState> states) => states.contains(WidgetState.selected)
-            ? colorScheme.primary.withOpacity(0.35)
-            : colorScheme.outlineVariant.withOpacity(0.5),
-      ),
-    );
+    thumbColor: WidgetStateProperty.resolveWith(
+      (Set<WidgetState> states) =>
+          states.contains(WidgetState.selected) ? colorScheme.primary : colorScheme.outlineVariant,
+    ),
+    trackColor: WidgetStateProperty.resolveWith(
+      (Set<WidgetState> states) => states.contains(WidgetState.selected)
+          ? colorScheme.primary.withOpacity(0.35)
+          : colorScheme.outlineVariant.withOpacity(0.5),
+    ),
+  );
 
-  static FloatingActionButtonThemeData _buildFabTheme(ColorScheme colorScheme) => FloatingActionButtonThemeData(
-      backgroundColor: colorScheme.primary,
-      foregroundColor: colorScheme.onPrimary,
-      elevation: 0,
-      hoverElevation: 0,
-      focusElevation: 0,
-      highlightElevation: 0,
-      disabledElevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
-      ),
-      focusColor: colorScheme.primary.withOpacity(0.18),
-      splashColor: colorScheme.primary.withOpacity(0.2),
-      hoverColor: colorScheme.primary.withOpacity(0.12),
-      iconSize: 24,
-    );
+  static FloatingActionButtonThemeData _buildFabTheme(ColorScheme colorScheme) =>
+      FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 0,
+        hoverElevation: 0,
+        focusElevation: 0,
+        highlightElevation: 0,
+        disabledElevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
+        ),
+        focusColor: colorScheme.primary.withOpacity(0.18),
+        splashColor: colorScheme.primary.withOpacity(0.2),
+        hoverColor: colorScheme.primary.withOpacity(0.12),
+        iconSize: 24,
+      );
 
-  static DialogThemeData _buildDialogTheme(ColorScheme colorScheme, TextTheme textTheme) => DialogThemeData(
-      backgroundColor: colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
-      shadowColor: YataElevationTokens.level4.first.color,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
-      ),
-      titleTextStyle: textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface),
-      contentTextStyle: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-    );
+  static DialogThemeData _buildDialogTheme(ColorScheme colorScheme, TextTheme textTheme) =>
+      DialogThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: YataElevationTokens.level4.first.color,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
+        ),
+        titleTextStyle: textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+      );
 
-  static BottomSheetThemeData _buildBottomSheetTheme(ColorScheme colorScheme) => BottomSheetThemeData(
-      backgroundColor: colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(YataRadiusTokens.large)),
-      ),
-      showDragHandle: true,
-      dragHandleColor: colorScheme.outlineVariant,
-    );
+  static BottomSheetThemeData _buildBottomSheetTheme(ColorScheme colorScheme) =>
+      BottomSheetThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(YataRadiusTokens.large)),
+        ),
+        showDragHandle: true,
+        dragHandleColor: colorScheme.outlineVariant,
+      );
 
   static ListTileThemeData _buildListTileTheme(ColorScheme colorScheme) => ListTileThemeData(
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-      ),
-      tileColor: colorScheme.surface,
-      iconColor: colorScheme.onSurfaceVariant,
-      textColor: colorScheme.onSurface,
-      dense: false,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: YataSpacingTokens.md,
-        vertical: YataSpacingTokens.xs,
-      ),
-    );
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+    ),
+    tileColor: colorScheme.surface,
+    iconColor: colorScheme.onSurfaceVariant,
+    textColor: colorScheme.onSurface,
+    dense: false,
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: YataSpacingTokens.md,
+      vertical: YataSpacingTokens.xs,
+    ),
+  );
 
   static const ColorScheme _lightColorScheme = ColorScheme(
     brightness: Brightness.light,
