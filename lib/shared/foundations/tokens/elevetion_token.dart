@@ -5,9 +5,7 @@ class YataElevationTokens {
   const YataElevationTokens._();
 
   /// フラットな状態。影なし。
-  static const List<BoxShadow> level0 = <BoxShadow>[
-    BoxShadow(color: Colors.transparent),
-  ];
+  static const List<BoxShadow> level0 = <BoxShadow>[BoxShadow(color: Colors.transparent)];
 
   /// カードやリストで使用する最小の影。
   static const List<BoxShadow> level1 = <BoxShadow>[

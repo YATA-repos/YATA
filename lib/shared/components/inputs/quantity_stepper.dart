@@ -1,9 +1,11 @@
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 
 import "../../foundations/tokens/color_tokens.dart";
 import "../../foundations/tokens/radius_tokens.dart";
 import "../../foundations/tokens/spacing_tokens.dart";
 import "../../foundations/tokens/typography_tokens.dart";
+import "../../themes/app_theme.dart";
 
 /// 数量の増減を行うステッパー。
 class YataQuantityStepper extends StatelessWidget {
@@ -36,6 +38,86 @@ class YataQuantityStepper extends StatelessWidget {
 
   bool get _canIncrement => max == null || value < max!;
 
+  int _clampQuantity(int q) {
+    if (q < min) return min;
+    if (max != null && q > max!) return max!;
+    return q;
+  }
+
+  Future<void> _promptForValue(BuildContext context) async {
+    final TextEditingController controller = TextEditingController(text: "$value");
+    int? result;
+
+    Future<void> submit() async {
+      final int? parsed = int.tryParse(controller.text.trim());
+      if (parsed == null) {
+        Navigator.of(context).pop();
+        return;
+      }
+      result = _clampQuantity(parsed);
+      Navigator.of(context).pop();
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) {
+        final ThemeData theme = Theme.of(ctx);
+        final ColorScheme scheme = theme.colorScheme;
+        final TextStyle titleStyle =
+            (theme.textTheme.headlineSmall ?? YataTypographyTokens.headlineSmall).copyWith(
+              color: scheme.onSurface,
+            );
+        final TextStyle inputTextStyle =
+            (theme.textTheme.titleLarge ?? YataTypographyTokens.titleLarge).copyWith(
+              color: scheme.onSurface,
+            );
+        final TextStyle hintStyle = (theme.textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium)
+            .copyWith(color: scheme.onSurfaceVariant);
+
+        return Theme(
+          data: AppTheme.lightTheme,
+          child: Builder(
+            builder: (BuildContext lightCtx) {
+              final ColorScheme lightScheme = Theme.of(lightCtx).colorScheme;
+              return AlertDialog(
+                backgroundColor: lightScheme.surface,
+                surfaceTintColor: Colors.transparent,
+                title: Text("数量を入力", style: titleStyle.copyWith(color: lightScheme.onSurface)),
+                content: TextField(
+                  controller: controller,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  style: inputTextStyle.copyWith(color: lightScheme.onSurface),
+                  cursorColor: lightScheme.primary,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                  onSubmitted: (_) => submit(),
+                  decoration: InputDecoration(
+                    hintText: "$min${max != null ? " ~ ${max!}" : "以上"}",
+                    hintStyle: hintStyle.copyWith(color: lightScheme.onSurfaceVariant),
+                    filled: true,
+                    fillColor: lightScheme.surface,
+                  ),
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () => Navigator.of(lightCtx).pop(),
+                    child: const Text("キャンセル"),
+                  ),
+                  FilledButton(onPressed: submit, child: const Text("OK")),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (result != null && result != value) {
+      onChanged(result!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextStyle valueStyle =
@@ -64,12 +146,19 @@ class YataQuantityStepper extends StatelessWidget {
           ),
           ConstrainedBox(
             constraints: BoxConstraints(minWidth: compact ? 22 : 28),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? YataSpacingTokens.sm : YataSpacingTokens.md,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () => _promptForValue(context),
+                borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? YataSpacingTokens.sm : YataSpacingTokens.md,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text("$value", style: valueStyle),
+                ),
               ),
-              alignment: Alignment.center,
-              child: Text("$value", style: valueStyle),
             ),
           ),
           _StepButton(
