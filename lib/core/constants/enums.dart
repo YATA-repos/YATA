@@ -93,7 +93,13 @@ enum UnitType {
 
   /// グラム、重量。ただし、運用時に厳密に管理することは困難であるため、目安として使用
   /// 注意: 将来的に在庫確認アラート機能で定期的な実測確認を促す仕組みを検討
-  gram("gram");
+  gram("gram"),
+
+  /// キログラム（重量）
+  kilogram("kilogram"),
+
+  /// リットル（体積）
+  liter("liter");
 
   // NOTE: 将来的に液体系・長さ系の単位追加を検討（gramでの統一管理も可能）
 
@@ -111,6 +117,10 @@ enum UnitType {
         return "個数";
       case UnitType.gram:
         return "グラム";
+      case UnitType.kilogram:
+        return "キログラム";
+      case UnitType.liter:
+        return "リットル";
     }
   }
 
@@ -121,6 +131,10 @@ enum UnitType {
         return "個";
       case UnitType.gram:
         return "g";
+      case UnitType.kilogram:
+        return "kg";
+      case UnitType.liter:
+        return "L";
     }
   }
 }

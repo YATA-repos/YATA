@@ -58,16 +58,25 @@ class YataSectionCard extends StatelessWidget {
       ),
       child: Padding(
         padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: expandChild ? MainAxisSize.max : MainAxisSize.min,
-          children: <Widget>[
-            if (title != null || subtitle != null || (actions?.isNotEmpty ?? false))
-              _Header(title: title, subtitle: subtitle, actions: actions),
-            if (title != null || subtitle != null || (actions?.isNotEmpty ?? false))
-              const SizedBox(height: YataSpacingTokens.md),
-            if (expandChild) Expanded(child: child) else child,
-          ],
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            // * SingleChildScrollView 等の高さが非拘束な環境では、
+            //   Column 配下に Expanded/Flexible を置くと例外になる。
+            //   そのため、bounded なときのみ Expanded を使用する。
+            final bool canExpand = expandChild && constraints.hasBoundedHeight;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: canExpand ? MainAxisSize.max : MainAxisSize.min,
+              children: <Widget>[
+                if (title != null || subtitle != null || (actions?.isNotEmpty ?? false))
+                  _Header(title: title, subtitle: subtitle, actions: actions),
+                if (title != null || subtitle != null || (actions?.isNotEmpty ?? false))
+                  const SizedBox(height: YataSpacingTokens.md),
+                if (canExpand) Expanded(child: child) else child,
+              ],
+            );
+          },
         ),
       ),
     );
