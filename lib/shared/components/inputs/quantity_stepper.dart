@@ -129,10 +129,10 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
             compact: widget.compact,
           ),
           ConstrainedBox(
-            constraints: BoxConstraints(minWidth: widget.compact ? 22 : 28),
+            constraints: BoxConstraints(minWidth: widget.compact ? 28 : 36),
             child: _editing
                 ? SizedBox(
-                    width: (widget.compact ? 36 : 48),
+                    width: (widget.compact ? 42 : 56),
                     child: Shortcuts(
                       shortcuts: <ShortcutActivator, Intent>{
                         SingleActivator(LogicalKeyboardKey.escape): const _CancelEditIntent(),
