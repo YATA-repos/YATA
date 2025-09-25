@@ -43,12 +43,24 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
     return Scaffold(
       backgroundColor: YataColorTokens.background,
       appBar: YataAppTopBar(
-        title: "フードスタンド管理",
-        navItems: const <YataNavItem>[
-          YataNavItem(label: "注文", icon: Icons.shopping_cart_outlined, isActive: true),
-          YataNavItem(label: "履歴", icon: Icons.receipt_long_outlined),
-          YataNavItem(label: "在庫管理", icon: Icons.inventory_2_outlined),
-          YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
+        navItems: <YataNavItem>[
+          YataNavItem(
+            label: "注文",
+            icon: Icons.shopping_cart_outlined,
+            isActive: true,
+            onTap: () => context.go("/"),
+          ),
+          YataNavItem(
+            label: "履歴",
+            icon: Icons.receipt_long_outlined,
+            onTap: () => context.go("/history"),
+          ),
+          YataNavItem(
+            label: "在庫管理",
+            icon: Icons.inventory_2_outlined,
+            onTap: () => context.go("/inventory"),
+          ),
+          const YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
         ],
         trailing: <Widget>[
           YataIconLabelButton(
@@ -132,7 +144,11 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          YataSearchField(controller: searchController, hintText: "メニュー検索..."),
+          YataSearchField(
+            controller: searchController,
+            hintText: "メニュー検索...",
+            onChanged: controller.updateSearchQuery,
+          ),
           const SizedBox(height: YataSpacingTokens.md),
           YataSegmentedFilter(
             segments: segments,
