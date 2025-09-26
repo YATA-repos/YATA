@@ -9,5 +9,7 @@
     "dart.warnWhenEditingFilesOutsideWorkspace": false,
     "flutter.experimentalRefactors": true,
     "markdown.validate.enabled": true,
-    "remote.autoForwardPortsFallback": 0
+    "remote.autoForwardPortsFallback": 0,
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }
