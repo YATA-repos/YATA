@@ -11,7 +11,6 @@ import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../../shared/utils/unit_config.dart";
 import "../controllers/inventory_management_controller.dart";
-import "../widgets/selection_toolbar.dart";
 
 /// 在庫管理画面。
 class InventoryManagementPage extends ConsumerStatefulWidget {
@@ -73,8 +72,6 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             const SizedBox(height: YataSpacingTokens.lg),
             _InventoryTable(key: _tableKey, state: state, controller: controller),
             const SizedBox(height: YataSpacingTokens.lg),
-            // 選択行がある場合のみ表示される一括操作ツールバー
-            const InventorySelectionToolbar(),
           ],
         ),
       ),
@@ -212,11 +209,22 @@ class _StatusPill extends StatelessWidget {
         ],
       ),
     );
-    if (onTap == null) return chip;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-      child: chip,
+    final Widget interactive = onTap == null
+        ? chip
+        : InkWell(
+            onTap: onTap,
+            borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+            child: chip,
+          );
+    final String tooltipMessage = onTap == null
+        ? label
+        : (isActive
+            ? "$label を表示中です。\nタップでフィルタを解除します。"
+            : "$label の在庫を表示します。\nタップでフィルタを適用します。");
+
+    return Tooltip(
+      message: tooltipMessage,
+      child: interactive,
     );
   }
 }
@@ -261,33 +269,39 @@ class _ControlsRow extends StatelessWidget {
   }
 }
 
-class _InventoryTable extends StatelessWidget {
+class _InventoryTable extends StatefulWidget {
   const _InventoryTable({required this.state, required this.controller, super.key});
   final InventoryManagementState state;
   final InventoryManagementController controller;
 
   @override
+  State<_InventoryTable> createState() => _InventoryTableState();
+}
+
+class _InventoryTableState extends State<_InventoryTable> {
+  @override
   Widget build(BuildContext context) {
-    // ヘッダの全選択チェックボックス表示判定
+    final InventoryManagementState state = widget.state;
+    final InventoryManagementController controller = widget.controller;
+
     final Set<String> visibleIds = state.filteredItems.map((InventoryItemViewData i) => i.id).toSet();
-    final int selectedVisibleCount =
-        state.selectedIds.where(visibleIds.contains).length;
+    final int selectedVisibleCount = state.selectedIds.where(visibleIds.contains).length;
     final bool noneSelected = selectedVisibleCount == 0;
     final bool allSelected = selectedVisibleCount == visibleIds.length && visibleIds.isNotEmpty;
 
     int? sortIndex;
     switch (state.sortBy) {
       case InventorySortBy.state:
-        sortIndex = 5; // 状態 (先頭に選択列を追加したため+1)
+        sortIndex = 5;
         break;
       case InventorySortBy.quantity:
-        sortIndex = 3; // 在庫量
+        sortIndex = 3;
         break;
       case InventorySortBy.delta:
-        sortIndex = 6; // 調整(差分)
+        sortIndex = 6;
         break;
       case InventorySortBy.updatedAt:
-        sortIndex = 7; // 更新日時
+        sortIndex = 7;
         break;
       case InventorySortBy.none:
         sortIndex = null;
@@ -296,10 +310,13 @@ class _InventoryTable extends StatelessWidget {
 
     final List<DataColumn> columns = <DataColumn>[
       DataColumn(
-        label: Checkbox(
-          tristate: true,
-          value: allSelected ? true : (noneSelected ? false : null),
-          onChanged: (bool? v) => controller.selectAll(v ?? false),
+        label: Tooltip(
+          message: "表示中の行を全選択/全解除",
+          child: Checkbox(
+            tristate: true,
+            value: allSelected ? true : (noneSelected ? false : null),
+            onChanged: (bool? v) => controller.selectAll(v ?? false),
+          ),
         ),
       ),
       const DataColumn(label: Text("カテゴリ")),
@@ -339,149 +356,356 @@ class _InventoryTable extends StatelessWidget {
       const DataColumn(label: Text("適用")),
     ];
 
-    final List<DataRow> rows = state.filteredItems
-        .map((InventoryItemViewData i) {
-          final int delta = state.pendingAdjustments[i.id] ?? 0;
-          final double after = (i.current + delta).clamp(0, double.infinity);
-      final UnitType unitType = _unitFromSymbol(i.unit);
+    final List<DataRow> rows = state.filteredItems.map((InventoryItemViewData item) {
+      final int delta = state.pendingAdjustments[item.id] ?? 0;
+      final double after = (item.current + delta).clamp(0, double.infinity);
+      final UnitType unitType = _unitFromSymbol(item.unit);
       final String threshold =
-        "警告閾値:${UnitFormatter.format(i.alertThreshold, unitType)} / 危険閾値:${UnitFormatter.format(i.criticalThreshold, unitType)}";
-          final _Status status = _statusFor(i.status);
-          final Color deltaColor = delta == 0
-              ? YataColorTokens.textSecondary
-              : (delta > 0 ? YataColorTokens.success : YataColorTokens.danger);
-          final bool selected = state.selectedIds.contains(i.id);
-          String fmtDate(DateTime d) {
-            final DateTime dd = d.toLocal();
-            final String ymd =
-                "${dd.year.toString().padLeft(4, '0')}-${dd.month.toString().padLeft(2, '0')}-${dd.day.toString().padLeft(2, '0')}";
-            final String hm =
-                "${dd.hour.toString().padLeft(2, '0')}:${dd.minute.toString().padLeft(2, '0')}";
-            return "$ymd $hm";
-          }
+          "警告閾値:${UnitFormatter.format(item.alertThreshold, unitType)} / 危険閾値:${UnitFormatter.format(item.criticalThreshold, unitType)}";
+      final _Status status = _statusFor(item.status);
+      final Color deltaColor = delta == 0
+          ? YataColorTokens.textSecondary
+          : (delta > 0 ? YataColorTokens.success : YataColorTokens.danger);
+      final bool selected = state.selectedIds.contains(item.id);
 
-          return DataRow(
-            cells: <DataCell>[
-              DataCell(Checkbox(
+      String fmtDate(DateTime d) {
+        final DateTime dd = d.toLocal();
+        final String ymd =
+            "${dd.year.toString().padLeft(4, '0')}-${dd.month.toString().padLeft(2, '0')}-${dd.day.toString().padLeft(2, '0')}";
+        final String hm = "${dd.hour.toString().padLeft(2, '0')}:${dd.minute.toString().padLeft(2, '0')}";
+        return "$ymd $hm";
+      }
+
+      return DataRow(
+        cells: <DataCell>[
+          DataCell(
+            Tooltip(
+              message: selected ? "選択解除" : "この行を選択",
+              child: Checkbox(
                 value: selected,
-                onChanged: (bool? v) => controller.toggleSelect(i.id),
-              )),
-              DataCell(Text(i.category)),
-              DataCell(Text(i.name)),
-              DataCell(
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(text: i.current.toStringAsFixed(0)),
-                        const TextSpan(text: " "),
-                        TextSpan(
-                          text: i.unit,
-                          style: TextStyle(color: YataColorTokens.textSecondary),
-                        ),
-                      ],
-                    ),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
+                onChanged: (bool? v) => controller.toggleSelect(item.id),
               ),
-              DataCell(Text(threshold)),
-              DataCell(_StatusChip(status: status)),
-              DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(
-                      delta == 0 ? "±0" : (delta > 0 ? "+$delta" : "$delta"),
-                      style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).copyWith(
-                        color: deltaColor,
-                      ),
-                    ),
-                    const SizedBox(width: YataSpacingTokens.sm),
-                    Text(
-                      "→ ${UnitFormatter.format(after, unitType)} ${i.unit}",
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(width: YataSpacingTokens.md),
-                    YataQuantityStepper(
-                      value: delta,
-                      min: -9999,
-                      onChanged: (int v) => controller.setPendingAdjustment(i.id, v),
-                      compact: true,
-                    ),
-                    const SizedBox(width: YataSpacingTokens.sm),
-                    SizedBox(
-                      width: 56,
-                      child: TextField(
-                        controller: TextEditingController(text: "$delta"),
-                        onSubmitted: (String v) {
-                          final int? parsed = int.tryParse(v.trim());
-                          if (parsed == null) return;
-                          controller.setPendingAdjustment(i.id, parsed);
-                        },
-                        textAlign: TextAlign.right,
-                        decoration: const InputDecoration(isDense: true, hintText: "0"),
-                      ),
+            ),
+          ),
+          DataCell(Text(item.category)),
+          DataCell(Text(item.name)),
+          DataCell(
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text.rich(
+                TextSpan(
+                  children: <InlineSpan>[
+                    TextSpan(text: item.current.toStringAsFixed(0)),
+                    const TextSpan(text: " "),
+                    TextSpan(
+                      text: item.unit,
+                      style: TextStyle(color: YataColorTokens.textSecondary),
                     ),
                   ],
                 ),
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-              // 更新日時列
-              DataCell(Text(fmtDate(i.updatedAt))),
-              DataCell(
-                Tooltip(
-                  message: delta == 0
-                      ? "変更がありません"
-                      : ((i.current + delta) < 0 ? "新在庫が0未満のため適用不可" : "この行の調整を適用"),
-                  child: ElevatedButton.icon(
-                    onPressed: delta == 0 || (i.current + delta) < 0
-                        ? null
-                        : () => controller.applyAdjustment(i.id),
-                    icon: const Icon(Icons.save_outlined),
-                    label: const Text("適用"),
-                    style: ElevatedButton.styleFrom(backgroundColor: YataColorTokens.primary),
+            ),
+          ),
+          DataCell(Text(threshold)),
+          DataCell(_StatusChip(status: status)),
+          DataCell(
+            SizedBox(
+              width: double.infinity,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        delta == 0 ? "±0" : (delta > 0 ? "+$delta" : "$delta"),
+                        style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle()).copyWith(
+                          color: deltaColor,
+                        ),
+                      ),
+                      const SizedBox(width: YataSpacingTokens.sm),
+                      Text(
+                        "→ ${UnitFormatter.format(after, unitType)} ${item.unit}",
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ],
                   ),
-                ),
+                  SizedBox(
+                    height: 36,
+                    child: Tooltip(
+                      message: "未適用差分を調整",
+                      child: YataQuantityStepper(
+                        value: delta,
+                        min: -9999,
+                        onChanged: (int value) => controller.setPendingAdjustment(item.id, value),
+                        compact: true,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          );
+            ),
+          ),
+          DataCell(
+            Tooltip(
+              message: "最終更新: ${fmtDate(item.updatedAt)} / by ${item.updatedBy}",
+              child: Text(fmtDate(item.updatedAt)),
+            ),
+          ),
+          DataCell(
+            Tooltip(
+              message: delta == 0
+                  ? "変更がありません"
+                  : ((item.current + delta) < 0 ? "新在庫が0未満のため適用不可" : "この行の調整を適用"),
+              child: ElevatedButton.icon(
+                onPressed: delta == 0 || (item.current + delta) < 0
+                    ? null
+                    : () => controller.applyAdjustment(item.id),
+                icon: const Icon(Icons.save_outlined),
+                label: const Text("適用"),
+                style: ElevatedButton.styleFrom(backgroundColor: YataColorTokens.primary),
+              ),
+            ),
+          ),
+        ],
+      );
+    }).toList(growable: false);
+
+    final int selectedWithDeltaCount = state.selectedIds
+        .where((String id) => (state.pendingAdjustments[id] ?? 0) != 0)
+        .length;
+    final int selectedApplicableCount = state.selectedIds
+        .where((String id) {
+          final int delta = state.pendingAdjustments[id] ?? 0;
+          if (delta == 0) {
+            return false;
+          }
+          return controller.canApply(id);
         })
-        .toList(growable: false);
+        .length;
+    final bool canApplySelected = selectedApplicableCount > 0;
+    final int visibleApplicableCount = state.filteredItems
+        .where((InventoryItemViewData item) {
+          final int delta = state.pendingAdjustments[item.id] ?? 0;
+          if (delta == 0) {
+            return false;
+          }
+          return controller.canApply(item.id);
+        })
+        .length;
+    final bool canApplyVisible = visibleApplicableCount > 0;
+    final bool canClearSelected = selectedWithDeltaCount > 0;
+    final int pendingTotal = state.pendingDeltaTotal;
+    final String pendingTotalLabel = pendingTotal > 0 ? "+$pendingTotal" : "$pendingTotal";
+    final String pendingSummary = "未適用: ${state.pendingCount}件 / 合計: $pendingTotalLabel";
 
     return YataSectionCard(
       title: "在庫一覧",
       expandChild: true,
       subtitle: "数量の調整はその場で編集できます",
-      actions: <Widget>[
-        Row(
-          children: <Widget>[
-            Text(
-              () {
-                final int t = state.pendingDeltaTotal;
-                final String tLabel = t > 0 ? "+$t" : "$t";
-                return "未適用: ${state.pendingCount}件 / 合計: $tLabel";
-              }(),
-              style: Theme.of(context).textTheme.bodyMedium,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              final Animation<double> curve = CurvedAnimation(parent: animation, curve: Curves.easeInOut);
+              return FadeTransition(
+                opacity: curve,
+                child: SizeTransition(
+                  sizeFactor: curve,
+                  axis: Axis.vertical,
+                  child: child,
+                ),
+              );
+            },
+            child: state.selectedIds.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: YataSpacingTokens.sm),
+                    child: Wrap(
+                      spacing: YataSpacingTokens.sm,
+                      runSpacing: YataSpacingTokens.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: <Widget>[
+                        Tooltip(
+                          message: "選択行に一括で減算 (−1)",
+                          child: OutlinedButton(
+                            onPressed: () => controller.incrementSelectedBy(-1),
+                            child: const Icon(Icons.remove),
+                          ),
+                        ),
+                        Tooltip(
+                          message: "選択行に一括で加算 (+1)",
+                          child: OutlinedButton(
+                            onPressed: () => controller.incrementSelectedBy(1),
+                            child: const Icon(Icons.add),
+                          ),
+                        ),
+                        Tooltip(
+                          message: "選択を解除",
+                          child: OutlinedButton.icon(
+                            onPressed: controller.clearSelection,
+                            icon: const Icon(Icons.clear),
+                            label: const Text("選択解除"),
+                          ),
+                        ),
+                        Tooltip(
+                          message: "選択行を削除（モック）",
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              final int count = state.selectedIds.length;
+                              final bool confirmed = await _confirmBulkAction(
+                                context: context,
+                                title: "選択行を削除",
+                                message: "$count件の行を削除します。よろしいですか？",
+                                confirmLabel: "削除する",
+                                confirmColor: Colors.redAccent,
+                              );
+                              if (!confirmed || !mounted) {
+                                return;
+                              }
+                              controller.deleteSelected();
+                            },
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            label: const Text("削除", style: TextStyle(color: Colors.redAccent)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: YataSpacingTokens.sm,
+              runSpacing: YataSpacingTokens.xs,
+              children: <Widget>[
+                Tooltip(
+                  message: "選択行に設定された調整を一括適用します（対象: $selectedApplicableCount件・負在庫は自動スキップ）",
+                  child: FilledButton.icon(
+                    onPressed: canApplySelected
+                        ? () async {
+                            final bool confirmed = await _confirmBulkAction(
+                              context: context,
+                              title: "選択行を適用",
+                              message: "$selectedApplicableCount件の選択行に調整を適用します。負在庫になる行は自動的にスキップされます。",
+                              confirmLabel: "適用する",
+                            );
+                            if (!confirmed || !mounted) {
+                              return;
+                            }
+                            controller.applySelected();
+                          }
+                        : null,
+                    icon: const Icon(Icons.fact_check),
+                    label: const Text("一括適用（選択）"),
+                  ),
+                ),
+                Tooltip(
+                  message: "未適用差分の件数と合計です。",
+                  child: Text(
+                    pendingSummary,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+                Tooltip(
+                  message: "表示中の行に設定された調整を一括適用します（対象: $visibleApplicableCount件・負在庫は自動スキップ）",
+                  child: FilledButton.icon(
+                    onPressed: canApplyVisible
+                        ? () async {
+                            final bool confirmed = await _confirmBulkAction(
+                              context: context,
+                              title: "表示中の行を適用",
+                              message: "表示中の$visibleApplicableCount件の行に調整を適用します。選択状態に関わらず、負在庫になる行は自動的にスキップされます。",
+                              confirmLabel: "適用する",
+                            );
+                            if (!confirmed || !mounted) {
+                              return;
+                            }
+                            controller.applyAllVisible();
+                          }
+                        : null,
+                    icon: const Icon(Icons.playlist_add_check),
+                    label: const Text("一括適用（表示中全件）"),
+                  ),
+                ),
+                Tooltip(
+                  message: "選択行に設定された未適用差分をクリアします（対象: $selectedWithDeltaCount件）",
+                  child: OutlinedButton.icon(
+                    onPressed: canClearSelected
+                        ? () async {
+                            final bool confirmed = await _confirmBulkAction(
+                              context: context,
+                              title: "選択行の差分をクリア",
+                              message: "$selectedWithDeltaCount件の選択行に設定した未適用差分をクリアします。よろしいですか？",
+                              confirmLabel: "クリアする",
+                            );
+                            if (!confirmed || !mounted) {
+                              return;
+                            }
+                            controller.clearAdjustmentsForSelected();
+                          }
+                        : null,
+                    icon: const Icon(Icons.backspace_outlined),
+                    label: const Text("選択行の差分クリア"),
+                  ),
+                ),
+                Tooltip(
+                  message: "全行に設定された未適用の調整を破棄します。",
+                  child: OutlinedButton.icon(
+                    onPressed: state.pendingAdjustments.isEmpty ? null : controller.clearAllAdjustments,
+                    icon: const Icon(Icons.undo),
+                    label: const Text("未適用の調整をクリア"),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: YataSpacingTokens.md),
-          ],
-        ),
-        OutlinedButton.icon(
-          onPressed: state.pendingAdjustments.isEmpty ? null : controller.clearAllAdjustments,
-          icon: const Icon(Icons.undo),
-          label: const Text("未適用の調整をクリア"),
-        ),
-      ],
-      child: YataDataTable(
-        columns: columns,
-        rows: rows,
-        sortColumnIndex: sortIndex,
-        sortAscending: state.sortAsc,
-        dataRowMinHeight: 64,
-        dataRowMaxHeight: 72,
+          ),
+          const SizedBox(height: YataSpacingTokens.md),
+          YataDataTable(
+            columns: columns,
+            rows: rows,
+            sortColumnIndex: sortIndex,
+            sortAscending: state.sortAsc,
+          ),
+        ],
       ),
     );
+  }
+
+  Future<bool> _confirmBulkAction({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required String confirmLabel,
+    Color? confirmColor,
+    String cancelLabel = "キャンセル",
+  }) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(cancelLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: confirmColor == null
+                ? null
+                : FilledButton.styleFrom(backgroundColor: confirmColor),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 }
 
@@ -537,31 +761,6 @@ void _showThresholdHelp(BuildContext context) {
       content: const Text(
         "警告閾値: 在庫がこの値以下になると『少』状態になります。\n"
         "危険閾値: 在庫がこの値以下になると『危険』状態になります。",
-      ),
-      actions: <Widget>[
-        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text("閉じる")),
-      ],
-    ),
-  );
-}
-
-void _showHistory(BuildContext context, InventoryItemViewData item) {
-  showDialog<void>(
-    context: context,
-    builder: (BuildContext ctx) => AlertDialog(
-      title: Text("履歴: ${item.name}"),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const <Widget>[
-            Text("過去の変更履歴は今後API実装で取得します。今はダミー表示です。"),
-            SizedBox(height: YataSpacingTokens.md),
-            Text("- 2025-09-20 10:32 by tanaka: -3"),
-            Text("- 2025-09-18 16:05 by suzuki: +5"),
-          ],
-        ),
       ),
       actions: <Widget>[
         TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text("閉じる")),

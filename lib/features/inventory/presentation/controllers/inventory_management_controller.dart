@@ -305,7 +305,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     final DateTime now = DateTime.now();
     final List<InventoryItemViewData> updated = state.items
         .map((InventoryItemViewData i) {
-          if (i.id != itemId) return i;
+          if (i.id != itemId) {
+            return i;
+          }
           final double next = (i.current + delta).clamp(0, double.infinity);
           return i.copyWith(current: next, updatedAt: now, updatedBy: "current_user");
         })
@@ -350,7 +352,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         updatedBy: "",
       ),
     );
-    if (item.id == "__invalid__") return false;
+    if (item.id == "__invalid__") {
+      return false;
+    }
     final double after = item.current + delta;
     return after >= 0;
   }
@@ -359,7 +363,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   void applySelected() {
     final Set<String> ids = state.selectedIds;
     for (final String id in ids) {
-      if (!canApply(id)) continue;
+      if (!canApply(id)) {
+        continue;
+      }
       applyAdjustment(id);
     }
     state = state.copyWith(selectedIds: <String>{});
@@ -368,7 +374,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   /// フィルタ後の全件に対して一括適用（負在庫になる行はスキップ）。
   void applyAllVisible() {
     for (final InventoryItemViewData i in state.filteredItems) {
-      if (!canApply(i.id)) continue;
+      if (!canApply(i.id)) {
+        continue;
+      }
       applyAdjustment(i.id);
     }
     state = state.copyWith(selectedIds: <String>{});
@@ -385,7 +393,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   /// 選択されている行すべての未適用差分に対して、[amount] を加算する。
   /// 例: +5 なら各行の差分に +5、-3 なら -3 を加算。
   void incrementSelectedBy(int amount) {
-    if (amount == 0 || state.selectedIds.isEmpty) return;
+    if (amount == 0 || state.selectedIds.isEmpty) {
+      return;
+    }
     final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments);
     for (final String id in state.selectedIds) {
       final int current = map[id] ?? 0;
@@ -396,7 +406,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
 
   /// 選択行の未適用差分をクリア（0に）する。
   void clearAdjustmentsForSelected() {
-    if (state.selectedIds.isEmpty) return;
+    if (state.selectedIds.isEmpty) {
+      return;
+    }
     final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments);
     for (final String id in state.selectedIds) {
       map.remove(id);
@@ -407,7 +419,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   /// 選択されている行を削除（モック実装）。
   /// 実サービス接続後は Service -> Repository 経由に置換する。
   void deleteSelected() {
-    if (state.selectedIds.isEmpty) return;
+    if (state.selectedIds.isEmpty) {
+      return;
+    }
     final Set<String> toDelete = state.selectedIds;
     final List<InventoryItemViewData> remaining = state.items
         .where((InventoryItemViewData i) => !toDelete.contains(i.id))
