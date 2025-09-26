@@ -131,10 +131,7 @@ class MaterialRepository implements MaterialRepositoryContract<Material> {
   }
 
   /// 日間使用率を計算（簡易版）
-  double? _calculateDailyUsageRate(Material material) {
-    // 簡易計算：固定値を返す（実際はログデータから計算）
-    return 1.0; // 仮の値
-  }
+  double? _calculateDailyUsageRate(Material material) => 1.0; // 簡易計算: 固定値（仮）
 
   // ==== CrudRepository delegation (explicit implementations) ====
   @override

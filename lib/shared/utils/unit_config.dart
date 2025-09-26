@@ -38,8 +38,12 @@ class UnitFormatter {
     final UnitSettings s = UnitConfig.get(unit);
     final double min = s.min;
     final double max = s.max ?? double.infinity;
-    if (value < min) return min;
-    if (value > max) return max;
+    if (value < min) {
+      return min;
+    }
+    if (value > max) {
+      return max;
+    }
     return value;
   }
 

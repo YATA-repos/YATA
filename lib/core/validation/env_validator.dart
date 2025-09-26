@@ -42,15 +42,22 @@ class EnvValidator {
 
   /// 内部ログ出力（循環インポート回避のため、直接printを使用）
   static void _log(String message, [Object? error, StackTrace? stackTrace]) {
-    if (kDebugMode) {
-      print("[EnvValidator] $message");
-      if (error != null) {
-        print("[EnvValidator] Error: $error");
-      }
-      if (stackTrace != null) {
-        print("[EnvValidator] StackTrace: $stackTrace");
-      }
+    if (!kDebugMode) {
+      return;
     }
+
+    debugPrint("[EnvValidator] $message");
+    if (error != null) {
+      debugPrint("[EnvValidator] Error: $error");
+    }
+    if (stackTrace != null) {
+      debugPrint("[EnvValidator] StackTrace: $stackTrace");
+    }
+  }
+
+  /// コンソール出力用ユーティリティ。
+  static void _emitConsole(String message) {
+    debugPrintSynchronously(message);
   }
 
   /// 必須の環境変数リスト
@@ -234,38 +241,38 @@ class EnvValidator {
 
   /// 検証結果をコンソールに出力
   static void printValidationResult(EnvValidationResult result) {
-    print("========================================");
-    print("🔍 環境変数検証結果");
-    print("========================================");
+    _emitConsole("========================================");
+    _emitConsole("🔍 環境変数検証結果");
+    _emitConsole("========================================");
 
     if (result.hasErrors) {
-      print("❌ エラー:");
+      _emitConsole("❌ エラー:");
       for (final String error in result.errors) {
-        print("   $error");
+        _emitConsole("   $error");
       }
     }
 
     if (result.hasWarnings) {
-      print("⚠️  警告:");
+      _emitConsole("⚠️  警告:");
       for (final String warning in result.warnings) {
-        print("   $warning");
+        _emitConsole("   $warning");
       }
     }
 
     if (result.hasInfo) {
-      print("ℹ️  情報:");
+      _emitConsole("ℹ️  情報:");
       for (final String info in result.info) {
-        print("   $info");
+        _emitConsole("   $info");
       }
     }
 
-    print("========================================");
+    _emitConsole("========================================");
     if (result.isValid) {
-      print("✅ 環境変数検証: 成功");
+      _emitConsole("✅ 環境変数検証: 成功");
     } else {
-      print("❌ 環境変数検証: 失敗");
+      _emitConsole("❌ 環境変数検証: 失敗");
     }
-    print("========================================");
+    _emitConsole("========================================");
   }
 
   /// .env.example ファイルと比較して不足している変数をチェック
@@ -317,7 +324,9 @@ class EnvValidator {
   /// 戻り値: boolean値
   static bool getBoolEnv(String key, {bool defaultValue = false}) {
     final String value = getEnv(key).toLowerCase();
-    if (value.isEmpty) return defaultValue;
+    if (value.isEmpty) {
+      return defaultValue;
+    }
     return value == "true" || value == "1" || value == "yes" || value == "on";
   }
 
@@ -403,11 +412,15 @@ class EnvValidator {
         final String line = raw.trim();
 
         // 空行またはコメント行をスキップ
-        if (line.isEmpty || line.startsWith("#")) continue;
+        if (line.isEmpty || line.startsWith("#")) {
+          continue;
+        }
 
         // KEY=VALUE 形式の解析
         final int idx = line.indexOf("=");
-        if (idx <= 0) continue;
+        if (idx <= 0) {
+          continue;
+        }
 
         final String key = line.substring(0, idx).trim();
         String value = line.substring(idx + 1).trim();

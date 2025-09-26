@@ -190,7 +190,7 @@ class _OrderHistoryList extends StatelessWidget {
             Icon(
               Icons.receipt_long_outlined,
               size: 64,
-              color: YataColorTokens.textSecondary.withOpacity(0.5),
+              color: YataColorTokens.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: YataSpacingTokens.md),
             Text(
@@ -230,8 +230,8 @@ class _OrderHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final DateFormat dateFormat = DateFormat('MM/dd HH:mm');
-    final NumberFormat currencyFormat = NumberFormat('#,###');
+    final DateFormat dateFormat = DateFormat("MM/dd HH:mm");
+    final NumberFormat currencyFormat = NumberFormat("#,###");
 
     return GestureDetector(
       onTap: onTap,
@@ -455,9 +455,8 @@ class _OrderDetailDialog extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withOpacity(0.5),
+  Widget build(BuildContext context) => Container(
+    color: Colors.black.withValues(alpha: 0.5),
       child: Center(
         child: Container(
           width: MediaQuery.of(context).size.width * 0.9,
@@ -468,7 +467,7 @@ class _OrderDetailDialog extends StatelessWidget {
           ),
           child: Material(
             borderRadius: YataRadiusTokens.borderRadiusCard,
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 color: YataColorTokens.surface,
                 borderRadius: YataRadiusTokens.borderRadiusCard,
@@ -514,7 +513,6 @@ class _OrderDetailDialog extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 /// 注文詳細コンテンツウィジェット。
@@ -525,8 +523,8 @@ class _OrderDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final DateFormat detailDateFormat = DateFormat('yyyy/MM/dd HH:mm:ss');
-    final NumberFormat currencyFormat = NumberFormat('#,###');
+    final DateFormat detailDateFormat = DateFormat("yyyy/MM/dd HH:mm:ss");
+    final NumberFormat currencyFormat = NumberFormat("#,###");
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(YataSpacingTokens.lg),
@@ -649,8 +647,7 @@ class _DetailSection extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
@@ -664,7 +661,6 @@ class _DetailSection extends StatelessWidget {
         child,
       ],
     );
-  }
 }
 
 /// 詳細行ウィジェット。
@@ -728,7 +724,7 @@ class _OrderItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final NumberFormat currencyFormat = NumberFormat('#,###');
+    final NumberFormat currencyFormat = NumberFormat("#,###");
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.sm),
@@ -838,8 +834,7 @@ class _PaginationControls extends StatelessWidget {
   final ValueChanged<int> onPageChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(YataSpacingTokens.md),
       decoration: const BoxDecoration(
         border: Border(
@@ -876,5 +871,4 @@ class _PaginationControls extends StatelessWidget {
         ],
       ),
     );
-  }
 }

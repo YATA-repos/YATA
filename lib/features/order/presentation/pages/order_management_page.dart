@@ -213,7 +213,9 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
                           final bool isSelected = state.isInCart(item.id);
                           int? quantityFor(String id) {
                             for (final CartItemViewData ci in state.cartItems) {
-                              if (ci.menuItem.id == id) return ci.quantity;
+                              if (ci.menuItem.id == id) {
+                                return ci.quantity;
+                              }
                             }
                             return null;
                           }
@@ -286,7 +288,9 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final bool isNarrow = constraints.maxWidth < 640;
-                if (isNarrow || state.cartItems.isEmpty) return const SizedBox.shrink();
+                if (isNarrow || state.cartItems.isEmpty) {
+                  return const SizedBox.shrink();
+                }
                 final TextStyle headerStyle =
                     (textTheme.labelMedium ?? YataTypographyTokens.labelMedium).copyWith(
                       color: YataColorTokens.textSecondary,

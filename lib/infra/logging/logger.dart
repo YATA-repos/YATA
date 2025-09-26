@@ -358,17 +358,25 @@ class _LoggerCore {
   }
 
   static String? _formatStack(StackTrace? st) {
-    if (st == null) return null;
+    if (st == null) {
+      return null;
+    }
     final List<String> lines = st.toString().split("\n");
-    if (lines.isEmpty) return null;
+    if (lines.isEmpty) {
+      return null;
+    }
     final List<String> picked = <String>[];
     int count = 0;
     for (final String raw in lines) {
       final String l = raw.trimRight();
-      if (l.isEmpty) continue;
+      if (l.isEmpty) {
+        continue;
+      }
       picked.add(l);
       count++;
-      if (count >= 20) break;
+      if (count >= 20) {
+        break;
+      }
     }
     if (lines.length > picked.length) {
       picked.add("...(truncated)");
@@ -377,9 +385,15 @@ class _LoggerCore {
   }
 
   static Map<String, dynamic>? _evalFields(Object? fieldsOrThunk) {
-    if (fieldsOrThunk == null) return null;
-    if (fieldsOrThunk is Map<String, dynamic>) return fieldsOrThunk;
-    if (fieldsOrThunk is FieldsThunk) return fieldsOrThunk();
+    if (fieldsOrThunk == null) {
+      return null;
+    }
+    if (fieldsOrThunk is Map<String, dynamic>) {
+      return fieldsOrThunk;
+    }
+    if (fieldsOrThunk is FieldsThunk) {
+      return fieldsOrThunk();
+    }
     return null;
   }
 
@@ -390,20 +404,28 @@ class _LoggerCore {
     final TagLevel key = (e.tag ?? "", e.lvl);
     final int? pct = _rateConfig.sampling[key];
     if (pct != null) {
-      if (pct <= 0) return false;
+      if (pct <= 0) {
+        return false;
+      }
       if (pct < 100) {
         final int r = Random().nextInt(100);
-        if (r >= pct) return false;
+        if (r >= pct) {
+          return false;
+        }
       }
     }
 
     final TokenBucket? tl = _rateConfig.perTagLevel[key];
-    if (tl != null && tl.tryConsume()) return true;
+    if (tl != null && tl.tryConsume()) {
+      return true;
+    }
 
     final String? tag = e.tag;
     if (tag != null) {
       final TokenBucket? t = _rateConfig.perTag[tag];
-      if (t != null && t.tryConsume()) return true;
+      if (t != null && t.tryConsume()) {
+        return true;
+      }
     }
 
     return _rateConfig.global.tryConsume();
@@ -444,11 +466,15 @@ class _LoggerCore {
   // ----------------------
   LogEvent _maybeAttachCallsite(LogEvent e) {
     final CallsiteConfig cfg = _configHub.value.callsite;
-    if (!cfg.enabled) return e;
+    if (!cfg.enabled) {
+      return e;
+    }
     try {
       final StackTrace st = StackTrace.current;
       final _Callsite? cs = _extractCallsite(st, cfg);
-      if (cs == null) return e;
+      if (cs == null) {
+        return e;
+      }
       final Map<String, dynamic> f = <String, dynamic>{...?(e.fields)};
       f["src"] = <String, dynamic>{"file": cs.file, "line": cs.line, "member": cs.member};
       return e.copyWith(fields: f);
@@ -465,8 +491,12 @@ class _LoggerCore {
     int skipped = 0;
     for (final String line in lines) {
       final String t = line.trim();
-      if (t.isEmpty) continue;
-      if (t.contains("logger.dart") || t.contains("dart:async") || t.contains("dart:ui")) continue;
+      if (t.isEmpty) {
+        continue;
+      }
+      if (t.contains("logger.dart") || t.contains("dart:async") || t.contains("dart:ui")) {
+        continue;
+      }
       if (cfg.skipFrames != null && skipped < (cfg.skipFrames ?? 0)) {
         skipped++;
         continue;
@@ -481,7 +511,9 @@ class _LoggerCore {
         String file = m.group(2) ?? "";
         if (cfg.basenameOnly) {
           final int idx = file.lastIndexOf("/");
-          if (idx >= 0) file = file.substring(idx + 1);
+          if (idx >= 0) {
+            file = file.substring(idx + 1);
+          }
         }
         final int lineNo = int.tryParse(m.group(3) ?? "") ?? 0;
         final String member = (m.group(1) ?? "").trim();
@@ -524,11 +556,15 @@ class _LoggerCore {
   // ----------------------
   final Map<int, _CrashBucket> _crashDedup = <int, _CrashBucket>{};
   void installCrashCapture({bool? rethrowOnError}) {
-    if (!_configHub.value.crashCaptureEnabled) return;
+    if (!_configHub.value.crashCaptureEnabled) {
+      return;
+    }
     final bool rethrowErrors = rethrowOnError ?? true;
     FlutterError.onError = (FlutterErrorDetails details) {
       _handleUnhandled(details.exception, details.stack, handledZone: true);
-      if (rethrowErrors) FlutterError.presentError(details);
+      if (rethrowErrors) {
+        FlutterError.presentError(details);
+      }
     };
     PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
       _handleUnhandled(error, stack, handledZone: false);
@@ -547,9 +583,10 @@ class _LoggerCore {
     final Duration window = _configHub.value.crashDedupWindow;
     final _CrashBucket bucket = _crashDedup.putIfAbsent(h, _CrashBucket.new);
     if (bucket.first == null || now.difference(bucket.first!) > window) {
-      bucket.first = now;
-      bucket.suppressed = 0;
-      bucket.lastSummaryAt = null;
+      bucket
+        ..first = now
+        ..suppressed = 0
+        ..lastSummaryAt = null;
       final LogLevel lvl = _inferUnhandledLevel(error);
       log(
         lvl,

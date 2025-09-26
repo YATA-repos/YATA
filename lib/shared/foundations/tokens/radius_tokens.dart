@@ -19,6 +19,9 @@ class YataRadiusTokens {
   /// ヒーローカードやハイライトの角丸。
   static const double xLarge = 20.0;
 
+  /// 小規模なコンポーネント向けBorderRadius。
+  static const BorderRadius borderRadiusSmall = BorderRadius.all(Radius.circular(small));
+
   /// カードに共通するBorderRadius。
   static const BorderRadius borderRadiusCard = BorderRadius.all(Radius.circular(medium));
 

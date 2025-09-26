@@ -227,7 +227,9 @@ class TokenBucket {
   void _refill() {
     final DateTime now = DateTime.now();
     final double elapsedSec = now.difference(_lastRefill).inMilliseconds / 1000.0;
-    if (elapsedSec <= 0) return;
+    if (elapsedSec <= 0) {
+      return;
+    }
     _tokens = (_tokens + elapsedSec * refillPerSec).clamp(0, capacity).toDouble();
     _lastRefill = now;
   }

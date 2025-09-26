@@ -49,8 +49,12 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
   bool get _canIncrement => widget.max == null || widget.value < widget.max!;
 
   int _clampQuantity(int q) {
-    if (q < widget.min) return widget.min;
-    if (widget.max != null && q > widget.max!) return widget.max!;
+    if (q < widget.min) {
+      return widget.min;
+    }
+    if (widget.max != null && q > widget.max!) {
+      return widget.max!;
+    }
     return q;
   }
 
@@ -68,22 +72,32 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
   }
 
   void _commitEdit() {
-    if (!_editing) return;
+    if (!_editing) {
+      return;
+    }
     final int? parsed = int.tryParse(_controller.text.trim());
     if (parsed == null) {
       _controller.text = widget.value.toString();
     } else {
       final int clamped = _clampQuantity(parsed);
-      if (clamped != widget.value) widget.onChanged(clamped);
+      if (clamped != widget.value) {
+        widget.onChanged(clamped);
+      }
     }
-    if (mounted) setState(() => _editing = false);
+    if (mounted) {
+      setState(() => _editing = false);
+    }
   }
 
   void _cancelEdit() {
-    if (!_editing) return;
+    if (!_editing) {
+      return;
+    }
     _controller.text = widget.value.toString();
     _focusNode.unfocus();
-    if (mounted) setState(() => _editing = false);
+    if (mounted) {
+      setState(() => _editing = false);
+    }
   }
 
   @override
@@ -121,7 +135,9 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
             icon: Icons.remove,
             enabled: _canDecrement,
             onPressed: () {
-              if (_editing) _commitEdit();
+              if (_editing) {
+                _commitEdit();
+              }
               if (_canDecrement) {
                 widget.onChanged(widget.value - 1);
               }
@@ -148,7 +164,9 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
                         },
                         child: Focus(
                           onFocusChange: (bool hasFocus) {
-                            if (!hasFocus) _commitEdit();
+                            if (!hasFocus) {
+                              _commitEdit();
+                            }
                           },
                           child: TextField(
                             controller: _controller,
@@ -194,7 +212,9 @@ class _YataQuantityStepperState extends State<YataQuantityStepper> {
             icon: Icons.add,
             enabled: _canIncrement,
             onPressed: () {
-              if (_editing) _commitEdit();
+              if (_editing) {
+                _commitEdit();
+              }
               if (_canIncrement) {
                 widget.onChanged(widget.value + 1);
               }

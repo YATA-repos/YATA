@@ -324,7 +324,11 @@ class _InventoryTableState extends State<_InventoryTable> {
       DataColumn(
         label: const Text("在庫量"),
         numeric: true,
-        onSort: (_, __) => controller.cycleSort(InventorySortBy.quantity),
+        onSort: (int columnIndex, bool ascending) {
+          columnIndex;
+          ascending;
+          controller.cycleSort(InventorySortBy.quantity);
+        },
       ),
       DataColumn(
         label: Row(
@@ -343,15 +347,27 @@ class _InventoryTableState extends State<_InventoryTable> {
       ),
       DataColumn(
         label: const Text("状態"),
-        onSort: (_, __) => controller.cycleSort(InventorySortBy.state),
+        onSort: (int columnIndex, bool ascending) {
+          columnIndex;
+          ascending;
+          controller.cycleSort(InventorySortBy.state);
+        },
       ),
       DataColumn(
         label: const Text("調整"),
-        onSort: (_, __) => controller.cycleSort(InventorySortBy.delta),
+        onSort: (int columnIndex, bool ascending) {
+          columnIndex;
+          ascending;
+          controller.cycleSort(InventorySortBy.delta);
+        },
       ),
       DataColumn(
         label: const Text("更新日時"),
-        onSort: (_, __) => controller.cycleSort(InventorySortBy.updatedAt),
+        onSort: (int columnIndex, bool ascending) {
+          columnIndex;
+          ascending;
+          controller.cycleSort(InventorySortBy.updatedAt);
+        },
       ),
       const DataColumn(label: Text("適用")),
     ];
@@ -515,7 +531,6 @@ class _InventoryTableState extends State<_InventoryTable> {
                 opacity: curve,
                 child: SizeTransition(
                   sizeFactor: curve,
-                  axis: Axis.vertical,
                   child: child,
                 ),
               );

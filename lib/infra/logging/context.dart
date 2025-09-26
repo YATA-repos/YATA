@@ -6,7 +6,9 @@ final Object _zoneLogContextKey = Object();
 
 LogContext? currentLogContext() {
   final Object? v = Zone.current[_zoneLogContextKey];
-  if (v is LogContext) return v;
+  if (v is LogContext) {
+    return v;
+  }
   return null;
 }
 

@@ -9,6 +9,8 @@ import "log_config.dart";
 import "log_event.dart";
 
 abstract class Interceptor {
+  String get name;
+
   LogEvent process(LogEvent event);
 }
 
@@ -29,6 +31,9 @@ class PiiMasker implements Interceptor {
   final List<String> _allowListKeys;
 
   late final Uint8List _salt;
+
+  @override
+  String get name => "pii_masker";
 
   @override
   LogEvent process(LogEvent event) {

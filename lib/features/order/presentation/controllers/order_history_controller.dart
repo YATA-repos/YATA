@@ -1,10 +1,7 @@
-import "package:flutter/foundation.dart";
+import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../../core/constants/enums.dart";
-import "../../../menu/models/menu_model.dart";
-import "../../dto/order_dto.dart";
-import "../../models/order_model.dart";
 
 /// 注文履歴画面で表示する注文の表示用データ。
 @immutable
@@ -117,13 +114,10 @@ class OrderHistoryState {
   }) : orders = List<OrderHistoryViewData>.unmodifiable(orders);
 
   /// デフォルトの初期状態を取得する。
-  factory OrderHistoryState.initial() {
-    return OrderHistoryState(
+  factory OrderHistoryState.initial() => OrderHistoryState(
       orders: _mockOrderHistory(),
       totalCount: _mockOrderHistory().length,
-      totalPages: 1,
     );
-  }
 
   /// 注文履歴一覧。
   final List<OrderHistoryViewData> orders;
@@ -163,8 +157,7 @@ class OrderHistoryState {
     bool? isLoading,
     DateTimeRange? selectedDateRange,
     OrderHistoryViewData? selectedOrder,
-  }) {
-    return OrderHistoryState(
+  }) => OrderHistoryState(
       orders: orders ?? this.orders,
       selectedStatusFilter: selectedStatusFilter ?? this.selectedStatusFilter,
       searchQuery: searchQuery ?? this.searchQuery,
@@ -175,7 +168,6 @@ class OrderHistoryState {
       selectedDateRange: selectedDateRange ?? this.selectedDateRange,
       selectedOrder: selectedOrder ?? this.selectedOrder,
     );
-  }
 
   /// フィルターされた注文一覧を取得する。
   List<OrderHistoryViewData> get filteredOrders {
@@ -196,19 +188,18 @@ class OrderHistoryState {
     if (searchQuery.isNotEmpty) {
       final String query = searchQuery.toLowerCase();
       filtered = filtered.where((OrderHistoryViewData order) {
-        return order.orderNumber?.toLowerCase().contains(query) == true ||
-               order.customerName?.toLowerCase().contains(query) == true ||
-               order.items.any((OrderItemViewData item) => 
-                 item.menuItemName.toLowerCase().contains(query));
+        final bool matchesOrderNumber = order.orderNumber?.toLowerCase().contains(query) ?? false;
+        final bool matchesCustomerName = order.customerName?.toLowerCase().contains(query) ?? false;
+        final bool matchesItemName = order.items.any((OrderItemViewData item) =>
+            item.menuItemName.toLowerCase().contains(query));
+        return matchesOrderNumber || matchesCustomerName || matchesItemName;
       }).toList();
     }
 
     // 日付範囲フィルター
     if (selectedDateRange != null) {
-      filtered = filtered.where((OrderHistoryViewData order) {
-        return order.orderedAt.isAfter(selectedDateRange!.start) &&
-               order.orderedAt.isBefore(selectedDateRange!.end.add(const Duration(days: 1)));
-      }).toList();
+      filtered = filtered.where((OrderHistoryViewData order) => order.orderedAt.isAfter(selectedDateRange!.start) &&
+               order.orderedAt.isBefore(selectedDateRange!.end.add(const Duration(days: 1)))).toList();
     }
 
     return filtered;
@@ -247,7 +238,7 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
 
   /// 注文詳細選択を解除する。
   void clearSelectedOrder() {
-    state = state.copyWith(selectedOrder: null);
+    state = state.copyWith();
   }
 
   /// 注文履歴を再読み込みする。
@@ -265,7 +256,7 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
 /// 注文履歴コントローラーのプロバイダー。
 final StateNotifierProvider<OrderHistoryController, OrderHistoryState> orderHistoryControllerProvider =
     StateNotifierProvider<OrderHistoryController, OrderHistoryState>(
-  (StateNotifierProviderRef<OrderHistoryController, OrderHistoryState> ref) => OrderHistoryController(),
+  (Ref ref) => OrderHistoryController(),
 );
 
 /// モック用の注文履歴データを生成する。

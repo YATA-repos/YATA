@@ -32,9 +32,9 @@ class AppTheme {
       shadowColor: colorScheme.shadow,
       dividerColor: colorScheme.outlineVariant,
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
-      hoverColor: colorScheme.primary.withOpacity(0.08),
-      highlightColor: colorScheme.primary.withOpacity(0.12),
-      splashColor: colorScheme.primary.withOpacity(0.14),
+  hoverColor: colorScheme.primary.withValues(alpha: 0.08),
+  highlightColor: colorScheme.primary.withValues(alpha: 0.12),
+  splashColor: colorScheme.primary.withValues(alpha: 0.14),
       appBarTheme: _buildAppBarTheme(colorScheme),
       cardTheme: _buildCardTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
@@ -152,12 +152,12 @@ class AppTheme {
         style: _buildPrimaryFilledButtonStyle(colorScheme).copyWith(
           backgroundColor: WidgetStateProperty.resolveWith(
             (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-                ? colorScheme.primary.withOpacity(0.45)
+                ? colorScheme.primary.withValues(alpha: 0.45)
                 : colorScheme.primary,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
             (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-                ? colorScheme.onSurface.withOpacity(0.4)
+                ? colorScheme.onSurface.withValues(alpha: 0.4)
                 : colorScheme.onPrimary,
           ),
           overlayColor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
@@ -165,10 +165,10 @@ class AppTheme {
               return Colors.transparent;
             }
             if (states.contains(WidgetState.pressed)) {
-              return colorScheme.primary.withOpacity(0.18);
+              return colorScheme.primary.withValues(alpha: 0.18);
             }
             if (states.contains(WidgetState.hovered)) {
-              return colorScheme.primary.withOpacity(0.1);
+              return colorScheme.primary.withValues(alpha: 0.1);
             }
             return null;
           }),
@@ -180,7 +180,7 @@ class AppTheme {
         style: ButtonStyle(
           foregroundColor: WidgetStateProperty.resolveWith(
             (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-                ? colorScheme.onSurface.withOpacity(0.4)
+                ? colorScheme.onSurface.withValues(alpha: 0.4)
                 : colorScheme.primary,
           ),
           textStyle: WidgetStateProperty.all(
@@ -209,17 +209,17 @@ class AppTheme {
               return Colors.transparent;
             }
             final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
-            return colorScheme.primary.withOpacity(opacity);
+            return colorScheme.primary.withValues(alpha: opacity);
           }),
         ),
       );
 
   static TextButtonThemeData _buildTextButtonTheme(ColorScheme colorScheme) => TextButtonThemeData(
     style: ButtonStyle(
-      foregroundColor: WidgetStateProperty.resolveWith(
-        (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-            ? colorScheme.onSurface.withOpacity(0.4)
-            : colorScheme.primary,
+  foregroundColor: WidgetStateProperty.resolveWith(
+    (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+    ? colorScheme.onSurface.withValues(alpha: 0.4)
+    : colorScheme.primary,
       ),
       textStyle: WidgetStateProperty.all(
         YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
@@ -235,7 +235,7 @@ class AppTheme {
           return Colors.transparent;
         }
         final double opacity = states.contains(WidgetState.pressed) ? 0.1 : 0.05;
-        return colorScheme.primary.withOpacity(opacity);
+        return colorScheme.primary.withValues(alpha: opacity);
       }),
     ),
   );
@@ -277,9 +277,9 @@ class AppTheme {
   static ChipThemeData _buildChipTheme(ColorScheme colorScheme, TextTheme textTheme) =>
       ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHighest,
-        disabledColor: colorScheme.surfaceContainerHighest.withOpacity(0.4),
-        selectedColor: colorScheme.primary.withOpacity(0.12),
-        secondarySelectedColor: colorScheme.primary.withOpacity(0.18),
+  disabledColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+  selectedColor: colorScheme.primary.withValues(alpha: 0.12),
+  secondarySelectedColor: colorScheme.primary.withValues(alpha: 0.18),
         padding: const EdgeInsets.symmetric(
           horizontal: YataSpacingTokens.sm,
           vertical: YataSpacingTokens.xs,
@@ -317,8 +317,8 @@ class AppTheme {
     ),
     trackColor: WidgetStateProperty.resolveWith(
       (Set<WidgetState> states) => states.contains(WidgetState.selected)
-          ? colorScheme.primary.withOpacity(0.35)
-          : colorScheme.outlineVariant.withOpacity(0.5),
+          ? colorScheme.primary.withValues(alpha: 0.35)
+          : colorScheme.outlineVariant.withValues(alpha: 0.5),
     ),
   );
 
@@ -334,9 +334,9 @@ class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
         ),
-        focusColor: colorScheme.primary.withOpacity(0.18),
-        splashColor: colorScheme.primary.withOpacity(0.2),
-        hoverColor: colorScheme.primary.withOpacity(0.12),
+  focusColor: colorScheme.primary.withValues(alpha: 0.18),
+  splashColor: colorScheme.primary.withValues(alpha: 0.2),
+  hoverColor: colorScheme.primary.withValues(alpha: 0.12),
         iconSize: 24,
       );
 
