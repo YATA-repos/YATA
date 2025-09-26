@@ -100,28 +100,32 @@ class _InventorySelectionToolbarState extends ConsumerState<InventorySelectionTo
                 ),
               ),
               const SizedBox(width: YataSpacingTokens.sm),
-              OutlinedButton.icon(
-                onPressed: () {
-                  final int v = _parseAmount();
-                  if (v == 0) {
-                    return;
-                  }
-                  controller.incrementSelectedBy(-v);
-                },
-                icon: const Icon(Icons.remove),
-                label: const Text("一括-"),
+              Tooltip(
+                message: "選択行に一括で減算",
+                child: OutlinedButton(
+                  onPressed: () {
+                    final int v = _parseAmount();
+                    if (v == 0) {
+                      return;
+                    }
+                    controller.incrementSelectedBy(-v);
+                  },
+                  child: const Icon(Icons.remove),
+                ),
               ),
               const SizedBox(width: YataSpacingTokens.sm),
-              OutlinedButton.icon(
-                onPressed: () {
-                  final int v = _parseAmount();
-                  if (v == 0) {
-                    return;
-                  }
-                  controller.incrementSelectedBy(v);
-                },
-                icon: const Icon(Icons.add),
-                label: const Text("一括+"),
+              Tooltip(
+                message: "選択行に一括で加算",
+                child: OutlinedButton(
+                  onPressed: () {
+                    final int v = _parseAmount();
+                    if (v == 0) {
+                      return;
+                    }
+                    controller.incrementSelectedBy(v);
+                  },
+                  child: const Icon(Icons.add),
+                ),
               ),
               const SizedBox(width: YataSpacingTokens.md),
               Tooltip(
