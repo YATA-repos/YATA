@@ -55,7 +55,9 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
           const YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
         ],
       ),
-      body: YataPageContainer(
+      body: Stack(
+        children: <Widget>[
+          YataPageContainer(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -134,16 +136,37 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                 expandChild: true,
                 child: state.isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : _OrderHistoryList(
-                        orders: state.filteredOrders,
-                        controller: controller,
+                    : Column(
+                        children: <Widget>[
+                          Expanded(
+                            child: _OrderHistoryList(
+                              orders: state.filteredOrders,
+                              controller: controller,
+                            ),
+                          ),
+                          if (state.totalPages > 1)
+                            _PaginationControls(
+                              currentPage: state.currentPage,
+                              totalPages: state.totalPages,
+                              onPageChanged: controller.setPage,
+                            ),
+                        ],
                       ),
               ),
             ),
           ],
         ),
       ),
-    );
+      
+      // 注文詳細ダイアログ
+      if (state.selectedOrder != null)
+        _OrderDetailDialog(
+          order: state.selectedOrder!,
+          onClose: controller.clearSelectedOrder,
+        ),
+    ],
+  ),
+);
   }
 }
 
@@ -417,6 +440,441 @@ class _OrderStatusBadge extends StatelessWidget {
     return YataStatusBadge(
       label: status.displayName,
       type: badgeType,
+    );
+  }
+}
+
+/// 注文詳細ダイアログウィジェット。
+class _OrderDetailDialog extends StatelessWidget {
+  const _OrderDetailDialog({
+    required this.order,
+    required this.onClose,
+  });
+
+  final OrderHistoryViewData order;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black.withOpacity(0.5),
+      child: Center(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.8,
+          constraints: const BoxConstraints(
+            maxWidth: 600,
+            maxHeight: 700,
+          ),
+          child: Material(
+            borderRadius: YataRadiusTokens.borderRadiusCard,
+            child: Container(
+              decoration: BoxDecoration(
+                color: YataColorTokens.surface,
+                borderRadius: YataRadiusTokens.borderRadiusCard,
+              ),
+              child: Column(
+                children: <Widget>[
+                  // ダイアログヘッダー
+                  Container(
+                    padding: const EdgeInsets.all(YataSpacingTokens.lg),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: YataColorTokens.border),
+                      ),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            "注文詳細",
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: YataColorTokens.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: onClose,
+                          icon: const Icon(Icons.close),
+                          color: YataColorTokens.textSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ダイアログコンテンツ
+                  Expanded(
+                    child: _OrderDetailContent(order: order),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 注文詳細コンテンツウィジェット。
+class _OrderDetailContent extends StatelessWidget {
+  const _OrderDetailContent({required this.order});
+
+  final OrderHistoryViewData order;
+
+  @override
+  Widget build(BuildContext context) {
+    final DateFormat detailDateFormat = DateFormat('yyyy/MM/dd HH:mm:ss');
+    final NumberFormat currencyFormat = NumberFormat('#,###');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(YataSpacingTokens.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // 注文基本情報
+          _DetailSection(
+            title: "注文情報",
+            child: Column(
+              children: <Widget>[
+                _DetailRow(
+                  label: "注文番号",
+                  value: order.orderNumber ?? "番号なし",
+                ),
+                _DetailRow(
+                  label: "ステータス",
+                  value: order.status.displayName,
+                  valueWidget: _OrderStatusBadge(status: order.status),
+                ),
+                _DetailRow(
+                  label: "顧客名",
+                  value: order.customerName ?? "名前なし",
+                ),
+                _DetailRow(
+                  label: "支払い方法",
+                  value: _getPaymentMethodLabel(order.paymentMethod),
+                ),
+                _DetailRow(
+                  label: "注文日時",
+                  value: detailDateFormat.format(order.orderedAt),
+                ),
+                if (order.completedAt != null)
+                  _DetailRow(
+                    label: "完了日時",
+                    value: detailDateFormat.format(order.completedAt!),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: YataSpacingTokens.xl),
+
+          // 注文明細
+          _DetailSection(
+            title: "注文明細",
+            child: Column(
+              children: <Widget>[
+                ...order.items.map((OrderItemViewData item) => _OrderItemRow(item: item)),
+                
+                const Divider(height: YataSpacingTokens.lg),
+
+                // 合計金額
+                _DetailRow(
+                  label: "小計",
+                  value: "¥${currencyFormat.format(order.totalAmount)}",
+                  isSubtotal: true,
+                ),
+                if (order.discountAmount > 0)
+                  _DetailRow(
+                    label: "割引",
+                    value: "-¥${currencyFormat.format(order.discountAmount)}",
+                    isDiscount: true,
+                  ),
+                _DetailRow(
+                  label: "合計",
+                  value: "¥${currencyFormat.format(order.actualAmount)}",
+                  isTotal: true,
+                ),
+              ],
+            ),
+          ),
+
+          // 備考（ある場合のみ）
+          if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
+            const SizedBox(height: YataSpacingTokens.xl),
+            _DetailSection(
+              title: "備考",
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(YataSpacingTokens.md),
+                decoration: BoxDecoration(
+                  color: YataColorTokens.surfaceAlt,
+                  borderRadius: YataRadiusTokens.borderRadiusSmall,
+                ),
+                child: Text(
+                  order.notes!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: YataColorTokens.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getPaymentMethodLabel(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cash:
+        return "現金";
+      case PaymentMethod.card:
+        return "カード";
+      case PaymentMethod.other:
+        return "その他";
+    }
+  }
+}
+
+/// 詳細セクションウィジェット。
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
+    required this.title,
+    required this.child,
+  });
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: YataColorTokens.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: YataSpacingTokens.md),
+        child,
+      ],
+    );
+  }
+}
+
+/// 詳細行ウィジェット。
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.valueWidget,
+    this.isSubtotal = false,
+    this.isDiscount = false,
+    this.isTotal = false,
+  });
+
+  final String label;
+  final String value;
+  final Widget? valueWidget;
+  final bool isSubtotal;
+  final bool isDiscount;
+  final bool isTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle labelStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: YataColorTokens.textSecondary,
+      fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
+    ) ?? YataTypographyTokens.bodyMedium;
+
+    final TextStyle valueStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: isDiscount ? YataColorTokens.warning : YataColorTokens.textPrimary,
+      fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
+    ) ?? YataTypographyTokens.bodyMedium;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            flex: 2,
+            child: Text(label, style: labelStyle),
+          ),
+          Expanded(
+            flex: 3,
+            child: valueWidget ?? Text(
+              value,
+              style: valueStyle,
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 注文明細行ウィジェット。
+class _OrderItemRow extends StatelessWidget {
+  const _OrderItemRow({required this.item});
+
+  final OrderItemViewData item;
+
+  @override
+  Widget build(BuildContext context) {
+    final NumberFormat currencyFormat = NumberFormat('#,###');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // 数量
+          Container(
+            width: 40,
+            alignment: Alignment.center,
+            child: Text(
+              "${item.quantity}x",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: YataColorTokens.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          
+          const SizedBox(width: YataSpacingTokens.md),
+          
+          // メニュー名と詳細
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  item.menuItemName,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: YataColorTokens.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (item.selectedOptions != null && item.selectedOptions!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: YataSpacingTokens.xs),
+                    child: Text(
+                      item.selectedOptions!.entries
+                          .map((MapEntry<String, String> e) => "${e.key}: ${e.value}")
+                          .join(", "),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: YataColorTokens.textSecondary,
+                      ),
+                    ),
+                  ),
+                if (item.specialRequest != null && item.specialRequest!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: YataSpacingTokens.xs),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: YataSpacingTokens.sm,
+                        vertical: YataSpacingTokens.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: YataColorTokens.warningSoft,
+                        borderRadius: YataRadiusTokens.borderRadiusSmall,
+                      ),
+                      child: Text(
+                        "特別リクエスト: ${item.specialRequest}",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: YataColorTokens.warning,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: YataSpacingTokens.md),
+          
+          // 単価と小計
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                "¥${currencyFormat.format(item.unitPrice)}",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+              Text(
+                "¥${currencyFormat.format(item.subtotal)}",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: YataColorTokens.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ページネーションコントロールウィジェット。
+class _PaginationControls extends StatelessWidget {
+  const _PaginationControls({
+    required this.currentPage,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
+
+  final int currentPage;
+  final int totalPages;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(YataSpacingTokens.md),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: YataColorTokens.border),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          // 前のページボタン
+          IconButton(
+            onPressed: currentPage > 1 ? () => onPageChanged(currentPage - 1) : null,
+            icon: const Icon(Icons.chevron_left),
+            color: YataColorTokens.textSecondary,
+          ),
+          const SizedBox(width: YataSpacingTokens.sm),
+          
+          // ページ情報
+          Text(
+            "$currentPage / $totalPages ページ",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: YataColorTokens.textSecondary,
+            ),
+          ),
+          
+          const SizedBox(width: YataSpacingTokens.sm),
+          
+          // 次のページボタン
+          IconButton(
+            onPressed: currentPage < totalPages ? () => onPageChanged(currentPage + 1) : null,
+            icon: const Icon(Icons.chevron_right),
+            color: YataColorTokens.textSecondary,
+          ),
+        ],
+      ),
     );
   }
 }
