@@ -1,9 +1,9 @@
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:supabase_flutter/supabase_flutter.dart" hide AuthException;
 
 import "../../core/base/base_error_msg.dart";
 import "../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../core/constants/log_enums/auth.dart";
+import "../../core/validation/env_validator.dart";
 import "../logging/logger.dart" as log;
 
 /// Supabaseクライアント管理サービス
@@ -34,8 +34,8 @@ class SupabaseClientService {
 
   /// 環境変数からSupabase URL取得
   static String get _supabaseUrl {
-    final String? url = dotenv.env["SUPABASE_URL"];
-    if (url == null || url.isEmpty) {
+    final String url = EnvValidator.supabaseUrl;
+    if (url.isEmpty) {
       throw AuthException.initializationFailed("SUPABASE_URL is not set in environment variables");
     }
     return url;
@@ -43,8 +43,8 @@ class SupabaseClientService {
 
   /// 環境変数からSupabase Anonymous Key取得
   static String get _supabaseAnonKey {
-    final String? key = dotenv.env["SUPABASE_ANON_KEY"];
-    if (key == null || key.isEmpty) {
+    final String key = EnvValidator.supabaseAnonKey;
+    if (key.isEmpty) {
       throw AuthException.initializationFailed(
         "SUPABASE_ANON_KEY is not set in environment variables",
       );

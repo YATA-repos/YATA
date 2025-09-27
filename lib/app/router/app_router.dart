@@ -6,7 +6,7 @@ import "../../features/analytics/presentation/pages/sales_analytics_page.dart";
 import "../../features/auth/models/auth_state.dart";
 import "../../features/auth/presentation/pages/auth_page.dart";
 import "../../features/auth/presentation/providers/auth_providers.dart";
-import "../../features/auth/routing/auth_guard.dart";
+import "guards/auth_guard.dart";
 import "../../features/inventory/presentation/pages/inventory_management_page.dart";
 import "../../features/menu/presentation/pages/menu_management_page.dart";
 import "../../features/order/presentation/pages/order_history_page.dart";

@@ -1,13 +1,14 @@
 import "dart:async";
 
 import "package:supabase_flutter/supabase_flutter.dart" as supabase
-    show AuthChangeEvent, AuthState, Session;
+  show AuthChangeEvent, AuthState, Session;
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/logging/compat.dart" as log;
 import "../../../core/utils/stream_manager_mixin.dart";
+import "../../../infra/supabase/supabase_client.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";
 import "../models/auth_state.dart";
@@ -82,6 +83,15 @@ class AuthService with StreamControllerManagerMixin {
 
     _authStateSubscription?.cancel();
     final AuthRepository concreteRepository = _authRepository;
+
+    if (!SupabaseClientService.isInitialized) {
+      log.w(
+        "Supabase client is not initialized; auth state listener will not start",
+        tag: loggerComponent,
+      );
+      return;
+    }
+
     _authStateSubscription = concreteRepository.authStateChanges.listen(
       (supabase.AuthState supabaseState) {
         log.d(

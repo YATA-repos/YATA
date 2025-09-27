@@ -1,6 +1,5 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app/app.dart";
@@ -18,7 +17,7 @@ void main() async {
   try {
     // 統合環境変数管理システムで初期化
     await EnvValidator.initialize();
-    i("環境変数をロードしました: ${dotenv.env.keys.join(", ")}", tag: "main");
+  i("環境変数をロードしました: ${EnvValidator.env.keys.join(", ")}", tag: "main");
 
     final EnvValidationResult validationResult = EnvValidator.validate();
     EnvValidator.printValidationResult(validationResult);
@@ -53,10 +52,10 @@ void main() async {
 }
 
 bool _shouldInitializeSupabase() {
-  final String? url = dotenv.env["SUPABASE_URL"];
-  final String? key = dotenv.env["SUPABASE_ANON_KEY"];
+  final String url = EnvValidator.supabaseUrl;
+  final String key = EnvValidator.supabaseAnonKey;
 
-  return url != null && key != null && url.isNotEmpty && key.isNotEmpty;
+  return url.isNotEmpty && key.isNotEmpty;
 }
 
 void _setupErrorHandling() {

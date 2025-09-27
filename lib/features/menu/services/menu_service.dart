@@ -95,8 +95,23 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       log.i("Stopping menu realtime monitoring", tag: loggerComponent);
       await stopFeatureMonitoring("menu");
       log.i("Menu realtime monitoring stopped", tag: loggerComponent);
-    } catch (e) {
-      log.e("Failed to stop menu realtime monitoring", tag: loggerComponent, error: e);
+    } catch (e, stackTrace) {
+      final String errorText = e.toString();
+      if (e is StateError &&
+          errorText.contains("ProviderContainer") &&
+          errorText.contains("already disposed")) {
+        log.w(
+          "Provider container disposed before realtime monitoring teardown completed: $errorText",
+          tag: loggerComponent,
+        );
+        return;
+      }
+      log.e(
+        "Failed to stop menu realtime monitoring",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
       rethrow;
     }
   }
