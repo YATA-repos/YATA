@@ -147,6 +147,12 @@ class InventoryManagementState {
     int cmpNum(num a, num b) => a.compareTo(b);
     int cmpDate(DateTime a, DateTime b) => a.compareTo(b);
     switch (sortBy) {
+      case InventorySortBy.category:
+        list.sort(
+          (InventoryItemViewData a, InventoryItemViewData b) =>
+              _compareCategoryName(a.category, b.category),
+        );
+        break;
       case InventorySortBy.state:
         list.sort(
           (InventoryItemViewData a, InventoryItemViewData b) =>
@@ -255,18 +261,21 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         userId,
       );
 
+    final String? previousCategorySelectionRaw =
+          state.selectedCategoryIndex <= 0 || state.selectedCategoryIndex >= state.categories.length
+              ? null
+              : state.categories[state.selectedCategoryIndex];
+    final String? previousCategorySelection = previousCategorySelectionRaw == null
+      ? null
+      : (previousCategorySelectionRaw.trim().isEmpty
+        ? null
+        : previousCategorySelectionRaw.trim());
+
       final Map<String, String> categoryNameById = <String, String>{
         for (final MaterialCategory category in categoryModels)
           if (category.id != null) category.id!: category.name,
       };
 
-      final List<String> categories = <String>["すべて"];
-      final Set<String> categoryNames = <String>{};
-      for (final MaterialCategory category in categoryModels) {
-        if (categoryNames.add(category.name)) {
-          categories.add(category.name);
-        }
-      }
       final Set<String> validIds = <String>{};
       final Map<String, Material> materialMap = <String, Material>{};
 
@@ -277,7 +286,10 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
             final String id = material.id!;
             validIds.add(id);
             materialMap[id] = material;
-            final String categoryName = categoryNameById[material.categoryId] ?? "未分類";
+      final String rawCategoryName = categoryNameById[material.categoryId] ?? "未分類";
+      final String categoryName = rawCategoryName.trim().isEmpty
+        ? "未分類"
+        : rawCategoryName.trim();
 
             final DateTime updatedAt = material.updatedAt ?? material.createdAt ?? DateTime.now();
 
@@ -298,25 +310,43 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
           })
           .toList(growable: false);
 
-      for (final InventoryItemViewData item in items) {
-        if (categoryNames.add(item.category)) {
-          categories.add(item.category);
+        final Set<String> categoryNames = <String>{};
+        for (final MaterialCategory category in categoryModels) {
+          final String name = category.name.trim();
+          if (name.isNotEmpty) {
+            categoryNames.add(name);
+          }
         }
-      }
+        for (final InventoryItemViewData item in items) {
+          final String name = item.category.trim();
+          if (name.isNotEmpty) {
+            categoryNames.add(name);
+          }
+        }
+
+        final List<String> sortedCategoryNames = categoryNames.toList(growable: false)
+          ..sort(_compareCategoryName);
+        final List<String> categories = <String>["すべて", ...sortedCategoryNames];
+
+        int resolvedCategoryIndex = 0;
+        if (previousCategorySelection != null) {
+          final int index = categories.indexOf(previousCategorySelection);
+          if (index >= 0) {
+            resolvedCategoryIndex = index;
+          }
+        }
 
       final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
         ..removeWhere((String key, _) => !validIds.contains(key));
 
       final Set<String> selectedIds = state.selectedIds.where(validIds.contains).toSet();
 
-      final int safeCategoryIndex = state.selectedCategoryIndex.clamp(0, categories.length - 1);
-
       state = state.copyWith(
         items: items,
         categories: categories,
         categoryEntities: List<MaterialCategory>.unmodifiable(categoryModels),
         materialById: Map<String, Material>.unmodifiable(materialMap),
-        selectedCategoryIndex: safeCategoryIndex,
+          selectedCategoryIndex: resolvedCategoryIndex,
         pendingAdjustments: pending,
         selectedIds: selectedIds,
         isLoading: false,
@@ -705,4 +735,113 @@ inventoryManagementControllerProvider =
     );
 
 /// ソートキー。
-enum InventorySortBy { none, state, quantity, delta, updatedAt }
+enum InventorySortBy { none, category, state, quantity, delta, updatedAt }
+
+/// カテゴリ名を比較して50音順・アルファベット順での昇順/降順ソートを実現する。
+int _compareCategoryName(String a, String b) {
+  final String left = _normalizeForSort(a);
+  final String right = _normalizeForSort(b);
+  final int primary = left.compareTo(right);
+  if (primary != 0) {
+    return primary;
+  }
+  return a.compareTo(b);
+}
+
+/// 50音・アルファベットの比較を行いやすいように文字列を正規化する。
+String _normalizeForSort(String input) {
+  final String trimmed = input.trim();
+  if (trimmed.isEmpty) {
+    return "";
+  }
+
+  final StringBuffer buffer = StringBuffer();
+  for (final int rune in trimmed.runes) {
+    // カタカナ -> ひらがな
+    if (rune >= 0x30A1 && rune <= 0x30F3) {
+      buffer.writeCharCode(rune - 0x60);
+      continue;
+    }
+
+    // 半角カタカナをひらがなに寄せる
+    final int? halfWidth = _halfWidthKatakanaToHiragana[rune];
+    if (halfWidth != null) {
+      buffer.writeCharCode(halfWidth);
+      continue;
+    }
+
+    // 全角英数字 -> 半角英数字
+    if ((rune >= 0xFF10 && rune <= 0xFF19) ||
+        (rune >= 0xFF21 && rune <= 0xFF3A) ||
+        (rune >= 0xFF41 && rune <= 0xFF5A)) {
+      buffer.writeCharCode(rune - 0xFEE0);
+      continue;
+    }
+
+    buffer.writeCharCode(rune);
+  }
+
+  return buffer.toString().toLowerCase();
+}
+
+/// 半角カタカナ -> ひらがな変換マップ。
+const Map<int, int> _halfWidthKatakanaToHiragana = <int, int>{
+  0xFF66: 0x3092, // ｦ -> を
+  0xFF67: 0x3041, // ｧ -> ぁ
+  0xFF68: 0x3043, // ｨ -> ぃ
+  0xFF69: 0x3045, // ｩ -> ぅ
+  0xFF6A: 0x3047, // ｪ -> ぇ
+  0xFF6B: 0x3049, // ｫ -> ぉ
+  0xFF6C: 0x3083, // ｬ -> ゃ
+  0xFF6D: 0x3085, // ｭ -> ゅ
+  0xFF6E: 0x3087, // ｮ -> ょ
+  0xFF6F: 0x3063, // ｯ -> っ
+  0xFF70: 0x30FC, // ｰ -> ー
+  0xFF71: 0x3042, // ｱ -> あ
+  0xFF72: 0x3044, // ｲ -> い
+  0xFF73: 0x3046, // ｳ -> う
+  0xFF74: 0x3048, // ｴ -> え
+  0xFF75: 0x304A, // ｵ -> お
+  0xFF76: 0x304B, // ｶ -> か
+  0xFF77: 0x304D, // ｷ -> き
+  0xFF78: 0x304F, // ｸ -> く
+  0xFF79: 0x3051, // ｹ -> け
+  0xFF7A: 0x3053, // ｺ -> こ
+  0xFF7B: 0x3055, // ｻ -> さ
+  0xFF7C: 0x3057, // ｼ -> し
+  0xFF7D: 0x3059, // ｽ -> す
+  0xFF7E: 0x305B, // ｾ -> せ
+  0xFF7F: 0x305D, // ｿ -> そ
+  0xFF80: 0x305F, // ﾀ -> た
+  0xFF81: 0x3061, // ﾁ -> ち
+  0xFF82: 0x3064, // ﾂ -> つ
+  0xFF83: 0x3066, // ﾃ -> て
+  0xFF84: 0x3068, // ﾄ -> と
+  0xFF85: 0x306A, // ﾅ -> な
+  0xFF86: 0x306B, // ﾆ -> に
+  0xFF87: 0x306C, // ﾇ -> ぬ
+  0xFF88: 0x306D, // ﾈ -> ね
+  0xFF89: 0x306E, // ﾉ -> の
+  0xFF8A: 0x306F, // ﾊ -> は
+  0xFF8B: 0x3072, // ﾋ -> ひ
+  0xFF8C: 0x3075, // ﾌ -> ふ
+  0xFF8D: 0x3078, // ﾍ -> へ
+  0xFF8E: 0x307B, // ﾎ -> ほ
+  0xFF8F: 0x307E, // ﾏ -> ま
+  0xFF90: 0x307F, // ﾐ -> み
+  0xFF91: 0x3080, // ﾑ -> む
+  0xFF92: 0x3081, // ﾒ -> め
+  0xFF93: 0x3082, // ﾓ -> も
+  0xFF94: 0x3084, // ﾔ -> や
+  0xFF95: 0x3086, // ﾕ -> ゆ
+  0xFF96: 0x3088, // ﾖ -> よ
+  0xFF97: 0x3089, // ﾗ -> ら
+  0xFF98: 0x308A, // ﾘ -> り
+  0xFF99: 0x308B, // ﾙ -> る
+  0xFF9A: 0x308C, // ﾚ -> れ
+  0xFF9B: 0x308D, // ﾛ -> ろ
+  0xFF9C: 0x308F, // ﾜ -> わ
+  0xFF9D: 0x3093, // ﾝ -> ん
+  0xFF9E: 0x309B, // ﾞ -> ゛
+  0xFF9F: 0x309C, // ﾟ -> ゜
+};

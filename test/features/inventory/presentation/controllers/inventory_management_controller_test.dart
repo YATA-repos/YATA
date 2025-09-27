@@ -165,13 +165,175 @@ void main() {
       expect(material.notes, "サイズ変更");
     });
   });
+
+  group("InventoryManagementController sorting", () {
+    test("category sort respects locale-aware ordering", () async {
+      final DateTime now = DateTime(2024, 1, 1);
+
+      final List<MaterialCategory> categories = <MaterialCategory>[
+        MaterialCategory(
+          id: "cat_noodles",
+          name: "そば",
+          displayOrder: 0,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        MaterialCategory(
+          id: "cat_sweets",
+          name: "あんこ",
+          displayOrder: 1,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        MaterialCategory(
+          id: "cat_bakery",
+          name: "Bakery",
+          displayOrder: 2,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        MaterialCategory(
+          id: "cat_drink",
+          name: "Drinks",
+          displayOrder: 3,
+          createdAt: now,
+          updatedAt: now,
+        ),
+        MaterialCategory(
+          id: "cat_dumpling",
+          name: "ぎょうざ",
+          displayOrder: 4,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ];
+
+      final List<MaterialStockInfo> stockInfos = <MaterialStockInfo>[
+        MaterialStockInfo(
+          material: Material(
+            id: "mat_noodles",
+            name: "そば粉",
+            categoryId: "cat_noodles",
+            unitType: UnitType.piece,
+            currentStock: 10,
+            alertThreshold: 3,
+            criticalThreshold: 1,
+            createdAt: now,
+            updatedAt: now,
+            userId: "current_user",
+          ),
+          stockLevel: StockLevel.sufficient,
+        ),
+        MaterialStockInfo(
+          material: Material(
+            id: "mat_sweets",
+            name: "あんこ缶",
+            categoryId: "cat_sweets",
+            unitType: UnitType.piece,
+            currentStock: 15,
+            alertThreshold: 5,
+            criticalThreshold: 2,
+            createdAt: now,
+            updatedAt: now,
+            userId: "current_user",
+          ),
+          stockLevel: StockLevel.sufficient,
+        ),
+        MaterialStockInfo(
+          material: Material(
+            id: "mat_bakery",
+            name: "ベーグル生地",
+            categoryId: "cat_bakery",
+            unitType: UnitType.piece,
+            currentStock: 8,
+            alertThreshold: 2,
+            criticalThreshold: 1,
+            createdAt: now,
+            updatedAt: now,
+            userId: "current_user",
+          ),
+          stockLevel: StockLevel.sufficient,
+        ),
+        MaterialStockInfo(
+          material: Material(
+            id: "mat_drink",
+            name: "クラフトソーダ",
+            categoryId: "cat_drink",
+            unitType: UnitType.liter,
+            currentStock: 12,
+            alertThreshold: 4,
+            criticalThreshold: 2,
+            createdAt: now,
+            updatedAt: now,
+            userId: "current_user",
+          ),
+          stockLevel: StockLevel.sufficient,
+        ),
+        MaterialStockInfo(
+          material: Material(
+            id: "mat_dumpling",
+            name: "ぎょうざ皮",
+            categoryId: "cat_dumpling",
+            unitType: UnitType.piece,
+            currentStock: 18,
+            alertThreshold: 6,
+            criticalThreshold: 3,
+            createdAt: now,
+            updatedAt: now,
+            userId: "current_user",
+          ),
+          stockLevel: StockLevel.sufficient,
+        ),
+      ];
+
+      final InventoryManagementController controller = InventoryManagementController(
+        ref: _FakeRef(
+          values: <ProviderListenable<dynamic>, dynamic>{currentUserIdProvider: "current_user"},
+        ),
+        inventoryService: _FakeInventoryService(
+          categories: categories,
+          stockInfos: stockInfos,
+        ),
+      );
+
+      addTearDown(controller.dispose);
+
+      await controller.loadInventory();
+
+      expect(
+        controller.state.categories,
+        <String>["すべて", "Bakery", "Drinks", "あんこ", "ぎょうざ", "そば"],
+      );
+
+      controller.cycleSort(InventorySortBy.category);
+      expect(controller.state.sortBy, InventorySortBy.category);
+      expect(controller.state.sortAsc, isTrue);
+
+      final List<String> ascCategories =
+          controller.state.filteredItems.map((InventoryItemViewData item) => item.category).toList();
+      expect(ascCategories, <String>["Bakery", "Drinks", "あんこ", "ぎょうざ", "そば"]);
+
+      controller.cycleSort(InventorySortBy.category);
+      expect(controller.state.sortAsc, isFalse);
+
+      final List<String> descCategories =
+          controller.state.filteredItems.map((InventoryItemViewData item) => item.category).toList();
+      expect(descCategories, ascCategories.reversed.toList());
+
+      controller.cycleSort(InventorySortBy.category);
+      expect(controller.state.sortBy, InventorySortBy.none);
+    });
+  });
 }
 
 class _FakeInventoryService implements InventoryServiceContract {
-  _FakeInventoryService() {
+  _FakeInventoryService({
+    List<MaterialCategory>? categories,
+    List<MaterialStockInfo>? stockInfos,
+  }) {
     final DateTime now = DateTime(2024);
 
-    _categories = <MaterialCategory>[
+    final List<MaterialCategory> sourceCategories = categories ?? <MaterialCategory>[
       MaterialCategory(
         id: "cat_ingredients",
         name: "食材",
@@ -188,7 +350,7 @@ class _FakeInventoryService implements InventoryServiceContract {
       ),
     ];
 
-    _stockInfos = <MaterialStockInfo>[
+    final List<MaterialStockInfo> sourceStocks = stockInfos ?? <MaterialStockInfo>[
       MaterialStockInfo(
         material: Material(
           id: "mat_1",
@@ -220,6 +382,42 @@ class _FakeInventoryService implements InventoryServiceContract {
         stockLevel: StockLevel.sufficient,
       ),
     ];
+
+    _categories = sourceCategories
+        .map(
+          (MaterialCategory category) => MaterialCategory(
+            id: category.id,
+            name: category.name,
+            displayOrder: category.displayOrder,
+            createdAt: category.createdAt,
+            updatedAt: category.updatedAt,
+            userId: category.userId,
+          ),
+        )
+        .toList(growable: true);
+
+    _stockInfos = sourceStocks
+        .map(
+          (MaterialStockInfo info) => MaterialStockInfo(
+            material: Material(
+              id: info.material.id,
+              name: info.material.name,
+              categoryId: info.material.categoryId,
+              unitType: info.material.unitType,
+              currentStock: info.material.currentStock,
+              alertThreshold: info.material.alertThreshold,
+              criticalThreshold: info.material.criticalThreshold,
+              notes: info.material.notes,
+              createdAt: info.material.createdAt,
+              updatedAt: info.material.updatedAt,
+              userId: info.material.userId,
+            ),
+            stockLevel: info.stockLevel,
+            estimatedUsageDays: info.estimatedUsageDays,
+            dailyUsageRate: info.dailyUsageRate,
+          ),
+        )
+        .toList(growable: true);
   }
 
   late final List<MaterialCategory> _categories;

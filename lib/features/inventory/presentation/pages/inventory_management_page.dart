@@ -602,6 +602,9 @@ class _InventoryTableState extends State<_InventoryTable> {
 
     int? sortIndex;
     switch (state.sortBy) {
+      case InventorySortBy.category:
+        sortIndex = 1;
+        break;
       case InventorySortBy.state:
         sortIndex = 5;
         break;
@@ -630,7 +633,14 @@ class _InventoryTableState extends State<_InventoryTable> {
           ),
         ),
       ),
-      const DataColumn(label: Text("カテゴリ")),
+      DataColumn(
+        label: const Text("カテゴリ"),
+        onSort: (int columnIndex, bool ascending) {
+          columnIndex;
+          ascending;
+          controller.cycleSort(InventorySortBy.category);
+        },
+      ),
       const DataColumn(label: Text("品目")),
       DataColumn(
         label: const Text("在庫量"),
