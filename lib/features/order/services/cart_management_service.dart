@@ -99,6 +99,8 @@ class CartManagementService {
     log.i("Started adding item to cart: quantity=${request.quantity}", tag: loggerComponent);
 
     try {
+      final Map<String, String> resolvedSelectedOptions =
+          request.selectedOptions ?? <String, String>{};
       // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
@@ -139,13 +141,17 @@ class CartManagementService {
           newQuantity,
         );
 
+        final Map<String, dynamic> updatePayload = <String, dynamic>{
+          "quantity": newQuantity,
+          "subtotal": newSubtotal,
+          "special_request": request.specialRequest,
+        };
+        if (request.selectedOptions != null) {
+          updatePayload["selected_options"] = request.selectedOptions;
+        }
+
         final OrderItem? updatedItem = await _orderItemRepository
-            .updateById(existingItem.id!, <String, dynamic>{
-              "quantity": newQuantity,
-              "subtotal": newSubtotal,
-              "selected_options": request.selectedOptions,
-              "special_request": request.specialRequest,
-            });
+            .updateById(existingItem.id!, updatePayload);
 
         // カート合計を更新
         await _updateCartTotal(cartId);
@@ -166,7 +172,7 @@ class CartManagementService {
           quantity: request.quantity,
           unitPrice: menuItem.price,
           subtotal: subtotal,
-          selectedOptions: request.selectedOptions,
+          selectedOptions: resolvedSelectedOptions,
           specialRequest: request.specialRequest,
           createdAt: DateTime.now(),
           userId: userId,
