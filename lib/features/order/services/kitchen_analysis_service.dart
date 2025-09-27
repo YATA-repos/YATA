@@ -1,11 +1,9 @@
 import "dart:math" as math;
 
 import "../../../core/constants/enums.dart";
-import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/logging/compat.dart" as log;
-import "../../menu/models/menu_model.dart";
 import "../models/order_model.dart";
 import "kitchen_operation_service.dart";
 
@@ -14,16 +12,13 @@ class KitchenAnalysisService {
   KitchenAnalysisService({
     required OrderRepositoryContract<Order> orderRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
-    required MenuItemRepositoryContract<MenuItem> menuItemRepository,
     required KitchenOperationService kitchenOperationService,
   }) : _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
-       _menuItemRepository = menuItemRepository,
        _kitchenOperationService = kitchenOperationService;
 
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
-  final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
   final KitchenOperationService _kitchenOperationService;
 
   String get loggerComponent => "KitchenAnalysisService";
@@ -44,18 +39,33 @@ class KitchenAnalysisService {
         return order.completedAt;
       }
 
-      // 注文アイテムの調理時間を計算
+      // 注文アイテム数を元に平均調理時間を推定
       final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
-      int totalPrepTime = 0;
+      final int itemCount = orderItems.fold<int>(
+        0,
+        (int total, OrderItem item) => total + item.quantity,
+      );
 
-      for (final OrderItem item in orderItems) {
-        final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
-        if (menuItem != null) {
-          totalPrepTime += menuItem.estimatedPrepTimeMinutes * item.quantity;
-        }
+      if (itemCount == 0) {
+        log.w("No order items found for estimation", tag: loggerComponent);
+        return null;
       }
 
-      log.d("Total estimated prep time: $totalPrepTime minutes", tag: loggerComponent);
+      final double? avgPrepMinutesPerItem = await _getAveragePrepMinutesPerItem();
+      if (avgPrepMinutesPerItem == null) {
+        log.w(
+          "Historical prep time data unavailable; cannot estimate completion",
+          tag: loggerComponent,
+        );
+        return null;
+      }
+
+      int totalPrepTime = math.max(0, (avgPrepMinutesPerItem * itemCount).round());
+
+      log.d(
+        "Total estimated prep time (historical average): $totalPrepTime minutes",
+        tag: loggerComponent,
+      );
 
       // 基準時刻（調理開始時刻または注文時刻）
       final DateTime baseTime = order.startedPreparingAt ?? order.orderedAt;
@@ -102,17 +112,21 @@ class KitchenAnalysisService {
 
       // 推定総調理時間を計算
       int totalEstimatedMinutes = 0;
-      for (final Order order in activeOrders) {
-        if (order.readyAt == null) {
-          // まだ完成していない注文
-          final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
-          for (final OrderItem item in orderItems) {
-            final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
-            if (menuItem != null) {
-              totalEstimatedMinutes += menuItem.estimatedPrepTimeMinutes * item.quantity;
-            }
+      final double? avgPrepMinutesPerItem = await _getAveragePrepMinutesPerItem();
+      if (avgPrepMinutesPerItem == null) {
+        log.w(
+          "Historical prep data unavailable; estimated totals default to 0",
+          tag: loggerComponent,
+        );
+      } else {
+        double aggregated = 0;
+        for (final Order order in activeOrders) {
+          if (order.readyAt == null && order.id != null) {
+            final int itemCount = await _countOrderItems(order.id!);
+            aggregated += avgPrepMinutesPerItem * itemCount;
           }
         }
+        totalEstimatedMinutes = aggregated.round();
       }
 
       final Map<String, dynamic> workload = <String, dynamic>{
@@ -142,22 +156,28 @@ class KitchenAnalysisService {
     try {
       final List<Order> queue = await _kitchenOperationService.getOrderQueue(userId);
 
-      int totalWaitTime = 0;
+      final double? avgPrepMinutesPerItem = await _getAveragePrepMinutesPerItem();
+      if (avgPrepMinutesPerItem == null) {
+        log.w(
+          "Historical prep data unavailable; queue wait time defaults to 0",
+          tag: loggerComponent,
+        );
+        return 0;
+      }
+
+      double totalWaitMinutes = 0;
       for (final Order order in queue) {
-        if (order.startedPreparingAt == null) {
+        if (order.startedPreparingAt == null && order.id != null) {
           // まだ開始していない注文
-          final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
-          for (final OrderItem item in orderItems) {
-            final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
-            if (menuItem != null) {
-              totalWaitTime += menuItem.estimatedPrepTimeMinutes * item.quantity;
-            }
-          }
+          final int itemCount = await _countOrderItems(order.id!);
+          totalWaitMinutes += avgPrepMinutesPerItem * itemCount;
         }
       }
 
       // 簡単な計算（実際はより複雑な計算が必要）
-      final int waitTime = queue.isNotEmpty ? totalWaitTime ~/ math.max(1, queue.length) : 0;
+      final int waitTime = queue.isNotEmpty
+          ? (totalWaitMinutes / math.max(1, queue.length)).round()
+          : 0;
       log.d("Queue wait time calculated: $waitTime minutes", tag: loggerComponent);
       return waitTime;
     } catch (e, stackTrace) {
@@ -179,20 +199,26 @@ class KitchenAnalysisService {
           .where((Order o) => o.startedPreparingAt == null)
           .toList();
 
-      // 最適化アルゴリズム（簡単な例：調理時間の短い順）
+      // 最適化アルゴリズム（簡単な例：平均調理時間を用いた短時間優先）
+      final double? avgPrepMinutesPerItem = await _getAveragePrepMinutesPerItem();
+      if (avgPrepMinutesPerItem == null) {
+        log.w("Historical prep data unavailable; fallback to FIFO order", tag: loggerComponent);
+        filteredOrders.sort((Order a, Order b) => a.orderedAt.compareTo(b.orderedAt));
+        return filteredOrders
+            .where((Order order) => order.id != null)
+            .map((Order order) => order.id!)
+            .toList();
+      }
+
       final List<(String, int, DateTime)> orderPrepTimes = <(String, int, DateTime)>[];
 
       for (final Order order in filteredOrders) {
-        final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(order.id!);
-        int totalTime = 0;
-        for (final OrderItem item in orderItems) {
-          final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
-          if (menuItem != null) {
-            totalTime += menuItem.estimatedPrepTimeMinutes * item.quantity;
-          }
+        if (order.id == null) {
+          continue;
         }
-
-        orderPrepTimes.add((order.id!, totalTime, order.orderedAt));
+        final int itemCount = await _countOrderItems(order.id!);
+        final int estimatedMinutes = math.max(0, (avgPrepMinutesPerItem * itemCount).round());
+        orderPrepTimes.add((order.id!, estimatedMinutes, order.orderedAt));
       }
 
       // 調理時間の短い順、同じ時間なら注文の早い順
@@ -307,6 +333,61 @@ class KitchenAnalysisService {
         st: stackTrace,
       );
       rethrow;
+    }
+  }
+
+  Future<int> _countOrderItems(String orderId) async {
+    final List<OrderItem> items = await _orderItemRepository.findByOrderId(orderId);
+    return items.fold<int>(0, (int total, OrderItem item) => total + item.quantity);
+  }
+
+  Future<double?> _getAveragePrepMinutesPerItem() async {
+    try {
+      final List<Order> recentOrders = await _orderRepository.findRecentOrders(limit: 20);
+      if (recentOrders.isEmpty) {
+        return null;
+      }
+
+      double totalMinutes = 0;
+      int totalItems = 0;
+
+      for (final Order order in recentOrders) {
+        if (order.id == null) {
+          continue;
+        }
+
+        final double? prepMinutes = _kitchenOperationService.getActualPrepTimeMinutes(order);
+        if (prepMinutes == null) {
+          continue;
+        }
+
+        final List<OrderItem> items = await _orderItemRepository.findByOrderId(order.id!);
+        final int itemCount = items.fold<int>(0, (int sum, OrderItem item) => sum + item.quantity);
+        if (itemCount == 0) {
+          continue;
+        }
+
+        totalMinutes += prepMinutes;
+        totalItems += itemCount;
+      }
+
+      if (totalItems == 0) {
+        return null;
+      }
+
+      final double average = totalMinutes / totalItems;
+      if (!average.isFinite) {
+        return null;
+      }
+      return average;
+    } catch (e, stackTrace) {
+      log.e(
+        "Failed to compute average prep minutes per item",
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
+      return null;
     }
   }
 }

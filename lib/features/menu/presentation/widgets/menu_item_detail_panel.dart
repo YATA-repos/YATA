@@ -148,8 +148,6 @@ class _BasicInfoTab extends StatelessWidget {
           const SizedBox(height: YataSpacingTokens.sm),
           YataKeyValueRow(label: "表示順", value: item.displayOrder.toString()),
           const SizedBox(height: YataSpacingTokens.sm),
-          YataKeyValueRow(label: "調理時間", value: "${item.estimatedPrepTimeMinutes}分"),
-          const SizedBox(height: YataSpacingTokens.sm),
           YataKeyValueRow(
             label: "最終更新",
             value: item.updatedAt != null

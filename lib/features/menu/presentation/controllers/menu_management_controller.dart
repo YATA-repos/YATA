@@ -146,7 +146,6 @@ class MenuItemViewData {
     required this.price,
     required this.isAvailable,
     required this.displayOrder,
-    required this.estimatedPrepTimeMinutes,
     this.description,
     this.imageUrl,
     this.createdAt,
@@ -163,7 +162,6 @@ class MenuItemViewData {
         price: model.price,
         isAvailable: model.isAvailable,
         displayOrder: model.displayOrder,
-        estimatedPrepTimeMinutes: model.estimatedPrepTimeMinutes,
         description: model.description,
         imageUrl: model.imageUrl,
         createdAt: model.createdAt,
@@ -191,9 +189,6 @@ class MenuItemViewData {
   /// 表示順。
   final int displayOrder;
 
-  /// 推定調理時間（分）。
-  final int estimatedPrepTimeMinutes;
-
   /// 詳細説明。
   final String? description;
 
@@ -214,7 +209,6 @@ class MenuItemViewData {
     price: price,
     description: description,
     isAvailable: isAvailable,
-    estimatedPrepTimeMinutes: estimatedPrepTimeMinutes,
     displayOrder: displayOrder,
     imageUrl: imageUrl,
     createdAt: createdAt,
@@ -229,7 +223,6 @@ class MenuItemViewData {
     int? price,
     bool? isAvailable,
     int? displayOrder,
-    int? estimatedPrepTimeMinutes,
     String? description,
     String? imageUrl,
     DateTime? createdAt,
@@ -242,7 +235,6 @@ class MenuItemViewData {
     price: price ?? this.price,
     isAvailable: isAvailable ?? this.isAvailable,
     displayOrder: displayOrder ?? this.displayOrder,
-    estimatedPrepTimeMinutes: estimatedPrepTimeMinutes ?? this.estimatedPrepTimeMinutes,
     description: description ?? this.description,
     imageUrl: imageUrl ?? this.imageUrl,
     createdAt: createdAt ?? this.createdAt,
@@ -761,7 +753,6 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
     required String categoryId,
     required int price,
     required bool isAvailable,
-    required int estimatedPrepTimeMinutes,
     required int displayOrder,
     String? description,
     String? imageUrl,
@@ -772,7 +763,6 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
         categoryId: categoryId,
         price: price,
         isAvailable: isAvailable,
-        estimatedPrepTimeMinutes: estimatedPrepTimeMinutes,
         displayOrder: displayOrder,
         description: description,
         imageUrl: imageUrl,
@@ -814,7 +804,6 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
     String? categoryId,
     int? price,
     bool? isAvailable,
-    int? estimatedPrepTimeMinutes,
     int? displayOrder,
     String? description,
     String? imageUrl,
@@ -829,7 +818,6 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
         categoryId: categoryId,
         price: price,
         isAvailable: isAvailable,
-        estimatedPrepTimeMinutes: estimatedPrepTimeMinutes,
         displayOrder: displayOrder,
         description: description,
         imageUrl: imageUrl,

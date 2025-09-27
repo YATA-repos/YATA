@@ -119,8 +119,7 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
           YataIconButton(
             icon: Icons.refresh,
             tooltip: "メニュー情報を再取得",
-            onPressed:
-                state.isInitializing ? null : () => controller.refreshAll(keepSelection: true),
+            onPressed: state.isInitializing ? null : controller.refreshAll,
           ),
           YataIconButton(
             icon: Icons.settings,
@@ -278,123 +277,16 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
     final MenuManagementState snapshot = ref.read(menuManagementControllerProvider);
     final int defaultOrder =
         initialCategory?.displayOrder ?? _nextCategoryOrder(snapshot.categories);
-    final TextEditingController nameController = TextEditingController(
-      text: initialCategory?.name ?? "",
-    );
-    final TextEditingController orderController = TextEditingController(
-      text: defaultOrder.toString(),
-    );
-    final ValueNotifier<bool> isSavingNotifier = ValueNotifier<bool>(false);
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext dialogContext) => ValueListenableBuilder<bool>(
-        valueListenable: isSavingNotifier,
-        builder: (BuildContext context, bool isSaving, Widget? _) => AlertDialog(
-          title: Text(initialCategory == null ? "カテゴリを追加" : "カテゴリを編集"),
-          content: SizedBox(
-            width: 360,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "カテゴリ名"),
-                    autofocus: true,
-                    enabled: !isSaving,
-                    validator: (String? value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "カテゴリ名を入力してください";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: YataSpacingTokens.md),
-                  TextFormField(
-                    controller: orderController,
-                    decoration: const InputDecoration(labelText: "表示順"),
-                    keyboardType: TextInputType.number,
-                    enabled: !isSaving,
-                    validator: (String? value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "表示順を入力してください";
-                      }
-                      final int? parsed = int.tryParse(value);
-                      if (parsed == null || parsed <= 0) {
-                        return "1以上の数値を入力してください";
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
-              child: const Text("キャンセル"),
-            ),
-            FilledButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) {
-                        return;
-                      }
-                      final String name = nameController.text.trim();
-                      final int displayOrder = int.parse(orderController.text.trim());
-
-                      isSavingNotifier.value = true;
-                      try {
-                        if (initialCategory == null) {
-                          await controller.createCategory(
-                            name: name,
-                            displayOrder: displayOrder,
-                          );
-                          messenger.showSnackBar(const SnackBar(content: Text("カテゴリを追加しました")));
-                        } else {
-                          await controller.updateCategory(
-                            initialCategory.id,
-                            name: name,
-                            displayOrder: displayOrder,
-                          );
-                          messenger.showSnackBar(const SnackBar(content: Text("カテゴリを更新しました")));
-                        }
-                        if (dialogContext.mounted) {
-                          Navigator.of(dialogContext).pop();
-                        }
-                      } catch (error) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text("カテゴリ処理に失敗しました: $error")),
-                        );
-                      } finally {
-                        if (dialogContext.mounted) {
-                          isSavingNotifier.value = false;
-                        }
-                      }
-                    },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text("保存"),
-            ),
-          ],
-        ),
+      builder: (BuildContext _) => _MenuCategoryDialog(
+        controller: controller,
+        initialCategory: initialCategory,
+        defaultDisplayOrder: defaultOrder,
       ),
     );
-
-    nameController.dispose();
-    orderController.dispose();
-    isSavingNotifier.dispose();
   }
 
   Future<void> _confirmCategoryDeletion(
@@ -456,257 +348,21 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
       );
     }
 
-    final TextEditingController nameController = TextEditingController(
-      text: initialItem?.name ?? "",
-    );
-    final TextEditingController priceController = TextEditingController(
-      text: initialItem?.price.toString() ?? "",
-    );
-    final TextEditingController displayOrderController = TextEditingController(
-      text: (initialItem?.displayOrder ?? _nextItemOrder(snapshot.items)).toString(),
-    );
-    final TextEditingController prepTimeController = TextEditingController(
-      text: (initialItem?.estimatedPrepTimeMinutes ?? 5).toString(),
-    );
-    final TextEditingController descriptionController = TextEditingController(
-      text: initialItem?.description ?? "",
-    );
-    final TextEditingController imageUrlController = TextEditingController(
-      text: initialItem?.imageUrl ?? "",
-    );
-
-    final ValueNotifier<String?> selectedCategoryIdNotifier = ValueNotifier<String?>(
-      initialItem?.categoryId ?? (categoryOptions.isNotEmpty ? categoryOptions.first.id : null),
-    );
-    final ValueNotifier<bool> isAvailableNotifier =
-        ValueNotifier<bool>(initialItem?.isAvailable ?? true);
-    final ValueNotifier<bool> isSavingNotifier = ValueNotifier<bool>(false);
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final int defaultDisplayOrder = initialItem?.displayOrder ?? _nextItemOrder(snapshot.items);
+    final String? initialSelectedCategoryId =
+        initialItem?.categoryId ?? (categoryOptions.isNotEmpty ? categoryOptions.first.id : null);
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext dialogContext) => ValueListenableBuilder<bool>(
-        valueListenable: isSavingNotifier,
-        builder: (BuildContext context, bool isSaving, Widget? _) => AlertDialog(
-          title: Text(initialItem == null ? "メニューを追加" : "メニューを編集"),
-          content: SizedBox(
-            width: 420,
-            child: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    TextFormField(
-                      controller: nameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(labelText: "商品名"),
-                      enabled: !isSaving,
-                      validator: (String? value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "商品名を入力してください";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    ValueListenableBuilder<String?>(
-                      valueListenable: selectedCategoryIdNotifier,
-                      builder: (BuildContext context, String? selectedCategoryId, Widget? _) =>
-                          DropdownButtonFormField<String>(
-                        value: selectedCategoryId,
-                        decoration: const InputDecoration(labelText: "カテゴリ"),
-                        items: <DropdownMenuItem<String>>[
-                          for (final MenuCategoryViewData category in categoryOptions)
-                            DropdownMenuItem<String>(
-                              value: category.id,
-                              child: Text(category.name),
-                            ),
-                        ],
-                        onChanged: isSaving
-                            ? null
-                            : (String? value) {
-                                selectedCategoryIdNotifier.value = value;
-                              },
-                        validator: (String? value) {
-                          if (value == null || value.isEmpty) {
-                            return "カテゴリを選択してください";
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    TextFormField(
-                      controller: priceController,
-                      decoration: const InputDecoration(labelText: "価格"),
-                      keyboardType: TextInputType.number,
-                      enabled: !isSaving,
-                      validator: (String? value) {
-                        final int? parsed = int.tryParse(value ?? "");
-                        if (parsed == null || parsed < 0) {
-                          return "0以上の整数を入力してください";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    TextFormField(
-                      controller: displayOrderController,
-                      decoration: const InputDecoration(labelText: "表示順"),
-                      keyboardType: TextInputType.number,
-                      enabled: !isSaving,
-                      validator: (String? value) {
-                        final int? parsed = int.tryParse(value ?? "");
-                        if (parsed == null || parsed <= 0) {
-                          return "1以上の整数を入力してください";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    TextFormField(
-                      controller: prepTimeController,
-                      decoration: const InputDecoration(labelText: "調理時間(分)"),
-                      keyboardType: TextInputType.number,
-                      enabled: !isSaving,
-                      validator: (String? value) {
-                        final int? parsed = int.tryParse(value ?? "");
-                        if (parsed == null || parsed <= 0) {
-                          return "1以上の整数を入力してください";
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    TextFormField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(labelText: "説明", hintText: "メニューの説明"),
-                      maxLines: 3,
-                      enabled: !isSaving,
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    TextFormField(
-                      controller: imageUrlController,
-                      decoration: const InputDecoration(
-                        labelText: "画像URL",
-                        hintText: "https://example.com",
-                      ),
-                      enabled: !isSaving,
-                    ),
-                    const SizedBox(height: YataSpacingTokens.sm),
-                    ValueListenableBuilder<bool>(
-                      valueListenable: isAvailableNotifier,
-                      builder: (BuildContext context, bool isAvailable, Widget? _) => SwitchListTile(
-                        title: const Text("販売を有効にする"),
-                        value: isAvailable,
-                        onChanged: isSaving
-                            ? null
-                            : (bool value) {
-                                isAvailableNotifier.value = value;
-                              },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
-              child: const Text("キャンセル"),
-            ),
-            FilledButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) {
-                        return;
-                      }
-                      final String? selectedCategoryId = selectedCategoryIdNotifier.value;
-                      if (selectedCategoryId == null) {
-                        messenger.showSnackBar(const SnackBar(content: Text("カテゴリを選択してください")));
-                        return;
-                      }
-                      final int price = int.parse(priceController.text.trim());
-                      final int displayOrder = int.parse(displayOrderController.text.trim());
-                      final int prepMinutes = int.parse(prepTimeController.text.trim());
-                      final bool isAvailable = isAvailableNotifier.value;
-
-                      isSavingNotifier.value = true;
-                      try {
-                        if (initialItem == null) {
-                          await controller.createMenuItem(
-                            name: nameController.text.trim(),
-                            categoryId: selectedCategoryId,
-                            price: price,
-                            isAvailable: isAvailable,
-                            estimatedPrepTimeMinutes: prepMinutes,
-                            displayOrder: displayOrder,
-                            description: descriptionController.text.trim().isEmpty
-                                ? null
-                                : descriptionController.text.trim(),
-                            imageUrl: imageUrlController.text.trim().isEmpty
-                                ? null
-                                : imageUrlController.text.trim(),
-                          );
-                          messenger.showSnackBar(const SnackBar(content: Text("メニューを追加しました")));
-                        } else {
-                          await controller.updateMenuItem(
-                            initialItem.id,
-                            name: nameController.text.trim(),
-                            categoryId: selectedCategoryId,
-                            price: price,
-                            isAvailable: isAvailable,
-                            estimatedPrepTimeMinutes: prepMinutes,
-                            displayOrder: displayOrder,
-                            description: descriptionController.text.trim().isEmpty
-                                ? null
-                                : descriptionController.text.trim(),
-                            imageUrl: imageUrlController.text.trim().isEmpty
-                                ? null
-                                : imageUrlController.text.trim(),
-                          );
-                          messenger.showSnackBar(const SnackBar(content: Text("メニューを更新しました")));
-                        }
-                        if (dialogContext.mounted) {
-                          Navigator.of(dialogContext).pop();
-                        }
-                      } catch (error) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text("メニュー処理に失敗しました: $error")),
-                        );
-                      } finally {
-                        if (dialogContext.mounted) {
-                          isSavingNotifier.value = false;
-                        }
-                      }
-                    },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text("保存"),
-            ),
-          ],
-        ),
+      builder: (BuildContext _) => _MenuItemDialog(
+        controller: controller,
+        initialItem: initialItem,
+        categoryOptions: categoryOptions,
+        initialSelectedCategoryId: initialSelectedCategoryId,
+        defaultDisplayOrder: defaultDisplayOrder,
       ),
     );
-
-    nameController.dispose();
-    priceController.dispose();
-    displayOrderController.dispose();
-    prepTimeController.dispose();
-    descriptionController.dispose();
-    imageUrlController.dispose();
-    selectedCategoryIdNotifier.dispose();
-    isAvailableNotifier.dispose();
-    isSavingNotifier.dispose();
   }
 
   Future<void> _showOptionsDialog(BuildContext context) async {
@@ -773,6 +429,405 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
   }
 }
 
+/// カテゴリ編集/作成ダイアログ。
+class _MenuCategoryDialog extends StatefulWidget {
+  const _MenuCategoryDialog({
+    required this.controller,
+    required this.defaultDisplayOrder,
+    this.initialCategory,
+  });
+
+  /// 状態制御用のコントローラー。
+  final MenuManagementController controller;
+
+  /// 編集対象カテゴリ。新規作成時はnull。
+  final MenuCategoryViewData? initialCategory;
+
+  /// 新規作成時に使用する表示順のデフォルト値。
+  final int defaultDisplayOrder;
+
+  @override
+  State<_MenuCategoryDialog> createState() => _MenuCategoryDialogState();
+}
+
+class _MenuCategoryDialogState extends State<_MenuCategoryDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _orderController;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialCategory?.name ?? "");
+    _orderController = TextEditingController(
+      text: (widget.initialCategory?.displayOrder ?? widget.defaultDisplayOrder).toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _orderController.dispose();
+    _isSavingNotifier.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSubmit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final String name = _nameController.text.trim();
+    final int displayOrder = int.parse(_orderController.text.trim());
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    _isSavingNotifier.value = true;
+    try {
+      if (widget.initialCategory == null) {
+        await widget.controller.createCategory(name: name, displayOrder: displayOrder);
+        messenger.showSnackBar(const SnackBar(content: Text("カテゴリを追加しました")));
+      } else {
+        await widget.controller.updateCategory(
+          widget.initialCategory!.id,
+          name: name,
+          displayOrder: displayOrder,
+        );
+        messenger.showSnackBar(const SnackBar(content: Text("カテゴリを更新しました")));
+      }
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text("カテゴリ処理に失敗しました: $error")));
+    } finally {
+      if (mounted) {
+        _isSavingNotifier.value = false;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: _isSavingNotifier,
+    builder: (BuildContext context, bool isSaving, Widget? _) => AlertDialog(
+      title: Text(widget.initialCategory == null ? "カテゴリを追加" : "カテゴリを編集"),
+      content: SizedBox(
+        width: 360,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: "カテゴリ名"),
+                autofocus: true,
+                enabled: !isSaving,
+                validator: (String? value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "カテゴリ名を入力してください";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: YataSpacingTokens.md),
+              TextFormField(
+                controller: _orderController,
+                decoration: const InputDecoration(labelText: "表示順"),
+                keyboardType: TextInputType.number,
+                enabled: !isSaving,
+                validator: (String? value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "表示順を入力してください";
+                  }
+                  final int? parsed = int.tryParse(value);
+                  if (parsed == null || parsed <= 0) {
+                    return "1以上の数値を入力してください";
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text("キャンセル"),
+        ),
+        FilledButton(
+          onPressed: isSaving ? null : _handleSubmit,
+          child: isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text("保存"),
+        ),
+      ],
+    ),
+  );
+}
+
+/// メニューアイテム編集/作成ダイアログ。
+class _MenuItemDialog extends StatefulWidget {
+  const _MenuItemDialog({
+    required this.controller,
+    required this.categoryOptions,
+    required this.initialSelectedCategoryId,
+    required this.defaultDisplayOrder,
+    this.initialItem,
+  });
+
+  /// 状態制御用のコントローラー。
+  final MenuManagementController controller;
+
+  /// 編集対象のメニューアイテム。新規の場合はnull。
+  final MenuItemViewData? initialItem;
+
+  /// 選択可能なカテゴリ一覧。
+  final List<MenuCategoryViewData> categoryOptions;
+
+  /// 初期選択するカテゴリID。
+  final String? initialSelectedCategoryId;
+
+  /// 新規作成時に利用する表示順のデフォルト。
+  final int defaultDisplayOrder;
+
+  @override
+  State<_MenuItemDialog> createState() => _MenuItemDialogState();
+}
+
+class _MenuItemDialogState extends State<_MenuItemDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _displayOrderController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _imageUrlController;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final ValueNotifier<String?> _selectedCategoryIdNotifier;
+  late final ValueNotifier<bool> _isAvailableNotifier;
+  final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialItem?.name ?? "");
+    _priceController = TextEditingController(text: widget.initialItem?.price.toString() ?? "");
+    _displayOrderController = TextEditingController(
+      text: (widget.initialItem?.displayOrder ?? widget.defaultDisplayOrder).toString(),
+    );
+    _descriptionController = TextEditingController(text: widget.initialItem?.description ?? "");
+    _imageUrlController = TextEditingController(text: widget.initialItem?.imageUrl ?? "");
+    _selectedCategoryIdNotifier = ValueNotifier<String?>(widget.initialSelectedCategoryId);
+    _isAvailableNotifier = ValueNotifier<bool>(widget.initialItem?.isAvailable ?? true);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _displayOrderController.dispose();
+    _descriptionController.dispose();
+    _imageUrlController.dispose();
+    _selectedCategoryIdNotifier.dispose();
+    _isAvailableNotifier.dispose();
+    _isSavingNotifier.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSubmit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final String? selectedCategoryId = _selectedCategoryIdNotifier.value;
+    if (selectedCategoryId == null || selectedCategoryId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("カテゴリを選択してください")));
+      return;
+    }
+
+    final int? price = int.tryParse(_priceController.text.trim());
+    final int? displayOrder = int.tryParse(_displayOrderController.text.trim());
+    if (price == null || price < 0 || displayOrder == null || displayOrder <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("入力値を確認してください")));
+      return;
+    }
+
+    final bool isAvailable = _isAvailableNotifier.value;
+    final String description = _descriptionController.text.trim();
+    final String imageUrl = _imageUrlController.text.trim();
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    _isSavingNotifier.value = true;
+    try {
+      if (widget.initialItem == null) {
+        await widget.controller.createMenuItem(
+          name: _nameController.text.trim(),
+          categoryId: selectedCategoryId,
+          price: price,
+          isAvailable: isAvailable,
+          displayOrder: displayOrder,
+          description: description.isEmpty ? null : description,
+          imageUrl: imageUrl.isEmpty ? null : imageUrl,
+        );
+        messenger.showSnackBar(const SnackBar(content: Text("メニューを追加しました")));
+      } else {
+        await widget.controller.updateMenuItem(
+          widget.initialItem!.id,
+          name: _nameController.text.trim(),
+          categoryId: selectedCategoryId,
+          price: price,
+          isAvailable: isAvailable,
+          displayOrder: displayOrder,
+          description: description.isEmpty ? null : description,
+          imageUrl: imageUrl.isEmpty ? null : imageUrl,
+        );
+        messenger.showSnackBar(const SnackBar(content: Text("メニューを更新しました")));
+      }
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text("メニュー処理に失敗しました: $error")));
+    } finally {
+      if (mounted) {
+        _isSavingNotifier.value = false;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: _isSavingNotifier,
+    builder: (BuildContext context, bool isSaving, Widget? _) => AlertDialog(
+      title: Text(widget.initialItem == null ? "メニューを追加" : "メニューを編集"),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: "商品名"),
+                  enabled: !isSaving,
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "商品名を入力してください";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: YataSpacingTokens.md),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedCategoryIdNotifier.value,
+                  decoration: const InputDecoration(labelText: "カテゴリ"),
+                  items: <DropdownMenuItem<String>>[
+                    for (final MenuCategoryViewData category in widget.categoryOptions)
+                      DropdownMenuItem<String>(value: category.id, child: Text(category.name)),
+                  ],
+                  onChanged: isSaving
+                      ? null
+                      : (String? value) {
+                          _selectedCategoryIdNotifier.value = value;
+                        },
+                  validator: (String? value) {
+                    if (value == null || value.isEmpty) {
+                      return "カテゴリを選択してください";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: YataSpacingTokens.md),
+                TextFormField(
+                  controller: _priceController,
+                  decoration: const InputDecoration(labelText: "価格"),
+                  keyboardType: TextInputType.number,
+                  enabled: !isSaving,
+                  validator: (String? value) {
+                    final int? parsed = int.tryParse(value ?? "");
+                    if (parsed == null || parsed < 0) {
+                      return "0以上の整数を入力してください";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: YataSpacingTokens.md),
+                TextFormField(
+                  controller: _displayOrderController,
+                  decoration: const InputDecoration(labelText: "表示順"),
+                  keyboardType: TextInputType.number,
+                  enabled: !isSaving,
+                  validator: (String? value) {
+                    final int? parsed = int.tryParse(value ?? "");
+                    if (parsed == null || parsed <= 0) {
+                      return "1以上の整数を入力してください";
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: YataSpacingTokens.md),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(labelText: "説明", hintText: "メニューの説明"),
+                  maxLines: 3,
+                  enabled: !isSaving,
+                ),
+                const SizedBox(height: YataSpacingTokens.md),
+                TextFormField(
+                  controller: _imageUrlController,
+                  decoration: const InputDecoration(
+                    labelText: "画像URL",
+                    hintText: "https://example.com",
+                  ),
+                  enabled: !isSaving,
+                ),
+                const SizedBox(height: YataSpacingTokens.sm),
+                ValueListenableBuilder<bool>(
+                  valueListenable: _isAvailableNotifier,
+                  builder: (BuildContext context, bool isAvailable, Widget? _) => SwitchListTile(
+                    title: const Text("販売を有効にする"),
+                    value: isAvailable,
+                    onChanged: isSaving
+                        ? null
+                        : (bool value) {
+                            _isAvailableNotifier.value = value;
+                          },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text("キャンセル"),
+        ),
+        FilledButton(
+          onPressed: isSaving ? null : _handleSubmit,
+          child: isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text("保存"),
+        ),
+      ],
+    ),
+  );
+}
+
 class _PageHeader extends StatelessWidget {
   const _PageHeader({
     required this.state,
@@ -834,27 +889,6 @@ class _PageHeader extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            Wrap(
-              spacing: YataSpacingTokens.sm,
-              runSpacing: YataSpacingTokens.sm,
-              children: <Widget>[
-                OutlinedButton.icon(
-                  onPressed: onFullRefresh,
-                  icon: const Icon(Icons.sync_outlined),
-                  label: const Text("全体更新"),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onRefreshAvailability,
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text("在庫チェック"),
-                ),
-                FilledButton.icon(
-                  onPressed: onAddItem,
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text("メニュー追加"),
-                ),
-              ],
             ),
           ],
         ),

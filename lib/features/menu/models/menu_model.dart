@@ -49,7 +49,6 @@ class MenuItem extends BaseModel {
     required this.categoryId,
     required this.price,
     required this.isAvailable,
-    required this.estimatedPrepTimeMinutes,
     required this.displayOrder,
     this.description,
     this.imageUrl,
@@ -76,9 +75,6 @@ class MenuItem extends BaseModel {
 
   /// 販売可能フラグ
   bool isAvailable;
-
-  /// 推定調理時間（分）
-  int estimatedPrepTimeMinutes;
 
   /// 表示順序
   int displayOrder;

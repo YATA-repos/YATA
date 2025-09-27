@@ -227,7 +227,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     required String categoryId,
     required int price,
     required bool isAvailable,
-    required int estimatedPrepTimeMinutes,
     required int displayOrder,
     String? description,
     String? imageUrl,
@@ -237,7 +236,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       categoryId: categoryId,
       price: price,
       isAvailable: isAvailable,
-      estimatedPrepTimeMinutes: estimatedPrepTimeMinutes,
       displayOrder: displayOrder,
       description: description,
       imageUrl: imageUrl,
@@ -263,7 +261,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     int? price,
     String? description,
     bool? isAvailable,
-    int? estimatedPrepTimeMinutes,
     int? displayOrder,
     String? imageUrl,
   }) async {
@@ -282,9 +279,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     }
     if (isAvailable != null) {
       updates["is_available"] = isAvailable;
-    }
-    if (estimatedPrepTimeMinutes != null) {
-      updates["estimated_prep_time_minutes"] = estimatedPrepTimeMinutes;
     }
     if (displayOrder != null) {
       updates["display_order"] = displayOrder;
@@ -371,10 +365,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
       return results;
     } catch (e, stackTrace) {
-      log.w(
-        "Falling back to manual search due to repository failure: $e",
-        tag: loggerComponent,
-      );
+      log.w("Falling back to manual search due to repository failure: $e", tag: loggerComponent);
       log.t(stackTrace.toString(), tag: loggerComponent);
 
       final List<MenuItem> fallbackResults = await _searchMenuItemsFallback(keyword);
@@ -443,8 +434,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         return _buildDisabledAvailability(menuItemId);
       }
 
-      final _AvailabilityContext context =
-          await _buildAvailabilityContext(<String>[menuItemId]);
+      final _AvailabilityContext context = await _buildAvailabilityContext(<String>[menuItemId]);
       final List<Recipe> recipes = context.recipesByMenuItemId[menuItemId] ?? <Recipe>[];
 
       if (recipes.isEmpty) {
@@ -499,8 +489,9 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
   /// 在庫不足で販売不可なメニューアイテムIDを取得
   Future<List<String>> getUnavailableMenuItems(String userId) async {
     final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null);
-    final List<MenuItem> itemsWithId =
-        menuItems.where((MenuItem item) => item.id != null).toList(growable: false);
+    final List<MenuItem> itemsWithId = menuItems
+        .where((MenuItem item) => item.id != null)
+        .toList(growable: false);
 
     if (itemsWithId.isEmpty) {
       return <String>[];
@@ -563,8 +554,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
   /// 現在の在庫で作れる最大数を計算
   Future<int> calculateMaxServings(String menuItemId, String userId) async {
-    final _AvailabilityContext context =
-        await _buildAvailabilityContext(<String>[menuItemId]);
+    final _AvailabilityContext context = await _buildAvailabilityContext(<String>[menuItemId]);
     final List<Recipe> recipes = context.recipesByMenuItemId[menuItemId] ?? <Recipe>[];
 
     if (recipes.isEmpty) {
@@ -585,7 +575,9 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
       if (recipe.requiredAmount > 0) {
         final double possibleServings = material.currentStock / recipe.requiredAmount;
-        maxServings = maxServings.isFinite ? math.min(maxServings, possibleServings) : possibleServings;
+        maxServings = maxServings.isFinite
+            ? math.min(maxServings, possibleServings)
+            : possibleServings;
       }
     }
 
@@ -819,15 +811,17 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     String userId, {
     int quantity = 1,
   }) async {
-    final List<MenuItem> itemsWithId =
-        menuItems.where((MenuItem item) => item.id != null).toList(growable: false);
+    final List<MenuItem> itemsWithId = menuItems
+        .where((MenuItem item) => item.id != null)
+        .toList(growable: false);
 
     if (itemsWithId.isEmpty) {
       return <String, MenuAvailabilityInfo>{};
     }
 
-    final List<MenuItem> enabledItems =
-        itemsWithId.where((MenuItem item) => item.isAvailable).toList(growable: false);
+    final List<MenuItem> enabledItems = itemsWithId
+        .where((MenuItem item) => item.isAvailable)
+        .toList(growable: false);
 
     final _AvailabilityContext context = await _buildAvailabilityContext(
       enabledItems.map((MenuItem item) => item.id!),
@@ -904,7 +898,9 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
       if (!recipe.isOptional && recipe.requiredAmount > 0) {
         final double possibleServings = availableAmount / recipe.requiredAmount;
-        maxServings = maxServings.isFinite ? math.min(maxServings, possibleServings) : possibleServings;
+        maxServings = maxServings.isFinite
+            ? math.min(maxServings, possibleServings)
+            : possibleServings;
       }
     }
 
@@ -930,10 +926,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     };
 
     if (ids.isEmpty) {
-      return (
-        recipesByMenuItemId: <String, List<Recipe>>{},
-        materialIndex: <String, Material>{},
-      );
+      return (recipesByMenuItemId: <String, List<Recipe>>{}, materialIndex: <String, Material>{});
     }
 
     final List<Recipe> recipes = await _recipeRepository.findByMenuItemIds(ids.toList());
@@ -946,10 +939,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     }
 
     if (materialIds.isEmpty) {
-      return (
-        recipesByMenuItemId: recipesByMenuItemId,
-        materialIndex: <String, Material>{},
-      );
+      return (recipesByMenuItemId: recipesByMenuItemId, materialIndex: <String, Material>{});
     }
 
     final List<Material> materials = await _materialRepository.findByIds(
@@ -961,10 +951,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         if (material.id != null) material.id!: material,
     };
 
-    return (
-      recipesByMenuItemId: recipesByMenuItemId,
-      materialIndex: materialIndex,
-    );
+    return (recipesByMenuItemId: recipesByMenuItemId, materialIndex: materialIndex);
   }
 
   String _describeMissingMaterial(Material? material, Recipe recipe) {
