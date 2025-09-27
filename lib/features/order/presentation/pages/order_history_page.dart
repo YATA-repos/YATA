@@ -67,6 +67,7 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
       body: Stack(
         children: <Widget>[
           YataPageContainer(
+            scrollable: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[

@@ -31,31 +31,32 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
   late final TextEditingController _categorySearchController;
   late final TextEditingController _itemSearchController;
 
+  /// 状態の検索クエリとテキストコントローラーを同期する。
+  void _syncSearchControllers(MenuManagementState state) {
+    if (_categorySearchController.text != state.categoryQuery) {
+      _categorySearchController
+        ..text = state.categoryQuery
+        ..selection = TextSelection.fromPosition(
+          TextPosition(offset: _categorySearchController.text.length),
+        );
+    }
+    if (_itemSearchController.text != state.itemQuery) {
+      _itemSearchController
+        ..text = state.itemQuery
+        ..selection = TextSelection.fromPosition(
+          TextPosition(offset: _itemSearchController.text.length),
+        );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _categorySearchController = TextEditingController();
     _itemSearchController = TextEditingController();
 
-    ref.listen<MenuManagementState>(menuManagementControllerProvider, (
-      MenuManagementState? previous,
-      MenuManagementState next,
-    ) {
-      if (_categorySearchController.text != next.categoryQuery) {
-        _categorySearchController
-          ..text = next.categoryQuery
-          ..selection = TextSelection.fromPosition(
-            TextPosition(offset: _categorySearchController.text.length),
-          );
-      }
-      if (_itemSearchController.text != next.itemQuery) {
-        _itemSearchController
-          ..text = next.itemQuery
-          ..selection = TextSelection.fromPosition(
-            TextPosition(offset: _itemSearchController.text.length),
-          );
-      }
-    });
+    final MenuManagementState initialState = ref.read(menuManagementControllerProvider);
+    _syncSearchControllers(initialState);
   }
 
   @override
@@ -67,6 +68,16 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<MenuManagementState>(
+      menuManagementControllerProvider,
+      (MenuManagementState? previous, MenuManagementState next) {
+        if (!mounted) {
+          return;
+        }
+        _syncSearchControllers(next);
+      },
+    );
+
     final MenuManagementState state = ref.watch(menuManagementControllerProvider);
     final MenuManagementController controller = ref.watch(
       menuManagementControllerProvider.notifier,
