@@ -13,7 +13,9 @@ import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
+import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_management_controller.dart";
+import "order_status_page.dart";
 
 /// 注文管理画面のメインページ。
 class OrderManagementPage extends ConsumerStatefulWidget {
@@ -51,6 +53,11 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
             onTap: () => context.go("/order"),
           ),
           YataNavItem(
+            label: "注文状況",
+            icon: Icons.dashboard_customize_outlined,
+            onTap: () => context.go(OrderStatusPage.routeName),
+          ),
+          YataNavItem(
             label: "履歴",
             icon: Icons.receipt_long_outlined,
             onTap: () => context.go("/history"),
@@ -72,12 +79,11 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
           ),
         ],
         trailing: <Widget>[
-          YataIconLabelButton(
-            icon: Icons.dashboard_customize_outlined,
-            label: "注文状況画面",
-            onPressed: () {},
+          YataIconButton(
+            icon: Icons.settings,
+            onPressed: () => context.go(SettingsPage.routeName),
+            tooltip: "設定",
           ),
-          YataIconButton(icon: Icons.settings, onPressed: () {}, tooltip: "設定"),
         ],
       ),
       body: YataPageContainer(

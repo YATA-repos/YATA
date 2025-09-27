@@ -15,7 +15,9 @@ import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
+import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_history_controller.dart";
+import "order_status_page.dart";
 
 /// 注文履歴ページ。
 class OrderHistoryPage extends ConsumerStatefulWidget {
@@ -50,6 +52,11 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
             icon: Icons.shopping_cart_outlined,
             onTap: () => context.go("/order"),
           ),
+          YataNavItem(
+            label: "注文状況",
+            icon: Icons.dashboard_customize_outlined,
+            onTap: () => context.go(OrderStatusPage.routeName),
+          ),
           const YataNavItem(label: "履歴", icon: Icons.receipt_long_outlined, isActive: true),
           YataNavItem(
             label: "在庫管理",
@@ -65,6 +72,13 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
             label: "売上分析",
             icon: Icons.query_stats_outlined,
             onTap: () => context.go("/analytics"),
+          ),
+        ],
+        trailing: <Widget>[
+          YataIconButton(
+            icon: Icons.settings,
+            onPressed: () => context.go(SettingsPage.routeName),
+            tooltip: "設定",
           ),
         ],
       ),

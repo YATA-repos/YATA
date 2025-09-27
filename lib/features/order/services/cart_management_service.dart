@@ -31,12 +31,11 @@ class CartManagementService {
 
   String get loggerComponent => "CartManagementService";
 
-  /// アクティブなカート（下書き注文）を取得または作成
-  Future<Order?> getOrCreateActiveCart(String userId) async {
-    log.i("Started retrieving or creating active cart for user", tag: loggerComponent);
+  /// アクティブなカート（下書き注文）を取得（存在しない場合は `null`）。
+  Future<Order?> getActiveCart(String userId) async {
+    log.i("Started retrieving active cart for user", tag: loggerComponent);
 
     try {
-      // 既存のアクティブカートを検索
       final Order? existingCart = await _orderRepository.findActiveDraftByUser();
 
       if (existingCart != null) {
@@ -44,7 +43,25 @@ class CartManagementService {
         return existingCart;
       }
 
-      // 新しいカートを作成
+      log.i("Active cart not found", tag: loggerComponent);
+      return null;
+    } catch (e, stackTrace) {
+      log.e("Failed to get active cart", tag: loggerComponent, error: e, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// アクティブなカートを取得し、存在しなければ新規作成して返す。
+  Future<Order?> getOrCreateActiveCart(String userId) async {
+    log.i("Started retrieving or creating active cart for user", tag: loggerComponent);
+
+    try {
+      final Order? existingCart = await getActiveCart(userId);
+
+      if (existingCart != null) {
+        return existingCart;
+      }
+
       log.d("Creating new cart for user", tag: loggerComponent);
       final DateTime now = DateTime.now();
       final Order newCart = Order(
