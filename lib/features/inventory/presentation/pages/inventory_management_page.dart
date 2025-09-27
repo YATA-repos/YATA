@@ -60,7 +60,11 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             icon: Icons.restaurant_menu_outlined,
             onTap: () => context.go("/menu"),
           ),
-          const YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
+          YataNavItem(
+            label: "売上分析",
+            icon: Icons.query_stats_outlined,
+            onTap: () => context.go("/analytics"),
+          ),
         ],
       ),
       body: YataPageContainer(
@@ -192,9 +196,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                           },
                         ),
                         const SizedBox(height: YataSpacingTokens.md),
-                    DropdownButtonFormField<String>(
-                      // ignore: deprecated_member_use
-                      value: selectedCategoryId,
+                        DropdownButtonFormField<String>(
+                          // ignore: deprecated_member_use
+                          value: selectedCategoryId,
                           decoration: const InputDecoration(labelText: "カテゴリ"),
                           items: categoryItems,
                           onChanged: isSaving
@@ -210,9 +214,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                           },
                         ),
                         const SizedBox(height: YataSpacingTokens.md),
-                    DropdownButtonFormField<UnitType>(
-                      // ignore: deprecated_member_use
-                      value: selectedUnit,
+                        DropdownButtonFormField<UnitType>(
+                          // ignore: deprecated_member_use
+                          value: selectedUnit,
                           decoration: const InputDecoration(labelText: "単位"),
                           items: UnitType.values
                               .map(
@@ -293,22 +297,22 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                   onPressed: isSaving
                       ? null
                       : () async {
-                      if (!formKey.currentState!.validate()) {
-                        return;
-                      }
-                      if (selectedCategoryId == null || selectedCategoryId!.isEmpty) {
-                        showSnack("カテゴリを選択してください");
-                        return;
-                      }
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+                          if (selectedCategoryId == null || selectedCategoryId!.isEmpty) {
+                            showSnack("カテゴリを選択してください");
+                            return;
+                          }
 
                           final double quantity = double.parse(quantityController.text.trim());
                           final double alert = double.parse(alertController.text.trim());
                           final double critical = double.parse(criticalController.text.trim());
 
-                      if (critical > alert) {
-                        showSnack("危険閾値は警告閾値以下で入力してください");
-                        return;
-                      }
+                          if (critical > alert) {
+                            showSnack("危険閾値は警告閾値以下で入力してください");
+                            return;
+                          }
 
                           setDialogState(() => isSaving = true);
 
@@ -334,20 +338,20 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                                   notes: trimmedNotes.isEmpty ? null : trimmedNotes,
                                 );
 
-                      if (!mounted || !dialogContext.mounted) {
-                        return;
-                      }
+                          if (!mounted || !dialogContext.mounted) {
+                            return;
+                          }
 
-                      if (errorMessage != null) {
-                        showSnack(errorMessage);
-                        setDialogState(() => isSaving = false);
-                        return;
-                      }
+                          if (errorMessage != null) {
+                            showSnack(errorMessage);
+                            setDialogState(() => isSaving = false);
+                            return;
+                          }
 
-                      showSnack(initialItem == null ? "在庫を追加しました" : "在庫を更新しました");
+                          showSnack(initialItem == null ? "在庫を追加しました" : "在庫を更新しました");
 
-                      Navigator.of(dialogContext).pop();
-                    },
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: Text(initialItem == null ? "追加" : "保存"),
                 ),
               ],

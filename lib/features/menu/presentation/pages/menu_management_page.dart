@@ -68,15 +68,15 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<MenuManagementState>(
-      menuManagementControllerProvider,
-      (MenuManagementState? previous, MenuManagementState next) {
-        if (!mounted) {
-          return;
-        }
-        _syncSearchControllers(next);
-      },
-    );
+    ref.listen<MenuManagementState>(menuManagementControllerProvider, (
+      MenuManagementState? previous,
+      MenuManagementState next,
+    ) {
+      if (!mounted) {
+        return;
+      }
+      _syncSearchControllers(next);
+    });
 
     final MenuManagementState state = ref.watch(menuManagementControllerProvider);
     final MenuManagementController controller = ref.watch(
@@ -103,6 +103,11 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
             onTap: () => context.go("/inventory"),
           ),
           const YataNavItem(label: "メニュー管理", icon: Icons.restaurant_menu_outlined, isActive: true),
+          YataNavItem(
+            label: "売上分析",
+            icon: Icons.query_stats_outlined,
+            onTap: () => context.go("/analytics"),
+          ),
         ],
       ),
       body: YataPageContainer(

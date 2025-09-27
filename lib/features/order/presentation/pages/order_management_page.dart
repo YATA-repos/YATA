@@ -65,7 +65,11 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
             icon: Icons.restaurant_menu_outlined,
             onTap: () => context.go("/menu"),
           ),
-          const YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
+          YataNavItem(
+            label: "売上分析",
+            icon: Icons.query_stats_outlined,
+            onTap: () => context.go("/analytics"),
+          ),
         ],
         trailing: <Widget>[
           YataIconLabelButton(

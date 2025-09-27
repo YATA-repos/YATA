@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 
+import "../../features/analytics/presentation/pages/sales_analytics_page.dart";
 import "../../features/auth/models/auth_state.dart";
 import "../../features/auth/presentation/pages/auth_page.dart";
 import "../../features/auth/presentation/providers/auth_providers.dart";
@@ -49,6 +50,11 @@ class AppRouter {
           path: "/menu",
           name: "menu",
           builder: (BuildContext context, GoRouterState state) => const MenuManagementPage(),
+        ),
+        GoRoute(
+          path: "/analytics",
+          name: "analytics",
+          builder: (BuildContext context, GoRouterState state) => const SalesAnalyticsPage(),
         ),
       ],
       redirect: (BuildContext context, GoRouterState state) =>
