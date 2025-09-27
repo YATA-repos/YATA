@@ -10,6 +10,7 @@ import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
+import "inventory_service_contract.dart";
 import "material_management_service.dart";
 import "order_stock_service.dart";
 import "stock_level_service.dart";
@@ -18,7 +19,9 @@ import "usage_analysis_service.dart";
 
 /// 在庫管理統合サービス（リアルタイム対応）
 /// 複数のサービスを組み合わせて在庫管理の全機能を提供
-class InventoryService with RealtimeServiceContractMixin implements RealtimeServiceControl {
+class InventoryService
+    with RealtimeServiceContractMixin
+    implements RealtimeServiceControl, InventoryServiceContract {
   InventoryService({
     required Ref ref,
     required r_contract.RealtimeManagerContract realtimeManager,
@@ -250,6 +253,7 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
       _materialManagementService.createMaterial(material);
 
   /// 材料カテゴリ一覧を取得
+  @override
   Future<List<MaterialCategory>> getMaterialCategories() async =>
       _materialManagementService.getMaterialCategories();
 
@@ -279,6 +283,7 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
       _stockLevelService.getCriticalStockMaterials();
 
   /// 材料一覧を在庫レベル・使用可能日数付きで取得
+  @override
   Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(
     String? categoryId,
     String userId,
@@ -313,6 +318,7 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
   // ===== 在庫操作関連メソッド =====
 
   /// 材料在庫を手動更新
+  @override
   Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId) async =>
       _stockOperationService.updateMaterialStock(request, userId);
 

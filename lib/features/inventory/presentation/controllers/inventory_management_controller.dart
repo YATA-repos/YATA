@@ -1,4 +1,14 @@
+import "dart:async";
+
 import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../../app/wiring/provider.dart";
+import "../../../../core/utils/error_handler.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
+import "../../dto/inventory_dto.dart";
+import "../../dto/transaction_dto.dart";
+import "../../models/inventory_model.dart";
+import "../../services/inventory_service_contract.dart";
 
 /// 在庫ステータス。
 enum StockStatus { sufficient, low, critical }
@@ -72,83 +82,23 @@ class InventoryManagementState {
     required this.sortBy,
     required this.sortAsc,
     required this.selectedIds,
+    this.isLoading = false,
+    this.errorMessage,
   });
 
   // コンストラクタは他メンバより前に配置（lint: sort_constructors_first対応）
-  factory InventoryManagementState.initial() {
-    final DateTime now = DateTime.now();
-    final List<InventoryItemViewData> seed = <InventoryItemViewData>[
-      InventoryItemViewData(
-        id: "m-001",
-        name: "玉ねぎ",
-        category: "野菜",
-        current: 42,
-        unit: "個",
-        alertThreshold: 30,
-        criticalThreshold: 10,
-        updatedAt: now.subtract(const Duration(hours: 2)),
-        updatedBy: "system",
-      ),
-      InventoryItemViewData(
-        id: "m-002",
-        name: "牛肩ロース",
-        category: "肉",
-        current: 8,
-        unit: "kg",
-        alertThreshold: 10,
-        criticalThreshold: 5,
-        updatedAt: now.subtract(const Duration(days: 1, hours: 3)),
-        updatedBy: "tanaka",
-      ),
-      InventoryItemViewData(
-        id: "m-003",
-        name: "醤油",
-        category: "調味料",
-        current: 2,
-        unit: "L",
-        alertThreshold: 3,
-        criticalThreshold: 1,
-        updatedAt: now.subtract(const Duration(minutes: 30)),
-        updatedBy: "suzuki",
-      ),
-      InventoryItemViewData(
-        id: "m-004",
-        name: "キャベツ",
-        category: "野菜",
-        current: 16,
-        unit: "玉",
-        alertThreshold: 12,
-        criticalThreshold: 6,
-        updatedAt: now.subtract(const Duration(days: 2)),
-        updatedBy: "system",
-      ),
-      InventoryItemViewData(
-        id: "m-005",
-        name: "中華麺",
-        category: "主食",
-        current: 110,
-        unit: "玉",
-        alertThreshold: 80,
-        criticalThreshold: 40,
-        updatedAt: now.subtract(const Duration(hours: 12)),
-        updatedBy: "yamada",
-      ),
-    ];
-
-    final Set<String> cats = <String>{for (final InventoryItemViewData i in seed) i.category};
-    final List<String> categoryList = <String>["すべて", ...cats];
-    return InventoryManagementState(
-      items: seed,
-      categories: categoryList,
-      selectedCategoryIndex: 0,
-      selectedStatusFilter: null,
-      searchText: "",
-      pendingAdjustments: <String, int>{},
-      sortBy: InventorySortBy.none,
-      sortAsc: true,
-      selectedIds: <String>{},
-    );
-  }
+  factory InventoryManagementState.initial() => InventoryManagementState(
+    items: const <InventoryItemViewData>[],
+    categories: const <String>["すべて"],
+    selectedCategoryIndex: 0,
+    selectedStatusFilter: null,
+    searchText: "",
+    pendingAdjustments: const <String, int>{},
+    sortBy: InventorySortBy.none,
+    sortAsc: true,
+    selectedIds: const <String>{},
+    isLoading: true,
+  );
 
   final List<InventoryItemViewData> items;
   final List<String> categories; // 先頭は "すべて"
@@ -159,6 +109,8 @@ class InventoryManagementState {
   final InventorySortBy sortBy;
   final bool sortAsc;
   final Set<String> selectedIds;
+  final bool isLoading;
+  final String? errorMessage;
 
   List<InventoryItemViewData> get filteredItems {
     final String query = searchText.trim().toLowerCase();
@@ -230,6 +182,9 @@ class InventoryManagementState {
     InventorySortBy? sortBy,
     bool? sortAsc,
     Set<String>? selectedIds,
+    bool? isLoading,
+    String? errorMessage,
+    bool clearErrorMessage = false,
   }) => InventoryManagementState(
     items: items ?? this.items,
     categories: categories ?? this.categories,
@@ -242,14 +197,112 @@ class InventoryManagementState {
     sortBy: sortBy ?? this.sortBy,
     sortAsc: sortAsc ?? this.sortAsc,
     selectedIds: selectedIds ?? this.selectedIds,
+    isLoading: isLoading ?? this.isLoading,
+    errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
   );
 }
 
 /// 在庫管理画面のコントローラ。
 class InventoryManagementController extends StateNotifier<InventoryManagementState> {
-  InventoryManagementController() : super(InventoryManagementState.initial());
+  InventoryManagementController({
+    required Ref ref,
+    required InventoryServiceContract inventoryService,
+  }) : _ref = ref,
+       _inventoryService = inventoryService,
+       super(InventoryManagementState.initial()) {
+    unawaited(loadInventory());
+  }
 
-  void setSearchText(String value) => state = state.copyWith(searchText: value);
+  final Ref _ref;
+  final InventoryServiceContract _inventoryService;
+
+  /// 初期データおよび最新データを取得する。
+  Future<void> loadInventory() async {
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    final String? userId = _ref.read(currentUserIdProvider);
+    if (userId == null) {
+      state = state.copyWith(isLoading: false, errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
+      return;
+    }
+
+    try {
+      final List<MaterialCategory> categoryModels = await _inventoryService.getMaterialCategories();
+      final List<MaterialStockInfo> stockInfos = await _inventoryService.getMaterialsWithStockInfo(
+        null,
+        userId,
+      );
+
+      final Map<String, String> categoryNameById = <String, String>{
+        for (final MaterialCategory category in categoryModels)
+          if (category.id != null) category.id!: category.name,
+      };
+
+      final List<String> categories = <String>["すべて"];
+      final Set<String> categoryNames = <String>{};
+      for (final MaterialCategory category in categoryModels) {
+        if (categoryNames.add(category.name)) {
+          categories.add(category.name);
+        }
+      }
+      final Set<String> validIds = <String>{};
+
+      final List<InventoryItemViewData> items = stockInfos
+          .where((MaterialStockInfo info) => info.material.id != null)
+          .map((MaterialStockInfo info) {
+            final Material material = info.material;
+            final String id = material.id!;
+            validIds.add(id);
+            final String categoryName = categoryNameById[material.categoryId] ?? "未分類";
+
+            final DateTime updatedAt = material.updatedAt ?? material.createdAt ?? DateTime.now();
+
+            return InventoryItemViewData(
+              id: id,
+              name: material.name,
+              category: categoryName,
+              current: material.currentStock,
+              unit: material.unitType.symbol,
+              alertThreshold: material.alertThreshold,
+              criticalThreshold: material.criticalThreshold,
+              updatedAt: updatedAt,
+              updatedBy: material.userId ?? "system",
+            );
+          })
+          .toList(growable: false);
+
+      for (final InventoryItemViewData item in items) {
+        if (categoryNames.add(item.category)) {
+          categories.add(item.category);
+        }
+      }
+
+      final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
+        ..removeWhere((String key, _) => !validIds.contains(key));
+
+      final Set<String> selectedIds = state.selectedIds.where(validIds.contains).toSet();
+
+      final int safeCategoryIndex = state.selectedCategoryIndex.clamp(0, categories.length - 1);
+
+      state = state.copyWith(
+        items: items,
+        categories: categories,
+        selectedCategoryIndex: safeCategoryIndex,
+        pendingAdjustments: pending,
+        selectedIds: selectedIds,
+        isLoading: false,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(isLoading: false, errorMessage: message);
+    }
+  }
+
+  /// データを再読み込みする。
+  void refresh() => unawaited(loadInventory());
+
+  void setSearchText(String value) =>
+      state = state.copyWith(searchText: value, clearErrorMessage: true);
 
   void selectCategory(int index) => state = state.copyWith(selectedCategoryIndex: index);
 
@@ -295,27 +348,77 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     state = state.copyWith(pendingAdjustments: map);
   }
 
-  /// 調整を適用（モック）。実際はサービスに委譲予定。
-  void applyAdjustment(String itemId) {
+  /// 調整を適用してサービスに反映する。
+  void applyAdjustment(String itemId) => unawaited(_applyAdjustment(itemId));
+
+  Future<void> _applyAdjustment(String itemId) async {
     final int? delta = state.pendingAdjustments[itemId];
     if (delta == null || delta == 0) {
       return;
     }
 
-    final DateTime now = DateTime.now();
-    final List<InventoryItemViewData> updated = state.items
-        .map((InventoryItemViewData i) {
-          if (i.id != itemId) {
-            return i;
-          }
-          final double next = (i.current + delta).clamp(0, double.infinity);
-          return i.copyWith(current: next, updatedAt: now, updatedBy: "current_user");
-        })
-        .toList(growable: false);
+    if (!canApply(itemId)) {
+      state = state.copyWith(errorMessage: "適用できない調整があります。数量を確認してください。");
+      return;
+    }
 
-    final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments)..remove(itemId);
-    state = state.copyWith(items: updated, pendingAdjustments: map);
+    InventoryItemViewData? target;
+    for (final InventoryItemViewData item in state.items) {
+      if (item.id == itemId) {
+        target = item;
+        break;
+      }
+    }
+
+    if (target == null) {
+      return;
+    }
+
+    final String? userId = _ref.read(currentUserIdProvider);
+    if (userId == null) {
+      state = state.copyWith(errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
+      return;
+    }
+
+    final InventoryItemViewData currentItem = target;
+    final double newQuantity = (currentItem.current + delta).clamp(0, double.infinity);
+
+    try {
+      state = state.copyWith(clearErrorMessage: true);
+      await _inventoryService.updateMaterialStock(
+        StockUpdateRequest(
+          materialId: itemId,
+          newQuantity: newQuantity,
+          reason: "UI adjustment",
+          notes: delta > 0 ? "+$delta" : delta.toString(),
+        ),
+        userId,
+      );
+
+      final List<InventoryItemViewData> updatedItems = state.items
+          .map(
+            (InventoryItemViewData item) => item.id == itemId
+                ? item.copyWith(current: newQuantity, updatedAt: DateTime.now(), updatedBy: userId)
+                : item,
+          )
+          .toList(growable: false);
+
+      final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
+        ..remove(itemId);
+      final Set<String> selectedIds = Set<String>.from(state.selectedIds)..remove(itemId);
+
+      state = state.copyWith(
+        items: updatedItems,
+        pendingAdjustments: pending,
+        selectedIds: selectedIds,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
+    }
   }
+
   void toggleSelect(String itemId) {
     final Set<String> s = Set<String>.from(state.selectedIds);
     if (s.contains(itemId)) {
@@ -329,7 +432,9 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   /// 全選択/解除。
   void selectAll(bool selected) {
     if (selected) {
-      state = state.copyWith(selectedIds: state.filteredItems.map((InventoryItemViewData e) => e.id).toSet());
+      state = state.copyWith(
+        selectedIds: state.filteredItems.map((InventoryItemViewData e) => e.id).toSet(),
+      );
     } else {
       state = state.copyWith(selectedIds: <String>{});
     }
@@ -360,24 +465,29 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   }
 
   /// 選択行に対して一括適用（負在庫になる行はスキップ）。
-  void applySelected() {
-    final Set<String> ids = state.selectedIds;
+  void applySelected() => unawaited(_applySelected());
+
+  Future<void> _applySelected() async {
+    final List<String> ids = state.selectedIds.toList(growable: false);
     for (final String id in ids) {
       if (!canApply(id)) {
         continue;
       }
-      applyAdjustment(id);
+      await _applyAdjustment(id);
     }
     state = state.copyWith(selectedIds: <String>{});
   }
 
   /// フィルタ後の全件に対して一括適用（負在庫になる行はスキップ）。
-  void applyAllVisible() {
-    for (final InventoryItemViewData i in state.filteredItems) {
-      if (!canApply(i.id)) {
+  void applyAllVisible() => unawaited(_applyAllVisible());
+
+  Future<void> _applyAllVisible() async {
+    final List<InventoryItemViewData> visibleItems = state.filteredItems;
+    for (final InventoryItemViewData item in visibleItems) {
+      if (!canApply(item.id)) {
         continue;
       }
-      applyAdjustment(i.id);
+      await _applyAdjustment(item.id);
     }
     state = state.copyWith(selectedIds: <String>{});
   }
@@ -428,11 +538,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         .toList(growable: false);
     final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
       ..removeWhere((String key, _) => toDelete.contains(key));
-    state = state.copyWith(
-      items: remaining,
-      pendingAdjustments: pending,
-      selectedIds: <String>{},
-    );
+    state = state.copyWith(items: remaining, pendingAdjustments: pending, selectedIds: <String>{});
     // TODO サービスレイヤー統合: まとめて削除APIに接続する
   }
 }
@@ -440,7 +546,10 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
 final StateNotifierProvider<InventoryManagementController, InventoryManagementState>
 inventoryManagementControllerProvider =
     StateNotifierProvider<InventoryManagementController, InventoryManagementState>(
-      (Ref ref) => InventoryManagementController(),
+      (Ref ref) => InventoryManagementController(
+        ref: ref,
+        inventoryService: ref.read(inventoryServiceProvider),
+      ),
     );
 
 /// ソートキー。

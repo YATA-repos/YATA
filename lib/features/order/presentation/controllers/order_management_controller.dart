@@ -1,17 +1,41 @@
+import "dart:async";
+import "dart:math" as math;
+
 import "package:flutter/foundation.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+
+import "../../../../app/wiring/provider.dart";
+import "../../../../core/utils/error_handler.dart";
+import "../../../auth/presentation/providers/auth_providers.dart";
+import "../../../menu/models/menu_model.dart";
+import "../../../menu/services/menu_service.dart";
+import "../../dto/order_dto.dart";
+import "../../models/order_model.dart";
+import "../../services/cart_service.dart";
+import "../../services/order_service.dart";
 
 /// 注文管理画面で扱うメニューカテゴリの表示用データ。
 @immutable
 class MenuCategoryViewData {
   /// [MenuCategoryViewData]を生成する。
-  const MenuCategoryViewData({required this.id, required this.label});
+  const MenuCategoryViewData({required this.id, required this.label, this.displayOrder = 0});
 
   /// カテゴリ識別子。
   final String id;
 
   /// 表示ラベル。
   final String label;
+
+  /// 表示順序。
+  final int displayOrder;
+
+  /// コピーを生成する。
+  MenuCategoryViewData copyWith({String? id, String? label, int? displayOrder}) =>
+      MenuCategoryViewData(
+        id: id ?? this.id,
+        label: label ?? this.label,
+        displayOrder: displayOrder ?? this.displayOrder,
+      );
 }
 
 /// 注文管理画面で扱うメニューアイテムの表示用データ。
@@ -23,6 +47,9 @@ class MenuItemViewData {
     required this.name,
     required this.categoryId,
     required this.price,
+    this.description,
+    this.isAvailable = true,
+    this.displayOrder = 0,
   });
 
   /// 商品ID。
@@ -36,13 +63,48 @@ class MenuItemViewData {
 
   /// 価格（税抜き）。
   final int price;
+
+  /// 説明。
+  final String? description;
+
+  /// 販売可能かどうか。
+  final bool isAvailable;
+
+  /// 表示順序。
+  final int displayOrder;
+
+  /// コピーを生成する。
+  MenuItemViewData copyWith({
+    String? id,
+    String? name,
+    String? categoryId,
+    int? price,
+    String? description,
+    bool? isAvailable,
+    int? displayOrder,
+  }) => MenuItemViewData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    categoryId: categoryId ?? this.categoryId,
+    price: price ?? this.price,
+    description: description ?? this.description,
+    isAvailable: isAvailable ?? this.isAvailable,
+    displayOrder: displayOrder ?? this.displayOrder,
+  );
 }
 
 /// 注文カートに表示するアイテム情報。
 @immutable
 class CartItemViewData {
   /// [CartItemViewData]を生成する。
-  const CartItemViewData({required this.menuItem, required this.quantity});
+  const CartItemViewData({
+    required this.menuItem,
+    required this.quantity,
+    this.orderItemId,
+    this.selectedOptions,
+    this.notes,
+    this.hasSufficientStock,
+  });
 
   /// メニューアイテム。
   final MenuItemViewData menuItem;
@@ -50,12 +112,37 @@ class CartItemViewData {
   /// 数量。
   final int quantity;
 
+  /// 注文明細ID。
+  final String? orderItemId;
+
+  /// 選択オプション。
+  final Map<String, String>? selectedOptions;
+
+  /// 特記事項。
+  final String? notes;
+
+  /// 在庫が十分かどうか。
+  final bool? hasSufficientStock;
+
   /// 小計金額。
   int get subtotal => menuItem.price * quantity;
 
   /// コピーを生成する。
-  CartItemViewData copyWith({MenuItemViewData? menuItem, int? quantity}) =>
-      CartItemViewData(menuItem: menuItem ?? this.menuItem, quantity: quantity ?? this.quantity);
+  CartItemViewData copyWith({
+    MenuItemViewData? menuItem,
+    int? quantity,
+    String? orderItemId,
+    Map<String, String>? selectedOptions,
+    String? notes,
+    bool? hasSufficientStock,
+  }) => CartItemViewData(
+    menuItem: menuItem ?? this.menuItem,
+    quantity: quantity ?? this.quantity,
+    orderItemId: orderItemId ?? this.orderItemId,
+    selectedOptions: selectedOptions ?? this.selectedOptions,
+    notes: notes ?? this.notes,
+    hasSufficientStock: hasSufficientStock ?? this.hasSufficientStock,
+  );
 }
 
 /// 注文管理画面の状態。
@@ -68,72 +155,24 @@ class OrderManagementState {
     required List<CartItemViewData> cartItems,
     this.selectedCategoryIndex = 0,
     this.searchQuery = "",
-    this.orderNumber = "#1046",
+    this.orderNumber,
     this.taxRate = 0.1,
     this.highlightedItemId,
+    this.cartId,
+    this.discountAmount = 0,
+    this.isLoading = false,
+    this.errorMessage,
   }) : categories = List<MenuCategoryViewData>.unmodifiable(categories),
        menuItems = List<MenuItemViewData>.unmodifiable(menuItems),
        cartItems = List<CartItemViewData>.unmodifiable(cartItems);
 
   /// デフォルトの初期状態を取得する。
-  factory OrderManagementState.initial() {
-    final List<MenuCategoryViewData> categories = <MenuCategoryViewData>[
-      const MenuCategoryViewData(id: "all", label: "すべて"),
-      const MenuCategoryViewData(id: "main", label: "メイン料理"),
-      const MenuCategoryViewData(id: "side", label: "サイドメニュー"),
-      const MenuCategoryViewData(id: "drink", label: "ドリンク"),
-      const MenuCategoryViewData(id: "dessert", label: "デザート"),
-    ];
-
-    final List<MenuItemViewData> menuItems = <MenuItemViewData>[
-      const MenuItemViewData(id: "item-1", name: "チキンラップ", categoryId: "main", price: 850),
-      const MenuItemViewData(id: "item-2", name: "ファラフェルボウル", categoryId: "main", price: 975),
-      const MenuItemViewData(id: "item-3", name: "アイスコーヒー", categoryId: "drink", price: 425),
-      const MenuItemViewData(id: "item-4", name: "ベジバーガー", categoryId: "main", price: 1050),
-      const MenuItemViewData(id: "item-5", name: "フレッシュレモネード", categoryId: "drink", price: 375),
-      const MenuItemViewData(id: "item-6", name: "さつまいもフライ", categoryId: "side", price: 450),
-      // * 以下ダミー商品: 長いリストの体感用
-      const MenuItemViewData(id: "item-7", name: "グリルチキンプレート", categoryId: "main", price: 980),
-      const MenuItemViewData(id: "item-8", name: "ガーリックシュリンプ", categoryId: "main", price: 1150),
-      const MenuItemViewData(id: "item-9", name: "スパイシータコス", categoryId: "main", price: 900),
-      const MenuItemViewData(id: "item-10", name: "日替わりスープ", categoryId: "side", price: 320),
-      const MenuItemViewData(id: "item-11", name: "コールスロー", categoryId: "side", price: 280),
-      const MenuItemViewData(id: "item-12", name: "オニオンリング", categoryId: "side", price: 390),
-      const MenuItemViewData(id: "item-13", name: "ホットコーヒー", categoryId: "drink", price: 350),
-      const MenuItemViewData(id: "item-14", name: "カフェラテ", categoryId: "drink", price: 480),
-      const MenuItemViewData(id: "item-15", name: "緑茶（アイス）", categoryId: "drink", price: 300),
-      const MenuItemViewData(id: "item-16", name: "クラフトコーラ", categoryId: "drink", price: 520),
-      const MenuItemViewData(id: "item-17", name: "チョコブラウニー", categoryId: "dessert", price: 420),
-      const MenuItemViewData(id: "item-18", name: "バスクチーズケーキ", categoryId: "dessert", price: 560),
-      const MenuItemViewData(id: "item-19", name: "ソフトクリーム", categoryId: "dessert", price: 350),
-      const MenuItemViewData(id: "item-20", name: "フルーツサンデー", categoryId: "dessert", price: 600),
-      const MenuItemViewData(id: "item-21", name: "ベジタコス（2個）", categoryId: "main", price: 980),
-      const MenuItemViewData(id: "item-22", name: "チキンケバブ", categoryId: "main", price: 1020),
-      const MenuItemViewData(id: "item-23", name: "フムス＆ピタ", categoryId: "side", price: 500),
-      const MenuItemViewData(id: "item-24", name: "スパークリングウォーター", categoryId: "drink", price: 260),
-    ];
-
-    final List<CartItemViewData> initialCart = <CartItemViewData>[
-      CartItemViewData(menuItem: menuItems[0], quantity: 1), // チキンラップ
-      CartItemViewData(menuItem: menuItems[2], quantity: 2), // アイスコーヒー
-      CartItemViewData(menuItem: menuItems[5], quantity: 1), // さつまいもフライ
-      CartItemViewData(menuItem: menuItems[3], quantity: 1), // ベジバーガー
-      CartItemViewData(menuItem: menuItems[6], quantity: 1), // グリルチキンプレート
-      CartItemViewData(menuItem: menuItems[7], quantity: 1), // ガーリックシュリンプ
-      CartItemViewData(menuItem: menuItems[8], quantity: 2), // スパイシータコス
-      CartItemViewData(menuItem: menuItems[9], quantity: 1), // 日替わりスープ
-      CartItemViewData(menuItem: menuItems[10], quantity: 1), // コールスロー
-      CartItemViewData(menuItem: menuItems[11], quantity: 1), // オニオンリング
-      CartItemViewData(menuItem: menuItems[14], quantity: 1), // 緑茶（アイス）
-      CartItemViewData(menuItem: menuItems[18], quantity: 1), // ソフトクリーム
-    ];
-
-    return OrderManagementState(
-      categories: categories,
-      menuItems: menuItems,
-      cartItems: initialCart,
-    );
-  }
+  factory OrderManagementState.initial() => OrderManagementState(
+    categories: const <MenuCategoryViewData>[MenuCategoryViewData(id: "all", label: "すべて")],
+    menuItems: const <MenuItemViewData>[],
+    cartItems: const <CartItemViewData>[],
+    isLoading: true,
+  );
 
   /// 表示するカテゴリ一覧。
   final List<MenuCategoryViewData> categories;
@@ -151,13 +190,25 @@ class OrderManagementState {
   final String searchQuery;
 
   /// 注文番号。
-  final String orderNumber;
+  final String? orderNumber;
 
   /// 税率（例: 0.1 = 10%）。
   final double taxRate;
 
   /// 直近にハイライト表示する対象のメニューID（UI用・一時的）。
   final String? highlightedItemId;
+
+  /// カートID（注文ID）。
+  final String? cartId;
+
+  /// 割引額。
+  final int discountAmount;
+
+  /// ローディング中かどうか。
+  final bool isLoading;
+
+  /// エラーメッセージ。
+  final String? errorMessage;
 
   /// 選択中のカテゴリ。
   MenuCategoryViewData? get selectedCategory {
@@ -181,7 +232,8 @@ class OrderManagementState {
           final bool matchesQuery = query.isEmpty || item.name.toLowerCase().contains(query);
           return matchesCategory && matchesQuery;
         })
-        .toList(growable: false);
+        .toList(growable: false)
+      ..sort((MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
   /// カート内に指定IDのアイテムが存在するか。
@@ -196,13 +248,18 @@ class OrderManagementState {
   int get tax => (subtotal * taxRate).round();
 
   /// 合計金額。
-  int get total => subtotal + tax;
+  int get total {
+    final int value = subtotal + tax - discountAmount;
+    return math.max(0, value);
+  }
 
   /// 金額を円表記で整形する。
   String formatPrice(int amount) => _formatCurrency(amount);
 
   /// 状態のコピーを生成する。
   OrderManagementState copyWith({
+    List<MenuCategoryViewData>? categories,
+    List<MenuItemViewData>? menuItems,
     List<CartItemViewData>? cartItems,
     int? selectedCategoryIndex,
     String? searchQuery,
@@ -210,9 +267,14 @@ class OrderManagementState {
     double? taxRate,
     String? highlightedItemId,
     bool clearHighlightedItemId = false,
+    String? cartId,
+    int? discountAmount,
+    bool? isLoading,
+    String? errorMessage,
+    bool clearErrorMessage = false,
   }) => OrderManagementState(
-    categories: categories,
-    menuItems: menuItems,
+    categories: categories ?? this.categories,
+    menuItems: menuItems ?? this.menuItems,
     cartItems: cartItems ?? this.cartItems,
     selectedCategoryIndex: selectedCategoryIndex ?? this.selectedCategoryIndex,
     searchQuery: searchQuery ?? this.searchQuery,
@@ -221,15 +283,88 @@ class OrderManagementState {
     highlightedItemId: clearHighlightedItemId
         ? null
         : (highlightedItemId ?? this.highlightedItemId),
+    cartId: cartId ?? this.cartId,
+    discountAmount: discountAmount ?? this.discountAmount,
+    isLoading: isLoading ?? this.isLoading,
+    errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
   );
 }
 
 /// 注文管理画面の振る舞いを担うコントローラ。
 class OrderManagementController extends StateNotifier<OrderManagementState> {
   /// [OrderManagementController]を生成する。
-  OrderManagementController() : super(OrderManagementState.initial());
+  OrderManagementController({
+    required Ref ref,
+    required MenuService menuService,
+    required CartService cartService,
+    required OrderService orderService,
+  }) : _ref = ref,
+       _menuService = menuService,
+       _cartService = cartService,
+       _orderService = orderService,
+       super(OrderManagementState.initial()) {
+    unawaited(loadInitialData());
+  }
 
+  final Ref _ref;
+  final MenuService _menuService;
+  final CartService _cartService;
+  final OrderService _orderService;
+
+  final Map<String, MenuItemViewData> _menuItemCache = <String, MenuItemViewData>{};
   int _highlightSeq = 0;
+
+  /// 初期データを読み込む。
+  Future<void> loadInitialData() async {
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    final String? userId = _ref.read(currentUserIdProvider);
+    if (userId == null) {
+      state = state.copyWith(isLoading: false, errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
+      return;
+    }
+
+    try {
+      final List<MenuCategory> categoryModels = await _menuService.getMenuCategories();
+      final List<MenuItem> menuItemModels = await _menuService.getMenuItemsByCategory(null);
+      _updateMenuCache(menuItemModels);
+
+      final List<MenuCategoryViewData> categoryView = _buildCategoryView(categoryModels);
+      final Order? cart = await _cartService.getOrCreateActiveCart(userId);
+      String? cartId = cart?.id;
+      _CartSnapshot snapshot = const _CartSnapshot(items: <CartItemViewData>[]);
+      if (cartId != null) {
+        snapshot = await _loadCartSnapshot(cartId, userId);
+        cartId = snapshot.cartId ?? cartId;
+      }
+
+      final List<MenuItemViewData> synchronisedMenu = _menuItemCache.values.toList()
+        ..sort(
+          (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
+        );
+
+      final int safeIndex = categoryView.isEmpty
+          ? 0
+          : state.selectedCategoryIndex.clamp(0, categoryView.length - 1);
+
+      state = state.copyWith(
+        categories: categoryView,
+        menuItems: synchronisedMenu,
+        cartItems: snapshot.items,
+        cartId: cartId,
+        orderNumber: snapshot.orderNumber ?? cart?.orderNumber,
+        discountAmount: snapshot.discountAmount ?? cart?.discountAmount ?? 0,
+        selectedCategoryIndex: safeIndex,
+        isLoading: false,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(isLoading: false, errorMessage: message);
+    }
+  }
+
+  /// データを再読み込みする。
+  void refresh() => unawaited(loadInitialData());
 
   void _triggerHighlight(String menuItemId) {
     final int token = ++_highlightSeq;
@@ -246,7 +381,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     if (index == state.selectedCategoryIndex) {
       return;
     }
-    state = state.copyWith(selectedCategoryIndex: index);
+    state = state.copyWith(selectedCategoryIndex: index, clearErrorMessage: true);
   }
 
   /// 検索キーワードを更新する。
@@ -254,74 +389,168 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     if (query == state.searchQuery) {
       return;
     }
-    state = state.copyWith(searchQuery: query);
+    state = state.copyWith(searchQuery: query, clearErrorMessage: true);
   }
 
   /// メニューをカートへ追加する。
-  void addMenuItem(String menuItemId) {
-    final MenuItemViewData? menuItem = _findMenuItem(menuItemId);
-    if (menuItem == null) {
+  void addMenuItem(String menuItemId) => unawaited(_addMenuItem(menuItemId));
+
+  Future<void> _addMenuItem(String menuItemId) async {
+    final String? userId = _ensureUserId();
+    if (userId == null) {
       return;
     }
 
-    final List<CartItemViewData> updatedCart = List<CartItemViewData>.from(state.cartItems);
-    final int existingIndex = updatedCart.indexWhere(
-      (CartItemViewData item) => item.menuItem.id == menuItemId,
-    );
-
-    if (existingIndex >= 0) {
-      final CartItemViewData current = updatedCart[existingIndex];
-      updatedCart[existingIndex] = current.copyWith(quantity: current.quantity + 1);
-    } else {
-      updatedCart.add(CartItemViewData(menuItem: menuItem, quantity: 1));
+    final MenuItemViewData? menuItem = _menuItemCache[menuItemId] ?? _findMenuItem(menuItemId);
+    if (menuItem == null) {
+      state = state.copyWith(errorMessage: "選択したメニューが見つかりませんでした。");
+      return;
     }
 
-    state = state.copyWith(cartItems: updatedCart);
-    _triggerHighlight(menuItemId);
+    final String? cartId = await _ensureCart(userId);
+    if (cartId == null) {
+      return;
+    }
+
+    try {
+      state = state.copyWith(clearErrorMessage: true);
+      await _cartService.addItemToCart(
+        cartId,
+        CartItemRequest(menuItemId: menuItemId, quantity: 1),
+        userId,
+      );
+      await _refreshCart(cartId, userId);
+      _triggerHighlight(menuItemId);
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
+    }
   }
 
   /// カート内アイテムの数量を更新する。
-  void updateItemQuantity(String menuItemId, int quantity) {
-    final List<CartItemViewData> updatedCart = List<CartItemViewData>.from(state.cartItems);
-    final int index = updatedCart.indexWhere(
-      (CartItemViewData item) => item.menuItem.id == menuItemId,
-    );
+  void updateItemQuantity(String menuItemId, int quantity) =>
+      unawaited(_updateItemQuantity(menuItemId, quantity));
 
-    if (index == -1) {
+  Future<void> _updateItemQuantity(String menuItemId, int quantity) async {
+    final String? userId = _ensureUserId();
+    if (userId == null) {
       return;
     }
 
-    if (quantity <= 0) {
-      updatedCart.removeAt(index);
-    } else {
-      updatedCart[index] = updatedCart[index].copyWith(quantity: quantity);
+    final String? cartId = state.cartId ?? await _ensureCart(userId);
+    if (cartId == null) {
+      return;
     }
 
-    state = state.copyWith(cartItems: updatedCart);
-    if (quantity > 0) {
-      _triggerHighlight(menuItemId);
-    } else if (state.highlightedItemId == menuItemId) {
-      state = state.copyWith(clearHighlightedItemId: true);
+    CartItemViewData? target;
+    String? orderItemId;
+    for (final CartItemViewData item in state.cartItems) {
+      if (item.menuItem.id == menuItemId) {
+        target = item;
+        orderItemId = item.orderItemId;
+        break;
+      }
+    }
+
+    if (target == null || orderItemId == null) {
+      if (quantity > 0) {
+        await _addMenuItem(menuItemId);
+      }
+      return;
+    }
+
+    try {
+      state = state.copyWith(clearErrorMessage: true);
+      if (quantity <= 0) {
+        await _cartService.removeItemFromCart(cartId, orderItemId, userId);
+      } else {
+        await _cartService.updateCartItemQuantity(cartId, orderItemId, quantity, userId);
+      }
+      await _refreshCart(cartId, userId);
+      if (quantity > 0) {
+        _triggerHighlight(menuItemId);
+      }
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
     }
   }
 
   /// アイテムをカートから削除する。
-  void removeItem(String menuItemId) {
-    final List<CartItemViewData> updatedCart = state.cartItems
-        .where((CartItemViewData item) => item.menuItem.id != menuItemId)
-        .toList(growable: false);
-    state = state.copyWith(cartItems: updatedCart);
-    if (state.highlightedItemId == menuItemId) {
-      state = state.copyWith(clearHighlightedItemId: true);
+  void removeItem(String menuItemId) => unawaited(_removeItem(menuItemId));
+
+  Future<void> _removeItem(String menuItemId) async {
+    final String? userId = _ensureUserId();
+    if (userId == null) {
+      return;
+    }
+
+    final String? cartId = state.cartId;
+    if (cartId == null) {
+      return;
+    }
+
+    CartItemViewData? target;
+    String? orderItemId;
+    for (final CartItemViewData item in state.cartItems) {
+      if (item.menuItem.id == menuItemId) {
+        target = item;
+        orderItemId = item.orderItemId;
+        break;
+      }
+    }
+
+    if (target == null || orderItemId == null) {
+      state = state.copyWith(
+        cartItems: state.cartItems
+            .where((CartItemViewData item) => item.menuItem.id != menuItemId)
+            .toList(growable: false),
+        clearHighlightedItemId: state.highlightedItemId == menuItemId,
+      );
+      return;
+    }
+
+    try {
+      state = state.copyWith(clearErrorMessage: true);
+      await _cartService.removeItemFromCart(cartId, orderItemId, userId);
+      await _refreshCart(cartId, userId);
+      if (state.highlightedItemId == menuItemId) {
+        state = state.copyWith(clearHighlightedItemId: true);
+      }
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
     }
   }
 
   /// カートをクリアする。
-  void clearCart() {
+  void clearCart() => unawaited(_clearCart());
+
+  Future<void> _clearCart() async {
     if (state.cartItems.isEmpty) {
       return;
     }
-    state = state.copyWith(cartItems: <CartItemViewData>[], clearHighlightedItemId: true);
+
+    final String? userId = _ensureUserId();
+    if (userId == null) {
+      return;
+    }
+
+    final String? cartId = state.cartId;
+    if (cartId == null) {
+      state = state.copyWith(cartItems: <CartItemViewData>[], clearHighlightedItemId: true);
+      return;
+    }
+
+    try {
+      state = state.copyWith(clearErrorMessage: true);
+      await _cartService.clearCart(cartId, userId);
+      await _refreshCart(cartId, userId);
+      state = state.copyWith(clearHighlightedItemId: true);
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
+    }
   }
 
   MenuItemViewData? _findMenuItem(String menuItemId) {
@@ -332,14 +561,171 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     }
     return null;
   }
+
+  String? _ensureUserId() {
+    final String? userId = _ref.read(currentUserIdProvider);
+    if (userId == null) {
+      state = state.copyWith(errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
+    }
+    return userId;
+  }
+
+  Future<String?> _ensureCart(String userId) async {
+    if (state.cartId != null) {
+      return state.cartId;
+    }
+    try {
+      final Order? cart = await _cartService.getOrCreateActiveCart(userId);
+      if (cart == null || cart.id == null) {
+        state = state.copyWith(errorMessage: "カートの初期化に失敗しました。");
+        return null;
+      }
+      state = state.copyWith(
+        cartId: cart.id,
+        orderNumber: cart.orderNumber,
+        discountAmount: cart.discountAmount,
+        clearErrorMessage: true,
+      );
+      return cart.id;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
+      return null;
+    }
+  }
+
+  void _updateMenuCache(List<MenuItem> items) {
+    for (final MenuItem item in items) {
+      final MenuItemViewData? view = _mapMenuItem(item);
+      if (view != null) {
+        _menuItemCache[view.id] = view;
+      }
+    }
+  }
+
+  List<MenuCategoryViewData> _buildCategoryView(List<MenuCategory> categories) {
+    final List<MenuCategoryViewData> list = <MenuCategoryViewData>[
+      const MenuCategoryViewData(id: "all", label: "すべて"),
+    ];
+    final Set<String> seenIds = <String>{"all"};
+    for (final MenuCategory category in categories) {
+      final String? id = category.id;
+      if (id == null || seenIds.contains(id)) {
+        continue;
+      }
+      seenIds.add(id);
+      list.add(
+        MenuCategoryViewData(id: id, label: category.name, displayOrder: category.displayOrder),
+      );
+    }
+    list.sort(
+      (MenuCategoryViewData a, MenuCategoryViewData b) => a.displayOrder.compareTo(b.displayOrder),
+    );
+    return list;
+  }
+
+  MenuItemViewData? _mapMenuItem(MenuItem item) {
+    final String? id = item.id;
+    if (id == null) {
+      return null;
+    }
+    return MenuItemViewData(
+      id: id,
+      name: item.name,
+      categoryId: item.categoryId,
+      price: item.price,
+      description: item.description,
+      isAvailable: item.isAvailable,
+      displayOrder: item.displayOrder,
+    );
+  }
+
+  Future<_CartSnapshot> _loadCartSnapshot(String cartId, String userId) async {
+    try {
+      final Map<String, dynamic>? data = await _orderService.getOrderWithItems(cartId, userId);
+      if (data == null) {
+        return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
+      }
+
+      final Order order = data["order"] as Order;
+      final List<Map<String, dynamic>> rawItems = (data["items"] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+
+      final List<CartItemViewData> items = <CartItemViewData>[];
+      for (final Map<String, dynamic> entry in rawItems) {
+        final OrderItem orderItem = entry["order_item"] as OrderItem;
+        MenuItemViewData? menuView = _menuItemCache[orderItem.menuItemId];
+        final MenuItem? menuItemModel = entry["menu_item"] as MenuItem?;
+        if (menuView == null && menuItemModel != null) {
+          final MenuItemViewData? mapped = _mapMenuItem(menuItemModel);
+          if (mapped != null) {
+            _menuItemCache[mapped.id] = mapped;
+            menuView = mapped;
+          }
+        }
+        if (menuView == null) {
+          continue;
+        }
+        items.add(
+          CartItemViewData(
+            menuItem: menuView,
+            quantity: orderItem.quantity,
+            orderItemId: orderItem.id,
+            selectedOptions: orderItem.selectedOptions,
+            notes: orderItem.specialRequest,
+          ),
+        );
+      }
+
+      return _CartSnapshot(
+        items: items,
+        orderNumber: order.orderNumber,
+        discountAmount: order.discountAmount,
+        cartId: order.id ?? cartId,
+      );
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
+      return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
+    }
+  }
+
+  Future<void> _refreshCart(String cartId, String userId) async {
+    final _CartSnapshot snapshot = await _loadCartSnapshot(cartId, userId);
+    final List<MenuItemViewData> menuView = _menuItemCache.values.toList()
+      ..sort((MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder));
+
+    state = state.copyWith(
+      cartItems: snapshot.items,
+      menuItems: menuView,
+      orderNumber: snapshot.orderNumber ?? state.orderNumber,
+      discountAmount: snapshot.discountAmount ?? state.discountAmount,
+      cartId: snapshot.cartId ?? state.cartId,
+      clearErrorMessage: true,
+    );
+  }
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。
 final StateNotifierProvider<OrderManagementController, OrderManagementState>
 orderManagementControllerProvider =
     StateNotifierProvider<OrderManagementController, OrderManagementState>(
-      (Ref ref) => OrderManagementController(),
+      (Ref ref) => OrderManagementController(
+        ref: ref,
+        menuService: ref.read(menuServiceProvider),
+        cartService: ref.read(cartServiceProvider),
+        orderService: ref.read(orderServiceProvider),
+      ),
     );
+
+class _CartSnapshot {
+  const _CartSnapshot({required this.items, this.orderNumber, this.discountAmount, this.cartId});
+
+  final List<CartItemViewData> items;
+  final String? orderNumber;
+  final int? discountAmount;
+  final String? cartId;
+}
 
 String _formatCurrency(int amount) {
   final String sign = amount < 0 ? "-" : "";

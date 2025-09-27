@@ -1,0 +1,15 @@
+import "../dto/inventory_dto.dart";
+import "../dto/transaction_dto.dart";
+import "../models/inventory_model.dart";
+
+/// 在庫サービスの共通契約。
+abstract interface class InventoryServiceContract {
+  /// 材料カテゴリ一覧を取得する。
+  Future<List<MaterialCategory>> getMaterialCategories();
+
+  /// 在庫情報を取得する。
+  Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(String? categoryId, String userId);
+
+  /// 在庫数量を更新する。
+  Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId);
+}

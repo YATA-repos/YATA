@@ -63,6 +63,8 @@ import "../../features/menu/services/menu_service.dart";
 import "../../features/order/models/order_model.dart" show Order, OrderItem;
 import "../../features/order/repositories/order_item_repository.dart";
 import "../../features/order/repositories/order_repository.dart";
+import "../../features/order/services/cart_management_service.dart";
+import "../../features/order/services/cart_service.dart";
 import "../../features/order/services/order_calculation_service.dart";
 import "../../features/order/services/order_management_service.dart";
 import "../../features/order/services/order_service.dart";
@@ -314,6 +316,37 @@ final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref 
     ref: ref,
     realtimeManager: ref.read(realtimeManagerProvider),
     orderManagementService: orderMgmt,
+  );
+});
+
+/// CartService（注文カート管理）
+final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref) {
+  final order_contract.OrderRepositoryContract<Order> orderRepo = ref.read(orderRepositoryProvider);
+  final order_contract.OrderItemRepositoryContract<OrderItem> orderItemRepo = ref.read(
+    orderItemRepositoryProvider,
+  );
+  final menu_contract.MenuItemRepositoryContract<MenuItem> menuItemRepo = ref.read(
+    menuItemRepositoryProvider,
+  );
+
+  final OrderCalculationService calculationService = OrderCalculationService(
+    orderItemRepository: orderItemRepo,
+  );
+
+  final CartManagementService cartManagementService = CartManagementService(
+    orderRepository: orderRepo,
+    orderItemRepository: orderItemRepo,
+    menuItemRepository: menuItemRepo,
+    orderCalculationService: calculationService,
+    orderStockService: order_svc.OrderStockService(
+      materialRepository: ref.read(materialRepositoryProvider),
+      recipeRepository: ref.read(recipeRepositoryProvider),
+    ),
+  );
+
+  return CartService(
+    cartManagementService: cartManagementService,
+    orderCalculationService: calculationService,
   );
 });
 

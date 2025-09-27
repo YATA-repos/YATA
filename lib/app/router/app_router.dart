@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 
 import "../../features/inventory/presentation/pages/inventory_management_page.dart";
+import "../../features/menu/presentation/pages/menu_management_page.dart";
 import "../../features/order/presentation/pages/order_history_page.dart";
 import "../../features/order/presentation/pages/order_management_page.dart";
 
@@ -14,7 +15,12 @@ class AppRouter {
     routes: <RouteBase>[
       GoRoute(
         path: "/",
-        name: "home",
+        name: "root",
+        redirect: (BuildContext context, GoRouterState state) => "/order",
+      ),
+      GoRoute(
+        path: "/order",
+        name: "order",
         builder: (BuildContext context, GoRouterState state) => const OrderManagementPage(),
       ),
       GoRoute(
@@ -26,6 +32,11 @@ class AppRouter {
         path: "/inventory",
         name: "inventory",
         builder: (BuildContext context, GoRouterState state) => const InventoryManagementPage(),
+      ),
+      GoRoute(
+        path: "/menu",
+        name: "menu",
+        builder: (BuildContext context, GoRouterState state) => const MenuManagementPage(),
       ),
     ],
     // TODO: 認証ガードやリダイレクトはここに設定

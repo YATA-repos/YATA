@@ -48,7 +48,7 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
             label: "注文",
             icon: Icons.shopping_cart_outlined,
             isActive: true,
-            onTap: () => context.go("/"),
+            onTap: () => context.go("/order"),
           ),
           YataNavItem(
             label: "履歴",
@@ -77,6 +77,15 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: YataSpacingTokens.lg),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: state.isLoading ? const LinearProgressIndicator() : const SizedBox.shrink(),
+            ),
+            if (state.isLoading) const SizedBox(height: YataSpacingTokens.md),
+            if (state.errorMessage != null) ...<Widget>[
+              _OrderPageErrorBanner(message: state.errorMessage!, onRetry: controller.refresh),
+              const SizedBox(height: YataSpacingTokens.md),
+            ],
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,6 +170,9 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final List<MenuItemViewData> items = state.filteredMenuItems;
+                if (state.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
                 if (items.isEmpty) {
                   return Center(
                     child: Padding(
@@ -229,9 +241,10 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
                               isSelected: isSelected,
                               minQuantity: 0,
                               quantity: quantity,
-                              onQuantityChanged: (int value) =>
-                                  controller.updateItemQuantity(item.id, value),
-                              onTap: () => controller.addMenuItem(item.id),
+                              onQuantityChanged: state.isLoading
+                                  ? null
+                                  : (int value) => controller.updateItemQuantity(item.id, value),
+                              onTap: state.isLoading ? null : () => controller.addMenuItem(item.id),
                             ),
                           );
                         }),
@@ -465,26 +478,29 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
 class _OrderNumberBadge extends StatelessWidget {
   const _OrderNumberBadge({required this.orderNumber});
 
-  final String orderNumber;
+  final String? orderNumber;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: YataSpacingTokens.md,
-      vertical: YataSpacingTokens.xs,
-    ),
-    decoration: BoxDecoration(
-      color: YataColorTokens.primarySoft,
-      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-      border: Border.all(color: YataColorTokens.primary.withValues(alpha: 0.3)),
-    ),
-    child: Text(
-      "注文番号: $orderNumber",
-      style:
-          Theme.of(context).textTheme.labelLarge?.copyWith(color: YataColorTokens.primary) ??
-          YataTypographyTokens.labelLarge.copyWith(color: YataColorTokens.primary),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final String label = (orderNumber == null || orderNumber!.isEmpty) ? "未割り当て" : orderNumber!;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: YataSpacingTokens.md,
+        vertical: YataSpacingTokens.xs,
+      ),
+      decoration: BoxDecoration(
+        color: YataColorTokens.primarySoft,
+        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+        border: Border.all(color: YataColorTokens.primary.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        "注文番号: $label",
+        style:
+            Theme.of(context).textTheme.labelLarge?.copyWith(color: YataColorTokens.primary) ??
+            YataTypographyTokens.labelLarge.copyWith(color: YataColorTokens.primary),
+      ),
+    );
+  }
 }
 
 class _SummaryRow extends StatelessWidget {
@@ -685,4 +701,41 @@ class _OrderRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _OrderPageErrorBanner extends StatelessWidget {
+  const _OrderPageErrorBanner({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(YataSpacingTokens.md),
+    decoration: BoxDecoration(
+      color: YataColorTokens.dangerSoft,
+      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+      border: Border.all(color: YataColorTokens.danger.withValues(alpha: 0.3)),
+    ),
+    child: Row(
+      children: <Widget>[
+        const Icon(Icons.error_outline, color: YataColorTokens.danger),
+        const SizedBox(width: YataSpacingTokens.sm),
+        Expanded(
+          child: Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: YataColorTokens.danger,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text("再試行"),
+        ),
+      ],
+    ),
+  );
 }

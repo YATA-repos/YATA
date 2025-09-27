@@ -18,6 +18,9 @@ import "../../inventory/models/inventory_model.dart";
 import "../dto/menu_dto.dart";
 import "../models/menu_model.dart";
 
+/// メニュー機能のリアルタイムイベントをUI層へ伝搬するためのカウンタープロバイダー。
+final StateProvider<int> menuRealtimeEventCounterProvider = StateProvider<int>((Ref ref) => 0);
+
 class MenuService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   MenuService({
     required Ref ref,
@@ -107,6 +110,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       tag: loggerComponent,
       fields: <String, dynamic>{"item": newRecord ?? oldRecord},
     );
+    _notifyRealtimeUpdate("menu_items");
   }
 
   void _handleMenuCategoryUpdate(Map<String, dynamic> data) {
@@ -118,6 +122,189 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       tag: loggerComponent,
       fields: <String, dynamic>{"category": newRecord ?? oldRecord},
     );
+    _notifyRealtimeUpdate("menu_categories");
+  }
+
+  /// メニューカテゴリを作成する。
+  Future<MenuCategory> createCategory({required String name, required int displayOrder}) async {
+    final MenuCategory category = MenuCategory(name: name, displayOrder: displayOrder);
+    try {
+      final MenuCategory? created = await _menuCategoryRepository.create(category);
+      if (created == null) {
+        throw Exception("Failed to create menu category");
+      }
+      log.i("Created menu category: ${created.name}", tag: loggerComponent);
+      return created;
+    } catch (error, stackTrace) {
+      log.e("Failed to create menu category", tag: loggerComponent, error: error, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// メニューカテゴリを更新する。
+  Future<MenuCategory?> updateCategory(String id, {String? name, int? displayOrder}) async {
+    final Map<String, dynamic> updates = <String, dynamic>{};
+    if (name != null) {
+      updates["name"] = name;
+    }
+    if (displayOrder != null) {
+      updates["display_order"] = displayOrder;
+    }
+
+    if (updates.isEmpty) {
+      return _menuCategoryRepository.getById(id);
+    }
+
+    try {
+      final MenuCategory? updated = await _menuCategoryRepository.updateById(id, updates);
+      if (updated != null) {
+        log.i("Updated menu category: ${updated.name}", tag: loggerComponent);
+      }
+      return updated;
+    } catch (error, stackTrace) {
+      log.e("Failed to update menu category", tag: loggerComponent, error: error, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// メニューカテゴリを削除する。
+  Future<void> deleteCategory(String id) async {
+    try {
+      await _menuCategoryRepository.deleteById(id);
+      log.i("Deleted menu category: $id", tag: loggerComponent);
+    } catch (error, stackTrace) {
+      log.e("Failed to delete menu category", tag: loggerComponent, error: error, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// 表示順を更新する。
+  Future<void> updateCategoryOrder(List<MenuCategory> categories) async {
+    try {
+      for (final MenuCategory category in categories) {
+        if (category.id == null) {
+          continue;
+        }
+        await _menuCategoryRepository.updateById(category.id!, <String, dynamic>{
+          "display_order": category.displayOrder,
+        });
+      }
+      log.i("Updated category ordering (${categories.length} entries)", tag: loggerComponent);
+    } catch (error, stackTrace) {
+      log.e(
+        "Failed to update category ordering",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// メニューアイテムを作成する。
+  Future<MenuItem> createMenuItem({
+    required String name,
+    required String categoryId,
+    required int price,
+    required bool isAvailable,
+    required int estimatedPrepTimeMinutes,
+    required int displayOrder,
+    String? description,
+    String? imageUrl,
+  }) async {
+    final MenuItem item = MenuItem(
+      name: name,
+      categoryId: categoryId,
+      price: price,
+      isAvailable: isAvailable,
+      estimatedPrepTimeMinutes: estimatedPrepTimeMinutes,
+      displayOrder: displayOrder,
+      description: description,
+      imageUrl: imageUrl,
+    );
+    try {
+      final MenuItem? created = await _menuItemRepository.create(item);
+      if (created == null) {
+        throw Exception("Failed to create menu item");
+      }
+      log.i("Created menu item: ${created.name}", tag: loggerComponent);
+      return created;
+    } catch (error, stackTrace) {
+      log.e("Failed to create menu item", tag: loggerComponent, error: error, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// メニューアイテムを更新する。
+  Future<MenuItem?> updateMenuItem(
+    String id, {
+    String? name,
+    String? categoryId,
+    int? price,
+    String? description,
+    bool? isAvailable,
+    int? estimatedPrepTimeMinutes,
+    int? displayOrder,
+    String? imageUrl,
+  }) async {
+    final Map<String, dynamic> updates = <String, dynamic>{};
+    if (name != null) {
+      updates["name"] = name;
+    }
+    if (categoryId != null) {
+      updates["category_id"] = categoryId;
+    }
+    if (price != null) {
+      updates["price"] = price;
+    }
+    if (description != null) {
+      updates["description"] = description;
+    }
+    if (isAvailable != null) {
+      updates["is_available"] = isAvailable;
+    }
+    if (estimatedPrepTimeMinutes != null) {
+      updates["estimated_prep_time_minutes"] = estimatedPrepTimeMinutes;
+    }
+    if (displayOrder != null) {
+      updates["display_order"] = displayOrder;
+    }
+    if (imageUrl != null) {
+      updates["image_url"] = imageUrl;
+    }
+
+    if (updates.isEmpty) {
+      return _menuItemRepository.getById(id);
+    }
+
+    try {
+      final MenuItem? updated = await _menuItemRepository.updateById(id, updates);
+      if (updated != null) {
+        log.i("Updated menu item: ${updated.name}", tag: loggerComponent);
+      }
+      return updated;
+    } catch (error, stackTrace) {
+      log.e("Failed to update menu item", tag: loggerComponent, error: error, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// メニューアイテムを削除する。
+  Future<void> deleteMenuItem(String id) async {
+    try {
+      await _menuItemRepository.deleteById(id);
+      log.i("Deleted menu item: $id", tag: loggerComponent);
+    } catch (error, stackTrace) {
+      log.e("Failed to delete menu item", tag: loggerComponent, error: error, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// リアルタイム更新をUI層へ通知する。
+  void _notifyRealtimeUpdate(String featureName) {
+    final StateController<int> controller = _ref.read(menuRealtimeEventCounterProvider.notifier);
+    controller.state = controller.state + 1;
+    log.t("Menu realtime event propagated: $featureName", tag: loggerComponent);
   }
 
   /// メニューカテゴリ一覧を取得
