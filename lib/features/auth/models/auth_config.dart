@@ -86,8 +86,15 @@ class AuthConfig {
         );
       }
     } else {
-      // Desktop/Mobile環境 - カスタムURLスキーム使用
-      // 環境変数から取得、未設定の場合はデフォルトスキームを使用
+      final AuthPlatform platform = _getCurrentPlatform();
+      if (platform == AuthPlatform.desktop) {
+        return EnvValidator.getEnv(
+          "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP",
+          defaultValue: "http://localhost:8739/auth/callback",
+        );
+      }
+
+      // Mobile環境 - カスタムURLスキーム使用
       return EnvValidator.getEnv(
         "SUPABASE_OAUTH_CALLBACK_URL_MOBILE",
         defaultValue: "com.example.yata://login",

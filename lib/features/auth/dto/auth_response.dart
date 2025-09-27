@@ -27,6 +27,9 @@ class AuthResponse {
   factory AuthResponse.success({required UserProfile user, AuthSession? session}) =>
       AuthResponse(success: true, user: user, session: session);
 
+  /// 認証処理継続中レスポンス（OAuthリダイレクト待ちなど）
+  factory AuthResponse.pending() => AuthResponse(success: true);
+
   /// 認証失敗レスポンス
   factory AuthResponse.failure({required String error, String? errorDescription}) =>
       AuthResponse(success: false, error: error, errorDescription: errorDescription);
@@ -76,6 +79,9 @@ class AuthResponse {
 
   /// 認証成功かどうか
   bool get isSuccess => success && user != null;
+
+  /// 認証が継続中かどうか（ユーザーデータ未確定）
+  bool get isPending => success && user == null && error == null;
 
   /// 認証失敗かどうか
   bool get isFailure => !success || error != null;

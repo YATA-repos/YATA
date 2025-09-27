@@ -1,5 +1,8 @@
 import "dart:async";
 
+import "package:supabase_flutter/supabase_flutter.dart" as supabase
+    show AuthChangeEvent, AuthState, Session;
+
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
 // Removed LoggerComponent mixin; use local tag
@@ -24,10 +27,12 @@ class AuthService with StreamControllerManagerMixin {
        _config = config ?? AuthConfig.forCurrentPlatform() {
     // StreamControllerを管理対象に追加
     addController(_stateController, debugName: "auth_state_controller", source: "AuthService");
+    _attachSupabaseAuthListener();
   }
 
   final contract.AuthRepositoryContract<UserProfile, local.AuthResponse> _authRepository;
   final AuthConfig _config;
+  StreamSubscription<supabase.AuthState>? _authStateSubscription;
 
   /// 現在の認証状態
   AuthState _currentState = AuthState.initial();
@@ -66,6 +71,111 @@ class AuthService with StreamControllerManagerMixin {
   /// 現在のユーザーIDを取得
   String? get currentUserId => _currentState.userId;
 
+  void _attachSupabaseAuthListener() {
+    if (_authRepository is! AuthRepository) {
+      log.w(
+        "AuthRepository does not expose Supabase auth state changes; automatic session sync is disabled",
+        tag: loggerComponent,
+      );
+      return;
+    }
+
+    _authStateSubscription?.cancel();
+    final AuthRepository concreteRepository = _authRepository;
+    _authStateSubscription = concreteRepository.authStateChanges.listen(
+      (supabase.AuthState supabaseState) {
+        log.d(
+          "Received Supabase auth event: ${supabaseState.event.name}",
+          tag: loggerComponent,
+        );
+        unawaited(_handleSupabaseAuthState(supabaseState));
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        log.e(
+          "Supabase auth state stream error: $error",
+          tag: loggerComponent,
+          error: error,
+          st: stackTrace,
+        );
+      },
+    );
+  }
+
+  Future<void> _handleSupabaseAuthState(supabase.AuthState supabaseState) async {
+    try {
+      switch (supabaseState.event) {
+        case supabase.AuthChangeEvent.signedIn:
+        case supabase.AuthChangeEvent.tokenRefreshed:
+        case supabase.AuthChangeEvent.userUpdated:
+          await _synchronizeSessionFromSupabase(supabaseState.session);
+          break;
+        case supabase.AuthChangeEvent.initialSession:
+          if (supabaseState.session != null) {
+            await _synchronizeSessionFromSupabase(supabaseState.session);
+          } else {
+            _updateState(AuthState.initial());
+          }
+          break;
+        case supabase.AuthChangeEvent.signedOut:
+          _updateState(AuthState.initial());
+          break;
+        case supabase.AuthChangeEvent.passwordRecovery:
+        case supabase.AuthChangeEvent.mfaChallengeVerified:
+          log.d(
+            "Supabase auth event '${supabaseState.event.name}' received; no state transition",
+            tag: loggerComponent,
+          );
+          break;
+        default:
+          _updateState(AuthState.initial());
+          break;
+      }
+    } on Object catch (error, stackTrace) {
+      final String message = error is AuthException ? error.message : error.toString();
+      _updateState(AuthState.error(message));
+      log.e(
+        "Failed to process Supabase auth event: $message",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _synchronizeSessionFromSupabase(supabase.Session? session) async {
+    if (session == null) {
+      log.w("Supabase session is null during synchronization", tag: loggerComponent);
+      _updateState(AuthState.initial());
+      return;
+    }
+
+    final UserProfile? userProfile = await _resolveUserProfile(session);
+    if (userProfile == null) {
+      log.w("User profile could not be resolved from Supabase session", tag: loggerComponent);
+      _updateState(AuthState.initial());
+      return;
+    }
+
+    _updateState(AuthState.authenticated(userProfile));
+    log.i("Supabase session synchronized for user: ${userProfile.email}", tag: loggerComponent);
+  }
+
+  Future<UserProfile?> _resolveUserProfile(supabase.Session session) async {
+    return UserProfile.fromSupabaseUser(session.user);
+  
+    try {
+      return await _authRepository.getCurrentUserProfile();
+    } on Object catch (error, stackTrace) {
+      log.e(
+        "Failed to fetch user profile during session sync: $error",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+      );
+      return null;
+    }
+  }
+
   // =================================================================
   // 認証操作
   // =================================================================
@@ -82,6 +192,12 @@ class AuthService with StreamControllerManagerMixin {
         final UserProfile user = response.user!;
         _updateState(AuthState.authenticated(user));
         log.i("Google OAuth authentication successful: ${user.email}", tag: loggerComponent);
+      } else if (response.isPending) {
+        log.i(
+          "Google OAuth authentication pending: awaiting callback",
+          tag: loggerComponent,
+        );
+        // 状態は引き続き認証処理中のままとする
       } else {
         final String error = response.error ?? "Authentication failed";
         _updateState(AuthState.error(error));
@@ -280,6 +396,8 @@ class AuthService with StreamControllerManagerMixin {
       }
     }
 
+    _authStateSubscription?.cancel();
+    _authStateSubscription = null;
     stopAutoRefresh();
 
     // StreamControllerManagerMixinを使用してStreamControllerを安全に破棄

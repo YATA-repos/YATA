@@ -68,6 +68,7 @@ class EnvValidator {
     "SUPABASE_OAUTH_CALLBACK_URL_DEV",
     "SUPABASE_OAUTH_CALLBACK_URL_PROD",
     "SUPABASE_OAUTH_CALLBACK_URL_MOBILE",
+    "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP",
     "DEBUG_MODE",
     "LOG_LEVEL",
     "LOG_DIR",
@@ -162,6 +163,19 @@ class EnvValidator {
           warnings.add("本番用コールバックURLがデフォルト値のままです");
         } else if (!value.startsWith("https://")) {
           errors.add("本番用コールバックURLはHTTPS必須です: $value");
+        }
+        break;
+
+      case "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP":
+        final Uri? desktopUri = Uri.tryParse(value);
+        if (desktopUri == null || desktopUri.host.isEmpty) {
+          warnings.add("デスクトップ用コールバックURLの形式が不正です: $value");
+        } else if (desktopUri.scheme != "http") {
+          warnings.add("デスクトップ用コールバックURLは http スキームを推奨します: $value");
+        } else if (desktopUri.host != "localhost" && desktopUri.host != "127.0.0.1") {
+          warnings.add("デスクトップ用コールバックURLは localhost へのループバックを推奨します: $value");
+        } else if (!desktopUri.hasPort) {
+          warnings.add("デスクトップ用コールバックURLにポート番号を指定してください");
         }
         break;
 
