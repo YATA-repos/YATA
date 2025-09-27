@@ -11,19 +11,7 @@ import "../../core/contracts/logging/logger.dart" as contract;
 import "../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 // Repository contracts
 import "../../core/contracts/repositories/crud_repository.dart" as repo_contract;
-import "../../core/contracts/repositories/inventory/material_category_repository_contract.dart"
-    as inv_contract;
-import "../../core/contracts/repositories/inventory/material_repository_contract.dart"
-    as inv_contract;
-import "../../core/contracts/repositories/inventory/purchase_repository_contract.dart"
-    as inv_contract;
-import "../../core/contracts/repositories/inventory/recipe_repository_contract.dart"
-    as inv_contract;
-import "../../core/contracts/repositories/inventory/stock_adjustment_repository_contract.dart"
-    as inv_contract;
-import "../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart"
-    as inv_contract;
-import "../../core/contracts/repositories/inventory/supplier_repository_contract.dart"
+import "../../core/contracts/repositories/inventory/inventory_repository_contracts.dart"
     as inv_contract;
 import "../../core/contracts/repositories/menu/menu_repository_contracts.dart" as menu_contract;
 import "../../core/contracts/repositories/order/order_repository_contracts.dart" as order_contract;
