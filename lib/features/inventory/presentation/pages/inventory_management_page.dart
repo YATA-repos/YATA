@@ -54,6 +54,11 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             onTap: () => context.go("/history"),
           ),
           const YataNavItem(label: "在庫管理", icon: Icons.inventory_2_outlined, isActive: true),
+          YataNavItem(
+            label: "メニュー管理",
+            icon: Icons.restaurant_menu_outlined,
+            onTap: () => context.go("/menu"),
+          ),
           const YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
         ],
       ),
