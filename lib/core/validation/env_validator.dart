@@ -344,9 +344,7 @@ class EnvValidator {
     );
   }
 
-  static Map<String, String> _initializeCachedEnv() {
-    return _readSystemEnvironment();
-  }
+  static Map<String, String> _initializeCachedEnv() => _readSystemEnvironment();
 
   /// 汎用環境変数取得
   ///
