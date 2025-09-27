@@ -1,13 +1,16 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../../app/wiring/provider.dart";
 import "../../../../core/logging/compat.dart" as log;
 import "../../models/auth_state.dart";
+import "../controllers/auth_controller.dart";
 
-/// 認証状態(State)のプロバイダー
-/// テストでは初期状態の読み出しのみを行うため、最小実装とする
-final StateProvider<AuthState> authStateNotifierProvider = StateProvider<AuthState>(
-  (Ref ref) => AuthState.initial(),
-);
+/// 認証状態(State)のStateNotifierプロバイダー。
+final StateNotifierProvider<AuthController, AuthState> authStateNotifierProvider =
+    StateNotifierProvider<AuthController, AuthState>(
+      (Ref ref) => AuthController(authService: ref.read(authServiceProvider)),
+      name: "authStateNotifierProvider",
+    );
 
 /// 現在のユーザーIDを公開するProvider
 final Provider<String?> currentUserIdProvider = Provider<String?>((Ref ref) {
