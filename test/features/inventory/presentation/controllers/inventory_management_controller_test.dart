@@ -106,6 +106,64 @@ void main() {
       expect(controller.state.pendingAdjustments[second.id], -2);
       expect(controller.state.selectedIds.contains(first.id), isTrue);
     });
+
+    test("createInventoryItem adds new entry and refreshes state", () async {
+      final String? result = await controller.createInventoryItem(
+        name: "ネギ",
+        categoryId: "cat_ingredients",
+        unitType: UnitType.piece,
+        currentStock: 12,
+        alertThreshold: 4,
+        criticalThreshold: 2,
+        notes: "仕入れ先A",
+      );
+
+      expect(result, isNull);
+      await pumpEventQueue();
+
+      expect(controller.state.items.length, 3);
+      final InventoryItemViewData created = controller.state.items.firstWhere(
+        (InventoryItemViewData item) => item.name == "ネギ",
+      );
+      expect(created.categoryId, "cat_ingredients");
+      expect(created.unitType, UnitType.piece);
+      expect(created.current, 12);
+      expect(created.alertThreshold, 4);
+      expect(created.criticalThreshold, 2);
+      expect(created.notes, "仕入れ先A");
+    });
+
+    test("updateInventoryItem updates existing entry", () async {
+      final InventoryItemViewData target = controller.state.items.first;
+
+      final String? result = await controller.updateInventoryItem(
+        target.id,
+        name: "キャベツ（特大）",
+        categoryId: "cat_ingredients",
+        unitType: UnitType.kilogram,
+        currentStock: target.current + 5,
+        alertThreshold: target.alertThreshold + 1,
+        criticalThreshold: target.criticalThreshold,
+        notes: "サイズ変更",
+      );
+
+      expect(result, isNull);
+      await pumpEventQueue();
+
+      final InventoryItemViewData updated = controller.state.items.firstWhere(
+        (InventoryItemViewData item) => item.id == target.id,
+      );
+      expect(updated.name, "キャベツ（特大）");
+      expect(updated.unitType, UnitType.kilogram);
+      expect(updated.current, target.current + 5);
+      expect(updated.alertThreshold, target.alertThreshold + 1);
+      expect(updated.notes, "サイズ変更");
+
+      final Material? material = controller.state.materialById[target.id];
+      expect(material, isNotNull);
+      expect(material!.unitType, UnitType.kilogram);
+      expect(material.notes, "サイズ変更");
+    });
   });
 }
 
@@ -188,6 +246,50 @@ class _FakeInventoryService implements InventoryServiceContract {
         ),
       )
       .toList(growable: false);
+
+  @override
+  Future<Material?> createMaterial(Material material) async {
+    final String newId = material.id ?? "mat_${_stockInfos.length + 1}";
+    final DateTime now = material.createdAt ?? DateTime.now();
+    final Material created = Material(
+      id: newId,
+      name: material.name,
+      categoryId: material.categoryId,
+      unitType: material.unitType,
+      currentStock: material.currentStock,
+      alertThreshold: material.alertThreshold,
+      criticalThreshold: material.criticalThreshold,
+      notes: material.notes,
+      createdAt: now,
+      updatedAt: material.updatedAt ?? now,
+      userId: material.userId,
+    );
+
+    _stockInfos.add(MaterialStockInfo(material: created, stockLevel: created.getStockLevel()));
+
+    return created;
+  }
+
+  @override
+  Future<Material?> updateMaterial(Material material) async {
+    for (final MaterialStockInfo info in _stockInfos) {
+      if (info.material.id == material.id) {
+        info.material
+          ..name = material.name
+          ..categoryId = material.categoryId
+          ..unitType = material.unitType
+          ..currentStock = material.currentStock
+          ..alertThreshold = material.alertThreshold
+          ..criticalThreshold = material.criticalThreshold
+          ..notes = material.notes
+          ..updatedAt = material.updatedAt ?? DateTime.now()
+          ..userId = material.userId;
+        info.stockLevel = info.material.getStockLevel();
+        return info.material;
+      }
+    }
+    return null;
+  }
 
   @override
   Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId) async {

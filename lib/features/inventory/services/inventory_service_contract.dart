@@ -10,6 +10,12 @@ abstract interface class InventoryServiceContract {
   /// 在庫情報を取得する。
   Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(String? categoryId, String userId);
 
+  /// 材料を新規作成する。
+  Future<Material?> createMaterial(Material material);
+
+  /// 材料情報を更新する。
+  Future<Material?> updateMaterial(Material material);
+
   /// 在庫数量を更新する。
   Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId);
 }

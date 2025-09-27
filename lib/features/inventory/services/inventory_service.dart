@@ -249,8 +249,14 @@ class InventoryService
   // ===== 材料管理関連メソッド =====
 
   /// 材料を作成
+  @override
   Future<Material?> createMaterial(Material material) async =>
       _materialManagementService.createMaterial(material);
+
+  /// 材料を更新
+  @override
+  Future<Material?> updateMaterial(Material material) async =>
+      _materialManagementService.updateMaterial(material);
 
   /// 材料カテゴリ一覧を取得
   @override

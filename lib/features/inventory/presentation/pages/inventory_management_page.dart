@@ -10,6 +10,7 @@ import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../../shared/utils/unit_config.dart";
+import "../../models/inventory_model.dart";
 import "../controllers/inventory_management_controller.dart";
 
 /// 在庫管理画面。
@@ -80,12 +81,285 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             const SizedBox(height: YataSpacingTokens.lg),
             _ControlsRow(searchController: _searchController, state: state, controller: controller),
             const SizedBox(height: YataSpacingTokens.lg),
-            _InventoryTable(key: _tableKey, state: state, controller: controller),
+            _InventoryTable(
+              key: _tableKey,
+              state: state,
+              controller: controller,
+              onAddItem: _handleAddItem,
+              onEditItem: _handleEditItem,
+            ),
             const SizedBox(height: YataSpacingTokens.lg),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _handleAddItem() async {
+    await _showInventoryItemDialog();
+  }
+
+  Future<void> _handleEditItem(InventoryItemViewData item) async {
+    await _showInventoryItemDialog(initialItem: item);
+  }
+
+  Future<void> _showInventoryItemDialog({InventoryItemViewData? initialItem}) async {
+    final InventoryManagementState snapshot = ref.read(inventoryManagementControllerProvider);
+    final InventoryManagementController controller = ref.read(
+      inventoryManagementControllerProvider.notifier,
+    );
+
+    void showSnack(String message) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+
+    final List<DropdownMenuItem<String>> categoryItems = snapshot.categoryEntities
+        .where((MaterialCategory category) => category.id != null)
+        .map(
+          (MaterialCategory category) =>
+              DropdownMenuItem<String>(value: category.id!, child: Text(category.name)),
+        )
+        .toList(growable: true);
+
+    if (initialItem != null &&
+        initialItem.categoryId.isNotEmpty &&
+        categoryItems.every(
+          (DropdownMenuItem<String> item) => item.value != initialItem.categoryId,
+        )) {
+      categoryItems.add(
+        DropdownMenuItem<String>(value: initialItem.categoryId, child: Text(initialItem.category)),
+      );
+    }
+
+    if (categoryItems.isEmpty) {
+      showSnack("カテゴリが存在しません。先にカテゴリを作成してください");
+      return;
+    }
+
+    String? selectedCategoryId = initialItem?.categoryId ?? categoryItems.first.value;
+    UnitType selectedUnit = initialItem?.unitType ?? UnitType.piece;
+
+    String formatNumber(double value) =>
+        value % 1 == 0 ? value.toInt().toString() : value.toString();
+
+    final TextEditingController nameController = TextEditingController(
+      text: initialItem?.name ?? "",
+    );
+    final TextEditingController quantityController = TextEditingController(
+      text: initialItem != null ? formatNumber(initialItem.current) : "0",
+    );
+    final TextEditingController alertController = TextEditingController(
+      text: initialItem != null ? formatNumber(initialItem.alertThreshold) : "0",
+    );
+    final TextEditingController criticalController = TextEditingController(
+      text: initialItem != null ? formatNumber(initialItem.criticalThreshold) : "0",
+    );
+    final TextEditingController notesController = TextEditingController(
+      text: initialItem?.notes ?? "",
+    );
+
+    bool isSaving = false;
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !isSaving,
+      builder: (BuildContext dialogContext) => StatefulBuilder(
+        builder: (BuildContext context, void Function(void Function()) setDialogState) =>
+            AlertDialog(
+              title: Text(initialItem == null ? "在庫を追加" : "在庫を編集"),
+              content: SizedBox(
+                width: 420,
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        TextFormField(
+                          controller: nameController,
+                          autofocus: true,
+                          decoration: const InputDecoration(labelText: "品目名"),
+                          enabled: !isSaving,
+                          validator: (String? value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "品目名を入力してください";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: YataSpacingTokens.md),
+                    DropdownButtonFormField<String>(
+                      // ignore: deprecated_member_use
+                      value: selectedCategoryId,
+                          decoration: const InputDecoration(labelText: "カテゴリ"),
+                          items: categoryItems,
+                          onChanged: isSaving
+                              ? null
+                              : (String? value) {
+                                  setDialogState(() => selectedCategoryId = value);
+                                },
+                          validator: (String? value) {
+                            if (value == null || value.isEmpty) {
+                              return "カテゴリを選択してください";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: YataSpacingTokens.md),
+                    DropdownButtonFormField<UnitType>(
+                      // ignore: deprecated_member_use
+                      value: selectedUnit,
+                          decoration: const InputDecoration(labelText: "単位"),
+                          items: UnitType.values
+                              .map(
+                                (UnitType type) => DropdownMenuItem<UnitType>(
+                                  value: type,
+                                  child: Text(type.displayName),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: isSaving
+                              ? null
+                              : (UnitType? value) {
+                                  if (value != null) {
+                                    setDialogState(() => selectedUnit = value);
+                                  }
+                                },
+                        ),
+                        const SizedBox(height: YataSpacingTokens.md),
+                        TextFormField(
+                          controller: quantityController,
+                          decoration: InputDecoration(labelText: "現在在庫(${selectedUnit.symbol})"),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          enabled: !isSaving,
+                          validator: (String? value) {
+                            final double? parsed = double.tryParse(value?.trim() ?? "");
+                            if (parsed == null || parsed < 0) {
+                              return "0以上の数値を入力してください";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: YataSpacingTokens.md),
+                        TextFormField(
+                          controller: alertController,
+                          decoration: const InputDecoration(labelText: "警告閾値"),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          enabled: !isSaving,
+                          validator: (String? value) {
+                            final double? parsed = double.tryParse(value?.trim() ?? "");
+                            if (parsed == null || parsed < 0) {
+                              return "0以上の数値を入力してください";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: YataSpacingTokens.md),
+                        TextFormField(
+                          controller: criticalController,
+                          decoration: const InputDecoration(labelText: "危険閾値"),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          enabled: !isSaving,
+                          validator: (String? value) {
+                            final double? parsed = double.tryParse(value?.trim() ?? "");
+                            if (parsed == null || parsed < 0) {
+                              return "0以上の数値を入力してください";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: YataSpacingTokens.md),
+                        TextFormField(
+                          controller: notesController,
+                          decoration: const InputDecoration(labelText: "メモ", hintText: "仕入れ先や補足など"),
+                          enabled: !isSaving,
+                          maxLines: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text("キャンセル"),
+                ),
+                FilledButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                      if (!formKey.currentState!.validate()) {
+                        return;
+                      }
+                      if (selectedCategoryId == null || selectedCategoryId!.isEmpty) {
+                        showSnack("カテゴリを選択してください");
+                        return;
+                      }
+
+                          final double quantity = double.parse(quantityController.text.trim());
+                          final double alert = double.parse(alertController.text.trim());
+                          final double critical = double.parse(criticalController.text.trim());
+
+                      if (critical > alert) {
+                        showSnack("危険閾値は警告閾値以下で入力してください");
+                        return;
+                      }
+
+                          setDialogState(() => isSaving = true);
+
+                          final String trimmedNotes = notesController.text.trim();
+                          final String? errorMessage = initialItem == null
+                              ? await controller.createInventoryItem(
+                                  name: nameController.text.trim(),
+                                  categoryId: selectedCategoryId!,
+                                  unitType: selectedUnit,
+                                  currentStock: quantity,
+                                  alertThreshold: alert,
+                                  criticalThreshold: critical,
+                                  notes: trimmedNotes.isEmpty ? null : trimmedNotes,
+                                )
+                              : await controller.updateInventoryItem(
+                                  initialItem.id,
+                                  name: nameController.text.trim(),
+                                  categoryId: selectedCategoryId!,
+                                  unitType: selectedUnit,
+                                  currentStock: quantity,
+                                  alertThreshold: alert,
+                                  criticalThreshold: critical,
+                                  notes: trimmedNotes.isEmpty ? null : trimmedNotes,
+                                );
+
+                      if (!mounted || !dialogContext.mounted) {
+                        return;
+                      }
+
+                      if (errorMessage != null) {
+                        showSnack(errorMessage);
+                        setDialogState(() => isSaving = false);
+                        return;
+                      }
+
+                      showSnack(initialItem == null ? "在庫を追加しました" : "在庫を更新しました");
+
+                      Navigator.of(dialogContext).pop();
+                    },
+                  child: Text(initialItem == null ? "追加" : "保存"),
+                ),
+              ],
+            ),
+      ),
+    );
+
+    nameController.dispose();
+    quantityController.dispose();
+    alertController.dispose();
+    criticalController.dispose();
+    notesController.dispose();
   }
 
   void _scrollToTable() {
@@ -275,9 +549,17 @@ class _ControlsRow extends StatelessWidget {
 }
 
 class _InventoryTable extends StatefulWidget {
-  const _InventoryTable({required this.state, required this.controller, super.key});
+  const _InventoryTable({
+    required this.state,
+    required this.controller,
+    required this.onAddItem,
+    required this.onEditItem,
+    super.key,
+  });
   final InventoryManagementState state;
   final InventoryManagementController controller;
+  final VoidCallback onAddItem;
+  final void Function(InventoryItemViewData) onEditItem;
 
   @override
   State<_InventoryTable> createState() => _InventoryTableState();
@@ -380,6 +662,7 @@ class _InventoryTableState extends State<_InventoryTable> {
           controller.cycleSort(InventorySortBy.updatedAt);
         },
       ),
+      const DataColumn(label: Text("編集")),
       const DataColumn(label: Text("適用")),
     ];
 
@@ -484,6 +767,15 @@ class _InventoryTableState extends State<_InventoryTable> {
               ),
               DataCell(
                 Tooltip(
+                  message: "在庫情報を編集",
+                  child: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => widget.onEditItem(item),
+                  ),
+                ),
+              ),
+              DataCell(
+                Tooltip(
                   message: delta == 0
                       ? "変更がありません"
                       : ((item.current + delta) < 0 ? "新在庫が0未満のため適用不可" : "この行の調整を適用"),
@@ -502,17 +794,6 @@ class _InventoryTableState extends State<_InventoryTable> {
         })
         .toList(growable: false);
 
-    final int selectedWithDeltaCount = state.selectedIds
-        .where((String id) => (state.pendingAdjustments[id] ?? 0) != 0)
-        .length;
-    final int selectedApplicableCount = state.selectedIds.where((String id) {
-      final int delta = state.pendingAdjustments[id] ?? 0;
-      if (delta == 0) {
-        return false;
-      }
-      return controller.canApply(id);
-    }).length;
-    final bool canApplySelected = selectedApplicableCount > 0;
     final int visibleApplicableCount = state.filteredItems.where((InventoryItemViewData item) {
       final int delta = state.pendingAdjustments[item.id] ?? 0;
       if (delta == 0) {
@@ -521,7 +802,7 @@ class _InventoryTableState extends State<_InventoryTable> {
       return controller.canApply(item.id);
     }).length;
     final bool canApplyVisible = visibleApplicableCount > 0;
-    final bool canClearSelected = selectedWithDeltaCount > 0;
+    final bool hasPending = state.pendingAdjustments.isNotEmpty;
     final int pendingTotal = state.pendingDeltaTotal;
     final String pendingTotalLabel = pendingTotal > 0 ? "+$pendingTotal" : "$pendingTotal";
     final String pendingSummary = "未適用: ${state.pendingCount}件 / 合計: $pendingTotalLabel";
@@ -601,95 +882,60 @@ class _InventoryTableState extends State<_InventoryTable> {
                   )
                 : const SizedBox.shrink(),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: YataSpacingTokens.sm,
-              runSpacing: YataSpacingTokens.xs,
-              children: <Widget>[
-                Tooltip(
-                  message: "選択行に設定された調整を一括適用します（対象: $selectedApplicableCount件・負在庫は自動スキップ）",
-                  child: FilledButton.icon(
-                    onPressed: canApplySelected
-                        ? () async {
-                            final bool confirmed = await _confirmBulkAction(
-                              context: context,
-                              title: "選択行を適用",
-                              message:
-                                  "$selectedApplicableCount件の選択行に調整を適用します。負在庫になる行は自動的にスキップされます。",
-                              confirmLabel: "適用する",
-                            );
-                            if (!confirmed || !mounted) {
-                              return;
-                            }
-                            controller.applySelected();
-                          }
-                        : null,
-                    icon: const Icon(Icons.fact_check),
-                    label: const Text("一括適用（選択）"),
+          const SizedBox(height: YataSpacingTokens.md),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool narrow = constraints.maxWidth < 720;
+              final TextStyle summaryStyle =
+                  Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium;
+              final Widget summaryLabel = Text(pendingSummary, style: summaryStyle);
+              final List<Widget> actions = <Widget>[
+                OutlinedButton.icon(
+                  onPressed: hasPending ? controller.clearAllAdjustments : null,
+                  icon: const Icon(Icons.undo),
+                  label: const Text("全てクリア"),
+                ),
+                OutlinedButton.icon(
+                  onPressed: canApplyVisible ? controller.applyAllVisible : null,
+                  icon: const Icon(Icons.save_alt_outlined),
+                  label: const Text("表示分を適用"),
+                ),
+                FilledButton.icon(
+                  onPressed: widget.onAddItem,
+                  icon: const Icon(Icons.add),
+                  label: const Text("在庫を追加"),
+                  style: FilledButton.styleFrom(backgroundColor: YataColorTokens.primary),
+                ),
+              ];
+
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    summaryLabel,
+                    const SizedBox(height: YataSpacingTokens.sm),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: YataSpacingTokens.sm,
+                      runSpacing: YataSpacingTokens.sm,
+                      children: actions,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: <Widget>[
+                  Expanded(child: summaryLabel),
+                  Wrap(
+                    spacing: YataSpacingTokens.sm,
+                    runSpacing: YataSpacingTokens.sm,
+                    alignment: WrapAlignment.end,
+                    children: actions,
                   ),
-                ),
-                Tooltip(
-                  message: "未適用差分の件数と合計です。",
-                  child: Text(pendingSummary, style: Theme.of(context).textTheme.bodyMedium),
-                ),
-                Tooltip(
-                  message: "表示中の行に設定された調整を一括適用します（対象: $visibleApplicableCount件・負在庫は自動スキップ）",
-                  child: FilledButton.icon(
-                    onPressed: canApplyVisible
-                        ? () async {
-                            final bool confirmed = await _confirmBulkAction(
-                              context: context,
-                              title: "表示中の行を適用",
-                              message:
-                                  "表示中の$visibleApplicableCount件の行に調整を適用します。選択状態に関わらず、負在庫になる行は自動的にスキップされます。",
-                              confirmLabel: "適用する",
-                            );
-                            if (!confirmed || !mounted) {
-                              return;
-                            }
-                            controller.applyAllVisible();
-                          }
-                        : null,
-                    icon: const Icon(Icons.playlist_add_check),
-                    label: const Text("一括適用（表示中全件）"),
-                  ),
-                ),
-                Tooltip(
-                  message: "選択行に設定された未適用差分をクリアします（対象: $selectedWithDeltaCount件）",
-                  child: OutlinedButton.icon(
-                    onPressed: canClearSelected
-                        ? () async {
-                            final bool confirmed = await _confirmBulkAction(
-                              context: context,
-                              title: "選択行の差分をクリア",
-                              message: "$selectedWithDeltaCount件の選択行に設定した未適用差分をクリアします。よろしいですか？",
-                              confirmLabel: "クリアする",
-                            );
-                            if (!confirmed || !mounted) {
-                              return;
-                            }
-                            controller.clearAdjustmentsForSelected();
-                          }
-                        : null,
-                    icon: const Icon(Icons.backspace_outlined),
-                    label: const Text("選択行の差分クリア"),
-                  ),
-                ),
-                Tooltip(
-                  message: "全行に設定された未適用の調整を破棄します。",
-                  child: OutlinedButton.icon(
-                    onPressed: state.pendingAdjustments.isEmpty
-                        ? null
-                        : controller.clearAllAdjustments,
-                    icon: const Icon(Icons.undo),
-                    label: const Text("未適用の調整をクリア"),
-                  ),
-                ),
-              ],
-            ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: YataSpacingTokens.md),
           YataDataTable(
