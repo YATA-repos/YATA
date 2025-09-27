@@ -46,12 +46,15 @@ class CartManagementService {
 
       // 新しいカートを作成
       log.d("Creating new cart for user", tag: loggerComponent);
+      final DateTime now = DateTime.now();
       final Order newCart = Order(
         totalAmount: 0,
         status: OrderStatus.preparing,
         paymentMethod: PaymentMethod.cash, // デフォルト値
         discountAmount: 0,
-        orderedAt: DateTime.now(),
+        orderedAt: now,
+        createdAt: now,
+        updatedAt: now,
         userId: userId,
       );
 

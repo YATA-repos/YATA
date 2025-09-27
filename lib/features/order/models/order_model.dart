@@ -6,7 +6,7 @@ import "../../../core/constants/enums.dart";
 part "order_model.g.dart";
 
 /// 注文
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Order extends BaseModel {
   Order({
     required this.totalAmount,
@@ -77,7 +77,7 @@ class Order extends BaseModel {
 }
 
 /// 注文明細
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OrderItem extends BaseModel {
   OrderItem({
     required this.orderId,
