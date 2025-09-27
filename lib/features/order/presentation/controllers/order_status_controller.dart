@@ -130,7 +130,6 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
       final Map<OrderStatus, List<Order>> grouped = await _orderService.getOrdersByStatuses(
         const <OrderStatus>[OrderStatus.preparing, OrderStatus.completed],
         userId,
-        limit: 50,
       );
 
       state = state.copyWith(

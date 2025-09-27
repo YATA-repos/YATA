@@ -78,7 +78,7 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
             tooltip: "最新の注文を再取得",
             onPressed: state.isLoading
                 ? null
-                : () => controller.loadOrders(showLoadingIndicator: true),
+                : controller.loadOrders,
           ),
           YataIconButton(
             icon: Icons.settings,
