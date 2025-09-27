@@ -1,5 +1,6 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../core/constants/enums.dart";
 import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/logging/compat.dart" as log;
 import "../../../core/realtime/realtime_service_mixin.dart";
@@ -128,4 +129,16 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
   /// 注文と注文明細を一括取得
   Future<Map<String, dynamic>?> getOrderWithItems(String orderId, String userId) async =>
       _orderManagementService.getOrderWithItems(orderId, userId);
+
+  /// ステータスに応じた注文一覧を取得
+  Future<Map<OrderStatus, List<Order>>> getOrdersByStatuses(
+  List<OrderStatus> statuses,
+  String userId, {
+  int limit = 50,
+  }) async =>
+    _orderManagementService.getOrdersByStatuses(statuses, userId, limit: limit);
+
+  /// 注文ステータスを更新
+  Future<Order?> updateOrderStatus(String orderId, OrderStatus newStatus, String userId) async =>
+    _orderManagementService.updateOrderStatus(orderId, newStatus, userId);
 }

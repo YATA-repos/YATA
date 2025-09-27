@@ -19,9 +19,13 @@ class CartService {
 
   // ===== カート管理関連メソッド =====
 
-  /// アクティブなカート（下書き注文）を取得または作成
+  /// アクティブなカートを取得し、存在しなければ新規作成して返す。
   Future<Order?> getOrCreateActiveCart(String userId) async =>
       _cartManagementService.getOrCreateActiveCart(userId);
+
+  /// 既存のアクティブカートを取得（存在しなければ `null`）。
+  Future<Order?> getActiveCart(String userId) async =>
+      _cartManagementService.getActiveCart(userId);
 
   /// カートに商品を追加（戻り値: (OrderItem, 在庫充足フラグ)）
   Future<(OrderItem?, bool)> addItemToCart(

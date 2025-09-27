@@ -308,4 +308,96 @@ class OrderManagementService {
       rethrow;
     }
   }
+
+  /// 指定ステータスの注文を取得する。
+  Future<Map<OrderStatus, List<Order>>> getOrdersByStatuses(
+    List<OrderStatus> statuses,
+    String userId, {
+    int limit = 50,
+  }) async {
+    log.d(
+      "Fetching orders by statuses",
+      tag: loggerComponent,
+      fields: <String, dynamic>{"statuses": statuses.map((OrderStatus s) => s.name).toList()},
+    );
+
+    if (statuses.isEmpty) {
+      return <OrderStatus, List<Order>>{};
+    }
+
+    try {
+      final List<Order> orders = await _orderRepository.findByStatusList(statuses);
+      final Map<OrderStatus, List<Order>> grouped = <OrderStatus, List<Order>>{};
+
+      for (final OrderStatus status in statuses) {
+        final Iterable<Order> filtered = orders.where(
+          (Order order) => order.userId == userId && order.status == status,
+        );
+        grouped[status] = filtered.take(limit).toList();
+      }
+
+      return grouped;
+    } catch (e, stackTrace) {
+      log.e("Failed to fetch orders by statuses", tag: loggerComponent, error: e, st: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// 注文ステータスを更新する。
+  Future<Order?> updateOrderStatus(
+    String orderId,
+    OrderStatus newStatus,
+    String userId,
+  ) async {
+    log.i(
+      "Updating order status",
+      tag: loggerComponent,
+      fields: <String, dynamic>{"orderId": orderId, "newStatus": newStatus.name},
+    );
+
+    if (newStatus != OrderStatus.preparing && newStatus != OrderStatus.completed) {
+      log.e("Unsupported status update requested", tag: loggerComponent);
+      throw OrderException.invalidOrderStatus(newStatus.value, "preparing/completed only");
+    }
+
+    try {
+      final Order? order = await _orderRepository.getById(orderId);
+      if (order == null || order.userId != userId) {
+        log.e("Order access denied or not found", tag: loggerComponent);
+        throw OrderException.orderNotFound(orderId);
+      }
+
+      if (order.status == newStatus) {
+        log.d("Order already in requested status", tag: loggerComponent);
+        return order;
+      }
+
+      if (newStatus == OrderStatus.completed) {
+        if (order.status == OrderStatus.cancelled || order.status == OrderStatus.refunded) {
+          log.e("Cannot complete canceled/refunded order", tag: loggerComponent);
+          throw OrderException.invalidOrderStatus(order.status.value, newStatus.value);
+        }
+
+        final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+          "status": OrderStatus.completed.value,
+          "completed_at": DateTime.now().toIso8601String(),
+        });
+
+        log.i("Order marked as completed", tag: loggerComponent);
+        return updatedOrder;
+      }
+
+      // newStatus == OrderStatus.preparing
+      final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
+        "status": OrderStatus.preparing.value,
+        "completed_at": null,
+      });
+
+      log.i("Order reverted to preparing", tag: loggerComponent);
+      return updatedOrder;
+    } catch (e, stackTrace) {
+      log.e("Failed to update order status", tag: loggerComponent, error: e, st: stackTrace);
+      rethrow;
+    }
+  }
 }

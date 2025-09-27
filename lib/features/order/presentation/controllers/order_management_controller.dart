@@ -329,7 +329,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       _updateMenuCache(menuItemModels);
 
       final List<MenuCategoryViewData> categoryView = _buildCategoryView(categoryModels);
-      final Order? cart = await _cartService.getOrCreateActiveCart(userId);
+      final Order? cart = await _cartService.getActiveCart(userId);
       String? cartId = cart?.id;
       _CartSnapshot snapshot = const _CartSnapshot(items: <CartItemViewData>[]);
       if (cartId != null) {
