@@ -102,7 +102,12 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             ],
             _HeaderStats(state: state, controller: controller, onDrillDown: _scrollToTable),
             const SizedBox(height: YataSpacingTokens.lg),
-            _ControlsRow(searchController: _searchController, state: state, controller: controller),
+            _ControlsRow(
+              searchController: _searchController,
+              state: state,
+              controller: controller,
+              onCreateCategory: _handleCreateCategory,
+            ),
             const SizedBox(height: YataSpacingTokens.lg),
             _InventoryTable(
               key: _tableKey,
@@ -126,6 +131,89 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
     await _showInventoryItemDialog(initialItem: item);
   }
 
+  Future<void> _handleCreateCategory() async {
+    await _showCreateCategoryDialog();
+  }
+
+  Future<bool> _showCreateCategoryDialog() async {
+    final InventoryManagementController controller = ref.read(
+      inventoryManagementControllerProvider.notifier,
+    );
+
+    final TextEditingController nameController = TextEditingController();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    bool isSaving = false;
+    bool created = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !isSaving,
+      builder: (BuildContext dialogContext) => StatefulBuilder(
+        builder: (BuildContext context, void Function(void Function()) setDialogState) =>
+            AlertDialog(
+              title: const Text("カテゴリを追加"),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: "カテゴリ名"),
+                  enabled: !isSaving,
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "カテゴリ名を入力してください";
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text("キャンセル"),
+                ),
+                FilledButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+
+                          final String? errorMessage = await controller.createCategory(
+                            nameController.text,
+                          );
+
+                          if (!mounted || !dialogContext.mounted) {
+                            return;
+                          }
+
+                          if (errorMessage != null) {
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(SnackBar(content: Text(errorMessage)));
+                            setDialogState(() => isSaving = false);
+                            return;
+                          }
+
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(const SnackBar(content: Text("カテゴリを追加しました")));
+
+                          created = true;
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text("追加"),
+                ),
+              ],
+            ),
+      ),
+    );
+
+    nameController.dispose();
+    return created;
+  }
+
   Future<void> _showInventoryItemDialog({InventoryItemViewData? initialItem}) async {
     final InventoryManagementState snapshot = ref.read(inventoryManagementControllerProvider);
     final InventoryManagementController controller = ref.read(
@@ -139,30 +227,51 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
 
-    final List<DropdownMenuItem<String>> categoryItems = snapshot.categoryEntities
-        .where((MaterialCategory category) => category.id != null)
-        .map(
-          (MaterialCategory category) =>
-              DropdownMenuItem<String>(value: category.id!, child: Text(category.name)),
-        )
-        .toList(growable: true);
+    List<DropdownMenuItem<String>> buildCategoryItems(InventoryManagementState state) {
+      final List<DropdownMenuItem<String>> items = state.categoryEntities
+          .where((MaterialCategory category) => category.id != null)
+          .map(
+            (MaterialCategory category) =>
+                DropdownMenuItem<String>(value: category.id!, child: Text(category.name)),
+          )
+          .toList(growable: true);
 
-    if (initialItem != null &&
-        initialItem.categoryId.isNotEmpty &&
-        categoryItems.every(
-          (DropdownMenuItem<String> item) => item.value != initialItem.categoryId,
-        )) {
-      categoryItems.add(
-        DropdownMenuItem<String>(value: initialItem.categoryId, child: Text(initialItem.category)),
-      );
+      if (initialItem != null &&
+          initialItem.categoryId.isNotEmpty &&
+          items.every((DropdownMenuItem<String> item) => item.value != initialItem.categoryId)) {
+        items.add(
+          DropdownMenuItem<String>(value: initialItem.categoryId, child: Text(initialItem.category)),
+        );
+      }
+
+      return items;
     }
+
+    List<DropdownMenuItem<String>> categoryItems = buildCategoryItems(snapshot);
 
     if (categoryItems.isEmpty) {
-      showSnack("カテゴリが存在しません。先にカテゴリを作成してください");
-      return;
+      final bool created = await _showCreateCategoryDialog();
+      if (!created) {
+        showSnack("カテゴリが存在しません。先にカテゴリを作成してください");
+        return;
+      }
+
+      final InventoryManagementState refreshedState =
+          ref.read(inventoryManagementControllerProvider);
+      categoryItems = buildCategoryItems(refreshedState);
+
+      if (categoryItems.isEmpty) {
+        showSnack("カテゴリの取得に失敗しました。再度お試しください");
+        return;
+      }
     }
 
-    String? selectedCategoryId = initialItem?.categoryId ?? categoryItems.first.value;
+    String? selectedCategoryId = initialItem?.categoryId;
+    if (selectedCategoryId == null ||
+        selectedCategoryId.isEmpty ||
+        categoryItems.every((DropdownMenuItem<String> item) => item.value != selectedCategoryId)) {
+      selectedCategoryId = categoryItems.first.value;
+    }
     UnitType selectedUnit = initialItem?.unitType ?? UnitType.piece;
 
     String formatNumber(double value) =>
@@ -231,6 +340,31 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                             }
                             return null;
                           },
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    final bool created = await _showCreateCategoryDialog();
+                                    if (!created || !mounted || !dialogContext.mounted) {
+                                      return;
+                                    }
+
+                                    final InventoryManagementState refreshedState =
+                                        ref.read(inventoryManagementControllerProvider);
+
+                                    setDialogState(() {
+                                      categoryItems = buildCategoryItems(refreshedState);
+                                      if (categoryItems.isNotEmpty) {
+                                        selectedCategoryId = categoryItems.last.value;
+                                      }
+                                    });
+                                  },
+                            icon: const Icon(Icons.add),
+                            label: const Text("カテゴリを追加"),
+                          ),
                         ),
                         const SizedBox(height: YataSpacingTokens.md),
                         DropdownButtonFormField<UnitType>(
@@ -536,11 +670,13 @@ class _ControlsRow extends StatelessWidget {
     required this.searchController,
     required this.state,
     required this.controller,
+    required this.onCreateCategory,
   });
 
   final TextEditingController searchController;
   final InventoryManagementState state;
   final InventoryManagementController controller;
+  final VoidCallback onCreateCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -549,6 +685,7 @@ class _ControlsRow extends StatelessWidget {
         .toList(growable: false);
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Expanded(
           child: YataSearchField(
@@ -558,12 +695,27 @@ class _ControlsRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: YataSpacingTokens.md),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 540),
-          child: YataSegmentedFilter(
-            segments: segments,
-            selectedIndex: state.selectedCategoryIndex,
-            onSegmentSelected: controller.selectCategory,
+        Flexible(
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: YataSpacingTokens.sm,
+            runSpacing: YataSpacingTokens.sm,
+            children: <Widget>[
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 540),
+                child: YataSegmentedFilter(
+                  segments: segments,
+                  selectedIndex: state.selectedCategoryIndex,
+                  onSegmentSelected: controller.selectCategory,
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: state.isLoading ? null : onCreateCategory,
+                icon: const Icon(Icons.add),
+                label: const Text("カテゴリを追加"),
+              ),
+            ],
           ),
         ),
       ],

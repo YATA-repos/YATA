@@ -361,6 +361,46 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
   /// データを再読み込みする。
   void refresh() => unawaited(loadInventory());
 
+  /// 材料カテゴリを新規作成する。
+  Future<String?> createCategory(String name) async {
+    final String trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      const String message = "カテゴリ名を入力してください。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    if (_ref.read(currentUserIdProvider) == null) {
+      const String message = "ユーザー情報を取得できませんでした。再度ログインしてください。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    int nextDisplayOrder = 0;
+    for (final MaterialCategory category in state.categoryEntities) {
+      if (category.displayOrder >= nextDisplayOrder) {
+        nextDisplayOrder = category.displayOrder + 1;
+      }
+    }
+
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+
+    try {
+      await _inventoryService.createMaterialCategory(
+        MaterialCategory(
+          name: trimmedName,
+          displayOrder: nextDisplayOrder,
+        ),
+      );
+      await loadInventory();
+      return null;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(isLoading: false, errorMessage: message);
+      return message;
+    }
+  }
+
   /// 材料を新規作成する。
   Future<String?> createInventoryItem({
     required String name,

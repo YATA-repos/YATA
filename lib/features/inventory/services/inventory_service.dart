@@ -253,6 +253,11 @@ class InventoryService
   Future<Material?> createMaterial(Material material) async =>
       _materialManagementService.createMaterial(material);
 
+  /// 材料カテゴリを作成
+  @override
+  Future<MaterialCategory?> createMaterialCategory(MaterialCategory category) async =>
+      _materialManagementService.createCategory(category);
+
   /// 材料を更新
   @override
   Future<Material?> updateMaterial(Material material) async =>

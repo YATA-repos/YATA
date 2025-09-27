@@ -133,6 +133,18 @@ void main() {
       expect(created.notes, "仕入れ先A");
     });
 
+    test("createCategory registers a new material category", () async {
+      final int beforeCount = controller.state.categoryEntities.length;
+
+      final String? result = await controller.createCategory("乾物");
+
+      expect(result, isNull);
+      await pumpEventQueue();
+
+      expect(controller.state.categoryEntities.length, beforeCount + 1);
+      expect(controller.state.categories.contains("乾物"), isTrue);
+    });
+
     test("updateInventoryItem updates existing entry", () async {
       final InventoryItemViewData target = controller.state.items.first;
 
@@ -168,7 +180,7 @@ void main() {
 
   group("InventoryManagementController sorting", () {
     test("category sort respects locale-aware ordering", () async {
-      final DateTime now = DateTime(2024, 1, 1);
+      final DateTime now = DateTime(2024);
 
       final List<MaterialCategory> categories = <MaterialCategory>[
         MaterialCategory(
@@ -465,6 +477,23 @@ class _FakeInventoryService implements InventoryServiceContract {
 
     _stockInfos.add(MaterialStockInfo(material: created, stockLevel: created.getStockLevel()));
 
+    return created;
+  }
+
+  @override
+  Future<MaterialCategory?> createMaterialCategory(MaterialCategory category) async {
+    final String newId = category.id ?? "cat_${_categories.length + 1}";
+    final DateTime now = category.createdAt ?? DateTime.now();
+    final MaterialCategory created = MaterialCategory(
+      id: newId,
+      name: category.name,
+      displayOrder: category.displayOrder,
+      createdAt: now,
+      updatedAt: category.updatedAt ?? now,
+      userId: category.userId,
+    );
+
+    _categories.add(created);
     return created;
   }
 

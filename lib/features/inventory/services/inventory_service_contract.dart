@@ -13,6 +13,9 @@ abstract interface class InventoryServiceContract {
   /// 材料を新規作成する。
   Future<Material?> createMaterial(Material material);
 
+  /// 材料カテゴリを新規作成する。
+  Future<MaterialCategory?> createMaterialCategory(MaterialCategory category);
+
   /// 材料情報を更新する。
   Future<Material?> updateMaterial(Material material);
 

@@ -94,6 +94,70 @@ class MaterialManagementService {
   Future<List<MaterialCategory>> getMaterialCategories() async =>
       _materialCategoryRepository.findActiveOrdered();
 
+  /// 材料カテゴリを作成
+  Future<MaterialCategory?> createCategory(MaterialCategory category) async {
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(
+        category.name,
+        required: true,
+        maxLength: 100,
+        fieldName: "カテゴリ名",
+      ),
+      InputValidator.validateNumber(
+        category.displayOrder,
+        min: 0,
+        fieldName: "表示順序",
+      ),
+    ];
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      final List<String> errorMessages = InputValidator.getErrorMessages(errors);
+      log.e(
+        "Validation failed for material category creation: ${errorMessages.join(', ')}",
+        tag: loggerComponent,
+      );
+      throw ValidationException(errorMessages);
+    }
+
+    log.i(
+      ServiceInfo.operationStarted.withParams(<String, String>{
+        "operationType": "create_material_category",
+      }),
+      tag: loggerComponent,
+    );
+
+    try {
+      final MaterialCategory? createdCategory = await _materialCategoryRepository.create(category);
+      if (createdCategory != null) {
+        log.i(
+          ServiceInfo.creationSuccessful.withParams(<String, String>{
+            "entityType": "material_category:${createdCategory.name}",
+          }),
+          tag: loggerComponent,
+        );
+      } else {
+        log.w(
+          ServiceWarning.creationFailed.withParams(<String, String>{
+            "entityType": "material_category:${category.name}",
+          }),
+          tag: loggerComponent,
+        );
+      }
+      return createdCategory;
+    } catch (e, stackTrace) {
+      log.e(
+        ServiceError.operationFailed.withParams(<String, String>{
+          "operationType": "create_material_category",
+        }),
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
   /// カテゴリ別材料一覧を取得
   Future<List<Material>> getMaterialsByCategory(String? categoryId) async =>
       _materialRepository.findByCategoryId(categoryId);
