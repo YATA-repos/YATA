@@ -59,11 +59,15 @@ class StockOperationService {
       );
 
       // 在庫調整を記録
+      final DateTime now = DateTime.now();
+
       final StockAdjustment adjustment = StockAdjustment(
         materialId: request.materialId,
         adjustmentAmount: adjustmentAmount,
         notes: request.notes,
-        adjustedAt: DateTime.now(),
+        adjustedAt: now,
+        createdAt: now,
+        updatedAt: now,
         userId: userId,
       );
       await _stockAdjustmentRepository.create(adjustment);
@@ -76,6 +80,8 @@ class StockOperationService {
         referenceType: ReferenceType.adjustment,
         referenceId: adjustment.id,
         notes: request.reason,
+        createdAt: now,
+        updatedAt: now,
         userId: userId,
       );
       await _stockTransactionRepository.create(transaction);

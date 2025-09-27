@@ -2,13 +2,13 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:mocktail/mocktail.dart";
 import "package:yata/app/wiring/provider.dart"
-  show
-    menuCategoryRepositoryProvider,
-    menuItemRepositoryProvider,
-    menuServiceProvider,
-    materialRepositoryProvider,
-    realtimeManagerProvider,
-    recipeRepositoryProvider;
+    show
+        menuCategoryRepositoryProvider,
+        menuItemRepositoryProvider,
+        menuServiceProvider,
+        materialRepositoryProvider,
+        realtimeManagerProvider,
+        recipeRepositoryProvider;
 import "package:yata/core/constants/enums.dart";
 import "package:yata/core/contracts/realtime/realtime_manager.dart";
 import "package:yata/core/contracts/repositories/inventory/material_repository_contract.dart";
@@ -20,17 +20,14 @@ import "package:yata/features/menu/dto/menu_dto.dart";
 import "package:yata/features/menu/models/menu_model.dart";
 import "package:yata/features/menu/services/menu_service.dart";
 
-class MockMenuItemRepository extends Mock
-    implements MenuItemRepositoryContract<MenuItem> {}
+class MockMenuItemRepository extends Mock implements MenuItemRepositoryContract<MenuItem> {}
 
 class MockMenuCategoryRepository extends Mock
     implements MenuCategoryRepositoryContract<MenuCategory> {}
 
-class MockMaterialRepository extends Mock
-    implements MaterialRepositoryContract<Material> {}
+class MockMaterialRepository extends Mock implements MaterialRepositoryContract<Material> {}
 
-class MockRecipeRepository extends Mock
-    implements RecipeRepositoryContract<Recipe> {}
+class MockRecipeRepository extends Mock implements RecipeRepositoryContract<Recipe> {}
 
 class MockRealtimeManager extends Mock implements RealtimeManagerContract {}
 
@@ -59,14 +56,16 @@ void main() {
     recipeRepository = MockRecipeRepository();
     realtimeManager = MockRealtimeManager();
 
-    container = ProviderContainer(overrides: <Override>[
-      currentUserIdProvider.overrideWith((Ref ref) => "user-1"),
-      realtimeManagerProvider.overrideWithValue(realtimeManager),
-      menuItemRepositoryProvider.overrideWithValue(menuItemRepository),
-      menuCategoryRepositoryProvider.overrideWithValue(menuCategoryRepository),
-      materialRepositoryProvider.overrideWithValue(materialRepository),
-      recipeRepositoryProvider.overrideWithValue(recipeRepository),
-    ]);
+    container = ProviderContainer(
+      overrides: <Override>[
+        currentUserIdProvider.overrideWith((Ref ref) => "user-1"),
+        realtimeManagerProvider.overrideWithValue(realtimeManager),
+        menuItemRepositoryProvider.overrideWithValue(menuItemRepository),
+        menuCategoryRepositoryProvider.overrideWithValue(menuCategoryRepository),
+        materialRepositoryProvider.overrideWithValue(materialRepository),
+        recipeRepositoryProvider.overrideWithValue(recipeRepository),
+      ],
+    );
 
     service = container.read(menuServiceProvider);
   });
@@ -83,7 +82,6 @@ void main() {
         categoryId: "cat-1",
         price: 900,
         isAvailable: true,
-        estimatedPrepTimeMinutes: 5,
         displayOrder: 1,
         userId: "user-1",
       );
@@ -99,15 +97,19 @@ void main() {
         userId: "user-1",
       );
 
-      when(() => recipeRepository.findByMenuItemIds(any<List<String>>())).thenAnswer(
-        (_) async => <Recipe>[recipe],
+      when(
+        () => recipeRepository.findByMenuItemIds(any<List<String>>()),
+      ).thenAnswer((_) async => <Recipe>[recipe]);
+
+      when(
+        () => materialRepository.findByIds(any<List<String>>()),
+      ).thenAnswer((_) async => <Material>[]);
+
+      final MenuAvailabilityInfo result = await service.checkMenuAvailability(
+        "item-1",
+        1,
+        "user-1",
       );
-
-      when(() => materialRepository.findByIds(any<List<String>>()))
-          .thenAnswer((_) async => <Material>[]);
-
-      final MenuAvailabilityInfo result =
-          await service.checkMenuAvailability("item-1", 1, "user-1");
 
       expect(result.isAvailable, isFalse);
       expect(result.estimatedServings, 0);
@@ -123,7 +125,6 @@ void main() {
         categoryId: "cat-1",
         price: 800,
         isAvailable: true,
-        estimatedPrepTimeMinutes: 7,
         displayOrder: 1,
         userId: "user-1",
       );
@@ -134,14 +135,13 @@ void main() {
         categoryId: "cat-1",
         price: 600,
         isAvailable: false,
-        estimatedPrepTimeMinutes: 6,
         displayOrder: 2,
         userId: "user-1",
       );
 
-      when(() => menuItemRepository.findByIds(any<List<String>>())).thenAnswer(
-        (_) async => <MenuItem>[availableItem, disabledItem],
-      );
+      when(
+        () => menuItemRepository.findByIds(any<List<String>>()),
+      ).thenAnswer((_) async => <MenuItem>[availableItem, disabledItem]);
 
       final Recipe recipe = Recipe(
         id: "recipe-1",
@@ -152,9 +152,9 @@ void main() {
         userId: "user-1",
       );
 
-      when(() => recipeRepository.findByMenuItemIds(any<List<String>>())).thenAnswer(
-        (_) async => <Recipe>[recipe],
-      );
+      when(
+        () => recipeRepository.findByMenuItemIds(any<List<String>>()),
+      ).thenAnswer((_) async => <Recipe>[recipe]);
 
       final Material material = Material(
         id: "mat-1",
@@ -167,12 +167,14 @@ void main() {
         userId: "user-1",
       );
 
-      when(() => materialRepository.findByIds(any<List<String>>())).thenAnswer(
-        (_) async => <Material>[material],
-      );
+      when(
+        () => materialRepository.findByIds(any<List<String>>()),
+      ).thenAnswer((_) async => <Material>[material]);
 
-      final Map<String, MenuAvailabilityInfo> result =
-          await service.bulkCheckMenuAvailability("user-1", menuItemIds: <String>["item-1"]);
+      final Map<String, MenuAvailabilityInfo> result = await service.bulkCheckMenuAvailability(
+        "user-1",
+        menuItemIds: <String>["item-1"],
+      );
 
       expect(result.keys, contains("item-1"));
       expect(result.keys, isNot(contains("item-2")));
@@ -182,7 +184,7 @@ void main() {
 
   group("searchMenuItems", () {
     test("falls back to manual search when repository call fails", () async {
-  when(() => menuItemRepository.searchByName(any<dynamic>())).thenThrow(Exception("network"));
+      when(() => menuItemRepository.searchByName(any<dynamic>())).thenThrow(Exception("network"));
 
       final MenuItem match = MenuItem(
         id: "item-1",
@@ -190,7 +192,6 @@ void main() {
         categoryId: "cat-1",
         price: 700,
         isAvailable: true,
-        estimatedPrepTimeMinutes: 6,
         displayOrder: 1,
         userId: "user-1",
         description: "焼き餃子",
@@ -202,15 +203,14 @@ void main() {
         categoryId: "cat-1",
         price: 450,
         isAvailable: true,
-        estimatedPrepTimeMinutes: 3,
         displayOrder: 2,
         userId: "user-1",
         description: "具たっぷり",
       );
 
-      when(() => menuItemRepository.findByCategoryId(null)).thenAnswer(
-        (_) async => <MenuItem>[match, other],
-      );
+      when(
+        () => menuItemRepository.findByCategoryId(null),
+      ).thenAnswer((_) async => <MenuItem>[match, other]);
 
       final List<MenuItem> results = await service.searchMenuItems("餃子", "user-1");
 

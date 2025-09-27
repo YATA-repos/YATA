@@ -149,7 +149,6 @@ class _MemoryMenuItemRepository implements MenuItemRepositoryContract<MenuItem> 
       categoryId: entity.categoryId,
       price: entity.price,
       isAvailable: entity.isAvailable,
-      estimatedPrepTimeMinutes: entity.estimatedPrepTimeMinutes,
       displayOrder: entity.displayOrder,
       description: entity.description,
       imageUrl: entity.imageUrl,
@@ -173,8 +172,6 @@ class _MemoryMenuItemRepository implements MenuItemRepositoryContract<MenuItem> 
       categoryId: (updates["category_id"] as String?) ?? current.categoryId,
       price: (updates["price"] as int?) ?? current.price,
       isAvailable: (updates["is_available"] as bool?) ?? current.isAvailable,
-      estimatedPrepTimeMinutes:
-          (updates["estimated_prep_time_minutes"] as int?) ?? current.estimatedPrepTimeMinutes,
       displayOrder: (updates["display_order"] as int?) ?? current.displayOrder,
       description: (updates["description"] as String?) ?? current.description,
       imageUrl: (updates["image_url"] as String?) ?? current.imageUrl,
@@ -204,9 +201,7 @@ class _MemoryMenuItemRepository implements MenuItemRepositoryContract<MenuItem> 
       return List<MenuItem>.from(_items)
         ..sort((MenuItem a, MenuItem b) => a.displayOrder.compareTo(b.displayOrder));
     }
-    return _items
-        .where((MenuItem item) => item.categoryId == categoryId)
-        .toList(growable: false);
+    return _items.where((MenuItem item) => item.categoryId == categoryId).toList(growable: false);
   }
 
   @override
@@ -249,10 +244,8 @@ class _MemoryMenuItemRepository implements MenuItemRepositoryContract<MenuItem> 
   Future<MenuItem?> getByPrimaryKey(Map<String, dynamic> keyMap) => throw UnimplementedError();
 
   @override
-  Future<MenuItem?> updateByPrimaryKey(
-    Map<String, dynamic> keyMap,
-    Map<String, dynamic> updates,
-  ) => throw UnimplementedError();
+  Future<MenuItem?> updateByPrimaryKey(Map<String, dynamic> keyMap, Map<String, dynamic> updates) =>
+      throw UnimplementedError();
 }
 
 class _NullMaterialRepository implements MaterialRepositoryContract<Material> {
@@ -299,13 +292,12 @@ class _NullMaterialRepository implements MaterialRepositoryContract<Material> {
   Future<Material?> getByPrimaryKey(Map<String, dynamic> keyMap) => throw UnimplementedError();
 
   @override
-  Future<Material?> updateById(String id, Map<String, dynamic> updates) => throw UnimplementedError();
+  Future<Material?> updateById(String id, Map<String, dynamic> updates) =>
+      throw UnimplementedError();
 
   @override
-  Future<Material?> updateByPrimaryKey(
-    Map<String, dynamic> keyMap,
-    Map<String, dynamic> updates,
-  ) => throw UnimplementedError();
+  Future<Material?> updateByPrimaryKey(Map<String, dynamic> keyMap, Map<String, dynamic> updates) =>
+      throw UnimplementedError();
 }
 
 class _NullRecipeRepository implements RecipeRepositoryContract<Recipe> {
@@ -355,10 +347,8 @@ class _NullRecipeRepository implements RecipeRepositoryContract<Recipe> {
   Future<Recipe?> updateById(String id, Map<String, dynamic> updates) => throw UnimplementedError();
 
   @override
-  Future<Recipe?> updateByPrimaryKey(
-    Map<String, dynamic> keyMap,
-    Map<String, dynamic> updates,
-  ) => throw UnimplementedError();
+  Future<Recipe?> updateByPrimaryKey(Map<String, dynamic> keyMap, Map<String, dynamic> updates) =>
+      throw UnimplementedError();
 }
 
 class _TestMenuService extends MenuService {
@@ -366,15 +356,15 @@ class _TestMenuService extends MenuService {
     required super.ref,
     required MenuItemRepositoryContract<MenuItem> itemRepository,
     required MenuCategoryRepositoryContract<MenuCategory> categoryRepository,
-  })  : _itemRepository = itemRepository,
-        _categoryRepository = categoryRepository,
-        super(
-          realtimeManager: _FakeRealtimeManager(),
-          menuItemRepository: itemRepository,
-          menuCategoryRepository: categoryRepository,
-          materialRepository: _NullMaterialRepository(),
-          recipeRepository: _NullRecipeRepository(),
-        );
+  }) : _itemRepository = itemRepository,
+       _categoryRepository = categoryRepository,
+       super(
+         realtimeManager: _FakeRealtimeManager(),
+         menuItemRepository: itemRepository,
+         menuCategoryRepository: categoryRepository,
+         materialRepository: _NullMaterialRepository(),
+         recipeRepository: _NullRecipeRepository(),
+       );
 
   final MenuItemRepositoryContract<MenuItem> _itemRepository;
   final MenuCategoryRepositoryContract<MenuCategory> _categoryRepository;
@@ -412,20 +402,19 @@ class _TestMenuService extends MenuService {
     int quantity,
     String userId,
   ) async => MenuAvailabilityInfo(
-        menuItemId: menuItemId,
-        isAvailable: true,
-        missingMaterials: const <String>[],
-        estimatedServings: 10,
-      );
+    menuItemId: menuItemId,
+    isAvailable: true,
+    missingMaterials: const <String>[],
+    estimatedServings: 10,
+  );
 
   @override
   Future<void> updateCategoryOrder(List<MenuCategory> categories) async {
     for (final MenuCategory category in categories) {
       if (category.id != null) {
-        await _categoryRepository.updateById(
-          category.id!,
-          <String, dynamic>{"display_order": category.displayOrder},
-        );
+        await _categoryRepository.updateById(category.id!, <String, dynamic>{
+          "display_order": category.displayOrder,
+        });
       }
     }
   }
@@ -445,17 +434,23 @@ void main() {
     final _MemoryMenuCategoryRepository categoryRepository = _MemoryMenuCategoryRepository();
     final _MemoryMenuItemRepository itemRepository = _MemoryMenuItemRepository();
 
-    container = ProviderContainer(overrides: <Override>[
-      menuServiceProvider.overrideWith(
-        (Ref ref) => _TestMenuService(
-          ref: ref,
-          itemRepository: itemRepository,
-          categoryRepository: categoryRepository,
+    container = ProviderContainer(
+      overrides: <Override>[
+        menuServiceProvider.overrideWith(
+          (Ref ref) => _TestMenuService(
+            ref: ref,
+            itemRepository: itemRepository,
+            categoryRepository: categoryRepository,
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
 
-    final UserProfile userProfile = UserProfile(email: "owner@example.com", id: "user-1", userId: "user-1");
+    final UserProfile userProfile = UserProfile(
+      email: "owner@example.com",
+      id: "user-1",
+      userId: "user-1",
+    );
     container.read(authStateNotifierProvider.notifier).state = AuthState.authenticated(userProfile);
 
     controller = container.read(menuManagementControllerProvider.notifier);
@@ -473,15 +468,16 @@ void main() {
   });
 
   test("createMenuItem increases item count for category", () async {
-    final MenuCategoryViewData category =
-        await controller.createCategory(name: "主菜", displayOrder: 1);
+    final MenuCategoryViewData category = await controller.createCategory(
+      name: "主菜",
+      displayOrder: 1,
+    );
 
     await controller.createMenuItem(
       name: "餃子",
       categoryId: category.id,
       price: 680,
       isAvailable: true,
-      estimatedPrepTimeMinutes: 10,
       displayOrder: 1,
       description: "焼き餃子6個",
     );
