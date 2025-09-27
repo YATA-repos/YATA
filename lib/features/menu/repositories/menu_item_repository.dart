@@ -3,6 +3,8 @@ import "../../../core/contracts/repositories/crud_repository.dart" as repo_contr
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../models/menu_model.dart";
 
+const int _menuItemFetchLimit = 1000;
+
 class MenuItemRepository implements MenuItemRepositoryContract<MenuItem> {
   MenuItemRepository({required repo_contract.CrudRepository<MenuItem, String> delegate})
     : _delegate = delegate;
@@ -17,14 +19,14 @@ class MenuItemRepository implements MenuItemRepositoryContract<MenuItem> {
     ];
 
     if (categoryId == null) {
-      return _delegate.find();
+      return _delegate.find(orderBy: orderBy, limit: _menuItemFetchLimit);
     }
 
     final List<QueryFilter> filters = <QueryFilter>[
       QueryConditionBuilder.eq("category_id", categoryId),
     ];
 
-    return _delegate.find(filters: filters, orderBy: orderBy);
+    return _delegate.find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
   }
 
   /// 販売可能なメニューアイテムのみ取得
@@ -36,7 +38,7 @@ class MenuItemRepository implements MenuItemRepositoryContract<MenuItem> {
       const OrderByCondition(column: "display_order"),
     ];
 
-    return _delegate.find(filters: filters, orderBy: orderBy);
+  return _delegate.find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
   }
 
   /// 名前でメニューアイテムを検索
@@ -68,7 +70,7 @@ class MenuItemRepository implements MenuItemRepositoryContract<MenuItem> {
       const OrderByCondition(column: "display_order"),
     ];
 
-    return find(filters: filters, orderBy: orderBy);
+  return find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
   }
 
   /// IDリストでメニューアイテムを取得

@@ -380,8 +380,20 @@ class _TestMenuService extends MenuService {
   final MenuCategoryRepositoryContract<MenuCategory> _categoryRepository;
 
   @override
-  Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(String userId) async {
-    final List<MenuItem> items = await _itemRepository.findByCategoryId(null);
+  Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(
+    String userId, {
+    Iterable<String>? menuItemIds,
+  }) async {
+    final List<MenuItem> allItems = await _itemRepository.findByCategoryId(null);
+    List<MenuItem> items = allItems;
+
+    if (menuItemIds != null) {
+      final Set<String> ids = <String>{
+        for (final String id in menuItemIds)
+          if (id.isNotEmpty) id,
+      };
+      items = allItems.where((MenuItem item) => item.id != null && ids.contains(item.id)).toList();
+    }
     return <String, MenuAvailabilityInfo>{
       for (final MenuItem item in items)
         if (item.id != null)
@@ -419,11 +431,17 @@ class _TestMenuService extends MenuService {
   }
 }
 
+Future<void> _waitForMenuManagementInitialization(MenuManagementController controller) async {
+  while (controller.state.isInitializing) {
+    await pumpEventQueue();
+  }
+}
+
 void main() {
   late ProviderContainer container;
   late MenuManagementController controller;
 
-  setUp(() {
+  setUp(() async {
     final _MemoryMenuCategoryRepository categoryRepository = _MemoryMenuCategoryRepository();
     final _MemoryMenuItemRepository itemRepository = _MemoryMenuItemRepository();
 
@@ -441,6 +459,7 @@ void main() {
     container.read(authStateNotifierProvider.notifier).state = AuthState.authenticated(userProfile);
 
     controller = container.read(menuManagementControllerProvider.notifier);
+    await _waitForMenuManagementInitialization(controller);
   });
 
   tearDown(() => container.dispose());

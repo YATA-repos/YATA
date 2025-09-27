@@ -21,6 +21,11 @@ import "../models/menu_model.dart";
 /// メニュー機能のリアルタイムイベントをUI層へ伝搬するためのカウンタープロバイダー。
 final StateProvider<int> menuRealtimeEventCounterProvider = StateProvider<int>((Ref ref) => 0);
 
+typedef _AvailabilityContext = ({
+  Map<String, List<Recipe>> recipesByMenuItemId,
+  Map<String, Material> materialIndex,
+});
+
 class MenuService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   MenuService({
     required Ref ref,
@@ -349,30 +354,39 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       throw ValidationException(InputValidator.getErrorMessages(errors));
     }
 
-    log.d("Started menu item search: keyword=\"$keyword\"", tag: loggerComponent);
+    log.d(
+      MenuDebug.menuSearchStarted.withParams(<String, String>{"keyword": keyword}),
+      tag: loggerComponent,
+    );
 
     try {
-      // まずユーザーのメニューアイテムを取得してから手動検索
-      final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null);
+      final List<MenuItem> results = await _menuItemRepository.searchByName(keyword);
 
-      log.d("Retrieved ${userItems.length} menu items for search", tag: loggerComponent);
+      log.d(
+        MenuDebug.menuSearchCompleted.withParams(<String, String>{
+          "itemCount": results.length.toString(),
+        }),
+        tag: loggerComponent,
+      );
 
-      // 手動でキーワード検索（Supabaseの制限回避）
-      final List<MenuItem> matchingItems = <MenuItem>[];
-      for (final MenuItem item in userItems) {
-        if (keyword.toLowerCase().isNotEmpty &&
-            (item.name.toLowerCase().contains(keyword.toLowerCase()) ||
-                (item.description != null &&
-                    item.description!.toLowerCase().contains(keyword.toLowerCase())))) {
-          matchingItems.add(item);
-        }
-      }
-
-      log.d("Menu search completed: ${matchingItems.length} items found", tag: loggerComponent);
-      return matchingItems;
+      return results;
     } catch (e, stackTrace) {
-      log.e(MenuError.searchFailed.message, tag: loggerComponent, error: e, st: stackTrace);
-      rethrow;
+      log.w(
+        "Falling back to manual search due to repository failure: $e",
+        tag: loggerComponent,
+      );
+      log.t(stackTrace.toString(), tag: loggerComponent);
+
+      final List<MenuItem> fallbackResults = await _searchMenuItemsFallback(keyword);
+
+      log.d(
+        MenuDebug.menuSearchCompleted.withParams(<String, String>{
+          "itemCount": fallbackResults.length.toString(),
+        }),
+        tag: loggerComponent,
+      );
+
+      return fallbackResults;
     }
   }
 
@@ -401,10 +415,14 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       throw ValidationException(InputValidator.getErrorMessages(errors));
     }
 
-    log.d("Checking menu availability: quantity=$quantity", tag: loggerComponent);
+    log.d(
+      MenuDebug.availabilityCheckStarted.withParams(<String, String>{
+        "quantity": quantity.toString(),
+      }),
+      tag: loggerComponent,
+    );
 
     try {
-      // メニューアイテムを取得
       final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
 
       if (menuItem == null || menuItem.userId != userId) {
@@ -417,90 +435,56 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         );
       }
 
-      // メニューアイテムが無効になっている場合
       if (!menuItem.isAvailable) {
         log.i(
           MenuInfo.menuItemDisabled.withParams(<String, String>{"itemName": menuItem.name}),
           tag: loggerComponent,
         );
-        return MenuAvailabilityInfo(
-          menuItemId: menuItemId,
-          isAvailable: false,
-          missingMaterials: <String>["Menu item disabled"],
-          estimatedServings: 0,
-        );
+        return _buildDisabledAvailability(menuItemId);
       }
 
-      // レシピを取得
-      final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
+      final _AvailabilityContext context =
+          await _buildAvailabilityContext(<String>[menuItemId]);
+      final List<Recipe> recipes = context.recipesByMenuItemId[menuItemId] ?? <Recipe>[];
 
       if (recipes.isEmpty) {
-        // レシピがない場合は作成可能とみなす
         log.d(MenuDebug.noRecipesFound.message, tag: loggerComponent);
-        return MenuAvailabilityInfo(
-          menuItemId: menuItemId,
-          isAvailable: true,
-          missingMaterials: <String>[],
-          estimatedServings: quantity,
+      } else {
+        log.d(
+          MenuDebug.recipesChecking.withParams(<String, String>{
+            "recipeCount": recipes.length.toString(),
+          }),
+          tag: loggerComponent,
         );
       }
 
-      log.d("Checking ${recipes.length} recipes for availability", tag: loggerComponent);
+      final MenuAvailabilityInfo info = _buildAvailabilityForEnabledItem(
+        menuItem: menuItem,
+        recipes: recipes,
+        materialIndex: context.materialIndex,
+        quantity: quantity,
+        userId: userId,
+      );
 
-      final List<String> missingMaterials = <String>[];
-      double maxServings = double.infinity;
-
-      for (final Recipe recipe in recipes) {
-        // 材料を取得
-        final Material? material = await _materialRepository.getById(recipe.materialId);
-
-        if (material == null || material.userId != userId) {
-          continue;
-        }
-
-        final double requiredAmount = recipe.requiredAmount * quantity;
-        final double availableAmount = material.currentStock;
-
-        if (!recipe.isOptional && availableAmount < requiredAmount) {
-          missingMaterials.add(material.name);
-        }
-
-        // 最大作成可能数を計算
-        if (!recipe.isOptional && recipe.requiredAmount > 0) {
-          final int possibleServings = (availableAmount / recipe.requiredAmount).floor();
-          maxServings = maxServings == double.infinity
-              ? possibleServings.toDouble()
-              : math.min(maxServings, possibleServings.toDouble());
-        }
-      }
-
-      if (maxServings == double.infinity) {
-        maxServings = quantity.toDouble();
-      }
-
-      final bool isAvailable = missingMaterials.isEmpty && maxServings >= quantity;
-
-      if (!isAvailable) {
+      if (!info.isAvailable) {
         log.d(
-          "Menu item not available: ${menuItem.name}, missing materials: ${missingMaterials.join(", ")}",
+          MenuDebug.insufficientStock.withParams(<String, String>{
+            "itemName": menuItem.name,
+            "missingMaterials": info.missingMaterials.join(", "),
+          }),
           tag: loggerComponent,
         );
       } else {
         log.i(
           MenuInfo.menuItemEnabled.withParams(<String, String>{
             "itemName": menuItem.name,
-            "maxServings": maxServings.round().toString(),
+            "maxServings": (info.estimatedServings ?? quantity).toString(),
           }),
           tag: loggerComponent,
         );
       }
 
-      return MenuAvailabilityInfo(
-        menuItemId: menuItemId,
-        isAvailable: isAvailable,
-        missingMaterials: missingMaterials,
-        estimatedServings: maxServings.round(),
-      );
+      return info;
     } catch (e, stackTrace) {
       log.e(
         MenuError.availabilityCheckFailed.message,
@@ -514,25 +498,24 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
   /// 在庫不足で販売不可なメニューアイテムIDを取得
   Future<List<String>> getUnavailableMenuItems(String userId) async {
-    // 全メニューアイテムを取得
     final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null);
+    final List<MenuItem> itemsWithId =
+        menuItems.where((MenuItem item) => item.id != null).toList(growable: false);
+
+    if (itemsWithId.isEmpty) {
+      return <String>[];
+    }
+
+    final Map<String, MenuAvailabilityInfo> availabilityMap =
+        await _evaluateAvailabilityForMenuItems(itemsWithId, userId);
 
     final List<String> unavailableItems = <String>[];
 
-    for (final MenuItem menuItem in menuItems) {
-      if (!menuItem.isAvailable) {
-        unavailableItems.add(menuItem.id!);
-        continue;
-      }
-
-      // 在庫チェック
-      final MenuAvailabilityInfo availability = await checkMenuAvailability(
-        menuItem.id!,
-        1,
-        userId,
-      );
-      if (!availability.isAvailable) {
-        unavailableItems.add(menuItem.id!);
+    for (final MenuItem menuItem in itemsWithId) {
+      final String id = menuItem.id!;
+      final MenuAvailabilityInfo? availability = availabilityMap[id];
+      if (!menuItem.isAvailable || availability == null || !availability.isAvailable) {
+        unavailableItems.add(id);
       }
     }
 
@@ -540,22 +523,39 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
   }
 
   /// 全メニューアイテムの在庫可否を一括チェック
-  Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(String userId) async {
-    // 全メニューアイテムを取得
-    final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null);
+  Future<Map<String, MenuAvailabilityInfo>> bulkCheckMenuAvailability(
+    String userId, {
+    Iterable<String>? menuItemIds,
+  }) async {
+    List<MenuItem> menuItems;
+    Set<String>? filterIds;
 
-    final Map<String, MenuAvailabilityInfo> availabilityInfo = <String, MenuAvailabilityInfo>{};
+    if (menuItemIds == null) {
+      menuItems = await _menuItemRepository.findByCategoryId(null);
+    } else {
+      filterIds = <String>{
+        for (final String id in menuItemIds)
+          if (id.isNotEmpty) id,
+      };
 
-    for (final MenuItem menuItem in menuItems) {
-      final MenuAvailabilityInfo availability = await checkMenuAvailability(
-        menuItem.id!,
-        1,
-        userId,
-      );
-      availabilityInfo[menuItem.id!] = availability;
+      if (filterIds.isEmpty) {
+        return <String, MenuAvailabilityInfo>{};
+      }
+
+      menuItems = await _menuItemRepository.findByIds(filterIds.toList(growable: false));
     }
 
-    return availabilityInfo;
+    if (filterIds != null) {
+      menuItems = menuItems
+          .where((MenuItem item) => item.id != null && filterIds!.contains(item.id))
+          .toList(growable: false);
+    }
+
+    if (menuItems.isEmpty) {
+      return <String, MenuAvailabilityInfo>{};
+    }
+
+    return _evaluateAvailabilityForMenuItems(menuItems, userId);
   }
 
   /// レシピがないメニューアイテムの最大提供可能数（業務ルールによる制限）
@@ -563,12 +563,11 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
   /// 現在の在庫で作れる最大数を計算
   Future<int> calculateMaxServings(String menuItemId, String userId) async {
-    // レシピを取得
-    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
+    final _AvailabilityContext context =
+        await _buildAvailabilityContext(<String>[menuItemId]);
+    final List<Recipe> recipes = context.recipesByMenuItemId[menuItemId] ?? <Recipe>[];
 
     if (recipes.isEmpty) {
-      // レシピがない場合は業務ルールに基づく上限値を返す
-      // 小規模店舗向けの合理的な上限として1000個を設定
       return _maxServingsWithoutRecipe;
     }
 
@@ -579,22 +578,22 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         continue;
       }
 
-      // 材料を取得
-      final Material? material = await _materialRepository.getById(recipe.materialId);
-
+      final Material? material = context.materialIndex[recipe.materialId];
       if (material == null || material.userId != userId) {
-        continue;
+        return 0;
       }
 
       if (recipe.requiredAmount > 0) {
-        final int possibleServings = (material.currentStock / recipe.requiredAmount).floor();
-        maxServings = maxServings == double.infinity
-            ? possibleServings.toDouble()
-            : math.min(maxServings, possibleServings.toDouble());
+        final double possibleServings = material.currentStock / recipe.requiredAmount;
+        maxServings = maxServings.isFinite ? math.min(maxServings, possibleServings) : possibleServings;
       }
     }
 
-    return maxServings == double.infinity ? 0 : maxServings.round();
+    if (!maxServings.isFinite || maxServings <= 0) {
+      return 0;
+    }
+
+    return maxServings.floor();
   }
 
   /// メニュー作成に必要な材料と使用量を計算
@@ -721,10 +720,19 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     log.i("Started auto-updating menu availability by stock", tag: loggerComponent);
 
     try {
-      // 全メニューアイテムの在庫状況をチェック
-      final Map<String, MenuAvailabilityInfo> availabilityInfo = await bulkCheckMenuAvailability(
-        userId,
-      );
+      final List<MenuItem> menuItems = await _menuItemRepository.findByCategoryId(null);
+      if (menuItems.isEmpty) {
+        log.i("No menu items found for auto-update", tag: loggerComponent);
+        return <String, bool>{};
+      }
+
+      final Map<String, MenuItem> menuItemIndex = <String, MenuItem>{
+        for (final MenuItem item in menuItems)
+          if (item.id != null) item.id!: item,
+      };
+
+      final Map<String, MenuAvailabilityInfo> availabilityInfo =
+          await _evaluateAvailabilityForMenuItems(menuItems, userId);
 
       log.d("Checked availability for ${availabilityInfo.length} menu items", tag: loggerComponent);
 
@@ -732,17 +740,16 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       final Map<String, bool> results = <String, bool>{};
 
       for (final MapEntry<String, MenuAvailabilityInfo> entry in availabilityInfo.entries) {
-        final String menuItemId = entry.key;
-        final MenuAvailabilityInfo info = entry.value;
+        final MenuItem? menuItem = menuItemIndex[entry.key];
+        if (menuItem == null) {
+          continue;
+        }
 
-        // 在庫に基づく可否状態を決定
-        final bool shouldBeAvailable = info.isAvailable && (info.estimatedServings ?? 0) > 0;
+        final bool shouldBeAvailable =
+            entry.value.isAvailable && (entry.value.estimatedServings ?? 0) > 0;
 
-        // 現在のメニューアイテムを取得して状態比較
-        final MenuItem? menuItem = await _menuItemRepository.getById(menuItemId);
-
-        if (menuItem != null && menuItem.isAvailable != shouldBeAvailable) {
-          updates[menuItemId] = shouldBeAvailable;
+        if (menuItem.isAvailable != shouldBeAvailable) {
+          updates[entry.key] = shouldBeAvailable;
         }
       }
 
@@ -751,7 +758,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         tag: loggerComponent,
       );
 
-      // 一括更新
       if (updates.isNotEmpty) {
         results.addAll(await bulkUpdateMenuAvailability(updates, userId));
         log.i(
@@ -772,6 +778,200 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       );
       rethrow;
     }
+  }
+
+  Future<List<MenuItem>> _searchMenuItemsFallback(String keyword) async {
+    final String normalizedKeyword = keyword.toLowerCase();
+    final List<MenuItem> userItems = await _menuItemRepository.findByCategoryId(null);
+
+    log.d(
+      MenuDebug.menuItemsRetrieved.withParams(<String, String>{
+        "itemCount": userItems.length.toString(),
+      }),
+      tag: loggerComponent,
+    );
+
+    if (normalizedKeyword.isEmpty) {
+      return userItems;
+    }
+
+    final List<MenuItem> matchingItems = <MenuItem>[];
+    for (final MenuItem item in userItems) {
+      final String name = item.name.toLowerCase();
+      final String? description = item.description?.toLowerCase();
+      if (name.contains(normalizedKeyword) || (description?.contains(normalizedKeyword) ?? false)) {
+        matchingItems.add(item);
+      }
+    }
+
+    return matchingItems;
+  }
+
+  MenuAvailabilityInfo _buildDisabledAvailability(String menuItemId) => MenuAvailabilityInfo(
+    menuItemId: menuItemId,
+    isAvailable: false,
+    missingMaterials: const <String>["Menu item disabled"],
+    estimatedServings: 0,
+  );
+
+  Future<Map<String, MenuAvailabilityInfo>> _evaluateAvailabilityForMenuItems(
+    List<MenuItem> menuItems,
+    String userId, {
+    int quantity = 1,
+  }) async {
+    final List<MenuItem> itemsWithId =
+        menuItems.where((MenuItem item) => item.id != null).toList(growable: false);
+
+    if (itemsWithId.isEmpty) {
+      return <String, MenuAvailabilityInfo>{};
+    }
+
+    final List<MenuItem> enabledItems =
+        itemsWithId.where((MenuItem item) => item.isAvailable).toList(growable: false);
+
+    final _AvailabilityContext context = await _buildAvailabilityContext(
+      enabledItems.map((MenuItem item) => item.id!),
+    );
+
+    final Map<String, MenuAvailabilityInfo> availability = <String, MenuAvailabilityInfo>{};
+
+    for (final MenuItem item in itemsWithId) {
+      final String id = item.id!;
+      if (!item.isAvailable) {
+        availability[id] = _buildDisabledAvailability(id);
+        continue;
+      }
+
+      final List<Recipe> recipes = context.recipesByMenuItemId[id] ?? <Recipe>[];
+      availability[id] = _buildAvailabilityForEnabledItem(
+        menuItem: item,
+        recipes: recipes,
+        materialIndex: context.materialIndex,
+        quantity: quantity,
+        userId: userId,
+      );
+    }
+
+    return availability;
+  }
+
+  MenuAvailabilityInfo _buildAvailabilityForEnabledItem({
+    required MenuItem menuItem,
+    required List<Recipe> recipes,
+    required Map<String, Material> materialIndex,
+    required int quantity,
+    required String userId,
+  }) {
+    final String? menuItemId = menuItem.id;
+    if (menuItemId == null) {
+      return MenuAvailabilityInfo(
+        menuItemId: "",
+        isAvailable: false,
+        missingMaterials: const <String>["Menu item not found"],
+        estimatedServings: 0,
+      );
+    }
+
+    if (recipes.isEmpty) {
+      return MenuAvailabilityInfo(
+        menuItemId: menuItemId,
+        isAvailable: true,
+        missingMaterials: const <String>[],
+        estimatedServings: quantity,
+      );
+    }
+
+    final Set<String> missingMaterials = <String>{};
+    double maxServings = double.infinity;
+
+    for (final Recipe recipe in recipes) {
+      final Material? material = materialIndex[recipe.materialId];
+
+      if (material == null || material.userId != userId) {
+        if (!recipe.isOptional) {
+          missingMaterials.add(_describeMissingMaterial(material, recipe));
+          maxServings = 0;
+        }
+        continue;
+      }
+
+      final double requiredAmount = recipe.requiredAmount * quantity;
+      final double availableAmount = material.currentStock;
+
+      if (!recipe.isOptional && availableAmount < requiredAmount) {
+        missingMaterials.add(material.name);
+      }
+
+      if (!recipe.isOptional && recipe.requiredAmount > 0) {
+        final double possibleServings = availableAmount / recipe.requiredAmount;
+        maxServings = maxServings.isFinite ? math.min(maxServings, possibleServings) : possibleServings;
+      }
+    }
+
+    if (!maxServings.isFinite) {
+      maxServings = quantity.toDouble();
+    }
+
+    final bool isAvailable = missingMaterials.isEmpty && maxServings >= quantity;
+    final int estimatedServings = math.max(0, maxServings.floor());
+
+    return MenuAvailabilityInfo(
+      menuItemId: menuItemId,
+      isAvailable: isAvailable,
+      missingMaterials: missingMaterials.toList(growable: false),
+      estimatedServings: estimatedServings,
+    );
+  }
+
+  Future<_AvailabilityContext> _buildAvailabilityContext(Iterable<String> menuItemIds) async {
+    final Set<String> ids = <String>{
+      for (final String id in menuItemIds)
+        if (id.isNotEmpty) id,
+    };
+
+    if (ids.isEmpty) {
+      return (
+        recipesByMenuItemId: <String, List<Recipe>>{},
+        materialIndex: <String, Material>{},
+      );
+    }
+
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemIds(ids.toList());
+    final Map<String, List<Recipe>> recipesByMenuItemId = <String, List<Recipe>>{};
+    final Set<String> materialIds = <String>{};
+
+    for (final Recipe recipe in recipes) {
+      recipesByMenuItemId.putIfAbsent(recipe.menuItemId, () => <Recipe>[]).add(recipe);
+      materialIds.add(recipe.materialId);
+    }
+
+    if (materialIds.isEmpty) {
+      return (
+        recipesByMenuItemId: recipesByMenuItemId,
+        materialIndex: <String, Material>{},
+      );
+    }
+
+    final List<Material> materials = await _materialRepository.findByIds(
+      materialIds.toList(growable: false),
+    );
+
+    final Map<String, Material> materialIndex = <String, Material>{
+      for (final Material material in materials)
+        if (material.id != null) material.id!: material,
+    };
+
+    return (
+      recipesByMenuItemId: recipesByMenuItemId,
+      materialIndex: materialIndex,
+    );
+  }
+
+  String _describeMissingMaterial(Material? material, Recipe recipe) {
+    if (material == null) {
+      return "Material not found (ID: ${recipe.materialId})";
+    }
+    return material.name;
   }
 }
 

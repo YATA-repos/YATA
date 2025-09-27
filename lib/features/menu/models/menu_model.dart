@@ -5,7 +5,7 @@ import "../../../core/base/base.dart";
 part "menu_model.g.dart";
 
 /// メニューカテゴリ
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MenuCategory extends BaseModel {
   MenuCategory({
     required this.name,
@@ -26,9 +26,11 @@ class MenuCategory extends BaseModel {
   int displayOrder;
 
   /// 作成日時
+  @JsonKey(includeIfNull: false)
   DateTime? createdAt;
 
   /// 更新日時
+  @JsonKey(includeIfNull: false)
   DateTime? updatedAt;
 
   @override
@@ -40,7 +42,7 @@ class MenuCategory extends BaseModel {
 }
 
 /// メニュー（販売商品）
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MenuItem extends BaseModel {
   MenuItem({
     required this.name,
@@ -85,9 +87,11 @@ class MenuItem extends BaseModel {
   String? imageUrl;
 
   /// 作成日時
+  @JsonKey(includeIfNull: false)
   DateTime? createdAt;
 
   /// 更新日時
+  @JsonKey(includeIfNull: false)
   DateTime? updatedAt;
 
   @override
@@ -99,7 +103,7 @@ class MenuItem extends BaseModel {
 }
 
 /// メニューオプション（トッピングなど）
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MenuItemOption extends BaseModel {
   MenuItemOption({
     required this.menuItemId,
@@ -132,9 +136,11 @@ class MenuItemOption extends BaseModel {
   int additionalPrice;
 
   /// 作成日時
+  @JsonKey(includeIfNull: false)
   DateTime? createdAt;
 
   /// 更新日時
+  @JsonKey(includeIfNull: false)
   DateTime? updatedAt;
 
   @override

@@ -994,7 +994,7 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
 
     try {
       final Map<String, MenuAvailabilityInfo> availability = await _menuService
-          .bulkCheckMenuAvailability(userId);
+          .bulkCheckMenuAvailability(userId, menuItemIds: ids);
       return <String, MenuAvailabilityViewData>{
         for (final String id in ids)
           id: availability.containsKey(id)
