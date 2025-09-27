@@ -55,6 +55,11 @@ class SalesAnalyticsPage extends ConsumerWidget {
         ],
         trailing: <Widget>[
           YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "売上データの再取得 (モック)",
+            onPressed: () => _showMockRefreshMessage(context),
+          ),
+          YataIconButton(
             icon: Icons.settings,
             onPressed: () => context.go(SettingsPage.routeName),
             tooltip: "設定",
@@ -223,6 +228,13 @@ class SalesAnalyticsPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// モックデータのため更新処理が未実装である旨を通知する。
+  void _showMockRefreshMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("売上データの更新は現在準備中です。")),
     );
   }
 }

@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 
+import "../../../../shared/components/buttons/icon_button.dart";
 import "../../../../shared/components/layout/page_container.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
@@ -55,6 +56,13 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => context.go("/analytics"),
           ),
         ],
+        trailing: <Widget>[
+          YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "設定データの再取得 (準備中)",
+            onPressed: () => _showRefreshUnavailableMessage(context),
+          ),
+        ],
       ),
       body: YataPageContainer(
         child: Center(
@@ -92,6 +100,13 @@ class SettingsPage extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// 設定データの更新が未提供であることを通知する。
+  void _showRefreshUnavailableMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("設定データの再取得は現在準備中です。")),
     );
   }
 }

@@ -80,6 +80,11 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
         ],
         trailing: <Widget>[
           YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "メニューとカートを再取得",
+            onPressed: state.isLoading ? null : controller.refresh,
+          ),
+          YataIconButton(
             icon: Icons.settings,
             onPressed: () => context.go(SettingsPage.routeName),
             tooltip: "設定",
@@ -193,7 +198,7 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.lg),
                       child: Text(
-                        "該当するメニューが見つかりません",
+                        "メニューが見つかりません",
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),

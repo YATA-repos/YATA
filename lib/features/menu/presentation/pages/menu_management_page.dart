@@ -117,6 +117,12 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
         ],
         trailing: <Widget>[
           YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "メニュー情報を再取得",
+            onPressed:
+                state.isInitializing ? null : () => controller.refreshAll(keepSelection: true),
+          ),
+          YataIconButton(
             icon: Icons.settings,
             onPressed: () => context.go(SettingsPage.routeName),
             tooltip: "設定",

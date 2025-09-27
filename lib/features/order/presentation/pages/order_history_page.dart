@@ -76,6 +76,11 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
         ],
         trailing: <Widget>[
           YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "履歴を再取得",
+            onPressed: state.isLoading ? null : controller.refreshHistory,
+          ),
+          YataIconButton(
             icon: Icons.settings,
             onPressed: () => context.go(SettingsPage.routeName),
             tooltip: "設定",
@@ -106,33 +111,23 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                 ],
 
                 // ページヘッダー
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            "注文履歴",
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: YataColorTokens.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: YataSpacingTokens.xs),
-                          Text(
-                            "過去の注文履歴を確認できます（全${state.totalCount}件）",
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
-                          ),
-                        ],
+                    Text(
+                      "注文履歴",
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: YataColorTokens.textPrimary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    YataIconButton(
-                      icon: Icons.refresh,
-                      onPressed: controller.refreshHistory,
-                      tooltip: "履歴を更新",
+                    const SizedBox(height: YataSpacingTokens.xs),
+                    Text(
+                      "過去の注文履歴を確認できます（全${state.totalCount}件）",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: YataColorTokens.textSecondary),
                     ),
                   ],
                 ),

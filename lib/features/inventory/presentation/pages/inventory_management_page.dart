@@ -75,6 +75,11 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
         ],
         trailing: <Widget>[
           YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "在庫情報を再取得",
+            onPressed: state.isLoading ? null : controller.refresh,
+          ),
+          YataIconButton(
             icon: Icons.settings,
             onPressed: () => context.go(SettingsPage.routeName),
             tooltip: "設定",
