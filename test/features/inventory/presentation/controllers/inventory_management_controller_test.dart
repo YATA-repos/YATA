@@ -26,6 +26,33 @@ void main() {
 
     tearDown(() => controller.dispose());
 
+    test("canApply returns false when adjustment invalid or item missing", () async {
+      final InventoryItemViewData first = controller.state.items.first;
+
+      controller.setPendingAdjustment(first.id, -30);
+      expect(controller.canApply(first.id), isFalse);
+
+      controller.setPendingAdjustment(first.id, -5);
+      expect(controller.canApply(first.id), isTrue);
+
+      controller.setPendingAdjustment(first.id, 0);
+      expect(controller.canApply(first.id), isTrue);
+
+      expect(controller.canApply("unknown_id"), isFalse);
+    });
+
+    test("applySelected clears selection even when no applicable adjustments", () async {
+      final InventoryItemViewData first = controller.state.items.first;
+
+      controller.toggleSelect(first.id);
+
+      controller.applySelected();
+      await pumpEventQueue();
+
+      expect(controller.state.selectedIds, isEmpty);
+      expect(controller.state.pendingAdjustments, isEmpty);
+    });
+
     test("applySelected applies only valid adjustments and clears selection", () async {
       final InventoryItemViewData first = controller.state.items[0];
       final InventoryItemViewData second = controller.state.items[1];

@@ -756,6 +756,13 @@ class _InventoryTableState extends State<_InventoryTable> {
     final int selectedVisibleCount = state.selectedIds.where(visibleIds.contains).length;
     final bool noneSelected = selectedVisibleCount == 0;
     final bool allSelected = selectedVisibleCount == visibleIds.length && visibleIds.isNotEmpty;
+    final bool hasApplicableSelection = state.selectedIds.any((String id) {
+      final int delta = state.pendingAdjustments[id] ?? 0;
+      if (delta == 0) {
+        return false;
+      }
+      return controller.canApply(id);
+    });
 
     int? sortIndex;
     switch (state.sortBy) {
@@ -863,6 +870,11 @@ class _InventoryTableState extends State<_InventoryTable> {
               ? YataColorTokens.textSecondary
               : (delta > 0 ? YataColorTokens.success : YataColorTokens.danger);
           final bool selected = state.selectedIds.contains(item.id);
+          final bool hasDelta = delta != 0;
+          final bool canApplyByController = controller.canApply(item.id);
+          final bool selectionActive = state.selectedIds.isNotEmpty;
+          final bool disableBySelection = selectionActive && selected;
+          final bool canApplyItem = hasDelta && canApplyByController && !disableBySelection;
 
           String fmtDate(DateTime d) {
             final DateTime dd = d.toLocal();
@@ -961,13 +973,20 @@ class _InventoryTableState extends State<_InventoryTable> {
               ),
               DataCell(
                 Tooltip(
-                  message: delta == 0
-                      ? "変更がありません"
-                      : ((item.current + delta) < 0 ? "新在庫が0未満のため適用不可" : "この行の調整を適用"),
+                  message: () {
+                    if (!hasDelta) {
+                      return "変更がありません";
+                    }
+                    if (!canApplyByController) {
+                      return "新在庫が0未満のため適用不可";
+                    }
+                    if (disableBySelection) {
+                      return "選択中は一括適用ボタンをご利用ください";
+                    }
+                    return "この行の調整を適用";
+                  }(),
                   child: ElevatedButton.icon(
-                    onPressed: delta == 0 || (item.current + delta) < 0
-                        ? null
-                        : () => controller.applyAdjustment(item.id),
+                    onPressed: canApplyItem ? () => controller.applyAdjustment(item.id) : null,
                     icon: const Icon(Icons.save_outlined),
                     label: const Text("適用"),
                     style: ElevatedButton.styleFrom(backgroundColor: YataColorTokens.primary),
@@ -1031,6 +1050,20 @@ class _InventoryTableState extends State<_InventoryTable> {
                           child: OutlinedButton(
                             onPressed: () => controller.incrementSelectedBy(1),
                             child: const Icon(Icons.add),
+                          ),
+                        ),
+                        Tooltip(
+                          message: hasApplicableSelection
+                              ? "選択された行の調整をまとめて適用"
+                              : "適用可能な差分がありません",
+                          child: FilledButton.icon(
+                            onPressed:
+                                hasApplicableSelection ? controller.applySelected : null,
+                            icon: const Icon(Icons.task_alt),
+                            label: const Text("適用 (選択)"),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: YataColorTokens.primary,
+                            ),
                           ),
                         ),
                         Tooltip(
