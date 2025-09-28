@@ -13,8 +13,8 @@ import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/navigation/app_top_bar.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
-import "../controllers/order_status_controller.dart";
 import "../../shared/order_status_presentation.dart";
+import "../controllers/order_status_controller.dart";
 
 /// 注文状況更新ページ。
 class OrderStatusPage extends ConsumerStatefulWidget {

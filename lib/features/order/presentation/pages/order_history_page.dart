@@ -16,9 +16,9 @@ import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
+import "../../shared/order_status_presentation.dart";
 import "../controllers/order_history_controller.dart";
 import "order_status_page.dart";
-import "../../shared/order_status_presentation.dart";
 
 /// 注文履歴ページ。
 class OrderHistoryPage extends ConsumerStatefulWidget {

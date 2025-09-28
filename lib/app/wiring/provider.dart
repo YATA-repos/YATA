@@ -302,15 +302,13 @@ final Provider<order_svc.OrderStockService> orderStockServiceProvider =
 );
 
 final Provider<CartManagementService> cartManagementServiceProvider =
-    Provider<CartManagementService>((Ref ref) {
-  return CartManagementService(
+    Provider<CartManagementService>((Ref ref) => CartManagementService(
     orderRepository: ref.read(orderRepositoryProvider),
     orderItemRepository: ref.read(orderItemRepositoryProvider),
     menuItemRepository: ref.read(menuItemRepositoryProvider),
     orderCalculationService: ref.read(orderCalculationServiceProvider),
     orderStockService: ref.read(orderStockServiceProvider),
-  );
-});
+  ));
 
 /// OrderService（契約Realtime注入）
 final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref ref) {
@@ -330,12 +328,10 @@ final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref 
 });
 
 /// CartService（注文カート管理）
-final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref) {
-  return CartService(
+final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref) => CartService(
     cartManagementService: ref.read(cartManagementServiceProvider),
     orderCalculationService: ref.read(orderCalculationServiceProvider),
-  );
-});
+  ));
 
 /// MenuService（契約Realtime注入）
 final Provider<MenuService> menuServiceProvider = Provider<MenuService>(

@@ -5,8 +5,8 @@ import "../../../core/contracts/repositories/order/order_repository_contracts.da
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/logging/compat.dart" as log;
 import "../models/order_model.dart";
-import "kitchen_operation_service.dart";
 import "../shared/order_status_mapper.dart";
+import "kitchen_operation_service.dart";
 
 /// キッチン分析・予測サービス
 class KitchenAnalysisService {

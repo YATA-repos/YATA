@@ -138,7 +138,7 @@ class OrderSearchRequest {
         ? null
         : (json["status_filter"] as List<dynamic>)
               .map(
-        (dynamic status) => OrderStatusMapper.fromJson(status),
+        OrderStatusMapper.fromJson,
               )
               .toList(),
     customerName: json["customer_name"] as String?,
@@ -177,7 +177,7 @@ class OrderSearchRequest {
     "date_from": dateFrom?.toIso8601String(),
     "date_to": dateTo?.toIso8601String(),
   "status_filter": statusFilter
-    ?.map((OrderStatus status) => OrderStatusMapper.toJson(status))
+    ?.map(OrderStatusMapper.toJson)
     .toList(),
     "customer_name": customerName,
     "menu_item_name": menuItemName,

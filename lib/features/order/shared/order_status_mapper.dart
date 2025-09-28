@@ -59,7 +59,7 @@ class OrderStatusMapper {
 
   /// 複数ステータスをまとめてクエリ文字列一覧に変換する。
   static List<String> queryValuesFromList(Iterable<OrderStatus> statuses) => statuses
-      .expand<String>((OrderStatus status) => queryValues(status))
+      .expand<String>(queryValues)
       .toSet()
       .toList(growable: false);
 
