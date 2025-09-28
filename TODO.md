@@ -2,6 +2,13 @@
 
 ---
 
+[Bugfix]: #
+[Feature]: #
+[Enhancement]: #
+[Performance]: #
+[Documentation]: #
+[Chore]: #
+
 ## Backlog
 
 ### [Bugfix] 注文番号が採番されない問題を解消
@@ -122,6 +129,19 @@
   3. レスポンシブ設定を調整し、主要解像度で表示を確認する。
 - **Description**: PC全画面に近い表示で余白が大きく非効率なため、ブレークポイントやレイアウトを調整して広い画面を活かす。
 
+### [Enhancement] 画面復帰時に状態を自動更新する
+- **ID**: UI/UX-Enhancement-6
+- **Priority**: P2
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: Order-Bugfix-3
+- **Goal**: 主要な注文・在庫・メニュー画面で遷移復帰時に `refresh()` が実行され、最新状態が表示される。
+- **Steps**:
+  1. 遷移復帰時の `refresh()` 呼び出しを共通化する仕組みと影響範囲の画面を洗い出す。
+  2. 対象コントローラ／ページへ `refresh()` フックや `autoDispose` 設定を追加し、重複実行を防ぐ制御を実装する。
+  3. 主要シナリオでの動作確認と回帰テスト手順を整備し、ドキュメントへ反映する。
+- **Description**: Order-Bugfix-3 で検討中の遷移直後 `refresh()` パターンを全画面へ展開し、古い状態が残らないようにする。
+
 ### [Documentation] menuとrecipeの依存関係を整理する
 - **ID**: Documentation-Documentation-1
 - **Priority**: P2
@@ -191,32 +211,6 @@
 
 ## Ready
 
-### [Bugfix] 在庫一括操作の適用ボタンとdisabled制御を修正
-- **ID**: UI/UX-Bugfix-1
-- **Priority**: P1
-- **Size**: S
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: 一括操作の適用ボタンが追加され、行ごとのボタンdisabledが適切に維持される。
-- **Steps**:
-  1. 現状の一括操作UIの状態管理とイベント処理を確認する。
-  2. 一括適用ボタンと行別ボタンの制御ロジックを整理して実装する。
-  3. 選択状態に応じてdisabledが期待通り切り替わることを確認する。
-- **Description**: 一括操作ボタンがなく、行ごとのボタンが意図せず有効になる問題がある。操作性と整合性を改善する。
-
-### [Bugfix] 会計後にメニュー選択をリセットする
-- **ID**: Order-Bugfix-3
-- **Priority**: P1
-- **Size**: S
-- **Area**: Order
-- **Dependencies**: None
-- **Goal**: 会計完了後にカートと選択状態がリセットされ、次の注文が空の状態で開始される。
-- **Steps**:
-  1. 会計処理完了時の状態遷移とセッション保持を調査する。
-  2. 会計完了後にカートと選択状態を初期化する処理を実装する。
-  3. 会計→新規注文のフローで状態が正しくリセットされることを確認する。
-- **Description**: 会計ボタン押下後も前回の選択が残り続けるため、オペレーションが混乱する。会計完了時に状態を明示的に初期化する。
-
 ### [Enhancement] 注文詳細モーダルをオーバーレイクリックで閉じる
 - **ID**: UI/UX-Enhancement-4
 - **Priority**: P2
@@ -272,7 +266,6 @@
 ---
 
 ## In Progress
-
 
 ---
 
