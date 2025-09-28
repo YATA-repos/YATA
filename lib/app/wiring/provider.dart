@@ -286,19 +286,41 @@ final Provider<InventoryService> inventoryServiceProvider = Provider<InventorySe
   );
 });
 
+final Provider<OrderCalculationService> orderCalculationServiceProvider =
+    Provider<OrderCalculationService>(
+  (Ref ref) => OrderCalculationService(
+    orderItemRepository: ref.read(orderItemRepositoryProvider),
+  ),
+);
+
+final Provider<order_svc.OrderStockService> orderStockServiceProvider =
+    Provider<order_svc.OrderStockService>(
+  (Ref ref) => order_svc.OrderStockService(
+    materialRepository: ref.read(materialRepositoryProvider),
+    recipeRepository: ref.read(recipeRepositoryProvider),
+  ),
+);
+
+final Provider<CartManagementService> cartManagementServiceProvider =
+    Provider<CartManagementService>((Ref ref) {
+  return CartManagementService(
+    orderRepository: ref.read(orderRepositoryProvider),
+    orderItemRepository: ref.read(orderItemRepositoryProvider),
+    menuItemRepository: ref.read(menuItemRepositoryProvider),
+    orderCalculationService: ref.read(orderCalculationServiceProvider),
+    orderStockService: ref.read(orderStockServiceProvider),
+  );
+});
+
 /// OrderService（契約Realtime注入）
 final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref ref) {
   final OrderManagementService orderMgmt = OrderManagementService(
     orderRepository: ref.read(orderRepositoryProvider),
     orderItemRepository: ref.read(orderItemRepositoryProvider),
     menuItemRepository: ref.read(menuItemRepositoryProvider),
-    orderCalculationService: OrderCalculationService(
-      orderItemRepository: ref.read(orderItemRepositoryProvider),
-    ),
-    orderStockService: order_svc.OrderStockService(
-      materialRepository: ref.read(materialRepositoryProvider),
-      recipeRepository: ref.read(recipeRepositoryProvider),
-    ),
+    orderCalculationService: ref.read(orderCalculationServiceProvider),
+    orderStockService: ref.read(orderStockServiceProvider),
+    cartManagementService: ref.read(cartManagementServiceProvider),
   );
   return OrderService(
     ref: ref,
@@ -309,32 +331,9 @@ final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref 
 
 /// CartService（注文カート管理）
 final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref) {
-  final order_contract.OrderRepositoryContract<Order> orderRepo = ref.read(orderRepositoryProvider);
-  final order_contract.OrderItemRepositoryContract<OrderItem> orderItemRepo = ref.read(
-    orderItemRepositoryProvider,
-  );
-  final menu_contract.MenuItemRepositoryContract<MenuItem> menuItemRepo = ref.read(
-    menuItemRepositoryProvider,
-  );
-
-  final OrderCalculationService calculationService = OrderCalculationService(
-    orderItemRepository: orderItemRepo,
-  );
-
-  final CartManagementService cartManagementService = CartManagementService(
-    orderRepository: orderRepo,
-    orderItemRepository: orderItemRepo,
-    menuItemRepository: menuItemRepo,
-    orderCalculationService: calculationService,
-    orderStockService: order_svc.OrderStockService(
-      materialRepository: ref.read(materialRepositoryProvider),
-      recipeRepository: ref.read(recipeRepositoryProvider),
-    ),
-  );
-
   return CartService(
-    cartManagementService: cartManagementService,
-    orderCalculationService: calculationService,
+    cartManagementService: ref.read(cartManagementServiceProvider),
+    orderCalculationService: ref.read(orderCalculationServiceProvider),
   );
 });
 

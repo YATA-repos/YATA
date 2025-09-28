@@ -1,8 +1,11 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/constants/exceptions/repository/repository_exception.dart";
 import "../../../core/constants/query_types.dart";
 import "../../../core/contracts/repositories/crud_repository.dart" as repo_contract;
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+import "../../../core/logging/compat.dart" as log;
 import "../models/order_model.dart";
+import "../shared/order_status_mapper.dart";
 
 /// 注文リポジトリ
 class OrderRepository implements OrderRepositoryContract<Order> {
@@ -13,18 +16,58 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
   /// ユーザーのアクティブな下書き注文（カート）を取得
   @override
-  Future<Order?> findActiveDraftByUser() async {
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("status", OrderStatus.preparing.value),
-    ];
+  Future<Order?> findActiveDraftByUser(String userId) async {
+    Future<Order?> runQuery(List<String> statusValues) async {
+      final List<QueryFilter> filters = <QueryFilter>[
+        QueryConditionBuilder.eq("user_id", userId),
+        QueryConditionBuilder.inList("status", statusValues),
+        QueryConditionBuilder.or(<QueryFilter>[
+          QueryConditionBuilder.eq("total_amount", 0),
+          QueryConditionBuilder.isNull("total_amount"),
+        ]),
+        QueryConditionBuilder.isNull("order_number"),
+      ];
 
-    // 最新のものを取得
-    final List<OrderByCondition> orderBy = <OrderByCondition>[
-      const OrderByCondition(column: "created_at", ascending: false),
-    ];
+      // 最新のものを取得
+      final List<OrderByCondition> orderBy = <OrderByCondition>[
+        const OrderByCondition(column: "created_at", ascending: false),
+      ];
 
-    final List<Order> results = await _delegate.find(filters: filters, orderBy: orderBy, limit: 1);
-    return results.isNotEmpty ? results[0] : null;
+      final List<Order> results = await _delegate.find(
+        filters: filters,
+        orderBy: orderBy,
+        limit: 1,
+      );
+      return results.isNotEmpty ? results[0] : null;
+    }
+
+    final List<String> primaryStatusValues = OrderStatusMapper.queryValues(OrderStatus.inProgress);
+
+    try {
+      return await runQuery(primaryStatusValues);
+    } on RepositoryException catch (error, stackTrace) {
+      final String? unsupportedValue = _extractUnsupportedOrderStatusValue(error);
+      if (unsupportedValue != null) {
+        OrderStatusMapper.markBackendValueUnsupported(unsupportedValue);
+        final List<String> fallbackValues = OrderStatusMapper.queryValues(OrderStatus.inProgress);
+
+        if (_didStatusValuesChange(primaryStatusValues, fallbackValues)) {
+          log.w(
+            "order_status_enum が '$unsupportedValue' を受け付けなかったため、レガシー値で再試行します",
+            tag: "OrderRepository",
+            fields: <String, Object?>{
+              "userId": userId,
+              "unsupportedValue": unsupportedValue,
+              "fallbackStatuses": fallbackValues,
+              "originalError": error.params["error"],
+              "stackTrace": stackTrace.toString(),
+            },
+          );
+          return runQuery(fallbackValues);
+        }
+      }
+      rethrow;
+    }
   }
 
   /// 指定ステータスリストの注文一覧を取得
@@ -34,18 +77,46 @@ class OrderRepository implements OrderRepositoryContract<Order> {
       return <Order>[];
     }
 
-    final List<String> statusValues = statusList.map((OrderStatus status) => status.value).toList();
+    Future<List<Order>> runQuery(List<String> values) async {
+      final List<QueryFilter> filters = <QueryFilter>[
+        QueryConditionBuilder.inList("status", values),
+      ];
 
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.inList("status", statusValues),
-    ];
+      // 注文日時で降順
+      final List<OrderByCondition> orderBy = <OrderByCondition>[
+        const OrderByCondition(column: "ordered_at", ascending: false),
+      ];
 
-    // 注文日時で降順
-    final List<OrderByCondition> orderBy = <OrderByCondition>[
-      const OrderByCondition(column: "ordered_at", ascending: false),
-    ];
+      return _delegate.find(filters: filters, orderBy: orderBy);
+    }
 
-    return _delegate.find(filters: filters, orderBy: orderBy);
+    final List<String> primaryStatusValues = OrderStatusMapper.queryValuesFromList(statusList);
+
+    try {
+      return await runQuery(primaryStatusValues);
+    } on RepositoryException catch (error, stackTrace) {
+      final String? unsupportedValue = _extractUnsupportedOrderStatusValue(error);
+      if (unsupportedValue != null) {
+        OrderStatusMapper.markBackendValueUnsupported(unsupportedValue);
+        final List<String> fallbackValues = OrderStatusMapper.queryValuesFromList(statusList);
+
+        if (_didStatusValuesChange(primaryStatusValues, fallbackValues)) {
+          log.w(
+            "order_status_enum が '$unsupportedValue' を受け付けないため、互換モードで再取得します",
+            tag: "OrderRepository",
+            fields: <String, Object?>{
+              "statusList": statusList.map((OrderStatus status) => status.value).toList(),
+              "unsupportedValue": unsupportedValue,
+              "fallbackStatuses": fallbackValues,
+              "originalError": error.params["error"],
+              "stackTrace": stackTrace.toString(),
+            },
+          );
+          return runQuery(fallbackValues);
+        }
+      }
+      rethrow;
+    }
   }
 
   /// 注文を検索（戻り値: (注文一覧, 総件数)）
@@ -157,11 +228,12 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
     // ステータス別に集計
     final Map<OrderStatus, int> statusCounts = <OrderStatus, int>{
-      for (final OrderStatus status in OrderStatus.values) status: 0,
+      for (final OrderStatus status in OrderStatus.primaryStatuses) status: 0,
     };
 
     for (final Order order in targetDateOrders) {
-      statusCounts[order.status] = (statusCounts[order.status] ?? 0) + 1;
+      final OrderStatus normalizedStatus = OrderStatusMapper.normalize(order.status);
+      statusCounts[normalizedStatus] = (statusCounts[normalizedStatus] ?? 0) + 1;
     }
 
     return statusCounts;
@@ -213,16 +285,8 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
   /// アクティブな注文を取得
   @override
-  Future<List<Order>> findActiveOrders() async {
-    final List<OrderStatus> activeStatuses = <OrderStatus>[
-      OrderStatus.pending,
-      OrderStatus.confirmed,
-      OrderStatus.preparing,
-      OrderStatus.ready,
-    ];
-
-    return findByStatusList(activeStatuses);
-  }
+  Future<List<Order>> findActiveOrders() =>
+      findByStatusList(const <OrderStatus>[OrderStatus.inProgress]);
 
   /// 最近の注文を取得
   @override
@@ -265,7 +329,9 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     final List<Order> orders = await _delegate.find(filters: filters);
 
     // ステータス別・日別に集計
-    final Map<OrderStatus, Map<DateTime, int>> result = <OrderStatus, Map<DateTime, int>>{};
+    final Map<OrderStatus, Map<DateTime, int>> result = <OrderStatus, Map<DateTime, int>>{
+      for (final OrderStatus status in OrderStatus.primaryStatuses) status: <DateTime, int>{},
+    };
 
     for (final Order order in orders) {
       final DateTime orderDate = DateTime(
@@ -274,8 +340,9 @@ class OrderRepository implements OrderRepositoryContract<Order> {
         order.orderedAt.day,
       );
 
-      result[order.status] ??= <DateTime, int>{};
-      result[order.status]![orderDate] = (result[order.status]![orderDate] ?? 0) + 1;
+      final OrderStatus normalizedStatus = OrderStatusMapper.normalize(order.status);
+      final Map<DateTime, int> dateMap = result[normalizedStatus] ??= <DateTime, int>{};
+      dateMap[orderDate] = (dateMap[orderDate] ?? 0) + 1;
     }
 
     return result;
@@ -284,20 +351,17 @@ class OrderRepository implements OrderRepositoryContract<Order> {
   /// アクティブ注文をステータス別に取得
   @override
   Future<Map<OrderStatus, List<Order>>> getActiveOrdersByStatus() async {
-    final List<OrderStatus> activeStatuses = <OrderStatus>[
-      OrderStatus.pending,
-      OrderStatus.confirmed,
-      OrderStatus.preparing,
-      OrderStatus.ready,
-    ];
-
-    final List<Order> activeOrders = await findByStatusList(activeStatuses);
+    final List<OrderStatus> statuses = OrderStatus.primaryStatuses;
+    final List<Order> orders = await findByStatusList(statuses);
 
     // ステータス別にグループ化
-    final Map<OrderStatus, List<Order>> result = <OrderStatus, List<Order>>{};
+    final Map<OrderStatus, List<Order>> result = <OrderStatus, List<Order>>{
+      for (final OrderStatus status in statuses) status: <Order>[],
+    };
 
-    for (final OrderStatus status in activeStatuses) {
-      result[status] = activeOrders.where((Order order) => order.status == status).toList();
+    for (final Order order in orders) {
+      final OrderStatus normalizedStatus = OrderStatusMapper.normalize(order.status);
+      result[normalizedStatus]!.add(order);
     }
 
     return result;
@@ -344,4 +408,33 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
   @override
   Future<int> count({List<QueryFilter>? filters}) => _delegate.count(filters: filters);
+}
+
+/// Supabase/Postgrest が返した `order_status_enum` の無効値を抽出する。
+///
+/// エラーメッセージから最初に検出された値を返し、該当しなければ `null` を返す。
+String? _extractUnsupportedOrderStatusValue(RepositoryException error) {
+  final String? raw = error.params["error"];
+  if (raw == null) {
+    return null;
+  }
+  final Match? match = _orderStatusInvalidEnumRegex.firstMatch(raw);
+  return match?.group(1)?.trim();
+}
+
+final RegExp _orderStatusInvalidEnumRegex = RegExp(
+  r'invalid input value for enum [\w.]+:\s*"([^"]+)"',
+  caseSensitive: false,
+);
+
+bool _didStatusValuesChange(List<String> original, List<String> next) {
+  if (original.length != next.length) {
+    return true;
+  }
+  final Set<String> originalSet = original.map((String value) => value.toLowerCase()).toSet();
+  final Set<String> nextSet = next.map((String value) => value.toLowerCase()).toSet();
+  if (originalSet.length != nextSet.length) {
+    return true;
+  }
+  return !originalSet.containsAll(nextSet);
 }

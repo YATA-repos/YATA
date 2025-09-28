@@ -4,6 +4,7 @@ import "../../../core/contracts/repositories/order/order_repository_contracts.da
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/logging/compat.dart" as log;
 import "../models/order_model.dart";
+import "../shared/order_status_mapper.dart";
 
 /// キッチン調理進行管理サービス
 class KitchenOperationService {
@@ -19,7 +20,7 @@ class KitchenOperationService {
     log.d("Retrieving active orders by status", tag: loggerComponent);
 
     try {
-      final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.preparing];
+  final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.inProgress];
       final List<Order> activeOrders = await _orderRepository.findByStatusList(activeStatuses);
 
       // ステータス別に分類
@@ -47,9 +48,9 @@ class KitchenOperationService {
     log.d("Retrieving order queue", tag: loggerComponent);
 
     try {
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
-        OrderStatus.preparing,
-      ]);
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(
+        const <OrderStatus>[OrderStatus.inProgress],
+      );
 
       // 調理開始前の注文を優先順位順に並べる
       final List<Order> notStarted = activeOrders
@@ -87,7 +88,7 @@ class KitchenOperationService {
         throw Exception("Order $orderId not found or access denied");
       }
 
-      if (order.status != OrderStatus.preparing) {
+      if (OrderStatusMapper.normalize(order.status) != OrderStatus.inProgress) {
         log.e(KitchenError.orderNotInPreparingStatus.message, tag: loggerComponent);
         throw Exception("Order is not in preparing status");
       }
@@ -185,7 +186,7 @@ class KitchenOperationService {
         throw Exception("Order not ready for delivery");
       }
 
-      if (order.status == OrderStatus.completed) {
+      if (OrderStatusMapper.normalize(order.status) == OrderStatus.completed) {
         log.w(KitchenWarning.orderAlreadyDelivered.message, tag: loggerComponent);
         throw Exception("Order already delivered");
       }

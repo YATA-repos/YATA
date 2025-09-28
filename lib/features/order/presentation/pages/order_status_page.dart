@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
 
+import "../../../../core/constants/enums.dart";
 import "../../../../shared/components/buttons/icon_button.dart";
 import "../../../../shared/components/layout/page_container.dart";
 import "../../../../shared/components/layout/section_card.dart";
@@ -13,6 +14,7 @@ import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/navigation/app_top_bar.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_status_controller.dart";
+import "../../shared/order_status_presentation.dart";
 
 /// 注文状況更新ページ。
 class OrderStatusPage extends ConsumerStatefulWidget {
@@ -35,6 +37,12 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
   Widget build(BuildContext context) {
     final OrderStatusState state = ref.watch(orderStatusControllerProvider);
     final OrderStatusController controller = ref.read(orderStatusControllerProvider.notifier);
+    final Map<OrderStatus, List<OrderStatusOrderViewData>> sections =
+        <OrderStatus, List<OrderStatusOrderViewData>>{
+          OrderStatus.inProgress: state.inProgressOrders,
+          OrderStatus.completed: state.completedOrders,
+          OrderStatus.cancelled: state.cancelledOrders,
+        };
 
     return Scaffold(
       backgroundColor: YataColorTokens.background,
@@ -76,9 +84,7 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
           YataIconButton(
             icon: Icons.refresh,
             tooltip: "最新の注文を再取得",
-            onPressed: state.isLoading
-                ? null
-                : controller.loadOrders,
+            onPressed: state.isLoading ? null : controller.loadOrders,
           ),
           YataIconButton(
             icon: Icons.settings,
@@ -95,9 +101,7 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
             const SizedBox(height: YataSpacingTokens.lg),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: state.isLoading
-                  ? const LinearProgressIndicator()
-                  : const SizedBox.shrink(),
+              child: state.isLoading ? const LinearProgressIndicator() : const SizedBox.shrink(),
             ),
             if (state.isLoading) const SizedBox(height: YataSpacingTokens.md),
             if (state.errorMessage != null) ...<Widget>[
@@ -108,45 +112,62 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
                   final bool isWide = constraints.maxWidth >= 900;
-                  final Widget preparingSection = _OrderStatusSection(
-                    title: "準備中",
-                    subtitle: "提供に向けて進行中の注文",
-                    child: _PreparingOrderList(
-                      orders: state.preparingOrders,
-                      updatingOrderIds: state.updatingOrderIds,
-                      isBusy: state.isLoading,
-                      currencyFormat: _currencyFormat,
-                      timeFormat: _timeFormat,
-                      onMarkCompleted: (OrderStatusOrderViewData order) async {
-                        final String? error = await controller.markOrderCompleted(order.id);
-                        if (!mounted) {
-                          return;
-                        }
-                        final String message = error ?? "${order.orderNumber ?? "注文"} を提供済みに更新しました";
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(message)),
-                        );
-                      },
+
+                  final List<Widget> sectionWidgets = <Widget>[
+                    _OrderStatusSection(
+                      title: OrderStatusPresentation.label(OrderStatus.inProgress),
+                      subtitle: "提供に向けて進行中の注文",
+                      child: _InProgressOrderList(
+                        orders:
+                            sections[OrderStatus.inProgress] ?? const <OrderStatusOrderViewData>[],
+                        updatingOrderIds: state.updatingOrderIds,
+                        isBusy: state.isLoading,
+                        currencyFormat: _currencyFormat,
+                        timeFormat: _timeFormat,
+                        onMarkCompleted: (OrderStatusOrderViewData order) async {
+                          final String? error = await controller.markOrderCompleted(order.id);
+                          if (!mounted) {
+                            return;
+                          }
+                          final String message = error ?? "${order.orderNumber ?? "注文"} を完了に更新しました";
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(message)));
+                        },
+                      ),
                     ),
-                  );
-                  final Widget completedSection = _OrderStatusSection(
-                    title: "提供済み",
-                    subtitle: "最近提供が完了した注文",
-                    child: _CompletedOrderList(
-                      orders: state.completedOrders,
-                      currencyFormat: _currencyFormat,
-                      timeFormat: _timeFormat,
-                      dateTimeFormat: _dateTimeFormat,
+                    _OrderStatusSection(
+                      title: OrderStatusPresentation.label(OrderStatus.completed),
+                      subtitle: "最近完了した注文",
+                      child: _CompletedOrderList(
+                        orders:
+                            sections[OrderStatus.completed] ?? const <OrderStatusOrderViewData>[],
+                        currencyFormat: _currencyFormat,
+                        timeFormat: _timeFormat,
+                        dateTimeFormat: _dateTimeFormat,
+                      ),
                     ),
-                  );
+                    _OrderStatusSection(
+                      title: OrderStatusPresentation.label(OrderStatus.cancelled),
+                      subtitle: "キャンセルされた注文",
+                      child: _CancelledOrderList(
+                        orders:
+                            sections[OrderStatus.cancelled] ?? const <OrderStatusOrderViewData>[],
+                        currencyFormat: _currencyFormat,
+                        timeFormat: _timeFormat,
+                      ),
+                    ),
+                  ];
 
                   if (isWide) {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Expanded(child: preparingSection),
+                        Expanded(child: sectionWidgets[0]),
                         const SizedBox(width: YataSpacingTokens.lg),
-                        Expanded(child: completedSection),
+                        Expanded(child: sectionWidgets[1]),
+                        const SizedBox(width: YataSpacingTokens.lg),
+                        Expanded(child: sectionWidgets[2]),
                       ],
                     );
                   }
@@ -155,9 +176,11 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        preparingSection,
+                        sectionWidgets[0],
                         const SizedBox(height: YataSpacingTokens.lg),
-                        completedSection,
+                        sectionWidgets[1],
+                        const SizedBox(height: YataSpacingTokens.lg),
+                        sectionWidgets[2],
                       ],
                     ),
                   );
@@ -172,27 +195,19 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
 }
 
 class _OrderStatusSection extends StatelessWidget {
-  const _OrderStatusSection({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
+  const _OrderStatusSection({required this.title, required this.subtitle, required this.child});
 
   final String title;
   final String subtitle;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => YataSectionCard(
-        title: title,
-        subtitle: subtitle,
-        expandChild: true,
-        child: child,
-      );
+  Widget build(BuildContext context) =>
+      YataSectionCard(title: title, subtitle: subtitle, expandChild: true, child: child);
 }
 
-class _PreparingOrderList extends StatelessWidget {
-  const _PreparingOrderList({
+class _InProgressOrderList extends StatelessWidget {
+  const _InProgressOrderList({
     required this.orders,
     required this.updatingOrderIds,
     required this.isBusy,
@@ -211,7 +226,7 @@ class _PreparingOrderList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (orders.isEmpty) {
-      return _EmptyIndicator(message: "現在、準備中の注文はありません");
+      return _EmptyIndicator(message: "現在、進行中の注文はありません");
     }
 
     return ListView.separated(
@@ -242,13 +257,15 @@ class _PreparingOrderList extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           order.orderNumber ?? "注文番号未設定",
-                          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
+                          style:
+                              textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
                               YataTypographyTokens.titleMedium,
                         ),
                         const SizedBox(height: YataSpacingTokens.xs),
                         Text(
                           "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
-                          style: textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                          style:
+                              textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
                               YataTypographyTokens.bodySmall,
                         ),
                       ],
@@ -257,7 +274,8 @@ class _PreparingOrderList extends StatelessWidget {
                   const SizedBox(width: YataSpacingTokens.sm),
                   Text(
                     "¥${currencyFormat.format(order.totalAmount)}",
-                    style: textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
+                    style:
+                        textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
                         YataTypographyTokens.titleMedium,
                   ),
                 ],
@@ -266,7 +284,8 @@ class _PreparingOrderList extends StatelessWidget {
                 const SizedBox(height: YataSpacingTokens.sm),
                 Text(
                   order.notes!,
-                  style: textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                  style:
+                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
                       YataTypographyTokens.bodySmall,
                 ),
               ],
@@ -275,7 +294,7 @@ class _PreparingOrderList extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.check_circle_outline),
-                  label: const Text("提供済みにする"),
+                  label: const Text("完了にする"),
                   onPressed: isUpdating ? null : () => onMarkCompleted(order),
                 ),
               ),
@@ -303,7 +322,7 @@ class _CompletedOrderList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (orders.isEmpty) {
-      return _EmptyIndicator(message: "提供済みの注文はまだありません");
+      return _EmptyIndicator(message: "完了した注文はまだありません");
     }
 
     return ListView.separated(
@@ -329,13 +348,15 @@ class _CompletedOrderList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       order.orderNumber ?? "注文番号未設定",
-                      style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
+                      style:
+                          textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
                           YataTypographyTokens.titleMedium,
                     ),
                   ),
                   Text(
                     "¥${currencyFormat.format(order.totalAmount)}",
-                    style: textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
+                    style:
+                        textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
                         YataTypographyTokens.titleMedium,
                   ),
                 ],
@@ -343,14 +364,16 @@ class _CompletedOrderList extends StatelessWidget {
               const SizedBox(height: YataSpacingTokens.xs),
               Text(
                 "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
-                style: textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                style:
+                    textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
                     YataTypographyTokens.bodySmall,
               ),
               if (order.completedAt != null) ...<Widget>[
                 const SizedBox(height: YataSpacingTokens.xs),
                 Text(
                   "提供完了: ${dateTimeFormat.format(order.completedAt!)}",
-                  style: textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                  style:
+                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
                       YataTypographyTokens.bodySmall,
                 ),
               ],
@@ -358,7 +381,85 @@ class _CompletedOrderList extends StatelessWidget {
                 const SizedBox(height: YataSpacingTokens.sm),
                 Text(
                   order.notes!,
-                  style: textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                  style:
+                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                      YataTypographyTokens.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CancelledOrderList extends StatelessWidget {
+  const _CancelledOrderList({
+    required this.orders,
+    required this.currencyFormat,
+    required this.timeFormat,
+  });
+
+  final List<OrderStatusOrderViewData> orders;
+  final NumberFormat currencyFormat;
+  final DateFormat timeFormat;
+
+  @override
+  Widget build(BuildContext context) {
+    if (orders.isEmpty) {
+      return _EmptyIndicator(message: "キャンセル済みの注文はありません");
+    }
+
+    return ListView.separated(
+      itemCount: orders.length,
+      separatorBuilder: (BuildContext context, int index) =>
+          const SizedBox(height: YataSpacingTokens.md),
+      itemBuilder: (BuildContext context, int index) {
+        final OrderStatusOrderViewData order = orders[index];
+        final TextTheme textTheme = Theme.of(context).textTheme;
+
+        return Container(
+          padding: const EdgeInsets.all(YataSpacingTokens.md),
+          decoration: BoxDecoration(
+            color: YataColorTokens.surfaceAlt,
+            borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+            border: Border.all(color: YataColorTokens.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      order.orderNumber ?? "注文番号未設定",
+                      style:
+                          textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
+                          YataTypographyTokens.titleMedium,
+                    ),
+                  ),
+                  Text(
+                    "¥${currencyFormat.format(order.totalAmount)}",
+                    style:
+                        textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
+                        YataTypographyTokens.titleMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: YataSpacingTokens.xs),
+              Text(
+                "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
+                style:
+                    textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                    YataTypographyTokens.bodySmall,
+              ),
+              if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
+                const SizedBox(height: YataSpacingTokens.sm),
+                Text(
+                  order.notes!,
+                  style:
+                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
                       YataTypographyTokens.bodySmall,
                 ),
               ],
@@ -378,34 +479,35 @@ class _StatusErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(YataSpacingTokens.md),
-        decoration: BoxDecoration(
-          color: YataColorTokens.dangerSoft,
-          borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-          border: Border.all(color: YataColorTokens.danger.withValues(alpha: 0.3)),
+    padding: const EdgeInsets.all(YataSpacingTokens.md),
+    decoration: BoxDecoration(
+      color: YataColorTokens.dangerSoft,
+      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+      border: Border.all(color: YataColorTokens.danger.withValues(alpha: 0.3)),
+    ),
+    child: Row(
+      children: <Widget>[
+        const Icon(Icons.error_outline, color: YataColorTokens.danger),
+        const SizedBox(width: YataSpacingTokens.sm),
+        Expanded(
+          child: Text(
+            message,
+            style:
+                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: YataColorTokens.danger,
+                  fontWeight: FontWeight.w600,
+                ) ??
+                YataTypographyTokens.bodyMedium,
+          ),
         ),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.error_outline, color: YataColorTokens.danger),
-            const SizedBox(width: YataSpacingTokens.sm),
-            Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: YataColorTokens.danger,
-                      fontWeight: FontWeight.w600,
-                    ) ??
-                    YataTypographyTokens.bodyMedium,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text("再試行"),
-            ),
-          ],
+        TextButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text("再試行"),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _EmptyIndicator extends StatelessWidget {
@@ -415,27 +517,28 @@ class _EmptyIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 48,
-                color: YataColorTokens.textSecondary.withValues(alpha: 0.4),
-              ),
-              const SizedBox(height: YataSpacingTokens.md),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: YataColorTokens.textSecondary,
-                    ) ??
-                    YataTypographyTokens.bodyMedium,
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 48,
+            color: YataColorTokens.textSecondary.withValues(alpha: 0.4),
           ),
-        ),
-      );
+          const SizedBox(height: YataSpacingTokens.md),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style:
+                Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary) ??
+                YataTypographyTokens.bodyMedium,
+          ),
+        ],
+      ),
+    ),
+  );
 }

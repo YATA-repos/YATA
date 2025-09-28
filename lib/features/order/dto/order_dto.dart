@@ -1,4 +1,6 @@
 import "../../../core/constants/enums.dart";
+import "../models/order_model.dart";
+import "../shared/order_status_mapper.dart";
 
 /// カートアイテム追加/更新リクエスト
 class CartItemRequest {
@@ -78,6 +80,43 @@ class OrderCheckoutRequest {
   };
 }
 
+/// 会計処理の結果を表すレスポンス。
+class OrderCheckoutResult {
+  const OrderCheckoutResult._({
+    required this.order,
+    required this.newCart,
+    required this.isStockInsufficient,
+  });
+
+  /// 正常完了時の結果を生成する。
+  factory OrderCheckoutResult.success({required Order order, Order? newCart}) =>
+      OrderCheckoutResult._(
+        order: order,
+        newCart: newCart,
+        isStockInsufficient: false,
+      );
+
+  /// 在庫不足などにより会計できなかった場合の結果を生成する。
+  factory OrderCheckoutResult.stockInsufficient({required Order order}) =>
+      OrderCheckoutResult._(
+        order: order,
+        newCart: null,
+        isStockInsufficient: true,
+      );
+
+  /// 会計対象となった注文。
+  final Order order;
+
+  /// 会計完了後に新規作成されたカート（存在する場合）。
+  final Order? newCart;
+
+  /// 在庫不足により完了できなかったかどうか。
+  final bool isStockInsufficient;
+
+  /// 会計が成功したかどうか。
+  bool get isSuccess => !isStockInsufficient;
+}
+
 /// 注文検索リクエスト
 class OrderSearchRequest {
   OrderSearchRequest({
@@ -99,8 +138,7 @@ class OrderSearchRequest {
         ? null
         : (json["status_filter"] as List<dynamic>)
               .map(
-                (dynamic status) =>
-                    OrderStatus.values.firstWhere((OrderStatus s) => s.value == status as String),
+        (dynamic status) => OrderStatusMapper.fromJson(status),
               )
               .toList(),
     customerName: json["customer_name"] as String?,
@@ -138,7 +176,9 @@ class OrderSearchRequest {
   Map<String, dynamic> toJson() => <String, dynamic>{
     "date_from": dateFrom?.toIso8601String(),
     "date_to": dateTo?.toIso8601String(),
-    "status_filter": statusFilter?.map((OrderStatus status) => status.value).toList(),
+  "status_filter": statusFilter
+    ?.map((OrderStatus status) => OrderStatusMapper.toJson(status))
+    .toList(),
     "customer_name": customerName,
     "menu_item_name": menuItemName,
     "search_query": searchQuery,

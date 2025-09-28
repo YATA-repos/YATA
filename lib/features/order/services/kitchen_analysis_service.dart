@@ -6,6 +6,7 @@ import "../../../core/contracts/repositories/order/order_repository_contracts.da
 import "../../../core/logging/compat.dart" as log;
 import "../models/order_model.dart";
 import "kitchen_operation_service.dart";
+import "../shared/order_status_mapper.dart";
 
 /// キッチン分析・予測サービス
 class KitchenAnalysisService {
@@ -34,7 +35,7 @@ class KitchenAnalysisService {
         return null;
       }
 
-      if (order.status == OrderStatus.completed) {
+      if (OrderStatusMapper.normalize(order.status) == OrderStatus.completed) {
         log.d("Order already completed, returning completion time", tag: loggerComponent);
         return order.completedAt;
       }
@@ -96,9 +97,9 @@ class KitchenAnalysisService {
     log.d("Retrieving kitchen workload", tag: loggerComponent);
 
     try {
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
-        OrderStatus.preparing,
-      ]);
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(
+        const <OrderStatus>[OrderStatus.inProgress],
+      );
 
       final int notStartedCount = activeOrders
           .where((Order o) => o.startedPreparingAt == null)
@@ -106,8 +107,12 @@ class KitchenAnalysisService {
       final int inProgressCount = activeOrders
           .where((Order o) => o.startedPreparingAt != null && o.readyAt == null)
           .length;
-      final int readyCount = activeOrders
-          .where((Order o) => o.readyAt != null && o.status != OrderStatus.completed)
+    final int readyCount = activeOrders
+      .where(
+      (Order o) =>
+        o.readyAt != null &&
+        OrderStatusMapper.normalize(o.status) != OrderStatus.completed,
+      )
           .length;
 
       // 推定総調理時間を計算
@@ -191,9 +196,9 @@ class KitchenAnalysisService {
     log.d("Optimizing cooking order", tag: loggerComponent);
 
     try {
-      final List<Order> notStartedOrders = await _orderRepository.findByStatusList(<OrderStatus>[
-        OrderStatus.preparing,
-      ]);
+      final List<Order> notStartedOrders = await _orderRepository.findByStatusList(
+        const <OrderStatus>[OrderStatus.inProgress],
+      );
 
       final List<Order> filteredOrders = notStartedOrders
           .where((Order o) => o.startedPreparingAt == null)
@@ -243,9 +248,9 @@ class KitchenAnalysisService {
     log.d("Predicting completion times for all active orders", tag: loggerComponent);
 
     try {
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(<OrderStatus>[
-        OrderStatus.preparing,
-      ]);
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(
+        const <OrderStatus>[OrderStatus.inProgress],
+      );
       final Map<String, DateTime> completionTimes = <String, DateTime>{};
 
       for (final Order order in activeOrders) {

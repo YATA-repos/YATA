@@ -107,8 +107,8 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
 
   // ===== 注文管理関連メソッド =====
 
-  /// カートを確定して正式注文に変換（戻り値: (Order, 成功フラグ)）
-  Future<(Order?, bool)> checkoutCart(
+  /// カートを確定して正式注文に変換する。
+  Future<OrderCheckoutResult> checkoutCart(
     String cartId,
     OrderCheckoutRequest request,
     String userId,

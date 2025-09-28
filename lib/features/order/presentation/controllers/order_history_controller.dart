@@ -12,6 +12,7 @@ import "../../../menu/models/menu_model.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../services/order_service.dart";
+import "../../shared/order_status_mapper.dart";
 
 /// 注文履歴画面で表示する注文の表示用データ。
 @immutable
@@ -131,7 +132,7 @@ class OrderHistoryState {
   /// 注文履歴一覧。
   final List<OrderHistoryViewData> orders;
 
-  /// 選択中のステータスフィルター（0=全て、1=完了、2=キャンセル等）。
+  /// 選択中のステータスフィルター（0=全て、1=準備中、2=完了、3=キャンセル）。
   final int selectedStatusFilter;
 
   /// 検索クエリ。
@@ -192,13 +193,16 @@ class OrderHistoryState {
     // ステータスフィルター
     if (selectedStatusFilter > 0) {
       final OrderStatus targetStatus = switch (selectedStatusFilter) {
-        1 => OrderStatus.completed,
-        2 => OrderStatus.cancelled,
-        3 => OrderStatus.refunded,
-        _ => OrderStatus.completed,
+        1 => OrderStatus.inProgress,
+        2 => OrderStatus.completed,
+        3 => OrderStatus.cancelled,
+        _ => OrderStatus.inProgress,
       };
       filtered = orders
-          .where((OrderHistoryViewData order) => order.status == targetStatus)
+          .where(
+            (OrderHistoryViewData order) =>
+                OrderStatusMapper.normalize(order.status) == targetStatus,
+          )
           .toList();
     }
 
@@ -310,7 +314,7 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
           OrderHistoryViewData(
             id: order.id!,
             orderNumber: order.orderNumber,
-            status: order.status,
+            status: OrderStatusMapper.normalize(order.status),
             customerName: order.customerName,
             totalAmount: order.totalAmount,
             discountAmount: order.discountAmount,
@@ -388,11 +392,11 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
   List<OrderStatus>? _statusFilterFromSelection() {
     switch (state.selectedStatusFilter) {
       case 1:
-        return <OrderStatus>[OrderStatus.completed];
+        return <OrderStatus>[OrderStatus.inProgress];
       case 2:
-        return <OrderStatus>[OrderStatus.cancelled];
+        return <OrderStatus>[OrderStatus.completed];
       case 3:
-        return <OrderStatus>[OrderStatus.refunded];
+        return <OrderStatus>[OrderStatus.cancelled];
       default:
         return null;
     }

@@ -9,6 +9,7 @@ import "../../../core/contracts/repositories/order/order_repository_contracts.da
 import "../../../core/logging/compat.dart" as log;
 import "../../inventory/models/transaction_model.dart";
 import "../../order/models/order_model.dart";
+import "../../order/shared/order_status_mapper.dart";
 import "../dto/analytics_dto.dart";
 
 class AnalyticsService {
@@ -37,10 +38,11 @@ class AnalyticsService {
         targetDate,
       );
       final Map<OrderStatus, int> statusCounts = <OrderStatus, int>{
-        for (final OrderStatus s in OrderStatus.values) s: 0,
+        for (final OrderStatus s in OrderStatus.primaryStatuses) s: 0,
       };
       for (final Order o in targetDayOrders) {
-        statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1;
+        final OrderStatus normalizedStatus = OrderStatusMapper.normalize(o.status);
+        statusCounts[normalizedStatus] = (statusCounts[normalizedStatus] ?? 0) + 1;
       }
 
       // 完了注文を取得して売上計算
@@ -88,8 +90,8 @@ class AnalyticsService {
       );
 
       return DailyStatsResult(
-        completedOrders: statusCounts[OrderStatus.completed] ?? 0,
-        pendingOrders: statusCounts[OrderStatus.preparing] ?? 0,
+  completedOrders: statusCounts[OrderStatus.completed] ?? 0,
+  pendingOrders: statusCounts[OrderStatus.inProgress] ?? 0,
         totalRevenue: totalRevenue,
         averagePrepTimeMinutes: averagePrepTime,
         mostPopularItem: mostPopularItem,

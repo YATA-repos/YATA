@@ -303,6 +303,23 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
 
   // 自動スクロールは無効化
 
+  String _checkoutFailureMessage(CheckoutActionResult result) {
+    switch (result.status) {
+      case CheckoutActionStatus.stockInsufficient:
+        return result.message ?? "在庫が不足している商品があります。数量を調整して再度お試しください。";
+      case CheckoutActionStatus.emptyCart:
+        return result.message ?? "カートに商品がありません。";
+      case CheckoutActionStatus.authenticationFailed:
+        return result.message ?? "ユーザー情報を取得できませんでした。再度ログインしてください。";
+      case CheckoutActionStatus.missingCart:
+        return result.message ?? "カート情報の取得に失敗しました。再度読み込みを行ってください。";
+      case CheckoutActionStatus.failure:
+        return result.message ?? "会計処理に失敗しました。時間をおいて再度お試しください。";
+      case CheckoutActionStatus.success:
+        return "";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final OrderManagementState state = widget.state;
@@ -458,7 +475,9 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
               children: <Widget>[
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: state.cartItems.isEmpty ? null : controller.clearCart,
+                    onPressed: state.cartItems.isEmpty || state.isCheckoutInProgress
+                        ? null
+                        : controller.clearCart,
                     icon: const Icon(Icons.close),
                     label: const Text("クリア"),
                     style: OutlinedButton.styleFrom(
@@ -472,13 +491,41 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                 const SizedBox(width: YataSpacingTokens.sm),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: state.cartItems.isEmpty
+                    onPressed: state.cartItems.isEmpty || state.isCheckoutInProgress
                         ? null
-                        : () {
-                            context.push("/history");
+                        : () async {
+                            final CheckoutActionResult result = await controller.checkout();
+                            if (!mounted) {
+                              return;
+                            }
+                            if (result.isSuccess) {
+                              final String? orderNumber = result.order?.orderNumber;
+                              final String orderNumberLabel =
+                                  (orderNumber == null || orderNumber.isEmpty)
+                                      ? "新規注文"
+                                      : "注文番号 $orderNumber";
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("会計が完了しました（$orderNumberLabel）。")),
+                              );
+                              context.go("/history");
+                            } else {
+                              final String message = _checkoutFailureMessage(result);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(message)),
+                              );
+                            }
                           },
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text("会計"),
+                    icon: state.isCheckoutInProgress
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              valueColor: AlwaysStoppedAnimation<Color>(YataColorTokens.neutral0),
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_outline),
+                    label: Text(state.isCheckoutInProgress ? "会計中…" : "会計"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: YataColorTokens.success,
                       foregroundColor: YataColorTokens.neutral0,

@@ -36,7 +36,7 @@ class CartManagementService {
     log.i("Started retrieving active cart for user", tag: loggerComponent);
 
     try {
-      final Order? existingCart = await _orderRepository.findActiveDraftByUser();
+  final Order? existingCart = await _orderRepository.findActiveDraftByUser(userId);
 
       if (existingCart != null) {
         log.i("Active cart found and returned", tag: loggerComponent);
@@ -66,7 +66,7 @@ class CartManagementService {
       final DateTime now = DateTime.now();
       final Order newCart = Order(
         totalAmount: 0,
-        status: OrderStatus.preparing,
+        status: OrderStatus.inProgress,
         paymentMethod: PaymentMethod.cash, // デフォルト値
         discountAmount: 0,
         orderedAt: now,

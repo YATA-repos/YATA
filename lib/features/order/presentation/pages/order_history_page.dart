@@ -18,6 +18,7 @@ import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_history_controller.dart";
 import "order_status_page.dart";
+import "../../shared/order_status_presentation.dart";
 
 /// 注文履歴ページ。
 class OrderHistoryPage extends ConsumerStatefulWidget {
@@ -42,6 +43,8 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
   Widget build(BuildContext context) {
     final OrderHistoryState state = ref.watch(orderHistoryControllerProvider);
     final OrderHistoryController controller = ref.watch(orderHistoryControllerProvider.notifier);
+  final List<(String label, OrderStatus status)> statusOptions =
+    OrderStatusPresentation.segmentOptions();
 
     return Scaffold(
       backgroundColor: YataColorTokens.background,
@@ -151,11 +154,15 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
 
                       // ステータスフィルター
                       YataSegmentedFilter(
-                        segments: const <YataFilterSegment>[
-                          YataFilterSegment(label: "全て", value: 0),
-                          YataFilterSegment(label: "完了", value: 1),
-                          YataFilterSegment(label: "キャンセル", value: 2),
-                          YataFilterSegment(label: "返金済み", value: 3),
+                        segments: <YataFilterSegment>[
+                          const YataFilterSegment(label: "全て", value: 0),
+                          ...List<YataFilterSegment>.generate(
+                            statusOptions.length,
+                            (int index) => YataFilterSegment(
+                              label: statusOptions[index].$1,
+                              value: index + 1,
+                            ),
+                          ),
                         ],
                         selectedIndex: state.selectedStatusFilter,
                         onSegmentSelected: controller.setStatusFilter,
@@ -489,18 +496,8 @@ class _OrderStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final YataStatusBadgeType badgeType = switch (status) {
-      OrderStatus.completed => YataStatusBadgeType.success,
-      OrderStatus.cancelled => YataStatusBadgeType.danger,
-      OrderStatus.refunded => YataStatusBadgeType.warning,
-      OrderStatus.delivered => YataStatusBadgeType.success,
-      OrderStatus.pending => YataStatusBadgeType.neutral,
-      OrderStatus.confirmed => YataStatusBadgeType.info,
-      OrderStatus.preparing => YataStatusBadgeType.warning,
-      OrderStatus.ready => YataStatusBadgeType.info,
-    };
-
-    return YataStatusBadge(label: status.displayName, type: badgeType);
+    final YataStatusBadgeType badgeType = OrderStatusPresentation.badgeType(status);
+    return YataStatusBadge(label: OrderStatusPresentation.label(status), type: badgeType);
   }
 }
 
@@ -589,7 +586,7 @@ class _OrderDetailContent extends StatelessWidget {
                 _DetailRow(label: "注文番号", value: order.orderNumber ?? "番号なし"),
                 _DetailRow(
                   label: "ステータス",
-                  value: order.status.displayName,
+                  value: OrderStatusPresentation.label(order.status),
                   valueWidget: _OrderStatusBadge(status: order.status),
                 ),
                 _DetailRow(label: "顧客名", value: order.customerName ?? "名前なし"),

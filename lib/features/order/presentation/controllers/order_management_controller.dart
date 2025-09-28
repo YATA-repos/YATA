@@ -5,6 +5,7 @@ import "package:flutter/foundation.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../../app/wiring/provider.dart";
+import "../../../../core/constants/enums.dart";
 import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../menu/models/menu_model.dart";
@@ -160,6 +161,7 @@ class OrderManagementState {
     this.highlightedItemId,
     this.cartId,
     this.discountAmount = 0,
+    this.isCheckoutInProgress = false,
     this.isLoading = false,
     this.errorMessage,
   }) : categories = List<MenuCategoryViewData>.unmodifiable(categories),
@@ -203,6 +205,9 @@ class OrderManagementState {
 
   /// 割引額。
   final int discountAmount;
+
+  /// 会計処理中かどうか。
+  final bool isCheckoutInProgress;
 
   /// ローディング中かどうか。
   final bool isLoading;
@@ -269,6 +274,7 @@ class OrderManagementState {
     bool clearHighlightedItemId = false,
     String? cartId,
     int? discountAmount,
+    bool? isCheckoutInProgress,
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
@@ -285,6 +291,7 @@ class OrderManagementState {
         : (highlightedItemId ?? this.highlightedItemId),
     cartId: cartId ?? this.cartId,
     discountAmount: discountAmount ?? this.discountAmount,
+    isCheckoutInProgress: isCheckoutInProgress ?? this.isCheckoutInProgress,
     isLoading: isLoading ?? this.isLoading,
     errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
   );
@@ -315,8 +322,12 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   int _highlightSeq = 0;
 
   /// 初期データを読み込む。
-  Future<void> loadInitialData() async {
-    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+  Future<void> loadInitialData({bool reset = false}) async {
+    if (reset) {
+      state = OrderManagementState.initial();
+    } else {
+      state = state.copyWith(isLoading: true, clearErrorMessage: true);
+    }
     final String? userId = _ref.read(currentUserIdProvider);
     if (userId == null) {
       state = state.copyWith(isLoading: false, errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
@@ -364,7 +375,12 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   }
 
   /// データを再読み込みする。
-  void refresh() => unawaited(loadInitialData());
+  void refresh() {
+    if (state.isCheckoutInProgress) {
+      return;
+    }
+    unawaited(loadInitialData());
+  }
 
   void _triggerHighlight(String menuItemId) {
     final int token = ++_highlightSeq;
@@ -396,6 +412,9 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   void addMenuItem(String menuItemId) => unawaited(_addMenuItem(menuItemId));
 
   Future<void> _addMenuItem(String menuItemId) async {
+    if (state.isCheckoutInProgress) {
+      return;
+    }
     final String? userId = _ensureUserId();
     if (userId == null) {
       return;
@@ -432,6 +451,9 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       unawaited(_updateItemQuantity(menuItemId, quantity));
 
   Future<void> _updateItemQuantity(String menuItemId, int quantity) async {
+    if (state.isCheckoutInProgress) {
+      return;
+    }
     final String? userId = _ensureUserId();
     if (userId == null) {
       return;
@@ -480,6 +502,9 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   void removeItem(String menuItemId) => unawaited(_removeItem(menuItemId));
 
   Future<void> _removeItem(String menuItemId) async {
+    if (state.isCheckoutInProgress) {
+      return;
+    }
     final String? userId = _ensureUserId();
     if (userId == null) {
       return;
@@ -523,10 +548,90 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     }
   }
 
+  /// カートを会計処理する。
+  Future<CheckoutActionResult> checkout() async {
+    if (state.isCheckoutInProgress) {
+      return CheckoutActionResult.failure(message: "会計処理中です。");
+    }
+
+    if (state.cartItems.isEmpty) {
+      return CheckoutActionResult.emptyCart(message: "カートに商品がありません。");
+    }
+
+    final String? userId = _ensureUserId();
+    if (userId == null) {
+      return CheckoutActionResult.authenticationFailed(
+        message: "ユーザー情報を取得できませんでした。再度ログインしてください。",
+      );
+    }
+
+    state = state.copyWith(isCheckoutInProgress: true, clearErrorMessage: true);
+
+    try {
+      String? cartId = state.cartId;
+      cartId ??= await _ensureCart(userId);
+      if (cartId == null) {
+        state = state.copyWith(isCheckoutInProgress: false);
+        return CheckoutActionResult.missingCart(message: "カート情報の取得に失敗しました。");
+      }
+
+      final OrderCheckoutRequest request = OrderCheckoutRequest(
+        paymentMethod: PaymentMethod.cash,
+        discountAmount: state.discountAmount,
+      );
+
+      final OrderCheckoutResult result =
+          await _orderService.checkoutCart(cartId, request, userId);
+
+      if (!result.isSuccess || result.isStockInsufficient) {
+        const String message = "在庫が不足している商品があります。数量を調整して再度お試しください。";
+        state = state.copyWith(
+          isCheckoutInProgress: false,
+          errorMessage: message,
+        );
+        return CheckoutActionResult.stockInsufficient(result.order, message: message);
+      }
+
+      final Order? newCart = result.newCart;
+      if (newCart == null) {
+        const String message = "新しいカートの初期化に失敗しました。";
+        state = state.copyWith(
+          isCheckoutInProgress: false,
+          errorMessage: message,
+        );
+        return CheckoutActionResult.failure(order: result.order, message: message);
+      }
+
+      state = state.copyWith(
+        isCheckoutInProgress: false,
+        cartItems: const <CartItemViewData>[],
+        cartId: newCart.id,
+        orderNumber: newCart.orderNumber,
+        discountAmount: newCart.discountAmount,
+        clearHighlightedItemId: true,
+        clearErrorMessage: true,
+      );
+
+  await loadInitialData(reset: true);
+
+      return CheckoutActionResult.success(result.order);
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(
+        isCheckoutInProgress: false,
+        errorMessage: message,
+      );
+      return CheckoutActionResult.failure(message: message);
+    }
+  }
+
   /// カートをクリアする。
   void clearCart() => unawaited(_clearCart());
 
   Future<void> _clearCart() async {
+    if (state.isCheckoutInProgress) {
+      return;
+    }
     if (state.cartItems.isEmpty) {
       return;
     }
@@ -707,9 +812,9 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。
-final StateNotifierProvider<OrderManagementController, OrderManagementState>
+final AutoDisposeStateNotifierProvider<OrderManagementController, OrderManagementState>
 orderManagementControllerProvider =
-    StateNotifierProvider<OrderManagementController, OrderManagementState>(
+    AutoDisposeStateNotifierProvider<OrderManagementController, OrderManagementState>(
       (Ref ref) => OrderManagementController(
         ref: ref,
         menuService: ref.read(menuServiceProvider),
@@ -741,4 +846,87 @@ String _formatCurrency(int amount) {
 
   final String formatted = buffer.toString().split("").reversed.join();
   return "¥$sign$formatted";
+}
+
+/// 会計アクションの状態フラグ。
+enum CheckoutActionStatus {
+  /// 会計が成功した。
+  success,
+
+  /// 在庫不足などで会計に失敗した。
+  stockInsufficient,
+
+  /// カートが空だった。
+  emptyCart,
+
+  /// ユーザー情報が取得できなかった。
+  authenticationFailed,
+
+  /// カートが取得できなかった。
+  missingCart,
+
+  /// その他のエラーが発生した。
+  failure,
+}
+
+/// 会計アクションの結果情報。
+class CheckoutActionResult {
+  const CheckoutActionResult._({
+    required this.status,
+    this.order,
+    this.message,
+  });
+
+  /// 成功結果を生成する。
+  factory CheckoutActionResult.success(Order order) => CheckoutActionResult._(
+        status: CheckoutActionStatus.success,
+        order: order,
+      );
+
+  /// 在庫不足による失敗結果を生成する。
+  factory CheckoutActionResult.stockInsufficient(Order order, {String? message}) =>
+      CheckoutActionResult._(
+        status: CheckoutActionStatus.stockInsufficient,
+        order: order,
+        message: message,
+      );
+
+  /// カートが空の場合の結果を生成する。
+  factory CheckoutActionResult.emptyCart({String? message}) => CheckoutActionResult._(
+        status: CheckoutActionStatus.emptyCart,
+        message: message,
+      );
+
+  /// 認証失敗時の結果を生成する。
+  factory CheckoutActionResult.authenticationFailed({String? message}) =>
+      CheckoutActionResult._(
+        status: CheckoutActionStatus.authenticationFailed,
+        message: message,
+      );
+
+  /// カート取得失敗時の結果を生成する。
+  factory CheckoutActionResult.missingCart({String? message}) => CheckoutActionResult._(
+        status: CheckoutActionStatus.missingCart,
+        message: message,
+      );
+
+  /// その他のエラーの場合の結果を生成する。
+  factory CheckoutActionResult.failure({String? message, Order? order}) =>
+      CheckoutActionResult._(
+        status: CheckoutActionStatus.failure,
+        order: order,
+        message: message,
+      );
+
+  /// 結果状態。
+  final CheckoutActionStatus status;
+
+  /// 処理対象となった注文。
+  final Order? order;
+
+  /// 結果に付随するメッセージ。
+  final String? message;
+
+  /// 成功したかどうか。
+  bool get isSuccess => status == CheckoutActionStatus.success;
 }

@@ -8,6 +8,8 @@ import "../../../core/validation/input_validator.dart";
 import "../../menu/models/menu_model.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
+import "../shared/order_status_mapper.dart";
+import "cart_management_service.dart";
 import "order_calculation_service.dart";
 import "order_stock_service.dart";
 
@@ -19,22 +21,25 @@ class OrderManagementService {
     required MenuItemRepositoryContract<MenuItem> menuItemRepository,
     required OrderCalculationService orderCalculationService,
     required OrderStockService orderStockService,
+    required CartManagementService cartManagementService,
   }) : _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
        _menuItemRepository = menuItemRepository,
        _orderCalculationService = orderCalculationService,
-       _orderStockService = orderStockService;
+    _orderStockService = orderStockService,
+    _cartManagementService = cartManagementService;
 
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
   final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
   final OrderCalculationService _orderCalculationService;
   final OrderStockService _orderStockService;
+  final CartManagementService _cartManagementService;
 
   String get loggerComponent => "OrderManagementService";
 
   /// カートを確定して正式注文に変換（戻り値: (Order, 成功フラグ)）
-  Future<(Order?, bool)> checkoutCart(
+  Future<OrderCheckoutResult> checkoutCart(
     String cartId,
     OrderCheckoutRequest request,
     String userId,
@@ -64,7 +69,7 @@ class OrderManagementService {
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      if (cart.status != OrderStatus.preparing) {
+      if (OrderStatusMapper.normalize(cart.status) != OrderStatus.inProgress) {
         log.e("Cart is not in preparing status", tag: loggerComponent);
         throw Exception("Cart is not in preparing status");
       }
@@ -88,7 +93,7 @@ class OrderManagementService {
 
       if (!allSufficient) {
         log.w("Checkout failed: insufficient stock for some items", tag: loggerComponent);
-        return (cart, false);
+        return OrderCheckoutResult.stockInsufficient(order: cart);
       }
 
       log.d("Stock validation passed for all items", tag: loggerComponent);
@@ -98,32 +103,43 @@ class OrderManagementService {
       await _orderStockService.consumeMaterialsForOrder(cartItems);
 
       // 注文の確定
-      // 注文番号生成（将来の使用のため）
-      await _orderRepository.generateNextOrderNumber();
+      final String orderNumber = await _orderRepository.generateNextOrderNumber();
+      final DateTime now = DateTime.now();
 
-      final Order? updatedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
+      final Order? confirmedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
         "payment_method": request.paymentMethod.value,
         "customer_name": request.customerName,
         "discount_amount": request.discountAmount,
         "notes": request.notes,
-        "ordered_at": DateTime.now().toIso8601String(),
-        "status": OrderStatus.preparing.value,
+        "ordered_at": now.toIso8601String(),
+  "status": OrderStatus.inProgress.value,
+        "order_number": orderNumber,
+        "updated_at": now.toIso8601String(),
       });
+
+      if (confirmedOrder == null) {
+        log.e("Failed to update order during checkout", tag: loggerComponent);
+        throw Exception("Failed to confirm order during checkout");
+      }
 
       // 最終金額を計算して更新
       final OrderCalculationResult calculation = await _orderCalculationService.calculateOrderTotal(
         cartId,
         discountAmount: request.discountAmount,
       );
-      await _orderRepository.updateById(cartId, <String, dynamic>{
+      final Order? recalculatedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
         "total_amount": calculation.totalAmount,
       });
+
+      final Order finalizedOrder = recalculatedOrder ?? confirmedOrder;
+
+      final Order? nextCart = await _cartManagementService.getOrCreateActiveCart(userId);
 
       log.i(
         "Cart checkout completed successfully: totalAmount=${calculation.totalAmount}",
         tag: loggerComponent,
       );
-      return (updatedOrder, true);
+      return OrderCheckoutResult.success(order: finalizedOrder, newCart: nextCart);
     } catch (e, stackTrace) {
       log.e("Cart checkout failed", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
@@ -142,12 +158,12 @@ class OrderManagementService {
         throw Exception("Order $orderId not found or access denied");
       }
 
-      if (order.status == OrderStatus.cancelled) {
+      if (OrderStatusMapper.normalize(order.status) == OrderStatus.cancelled) {
         log.w("Order already canceled", tag: loggerComponent);
         return (order, false); // 既にキャンセル済み
       }
 
-      if (order.status == OrderStatus.completed) {
+      if (OrderStatusMapper.normalize(order.status) == OrderStatus.completed) {
         log.e("Cannot cancel completed order", tag: loggerComponent);
         throw Exception("Cannot cancel completed order");
       }
@@ -326,17 +342,30 @@ class OrderManagementService {
     }
 
     try {
-      final List<Order> orders = await _orderRepository.findByStatusList(statuses);
-      final Map<OrderStatus, List<Order>> grouped = <OrderStatus, List<Order>>{};
+      final List<OrderStatus> normalizedStatuses = OrderStatusMapper.normalizeList(statuses);
+      final List<Order> orders = await _orderRepository.findByStatusList(normalizedStatuses);
+      final Map<OrderStatus, List<Order>> grouped = <OrderStatus, List<Order>>{
+        for (final OrderStatus status in normalizedStatuses) status: <Order>[]
+      };
 
-      for (final OrderStatus status in statuses) {
-        final Iterable<Order> filtered = orders.where(
-          (Order order) => order.userId == userId && order.status == status,
-        );
-        grouped[status] = filtered.take(limit).toList();
+      for (final Order order in orders) {
+        if (order.userId != userId) {
+          continue;
+        }
+        final OrderStatus normalizedStatus = OrderStatusMapper.normalize(order.status);
+        if (!grouped.containsKey(normalizedStatus)) {
+          continue;
+        }
+        grouped[normalizedStatus]!.add(order);
       }
 
-      return grouped;
+      final Map<OrderStatus, List<Order>> limited = <OrderStatus, List<Order>>{};
+      for (final OrderStatus status in grouped.keys) {
+        final List<Order> list = grouped[status] ?? <Order>[];
+        limited[status] = list.take(limit).toList();
+      }
+
+      return limited;
     } catch (e, stackTrace) {
       log.e("Failed to fetch orders by statuses", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
@@ -355,9 +384,10 @@ class OrderManagementService {
       fields: <String, dynamic>{"orderId": orderId, "newStatus": newStatus.name},
     );
 
-    if (newStatus != OrderStatus.preparing && newStatus != OrderStatus.completed) {
+    final OrderStatus targetStatus = OrderStatusMapper.normalize(newStatus);
+    if (targetStatus != OrderStatus.inProgress && targetStatus != OrderStatus.completed) {
       log.e("Unsupported status update requested", tag: loggerComponent);
-      throw OrderException.invalidOrderStatus(newStatus.value, "preparing/completed only");
+      throw OrderException.invalidOrderStatus(newStatus.value, "in_progress/completed only");
     }
 
     try {
@@ -367,15 +397,16 @@ class OrderManagementService {
         throw OrderException.orderNotFound(orderId);
       }
 
-      if (order.status == newStatus) {
+      if (OrderStatusMapper.normalize(order.status) == targetStatus) {
         log.d("Order already in requested status", tag: loggerComponent);
         return order;
       }
 
-      if (newStatus == OrderStatus.completed) {
-        if (order.status == OrderStatus.cancelled || order.status == OrderStatus.refunded) {
+      if (targetStatus == OrderStatus.completed) {
+        final OrderStatus currentStatus = OrderStatusMapper.normalize(order.status);
+        if (currentStatus == OrderStatus.cancelled) {
           log.e("Cannot complete canceled/refunded order", tag: loggerComponent);
-          throw OrderException.invalidOrderStatus(order.status.value, newStatus.value);
+          throw OrderException.invalidOrderStatus(order.status.value, targetStatus.value);
         }
 
         final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
@@ -387,13 +418,13 @@ class OrderManagementService {
         return updatedOrder;
       }
 
-      // newStatus == OrderStatus.preparing
+      // targetStatus == OrderStatus.inProgress
       final Order? updatedOrder = await _orderRepository.updateById(orderId, <String, dynamic>{
-        "status": OrderStatus.preparing.value,
+        "status": OrderStatus.inProgress.value,
         "completed_at": null,
       });
 
-      log.i("Order reverted to preparing", tag: loggerComponent);
+      log.i("Order reverted to in_progress", tag: loggerComponent);
       return updatedOrder;
     } catch (e, stackTrace) {
       log.e("Failed to update order status", tag: loggerComponent, error: e, st: stackTrace);

@@ -8,6 +8,7 @@ import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
 import "../../services/order_service.dart";
+import "../../shared/order_status_presentation.dart";
 
 /// 注文状況ページで表示する注文のビューモデル。
 class OrderStatusOrderViewData {
@@ -52,27 +53,33 @@ class OrderStatusOrderViewData {
 class OrderStatusState {
   /// [OrderStatusState]を生成する。
   OrderStatusState({
-    required List<OrderStatusOrderViewData> preparingOrders,
+    required List<OrderStatusOrderViewData> inProgressOrders,
     required List<OrderStatusOrderViewData> completedOrders,
+    required List<OrderStatusOrderViewData> cancelledOrders,
     this.isLoading = false,
     this.errorMessage,
     Set<String>? updatingOrderIds,
-  })  : preparingOrders = List<OrderStatusOrderViewData>.unmodifiable(preparingOrders),
+  })  : inProgressOrders = List<OrderStatusOrderViewData>.unmodifiable(inProgressOrders),
         completedOrders = List<OrderStatusOrderViewData>.unmodifiable(completedOrders),
+        cancelledOrders = List<OrderStatusOrderViewData>.unmodifiable(cancelledOrders),
         updatingOrderIds = Set<String>.unmodifiable(updatingOrderIds ?? <String>{});
 
   /// 初期状態を生成する。
   factory OrderStatusState.initial() => OrderStatusState(
-        preparingOrders: const <OrderStatusOrderViewData>[],
+        inProgressOrders: const <OrderStatusOrderViewData>[],
         completedOrders: const <OrderStatusOrderViewData>[],
+        cancelledOrders: const <OrderStatusOrderViewData>[],
         isLoading: true,
       );
 
   /// 準備中の注文一覧。
-  final List<OrderStatusOrderViewData> preparingOrders;
+  final List<OrderStatusOrderViewData> inProgressOrders;
 
   /// 提供済みの注文一覧。
   final List<OrderStatusOrderViewData> completedOrders;
+
+  /// キャンセル済みの注文一覧。
+  final List<OrderStatusOrderViewData> cancelledOrders;
 
   /// 読み込み中かどうか。
   final bool isLoading;
@@ -85,15 +92,17 @@ class OrderStatusState {
 
   /// 状態を複製する。
   OrderStatusState copyWith({
-    List<OrderStatusOrderViewData>? preparingOrders,
+    List<OrderStatusOrderViewData>? inProgressOrders,
     List<OrderStatusOrderViewData>? completedOrders,
+    List<OrderStatusOrderViewData>? cancelledOrders,
     bool? isLoading,
     String? errorMessage,
     Set<String>? updatingOrderIds,
     bool clearErrorMessage = false,
   }) => OrderStatusState(
-        preparingOrders: preparingOrders ?? this.preparingOrders,
+        inProgressOrders: inProgressOrders ?? this.inProgressOrders,
         completedOrders: completedOrders ?? this.completedOrders,
+        cancelledOrders: cancelledOrders ?? this.cancelledOrders,
         isLoading: isLoading ?? this.isLoading,
         errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
         updatingOrderIds: updatingOrderIds ?? this.updatingOrderIds,
@@ -128,13 +137,14 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
 
     try {
       final Map<OrderStatus, List<Order>> grouped = await _orderService.getOrdersByStatuses(
-        const <OrderStatus>[OrderStatus.preparing, OrderStatus.completed],
+        OrderStatusPresentation.displayOrder,
         userId,
       );
 
       state = state.copyWith(
-        preparingOrders: _mapOrders(grouped[OrderStatus.preparing] ?? const <Order>[]),
+        inProgressOrders: _mapOrders(grouped[OrderStatus.inProgress] ?? const <Order>[]),
         completedOrders: _mapOrders(grouped[OrderStatus.completed] ?? const <Order>[]),
+        cancelledOrders: _mapOrders(grouped[OrderStatus.cancelled] ?? const <Order>[]),
         isLoading: showLoadingIndicator ? false : state.isLoading,
         clearErrorMessage: true,
       );

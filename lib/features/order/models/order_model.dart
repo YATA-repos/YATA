@@ -2,6 +2,7 @@ import "package:json_annotation/json_annotation.dart";
 
 import "../../../core/base/base.dart";
 import "../../../core/constants/enums.dart";
+import "../shared/order_status_mapper.dart";
 
 part "order_model.g.dart";
 
@@ -36,6 +37,7 @@ class Order extends BaseModel {
   String? orderNumber;
 
   /// 注文ステータス
+  @JsonKey(fromJson: OrderStatusMapper.fromJson, toJson: OrderStatusMapper.toJson)
   OrderStatus status;
 
   /// 支払い方法

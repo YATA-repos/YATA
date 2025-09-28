@@ -5,7 +5,7 @@ import "../../repositories/crud_repository.dart";
 
 abstract interface class OrderRepositoryContract<T extends BaseModel>
     implements CrudRepository<T, String> {
-  Future<T?> findActiveDraftByUser();
+  Future<T?> findActiveDraftByUser(String userId);
   Future<List<T>> findByStatusList(List<OrderStatus> statusList);
   Future<(List<T>, int)> searchWithPagination(List<QueryFilter> filters, int page, int limit);
   Future<List<T>> findByDateRange(DateTime dateFrom, DateTime dateTo);
