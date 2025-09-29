@@ -12,7 +12,7 @@ import "../../../../shared/patterns/patterns.dart";
 import "../../../../shared/utils/unit_config.dart";
 import "../../../order/presentation/pages/order_status_page.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
-import "../../models/inventory_model.dart";
+import "../../models/inventory_model.dart" as inventory_models;
 import "../controllers/inventory_management_controller.dart";
 
 /// 在庫管理画面。
@@ -100,21 +100,60 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
               _ErrorBanner(message: state.errorMessage!, onRetry: controller.refresh),
               const SizedBox(height: YataSpacingTokens.md),
             ],
-            _HeaderStats(state: state, controller: controller, onDrillDown: _scrollToTable),
-            const SizedBox(height: YataSpacingTokens.lg),
-            _ControlsRow(
-              searchController: _searchController,
-              state: state,
-              controller: controller,
-              onCreateCategory: _handleCreateCategory,
-            ),
-            const SizedBox(height: YataSpacingTokens.lg),
-            _InventoryTable(
-              key: _tableKey,
-              state: state,
-              controller: controller,
-              onAddItem: _handleAddItem,
-              onEditItem: _handleEditItem,
+            LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final bool showSidebar = constraints.maxWidth >= 1080;
+                final Widget mainContent = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _HeaderStats(state: state, controller: controller, onDrillDown: _scrollToTable),
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    _ControlsRow(
+                      searchController: _searchController,
+                      state: state,
+                      controller: controller,
+                      onAddItem: _handleAddItem,
+                    ),
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    _InventoryTable(
+                      key: _tableKey,
+                      state: state,
+                      controller: controller,
+                      onAddItem: _handleAddItem,
+                      onEditItem: _handleEditItem,
+                    ),
+                  ],
+                );
+
+                final Widget sidebar = SizedBox(
+                  width: showSidebar ? 320 : double.infinity,
+                  child: _CategorySidebar(
+                    state: state,
+                    controller: controller,
+                    onCreateCategory: _handleCreateCategory,
+                  ),
+                );
+
+                if (showSidebar) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      sidebar,
+                      const SizedBox(width: YataSpacingTokens.lg),
+                      Expanded(child: mainContent),
+                    ],
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    mainContent,
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    sidebar,
+                  ],
+                );
+              },
             ),
             const SizedBox(height: YataSpacingTokens.lg),
           ],
@@ -191,14 +230,16 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                           }
 
                           if (errorMessage != null) {
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(SnackBar(content: Text(errorMessage)));
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(errorMessage)));
                             setDialogState(() => isSaving = false);
                             return;
                           }
 
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(const SnackBar(content: Text("カテゴリを追加しました")));
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(const SnackBar(content: Text("カテゴリを追加しました")));
 
                           created = true;
                           Navigator.of(dialogContext).pop();
@@ -229,9 +270,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
 
     List<DropdownMenuItem<String>> buildCategoryItems(InventoryManagementState state) {
       final List<DropdownMenuItem<String>> items = state.categoryEntities
-          .where((MaterialCategory category) => category.id != null)
+          .where((inventory_models.MaterialCategory category) => category.id != null)
           .map(
-            (MaterialCategory category) =>
+            (inventory_models.MaterialCategory category) =>
                 DropdownMenuItem<String>(value: category.id!, child: Text(category.name)),
           )
           .toList(growable: true);
@@ -240,7 +281,10 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
           initialItem.categoryId.isNotEmpty &&
           items.every((DropdownMenuItem<String> item) => item.value != initialItem.categoryId)) {
         items.add(
-          DropdownMenuItem<String>(value: initialItem.categoryId, child: Text(initialItem.category)),
+          DropdownMenuItem<String>(
+            value: initialItem.categoryId,
+            child: Text(initialItem.category),
+          ),
         );
       }
 
@@ -256,8 +300,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
         return;
       }
 
-      final InventoryManagementState refreshedState =
-          ref.read(inventoryManagementControllerProvider);
+      final InventoryManagementState refreshedState = ref.read(
+        inventoryManagementControllerProvider,
+      );
       categoryItems = buildCategoryItems(refreshedState);
 
       if (categoryItems.isEmpty) {
@@ -352,8 +397,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                                       return;
                                     }
 
-                                    final InventoryManagementState refreshedState =
-                                        ref.read(inventoryManagementControllerProvider);
+                                    final InventoryManagementState refreshedState = ref.read(
+                                      inventoryManagementControllerProvider,
+                                    );
 
                                     setDialogState(() {
                                       categoryItems = buildCategoryItems(refreshedState);
@@ -539,75 +585,174 @@ class _HeaderStats extends StatelessWidget {
   final VoidCallback onDrillDown;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (BuildContext context, BoxConstraints constraints) {
-      final bool twoCols = constraints.maxWidth >= 900;
-      final double gap = YataSpacingTokens.lg;
-      return Wrap(
-        spacing: gap,
-        runSpacing: gap,
-        children: <Widget>[
-          SizedBox(
-            width: twoCols ? (constraints.maxWidth - gap) / 2 : constraints.maxWidth,
-            child: YataStatCard(
-              title: "登録アイテム",
-              value: "${state.totalItems}",
-              trend: YataStatTrend.steady,
-              trendLabel: "今週",
-            ),
-          ),
-          SizedBox(
-            width: twoCols ? (constraints.maxWidth - gap) / 2 : constraints.maxWidth,
-            child: YataSectionCard(
-              title: "在庫ステータス",
-              child: Row(
-                children: <Widget>[
-                  _StatusPill(
-                    color: YataColorTokens.success,
-                    bg: YataColorTokens.successSoft,
-                    label: "十分: ${state.totalItems - state.lowCount - state.criticalCount}",
-                    isActive: state.selectedStatusFilter == StockStatus.sufficient,
-                    onTap: () {
-                      controller.toggleStatusFilter(StockStatus.sufficient);
-                      onDrillDown();
-                    },
-                  ),
-                  const SizedBox(width: YataSpacingTokens.md),
-                  _StatusPill(
-                    color: YataColorTokens.warning,
-                    bg: YataColorTokens.warningSoft,
-                    label: "少: ${state.lowCount}",
-                    isActive: state.selectedStatusFilter == StockStatus.low,
-                    onTap: () {
-                      controller.toggleStatusFilter(StockStatus.low);
-                      onDrillDown();
-                    },
-                  ),
-                  const SizedBox(width: YataSpacingTokens.md),
-                  _StatusPill(
-                    color: YataColorTokens.danger,
-                    bg: YataColorTokens.dangerSoft,
-                    label: "危険: ${state.criticalCount}",
-                    isActive: state.selectedStatusFilter == StockStatus.critical,
-                    onTap: () {
-                      controller.toggleStatusFilter(StockStatus.critical);
-                      onDrillDown();
-                    },
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: onDrillDown,
-                    icon: const Icon(Icons.south),
-                    label: const Text("一覧へ移動"),
-                  ),
-                ],
+  Widget build(BuildContext context) {
+    final int adequateCount = state.totalItems - state.lowCount - state.criticalCount;
+    final List<_OverviewStat> stats = <_OverviewStat>[
+      _OverviewStat(
+        title: "総在庫アイテム",
+        value: state.totalItems,
+        icon: Icons.inventory_2_outlined,
+        accent: YataColorTokens.primary,
+      ),
+      _OverviewStat(
+        title: "適正在庫",
+        value: adequateCount < 0 ? 0 : adequateCount,
+        icon: Icons.check_circle_outline,
+        accent: YataColorTokens.success,
+      ),
+      _OverviewStat(
+        title: "要注意",
+        value: state.lowCount,
+        icon: Icons.error_outline,
+        accent: YataColorTokens.warning,
+      ),
+      _OverviewStat(
+        title: "緊急補充",
+        value: state.criticalCount,
+        icon: Icons.warning_amber_outlined,
+        accent: YataColorTokens.danger,
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double gap = YataSpacingTokens.md;
+            final int perRow = constraints.maxWidth >= 1080
+                ? 4
+                : (constraints.maxWidth >= 720 ? 2 : 1);
+            final double itemWidth = perRow == 1
+                ? constraints.maxWidth
+                : (constraints.maxWidth - gap * (perRow - 1)) / perRow;
+
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: stats
+                  .map(
+                    (_OverviewStat stat) => SizedBox(
+                      width: itemWidth,
+                      child: _OverviewStatCard(stat: stat),
+                    ),
+                  )
+                  .toList(growable: false),
+            );
+          },
+        ),
+        const SizedBox(height: YataSpacingTokens.lg),
+        YataSectionCard(
+          title: "在庫ステータス",
+          subtitle: "タップで絞り込みができます",
+          child: Wrap(
+            spacing: YataSpacingTokens.md,
+            runSpacing: YataSpacingTokens.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              _StatusPill(
+                color: YataColorTokens.success,
+                bg: YataColorTokens.successSoft,
+                label: "適正: ${adequateCount < 0 ? 0 : adequateCount}",
+                isActive: state.selectedStatusFilter == StockStatus.sufficient,
+                onTap: () {
+                  controller.toggleStatusFilter(StockStatus.sufficient);
+                  onDrillDown();
+                },
               ),
-            ),
+              _StatusPill(
+                color: YataColorTokens.warning,
+                bg: YataColorTokens.warningSoft,
+                label: "要注意: ${state.lowCount}",
+                isActive: state.selectedStatusFilter == StockStatus.low,
+                onTap: () {
+                  controller.toggleStatusFilter(StockStatus.low);
+                  onDrillDown();
+                },
+              ),
+              _StatusPill(
+                color: YataColorTokens.danger,
+                bg: YataColorTokens.dangerSoft,
+                label: "危険: ${state.criticalCount}",
+                isActive: state.selectedStatusFilter == StockStatus.critical,
+                onTap: () {
+                  controller.toggleStatusFilter(StockStatus.critical);
+                  onDrillDown();
+                },
+              ),
+              TextButton.icon(
+                onPressed: onDrillDown,
+                icon: const Icon(Icons.table_rows_outlined),
+                label: const Text("一覧を確認"),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OverviewStat {
+  const _OverviewStat({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String title;
+  final int value;
+  final IconData icon;
+  final Color accent;
+}
+
+class _OverviewStatCard extends StatelessWidget {
+  const _OverviewStatCard({required this.stat});
+
+  final _OverviewStat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final Color accent = stat.accent;
+
+    return Container(
+      padding: const EdgeInsets.all(YataSpacingTokens.lg),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(stat.icon, color: accent, size: 28),
+          const SizedBox(height: YataSpacingTokens.sm),
+          Text(stat.title, style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium),
+          const SizedBox(height: YataSpacingTokens.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                "${stat.value}",
+                style: (textTheme.headlineMedium ?? YataTypographyTokens.headlineMedium).copyWith(
+                  color: accent,
+                ),
+              ),
+              const SizedBox(width: YataSpacingTokens.xs),
+              Text(
+                "件",
+                style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
+                  color: accent,
+                ),
+              ),
+            ],
           ),
         ],
-      );
-    },
-  );
+      ),
+    );
+  }
 }
 
 class _StatusPill extends StatelessWidget {
@@ -665,60 +810,295 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _ControlsRow extends StatelessWidget {
-  const _ControlsRow({
-    required this.searchController,
+/// カテゴリとステータス集計を表示するサイドバー領域。
+class _CategorySidebar extends StatelessWidget {
+  const _CategorySidebar({
     required this.state,
     required this.controller,
     required this.onCreateCategory,
   });
 
-  final TextEditingController searchController;
   final InventoryManagementState state;
   final InventoryManagementController controller;
   final VoidCallback onCreateCategory;
 
   @override
   Widget build(BuildContext context) {
-    final List<YataFilterSegment> segments = state.categories
-        .map((String c) => YataFilterSegment(label: c))
-        .toList(growable: false);
+    final int categoryCount = state.categories.length > 1 ? state.categories.length - 1 : 0;
+    final int sufficientCountRaw = state.totalItems - state.lowCount - state.criticalCount;
+    final int sufficientCount = sufficientCountRaw < 0 ? 0 : sufficientCountRaw;
+    final List<_CategorySummary> summaries = _buildCategorySummaries(state);
+    final bool isBusy = state.isLoading;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          child: YataSearchField(
-            controller: searchController,
-            hintText: "在庫を検索...",
-            onChanged: controller.setSearchText,
-          ),
-        ),
-        const SizedBox(width: YataSpacingTokens.md),
-        Flexible(
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: YataSpacingTokens.sm,
-            runSpacing: YataSpacingTokens.sm,
+        YataSectionCard(
+          title: "カテゴリ",
+          subtitle: "在庫アイテムをカテゴリ別に管理",
+          actions: <Widget>[
+            FilledButton.icon(
+              onPressed: isBusy ? null : onCreateCategory,
+              icon: const Icon(Icons.add),
+              label: const Text("カテゴリ追加"),
+            ),
+          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 540),
-                child: YataSegmentedFilter(
-                  segments: segments,
-                  selectedIndex: state.selectedCategoryIndex,
-                  onSegmentSelected: controller.selectCategory,
+              if (summaries.isEmpty)
+                Container(
+                  height: 160,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: YataColorTokens.neutral100,
+                    borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+                  ),
+                  child: Text(
+                    "カテゴリがまだ登録されていません",
+                    style:
+                        Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: summaries.length,
+                  separatorBuilder: (BuildContext context, int _) =>
+                      const SizedBox(height: YataSpacingTokens.sm),
+                  itemBuilder: (BuildContext context, int index) {
+                    final _CategorySummary summary = summaries[index];
+                    return _CategoryTile(
+                      summary: summary,
+                      isSelected: state.selectedCategoryIndex == summary.index,
+                      color: _categoryAccentForIndex(index),
+                      onTap: () => controller.selectCategory(summary.index),
+                    );
+                  },
                 ),
-              ),
-              FilledButton.icon(
-                onPressed: state.isLoading ? null : onCreateCategory,
-                icon: const Icon(Icons.add),
-                label: const Text("カテゴリを追加"),
-              ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  /// カテゴリ単位の集計データを算出する。
+  List<_CategorySummary> _buildCategorySummaries(InventoryManagementState state) {
+    final List<_CategorySummary> summaries = <_CategorySummary>[
+      _CategorySummary(
+        name: "すべて",
+        index: 0,
+        total: state.totalItems,
+        low: state.lowCount,
+        critical: state.criticalCount,
+      ),
+    ];
+
+    final Map<String, List<InventoryItemViewData>> grouped =
+        <String, List<InventoryItemViewData>>{};
+    for (final InventoryItemViewData item in state.items) {
+      grouped[item.category] = (grouped[item.category] ?? <InventoryItemViewData>[])..add(item);
+    }
+
+    for (int i = 1; i < state.categories.length; i++) {
+      final String category = state.categories[i];
+      final List<InventoryItemViewData> items = grouped[category] ?? <InventoryItemViewData>[];
+      final int total = items.length;
+      final int low = items.where((InventoryItemViewData e) => e.status == StockStatus.low).length;
+      final int critical = items
+          .where((InventoryItemViewData e) => e.status == StockStatus.critical)
+          .length;
+
+      summaries.add(
+        _CategorySummary(name: category, index: i, total: total, low: low, critical: critical),
+      );
+    }
+
+    return summaries;
+  }
+}
+
+/// カテゴリ別集計値を保持するシンプルなモデル。
+class _CategorySummary {
+  const _CategorySummary({
+    required this.name,
+    required this.index,
+    required this.total,
+    required this.low,
+    required this.critical,
+  });
+
+  final String name;
+  final int index;
+  final int total;
+  final int low;
+  final int critical;
+
+  int get adequate {
+    final int value = total - low - critical;
+    return value < 0 ? 0 : value;
+  }
+}
+
+/// カテゴリの件数と在庫ステータスを表示するカード。
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({
+    required this.summary,
+    required this.isSelected,
+    required this.onTap,
+    required this.color,
+  });
+
+  final _CategorySummary summary;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final Color foreground = isSelected ? YataColorTokens.primary : YataColorTokens.textPrimary;
+    final Color background = isSelected ? YataColorTokens.primarySoft : YataColorTokens.surface;
+
+    return Material(
+      color: background,
+      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+        child: Padding(
+          padding: const EdgeInsets.all(YataSpacingTokens.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: YataSpacingTokens.sm),
+                  Expanded(
+                    child: Text(
+                      summary.name,
+                      style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    "${summary.total}",
+                    style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: YataSpacingTokens.xs),
+              Wrap(
+                spacing: YataSpacingTokens.xs,
+                runSpacing: YataSpacingTokens.xs,
+                children: <Widget>[
+                  YataStatusBadge(
+                    label: "適正 ${summary.adequate}",
+                    type: YataStatusBadgeType.success,
+                  ),
+                  YataStatusBadge(label: "要注意 ${summary.low}", type: YataStatusBadgeType.warning),
+                  YataStatusBadge(
+                    label: "危険 ${summary.critical}",
+                    type: YataStatusBadgeType.danger,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// カテゴリカードに使うアクセントカラーをインデックスから取得する。
+Color _categoryAccentForIndex(int index) {
+  const List<Color> palette = <Color>[
+    YataColorTokens.primary,
+    YataColorTokens.success,
+    YataColorTokens.info,
+    YataColorTokens.warning,
+    YataColorTokens.danger,
+  ];
+  return palette[index % palette.length];
+}
+/// 在庫一覧の検索欄と操作ボタンをまとめたコンポーネント。
+class _ControlsRow extends StatelessWidget {
+  const _ControlsRow({
+    required this.searchController,
+    required this.state,
+    required this.controller,
+    required this.onAddItem,
+  });
+
+  final TextEditingController searchController;
+  final InventoryManagementState state;
+  final InventoryManagementController controller;
+  final VoidCallback onAddItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isBusy = state.isLoading;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool narrow = constraints.maxWidth < 720;
+        final List<Widget> actions = <Widget>[
+          OutlinedButton.icon(
+            onPressed: isBusy ? null : controller.refresh,
+            icon: const Icon(Icons.refresh_outlined),
+            label: const Text("再取得"),
+          ),
+          FilledButton.icon(
+            onPressed: isBusy ? null : onAddItem,
+            icon: const Icon(Icons.add),
+            label: const Text("新規在庫追加"),
+          ),
+        ];
+
+        final Widget actionWrap = Wrap(
+          spacing: YataSpacingTokens.sm,
+          runSpacing: YataSpacingTokens.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: narrow ? WrapAlignment.start : WrapAlignment.end,
+          children: actions,
+        );
+
+        final Widget searchField = YataSearchField(
+          controller: searchController,
+          hintText: "在庫アイテム、カテゴリで検索",
+          onChanged: controller.setSearchText,
+        );
+
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              searchField,
+              const SizedBox(height: YataSpacingTokens.sm),
+              actionWrap,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(child: searchField),
+            const SizedBox(width: YataSpacingTokens.md),
+            actionWrap,
+          ],
+        );
+      },
     );
   }
 }
@@ -1053,17 +1433,12 @@ class _InventoryTableState extends State<_InventoryTable> {
                           ),
                         ),
                         Tooltip(
-                          message: hasApplicableSelection
-                              ? "選択された行の調整をまとめて適用"
-                              : "適用可能な差分がありません",
+                          message: hasApplicableSelection ? "選択された行の調整をまとめて適用" : "適用可能な差分がありません",
                           child: FilledButton.icon(
-                            onPressed:
-                                hasApplicableSelection ? controller.applySelected : null,
+                            onPressed: hasApplicableSelection ? controller.applySelected : null,
                             icon: const Icon(Icons.task_alt),
                             label: const Text("適用 (選択)"),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: YataColorTokens.primary,
-                            ),
+                            style: FilledButton.styleFrom(backgroundColor: YataColorTokens.primary),
                           ),
                         ),
                         Tooltip(
