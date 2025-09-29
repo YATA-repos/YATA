@@ -154,6 +154,7 @@ class OrderManagementState {
     required List<MenuCategoryViewData> categories,
     required List<MenuItemViewData> menuItems,
     required List<CartItemViewData> cartItems,
+    this.currentPaymentMethod = PaymentMethod.cash,
     this.selectedCategoryIndex = 0,
     this.searchQuery = "",
     this.orderNumber,
@@ -184,6 +185,9 @@ class OrderManagementState {
 
   /// カート内アイテム。
   final List<CartItemViewData> cartItems;
+
+  /// 選択中の支払い方法。
+  final PaymentMethod currentPaymentMethod;
 
   /// 選択中のカテゴリインデックス。
   final int selectedCategoryIndex;
@@ -266,6 +270,7 @@ class OrderManagementState {
     List<MenuCategoryViewData>? categories,
     List<MenuItemViewData>? menuItems,
     List<CartItemViewData>? cartItems,
+    PaymentMethod? currentPaymentMethod,
     int? selectedCategoryIndex,
     String? searchQuery,
     String? orderNumber,
@@ -282,6 +287,7 @@ class OrderManagementState {
     categories: categories ?? this.categories,
     menuItems: menuItems ?? this.menuItems,
     cartItems: cartItems ?? this.cartItems,
+  currentPaymentMethod: currentPaymentMethod ?? this.currentPaymentMethod,
     selectedCategoryIndex: selectedCategoryIndex ?? this.selectedCategoryIndex,
     searchQuery: searchQuery ?? this.searchQuery,
     orderNumber: orderNumber ?? this.orderNumber,
@@ -361,6 +367,8 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         categories: categoryView,
         menuItems: synchronisedMenu,
         cartItems: snapshot.items,
+        currentPaymentMethod:
+            snapshot.paymentMethod ?? cart?.paymentMethod ?? state.currentPaymentMethod,
         cartId: cartId,
         orderNumber: snapshot.orderNumber ?? cart?.orderNumber,
         discountAmount: snapshot.discountAmount ?? cart?.discountAmount ?? 0,
@@ -548,6 +556,42 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     }
   }
 
+  /// 支払い方法を更新する。
+  Future<void> updatePaymentMethod(PaymentMethod method) async {
+    if (state.isCheckoutInProgress || state.isLoading || method == state.currentPaymentMethod) {
+      return;
+    }
+
+    final String? userId = _ensureUserId();
+    if (userId == null) {
+      return;
+    }
+
+    final PaymentMethod previous = state.currentPaymentMethod;
+
+    String? cartId = state.cartId;
+    cartId ??= await _ensureCart(userId);
+    if (cartId == null) {
+      state = state.copyWith(
+        currentPaymentMethod: previous,
+        errorMessage: "カート情報を取得できませんでした。再度お試しください。",
+      );
+      return;
+    }
+
+    state = state.copyWith(currentPaymentMethod: method, clearErrorMessage: true);
+
+    try {
+      await _cartService.updateCartPaymentMethod(cartId, method, userId);
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(
+        currentPaymentMethod: previous,
+        errorMessage: message,
+      );
+    }
+  }
+
   /// カートを会計処理する。
   Future<CheckoutActionResult> checkout() async {
     if (state.isCheckoutInProgress) {
@@ -576,7 +620,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       }
 
       final OrderCheckoutRequest request = OrderCheckoutRequest(
-        paymentMethod: PaymentMethod.cash,
+        paymentMethod: state.currentPaymentMethod,
         discountAmount: state.discountAmount,
       );
 
@@ -608,6 +652,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         cartId: newCart.id,
         orderNumber: newCart.orderNumber,
         discountAmount: newCart.discountAmount,
+        currentPaymentMethod: newCart.paymentMethod,
         clearHighlightedItemId: true,
         clearErrorMessage: true,
       );
@@ -689,6 +734,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         cartId: cart.id,
         orderNumber: cart.orderNumber,
         discountAmount: cart.discountAmount,
+        currentPaymentMethod: cart.paymentMethod,
         clearErrorMessage: true,
       );
       return cart.id;
@@ -786,6 +832,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         items: items,
         orderNumber: order.orderNumber,
         discountAmount: order.discountAmount,
+        paymentMethod: order.paymentMethod,
         cartId: order.id ?? cartId,
       );
     } catch (error) {
@@ -803,6 +850,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     state = state.copyWith(
       cartItems: snapshot.items,
       menuItems: menuView,
+      currentPaymentMethod: snapshot.paymentMethod ?? state.currentPaymentMethod,
       orderNumber: snapshot.orderNumber ?? state.orderNumber,
       discountAmount: snapshot.discountAmount ?? state.discountAmount,
       cartId: snapshot.cartId ?? state.cartId,
@@ -824,11 +872,18 @@ orderManagementControllerProvider =
     );
 
 class _CartSnapshot {
-  const _CartSnapshot({required this.items, this.orderNumber, this.discountAmount, this.cartId});
+  const _CartSnapshot({
+    required this.items,
+    this.orderNumber,
+    this.discountAmount,
+    this.paymentMethod,
+    this.cartId,
+  });
 
   final List<CartItemViewData> items;
   final String? orderNumber;
   final int? discountAmount;
+  final PaymentMethod? paymentMethod;
   final String? cartId;
 }
 

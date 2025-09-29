@@ -15,6 +15,7 @@ import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_management_controller.dart";
+import "../widgets/order_payment_method_selector.dart";
 import "order_status_page.dart";
 
 /// 注文管理画面のメインページ。
@@ -448,6 +449,13 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
             const SizedBox(height: YataSpacingTokens.md),
             const Divider(),
             const SizedBox(height: YataSpacingTokens.md),
+            // 支払い方法セレクター
+            OrderPaymentMethodSelector(
+              selected: state.currentPaymentMethod,
+              isDisabled: state.isCheckoutInProgress || state.isLoading,
+              onChanged: controller.updatePaymentMethod,
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
             _SummaryRow(
               label: "小計",
               value: state.formatPrice(state.subtotal),
@@ -494,8 +502,9 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                     onPressed: state.cartItems.isEmpty || state.isCheckoutInProgress
                         ? null
                         : () async {
+                            // 会計処理
                             final CheckoutActionResult result = await controller.checkout();
-                            if (!mounted) {
+                            if (!context.mounted) {
                               return;
                             }
                             if (result.isSuccess) {
@@ -507,7 +516,6 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text("会計が完了しました（$orderNumberLabel）。")),
                               );
-                              context.go("/history");
                             } else {
                               final String message = _checkoutFailureMessage(result);
                               ScaffoldMessenger.of(context).showSnackBar(

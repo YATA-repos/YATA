@@ -322,6 +322,40 @@ class CartManagementService {
     }
   }
 
+  /// 支払い方法を更新する
+  Future<Order?> updateCartPaymentMethod(
+    String cartId,
+    PaymentMethod method,
+    String userId,
+  ) async {
+    log.i("Started updating cart payment method", tag: loggerComponent);
+
+    try {
+      final Order? cart = await _orderRepository.getById(cartId);
+      if (cart == null || cart.userId != userId) {
+        log.e("Cart access denied or cart not found", tag: loggerComponent);
+        throw Exception("Cart $cartId not found or access denied");
+      }
+
+      final DateTime now = DateTime.now();
+      final Order? updated = await _orderRepository.updateById(cartId, <String, dynamic>{
+        "payment_method": method.value,
+        "updated_at": now.toIso8601String(),
+      });
+
+      if (updated != null) {
+        log.i("Cart payment method updated successfully", tag: loggerComponent);
+      } else {
+        log.w("Cart payment method update returned null", tag: loggerComponent);
+      }
+
+      return updated;
+    } catch (e, stackTrace) {
+      log.e("Failed to update cart payment method", tag: loggerComponent, error: e, st: stackTrace);
+      rethrow;
+    }
+  }
+
   /// カート内全商品の在庫を検証（戻り値: {order_item_id: 在庫充足フラグ}）
   Future<Map<String, bool>> validateCartStock(String cartId, String userId) async {
     log.i("Started validating cart stock", tag: loggerComponent);

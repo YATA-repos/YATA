@@ -1,3 +1,4 @@
+import "../../../core/constants/enums.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "cart_management_service.dart";
@@ -50,6 +51,14 @@ class CartService {
   /// カートを空にする
   Future<bool> clearCart(String cartId, String userId) async =>
       _cartManagementService.clearCart(cartId, userId);
+
+  /// 支払い方法を更新
+  Future<Order?> updateCartPaymentMethod(
+    String cartId,
+    PaymentMethod method,
+    String userId,
+  ) async =>
+      _cartManagementService.updateCartPaymentMethod(cartId, method, userId);
 
   /// カート内全商品の在庫を検証（戻り値: {order_item_id: 在庫充足フラグ}）
   Future<Map<String, bool>> validateCartStock(String cartId, String userId) async =>

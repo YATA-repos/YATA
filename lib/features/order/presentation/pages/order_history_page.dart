@@ -16,6 +16,7 @@ import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
+import "../../../shared/utils/payment_method_label.dart";
 import "../../shared/order_status_presentation.dart";
 import "../controllers/order_history_controller.dart";
 import "order_status_page.dart";
@@ -343,12 +344,12 @@ class _OrderHistoryCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      _getPaymentMethodLabel(order.paymentMethod),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
-                    ),
+                        Text(
+                          paymentMethodLabel(order.paymentMethod),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                        ),
                   ],
                 ),
               ],
@@ -476,16 +477,6 @@ class _OrderHistoryCard extends StatelessWidget {
     );
   }
 
-  String _getPaymentMethodLabel(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.cash:
-        return "現金";
-      case PaymentMethod.card:
-        return "カード";
-      case PaymentMethod.other:
-        return "その他";
-    }
-  }
 }
 
 /// 注文ステータスバッジウィジェット。
@@ -590,7 +581,7 @@ class _OrderDetailContent extends StatelessWidget {
                   valueWidget: _OrderStatusBadge(status: order.status),
                 ),
                 _DetailRow(label: "顧客名", value: order.customerName ?? "名前なし"),
-                _DetailRow(label: "支払い方法", value: _getPaymentMethodLabel(order.paymentMethod)),
+                    _DetailRow(label: "支払い方法", value: paymentMethodLabel(order.paymentMethod)),
                 _DetailRow(label: "注文日時", value: detailDateFormat.format(order.orderedAt)),
                 if (order.completedAt != null)
                   _DetailRow(label: "完了日時", value: detailDateFormat.format(order.completedAt!)),
@@ -656,16 +647,6 @@ class _OrderDetailContent extends StatelessWidget {
     );
   }
 
-  String _getPaymentMethodLabel(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.cash:
-        return "現金";
-      case PaymentMethod.card:
-        return "カード";
-      case PaymentMethod.other:
-        return "その他";
-    }
-  }
 }
 
 /// 詳細セクションウィジェット。
