@@ -25,7 +25,9 @@ void main() {
   late _MockCartService cartService;
   late _MockOrderService orderService;
   late ProviderContainer container;
-  late Order existingOrder;
+  late Order orderUser123;
+  late Order orderUser456;
+  late String? testUserId;
 
   setUpAll(() {
     registerFallbackValue(MenuCategory(name: "", displayOrder: 0));
@@ -35,8 +37,9 @@ void main() {
     menuService = _MockMenuService();
     cartService = _MockCartService();
     orderService = _MockOrderService();
+    testUserId = "user-123";
 
-    existingOrder = Order(
+    orderUser123 = Order(
       id: "order-1",
       userId: "user-123",
       totalAmount: 0,
@@ -46,20 +49,62 @@ void main() {
       orderedAt: DateTime(2025),
     );
 
+    orderUser456 = Order(
+      id: "order-2",
+      userId: "user-456",
+      totalAmount: 0,
+      status: OrderStatus.inProgress,
+      paymentMethod: PaymentMethod.cash,
+      discountAmount: 0,
+      orderedAt: DateTime(2025, 6, 15),
+    );
+
     when(() => menuService.getMenuCategories()).thenAnswer((_) async => <MenuCategory>[]);
     when(() => menuService.getMenuItemsByCategory(any())).thenAnswer((_) async => <MenuItem>[]);
-    when(() => cartService.getActiveCart("user-123")).thenAnswer((_) async => existingOrder);
-    when(() => cartService.getOrCreateActiveCart("user-123"))
-        .thenAnswer((_) async => existingOrder);
-    when(() => orderService.getOrderWithItems(existingOrder.id!, "user-123")).thenAnswer(
-      (_) async => <String, dynamic>{
-        "order": existingOrder,
-        "items": <Map<String, dynamic>>[],
+    when(() => cartService.getActiveCart(any()))
+        .thenAnswer((Invocation invocation) async {
+      final String userId = invocation.positionalArguments.first as String;
+      if (userId == "user-123") {
+        return orderUser123;
+      }
+      if (userId == "user-456") {
+        return orderUser456;
+      }
+      return null;
+    });
+    when(() => cartService.getOrCreateActiveCart(any()))
+        .thenAnswer((Invocation invocation) async {
+      final String userId = invocation.positionalArguments.first as String;
+      if (userId == "user-123") {
+        return orderUser123;
+      }
+      if (userId == "user-456") {
+        return orderUser456;
+      }
+      return null;
+    });
+    when(() => orderService.getOrderWithItems(any(), any())).thenAnswer(
+      (Invocation invocation) async {
+        final String orderId = invocation.positionalArguments[0] as String;
+        final String userId = invocation.positionalArguments[1] as String;
+        if (userId == "user-123" && orderId == orderUser123.id) {
+          return <String, dynamic>{
+            "order": orderUser123,
+            "items": <Map<String, dynamic>>[],
+          };
+        }
+        if (userId == "user-456" && orderId == orderUser456.id) {
+          return <String, dynamic>{
+            "order": orderUser456,
+            "items": <Map<String, dynamic>>[],
+          };
+        }
+        return null;
       },
     );
 
     container = ProviderContainer(overrides: <Override>[
-      currentUserIdProvider.overrideWith((Ref ref) => "user-123"),
+      currentUserIdProvider.overrideWith((Ref ref) => testUserId),
       menuServiceProvider.overrideWith((Ref ref) => menuService),
       cartServiceProvider.overrideWith((Ref ref) => cartService),
       orderServiceProvider.overrideWith((Ref ref) => orderService),
@@ -79,11 +124,11 @@ void main() {
     test("updates state and persists selection", () async {
       when(
         () => cartService.updateCartPaymentMethod(
-          existingOrder.id!,
+          orderUser123.id!,
           PaymentMethod.other,
-          existingOrder.userId!,
+          orderUser123.userId!,
         ),
-      ).thenAnswer((_) async => existingOrder);
+      ).thenAnswer((_) async => orderUser123);
 
       final OrderManagementController controller = await createController();
 
@@ -95,9 +140,9 @@ void main() {
       expect(controller.state.errorMessage, isNull);
       verify(
         () => cartService.updateCartPaymentMethod(
-          existingOrder.id!,
+          orderUser123.id!,
           PaymentMethod.other,
-          existingOrder.userId!,
+          orderUser123.userId!,
         ),
       ).called(1);
     });
@@ -105,9 +150,9 @@ void main() {
     test("reverts selection and surfaces error on failure", () async {
       when(
         () => cartService.updateCartPaymentMethod(
-          existingOrder.id!,
+          orderUser123.id!,
           PaymentMethod.other,
-          existingOrder.userId!,
+          orderUser123.userId!,
         ),
       ).thenThrow(Exception("network failure"));
 
@@ -120,11 +165,57 @@ void main() {
       expect(controller.state.errorMessage, isNotNull);
       verify(
         () => cartService.updateCartPaymentMethod(
-          existingOrder.id!,
+          orderUser123.id!,
           PaymentMethod.other,
-          existingOrder.userId!,
+          orderUser123.userId!,
         ),
       ).called(1);
+    });
+  });
+
+  group("user context transitions", () {
+    test("clears local state when user logs out", () async {
+      final OrderManagementController controller = await createController();
+
+      controller.state = controller.state.copyWith(
+        cartItems: <CartItemViewData>[
+          CartItemViewData(
+            menuItem: const MenuItemViewData(
+              id: "menu-1",
+              name: "テスト商品",
+              categoryId: "cat-1",
+              price: 500,
+            ),
+            quantity: 2,
+          ),
+        ],
+        isLoading: false,
+      );
+
+      expect(controller.state.cartItems, isNotEmpty);
+
+      testUserId = null;
+      container.refresh(currentUserIdProvider);
+      await pumpEventQueue();
+
+      expect(controller.state.cartItems, isEmpty);
+      expect(controller.state.isLoading, isTrue);
+    });
+
+    test("reloads cart when a different user signs in", () async {
+      final OrderManagementController controller = await createController();
+
+      testUserId = null;
+      container.refresh(currentUserIdProvider);
+      await pumpEventQueue();
+
+      testUserId = "user-456";
+      container.refresh(currentUserIdProvider);
+      await pumpEventQueue(times: 5);
+
+      expect(controller.state.cartId, orderUser456.id);
+      expect(controller.state.currentPaymentMethod, orderUser456.paymentMethod);
+      verify(() => cartService.getActiveCart("user-456")).called(greaterThanOrEqualTo(1));
     });
   });
 }

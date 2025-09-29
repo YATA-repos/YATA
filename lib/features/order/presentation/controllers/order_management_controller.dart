@@ -316,6 +316,11 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
        _cartService = cartService,
        _orderService = orderService,
        super(OrderManagementState.initial()) {
+    _authSubscription = _ref.listen<String?>(
+      currentUserIdProvider,
+      _handleUserChange,
+      fireImmediately: false,
+    );
     unawaited(loadInitialData());
   }
 
@@ -323,9 +328,31 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   final MenuService _menuService;
   final CartService _cartService;
   final OrderService _orderService;
+  late final ProviderSubscription<String?> _authSubscription;
 
   final Map<String, MenuItemViewData> _menuItemCache = <String, MenuItemViewData>{};
   int _highlightSeq = 0;
+
+  void _handleUserChange(String? previousUserId, String? nextUserId) {
+    if (previousUserId == nextUserId) {
+      return;
+    }
+    _menuItemCache.clear();
+    _highlightSeq = 0;
+
+    if (nextUserId == null) {
+      state = OrderManagementState.initial();
+      return;
+    }
+
+    unawaited(loadInitialData(reset: true));
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.close();
+    super.dispose();
+  }
 
   /// 初期データを読み込む。
   Future<void> loadInitialData({bool reset = false}) async {
@@ -860,9 +887,9 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。
-final AutoDisposeStateNotifierProvider<OrderManagementController, OrderManagementState>
-orderManagementControllerProvider =
-    AutoDisposeStateNotifierProvider<OrderManagementController, OrderManagementState>(
+final StateNotifierProvider<OrderManagementController, OrderManagementState>
+    orderManagementControllerProvider =
+    StateNotifierProvider<OrderManagementController, OrderManagementState>(
       (Ref ref) => OrderManagementController(
         ref: ref,
         menuService: ref.read(menuServiceProvider),
