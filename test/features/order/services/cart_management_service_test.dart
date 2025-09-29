@@ -28,6 +28,15 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(<String, dynamic>{});
+    registerFallbackValue(
+      Order(
+        totalAmount: 0,
+        status: OrderStatus.inProgress,
+        paymentMethod: PaymentMethod.cash,
+        discountAmount: 0,
+        orderedAt: DateTime(2025),
+      ),
+    );
   });
 
   setUp(() {
@@ -94,6 +103,28 @@ void main() {
       );
       verify(() => orderRepository.getById(existing.id!)).called(1);
       verifyNever(() => orderRepository.updateById(any(), any()));
+    });
+  });
+
+  group("getOrCreateActiveCart", () {
+    test("creates new cart with isCart flag set", () async {
+      when(() => orderRepository.findActiveDraftByUser("user-1")).thenAnswer((_) async => null);
+
+      Order? capturedOrder;
+      when(() => orderRepository.create(any())).thenAnswer((Invocation invocation) async {
+        capturedOrder = invocation.positionalArguments[0] as Order;
+        return capturedOrder;
+      });
+
+      final Order? result = await service.getOrCreateActiveCart("user-1");
+
+      expect(result, isNotNull);
+      expect(result!.isCart, isTrue);
+      expect(capturedOrder, isNotNull);
+      expect(capturedOrder!.isCart, isTrue);
+      verify(() => orderRepository.findActiveDraftByUser("user-1")).called(1);
+      verify(() => orderRepository.create(any())).called(1);
+      verifyNoMoreInteractions(orderRepository);
     });
   });
 }

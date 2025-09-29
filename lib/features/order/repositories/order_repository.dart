@@ -20,6 +20,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     Future<Order?> runQuery(List<String> statusValues) async {
       final List<QueryFilter> filters = <QueryFilter>[
         QueryConditionBuilder.eq("user_id", userId),
+        QueryConditionBuilder.eq("is_cart", true),
         QueryConditionBuilder.inList("status", statusValues),
         QueryConditionBuilder.or(<QueryFilter>[
           QueryConditionBuilder.eq("total_amount", 0),
@@ -79,6 +80,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
     Future<List<Order>> runQuery(List<String> values) async {
       final List<QueryFilter> filters = <QueryFilter>[
+        QueryConditionBuilder.eq("is_cart", false),
         QueryConditionBuilder.inList("status", values),
       ];
 
@@ -126,8 +128,9 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     int page,
     int limit,
   ) async {
+    final List<QueryFilter> effectiveFilters = <QueryFilter>[...filters, QueryConditionBuilder.eq("is_cart", false)];
     // 総件数を取得
-    final int totalCount = await _delegate.count(filters: filters);
+    final int totalCount = await _delegate.count(filters: effectiveFilters);
 
     // ページネーション計算
     final int offset = (page - 1) * limit;
@@ -139,7 +142,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
     // データを取得
     final List<Order> orders = await _delegate.find(
-      filters: filters,
+      filters: effectiveFilters,
       orderBy: orderBy,
       limit: limit,
       offset: offset,
@@ -164,6 +167,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     );
 
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.gte("ordered_at", dateFromNormalized.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", dateToNormalized.toIso8601String()),
     ];
@@ -191,6 +195,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     );
 
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.eq("status", OrderStatus.completed.value),
       QueryConditionBuilder.gte("completed_at", dateStart.toIso8601String()),
       QueryConditionBuilder.lte("completed_at", dateEnd.toIso8601String()),
@@ -220,6 +225,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
     // 指定日のユーザー注文を取得
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.gte("ordered_at", dateStart.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", dateEnd.toIso8601String()),
     ];
@@ -254,6 +260,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     final DateTime todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59, 999);
 
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.gte("ordered_at", todayStart.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", todayEnd.toIso8601String()),
     ];
@@ -270,6 +277,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
   @override
   Future<List<Order>> findOrdersByCompletionTimeRange(DateTime startTime, DateTime endTime) async {
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.eq("status", OrderStatus.completed.value),
       QueryConditionBuilder.gte("completed_at", startTime.toIso8601String()),
       QueryConditionBuilder.lte("completed_at", endTime.toIso8601String()),
@@ -296,13 +304,18 @@ class OrderRepository implements OrderRepositoryContract<Order> {
       const OrderByCondition(column: "ordered_at", ascending: false),
     ];
 
-    return find(orderBy: orderBy, limit: limit);
+    return find(
+      filters: <QueryFilter>[QueryConditionBuilder.eq("is_cart", false)],
+      orderBy: orderBy,
+      limit: limit,
+    );
   }
 
   /// 期間指定で完了注文を取得
   @override
   Future<List<Order>> findCompletedByDateRange(DateTime start, DateTime end) async {
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.eq("status", OrderStatus.completed.value),
       QueryConditionBuilder.gte("completed_at", start.toIso8601String()),
       QueryConditionBuilder.lte("completed_at", end.toIso8601String()),
@@ -322,6 +335,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     DateTime end,
   ) async {
     final List<QueryFilter> filters = <QueryFilter>[
+      QueryConditionBuilder.eq("is_cart", false),
       QueryConditionBuilder.gte("ordered_at", start.toIso8601String()),
       QueryConditionBuilder.lte("ordered_at", end.toIso8601String()),
     ];

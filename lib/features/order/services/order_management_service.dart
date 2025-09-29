@@ -115,6 +115,7 @@ class OrderManagementService {
   "status": OrderStatus.inProgress.value,
         "order_number": orderNumber,
         "updated_at": now.toIso8601String(),
+        "is_cart": false,
       });
 
       if (confirmedOrder == null) {
@@ -208,8 +209,8 @@ class OrderManagementService {
 
       log.d("Retrieved ${allOrders.length} orders from repository", tag: loggerComponent);
 
-      List<Order> orders = allOrders;
-      final int totalCount = allOrders.length;
+      List<Order> orders = allOrders.where((Order order) => !order.isCart).toList();
+      final int totalCount = orders.length;
 
       // 手動で日付フィルタリング（リポジトリでサポートされていない場合）
       if (request.dateFrom != null || request.dateTo != null) {
@@ -350,6 +351,9 @@ class OrderManagementService {
 
       for (final Order order in orders) {
         if (order.userId != userId) {
+          continue;
+        }
+        if (order.isCart) {
           continue;
         }
         final OrderStatus normalizedStatus = OrderStatusMapper.normalize(order.status);

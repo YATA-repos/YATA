@@ -15,6 +15,7 @@ class Order extends BaseModel {
     required this.paymentMethod,
     required this.discountAmount,
     required this.orderedAt,
+    this.isCart = false,
     this.orderNumber,
     this.customerName,
     this.notes,
@@ -35,6 +36,10 @@ class Order extends BaseModel {
 
   /// 注文番号
   String? orderNumber;
+
+  /// カート注文フラグ
+  @JsonKey(defaultValue: false)
+  bool isCart;
 
   /// 注文ステータス
   @JsonKey(fromJson: OrderStatusMapper.fromJson, toJson: OrderStatusMapper.toJson)

@@ -87,6 +87,16 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
     final String eventType = data["event_type"] as String? ?? "unknown";
     final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
     final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
+    final bool isCartEvent =
+        (newRecord?['is_cart'] as bool?) == true || (oldRecord?['is_cart'] as bool?) == true;
+    if (isCartEvent) {
+      log.d(
+        "Ignoring cart order event",
+        tag: loggerComponent,
+        fields: <String, dynamic>{"eventType": eventType},
+      );
+      return;
+    }
     log.d(
       "Order event: $eventType",
       tag: loggerComponent,

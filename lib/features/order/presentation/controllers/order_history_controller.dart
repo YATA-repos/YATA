@@ -309,6 +309,9 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
         if (order.id == null) {
           continue;
         }
+        if (order.isCart) {
+          continue;
+        }
         final List<OrderItemViewData> items = await _loadOrderItems(order.id!, userId);
         viewOrders.add(
           OrderHistoryViewData(

@@ -37,7 +37,7 @@
 1. **DB スキーマ変更**
    - `ALTER TABLE orders ADD COLUMN is_cart boolean NOT NULL DEFAULT false;`
    - 既存レコードの初期値更新: `UPDATE orders SET is_cart = true WHERE order_number IS NULL AND status IN ('in_progress', 'pending', 'preparing');`
-   - Supabase migration スクリプトを `supabase/migrations` に追加。
+   - Supabase migration スクリプトを `supabase/migrations` に追加（`docs/guide/migrations/order_cart_flag_migration.md` に適用手順を記載）。
 
 2. **モデル更新**
    - `Order` クラスに `bool isCart;` を追加し、`@JsonKey(name: "is_cart", defaultValue: false)` を設定。

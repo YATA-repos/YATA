@@ -70,6 +70,7 @@ class CartManagementService {
         paymentMethod: PaymentMethod.cash, // デフォルト値
         discountAmount: 0,
         orderedAt: now,
+        isCart: true,
         createdAt: now,
         updatedAt: now,
         userId: userId,
