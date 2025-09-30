@@ -64,6 +64,7 @@ import "../../infra/local/cache/ttl_cache_adapter.dart";
 import "../../infra/logging/logger_adapter.dart";
 import "../../infra/realtime/realtime_manager_adapter.dart";
 import "../../infra/repositories/generic_crud_repository.dart";
+import "../../shared/utils/order_identifier_generator.dart";
 
 /// グローバルロガー（契約）
 final Provider<contract.LoggerContract> loggerProvider = Provider<contract.LoggerContract>(
@@ -185,6 +186,10 @@ menuCategoryRepositoryProvider =
       ),
     );
 
+/// Order: 注文番号生成ユーティリティ
+final Provider<OrderIdentifierGenerator> orderIdentifierGeneratorProvider =
+    Provider<OrderIdentifierGenerator>((Ref ref) => OrderIdentifierGenerator());
+
 /// Order: リポジトリ（契約型）
 final Provider<order_contract.OrderRepositoryContract<Order>> orderRepositoryProvider =
     Provider<order_contract.OrderRepositoryContract<Order>>(
@@ -194,6 +199,7 @@ final Provider<order_contract.OrderRepositoryContract<Order>> orderRepositoryPro
           tableName: "orders",
           fromJson: Order.fromJson,
         ),
+        identifierGenerator: ref.read(orderIdentifierGeneratorProvider),
       ),
     );
 final Provider<order_contract.OrderItemRepositoryContract<OrderItem>> orderItemRepositoryProvider =

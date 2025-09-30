@@ -4,15 +4,20 @@ import "../../../core/constants/query_types.dart";
 import "../../../core/contracts/repositories/crud_repository.dart" as repo_contract;
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
 import "../../../core/logging/compat.dart" as log;
+import "../../../shared/utils/order_identifier_generator.dart";
 import "../models/order_model.dart";
 import "../shared/order_status_mapper.dart";
 
 /// 注文リポジトリ
 class OrderRepository implements OrderRepositoryContract<Order> {
-  OrderRepository({required repo_contract.CrudRepository<Order, String> delegate})
-    : _delegate = delegate;
+  OrderRepository({
+    required repo_contract.CrudRepository<Order, String> delegate,
+    OrderIdentifierGenerator? identifierGenerator,
+  })  : _delegate = delegate,
+        _identifierGenerator = identifierGenerator ?? OrderIdentifierGenerator();
 
   final repo_contract.CrudRepository<Order, String> _delegate;
+  final OrderIdentifierGenerator _identifierGenerator;
 
   /// ユーザーのアクティブな下書き注文（カート）を取得
   @override
@@ -248,52 +253,61 @@ class OrderRepository implements OrderRepositoryContract<Order> {
   /// 次の注文番号を生成
   @override
   Future<String> generateNextOrderNumber() async {
-    // 今日の日付を取得
-    final DateTime today = DateTime.now();
-    final String todayPrefix =
-        "${today.year.toString().padLeft(4, '0')}"
-        "${today.month.toString().padLeft(2, '0')}"
-        "${today.day.toString().padLeft(2, '0')}";
+    const int maxAttempts = 5;
 
-    // 今日のユーザー注文をカウントするための範囲を作成
-    final DateTime todayStart = DateTime(today.year, today.month, today.day);
-    final DateTime todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59, 999);
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      final String candidate = _identifierGenerator.generateOrderNumber();
 
-    final List<QueryFilter> filters = <QueryFilter>[
-      QueryConditionBuilder.eq("is_cart", false),
-      QueryConditionBuilder.isNotNull("order_number"),
-      QueryConditionBuilder.gte("ordered_at", todayStart.toIso8601String()),
-      QueryConditionBuilder.lte("ordered_at", todayEnd.toIso8601String()),
-    ];
+      try {
+        final List<Order> existingOrders = await _delegate.find(
+          filters: <QueryFilter>[QueryConditionBuilder.eq("order_number", candidate)],
+          limit: 1,
+        );
 
-    try {
-      final int todayOrderCount = await _delegate.count(filters: filters);
-      final int nextNumber = todayOrderCount + 1;
+        if (existingOrders.isEmpty) {
+          log.d(
+            "Generated next order number using timestamp+slug strategy",
+            tag: "OrderRepository",
+            fields: <String, Object?>{
+              "orderNumber": candidate,
+              "attempt": attempt + 1,
+            },
+          );
+          return candidate;
+        }
 
-      log.d(
-        "Generated next order number using count strategy",
-        tag: "OrderRepository",
-        fields: <String, Object?>{
-          "datePrefix": todayPrefix,
-          "todayOrderCount": todayOrderCount,
-          "nextSequentialNumber": nextNumber,
-        },
-      );
-
-      return "$todayPrefix-${nextNumber.toString().padLeft(3, '0')}";
-    } catch (error, stackTrace) {
-      log.e(
-        "Failed to generate next order number",
-        tag: "OrderRepository",
-        error: error,
-        st: stackTrace,
-        fields: <String, Object?>{
-          "datePrefix": todayPrefix,
-          "filterCount": filters.length,
-        },
-      );
-      rethrow;
+        log.w(
+          "Order number collision detected, regenerating",
+          tag: "OrderRepository",
+          fields: <String, Object?>{
+            "orderNumber": candidate,
+            "attempt": attempt + 1,
+          },
+        );
+      } catch (error, stackTrace) {
+        log.e(
+          "Failed to verify order number uniqueness",
+          tag: "OrderRepository",
+          error: error,
+          st: stackTrace,
+          fields: <String, Object?>{
+            "orderNumber": candidate,
+            "attempt": attempt + 1,
+          },
+        );
+        rethrow;
+      }
     }
+
+    final Exception generationError =
+        Exception("Failed to generate a unique order number after $maxAttempts attempts");
+    log.e(
+      "Failed to generate a unique order number",
+      tag: "OrderRepository",
+      error: generationError,
+      fields: <String, Object?>{"maxAttempts": maxAttempts},
+    );
+    throw generationError;
   }
 
   /// 完了時間範囲で注文を取得（調理時間分析用）

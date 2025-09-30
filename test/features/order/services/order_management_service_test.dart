@@ -103,7 +103,7 @@ void main() {
         paymentMethod: request.paymentMethod,
         discountAmount: request.discountAmount,
         orderedAt: cart.orderedAt,
-        orderNumber: "20250929-001",
+        orderNumber: "20250930T154512+0900-ABC123xyz90",
         isCart: false,
       );
 
@@ -115,7 +115,7 @@ void main() {
         paymentMethod: request.paymentMethod,
         discountAmount: request.discountAmount,
         orderedAt: cart.orderedAt,
-        orderNumber: "20250929-001",
+        orderNumber: "20250930T154512+0900-ABC123xyz90",
         isCart: false,
       );
 
@@ -145,7 +145,9 @@ void main() {
       .thenAnswer((_) async => stockValidation);
     when(() => stockService.consumeMaterialsForOrder(any<List<OrderItem>>()))
       .thenAnswer((_) async {});
-      when(() => orderRepository.generateNextOrderNumber()).thenAnswer((_) async => "20250929-001");
+      when(() => orderRepository.generateNextOrderNumber()).thenAnswer(
+        (_) async => "20250930T154512+0900-ABC123xyz90",
+      );
       when(() => calculationService.calculateOrderTotal(cart.id!, discountAmount: request.discountAmount))
           .thenAnswer((_) async => calculationResult);
       when(() => cartManagementService.getOrCreateActiveCart(cart.userId!))
