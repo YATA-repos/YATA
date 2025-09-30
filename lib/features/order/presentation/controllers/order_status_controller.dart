@@ -183,6 +183,37 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     }
   }
 
+  /// 注文をキャンセルする。
+  Future<String?> cancelOrder(String orderId, {String reason = "店舗側キャンセル"}) async {
+    final String? userId = _ensureUserId();
+    if (userId == null) {
+      const String message = "ユーザー情報を取得できませんでした。再度ログインしてください。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    final Set<String> nextUpdating = <String>{...state.updatingOrderIds, orderId};
+    state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
+
+    try {
+      final (_, bool didUpdate) = await _orderService.cancelOrder(orderId, reason, userId);
+      final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
+      await loadOrders(showLoadingIndicator: false);
+      state = state.copyWith(updatingOrderIds: updatedSet);
+
+      if (!didUpdate) {
+        return "すでにキャンセル済みの注文です";
+      }
+
+      return null;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
+      state = state.copyWith(errorMessage: message, updatingOrderIds: updatedSet);
+      return message;
+    }
+  }
+
   /// ユーザーIDを取得する。
   String? _ensureUserId() {
     final String? userId = _ref.read(currentUserIdProvider);

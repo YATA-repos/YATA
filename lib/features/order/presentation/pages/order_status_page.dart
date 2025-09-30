@@ -126,10 +126,52 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
                         timeFormat: _timeFormat,
                         onMarkCompleted: (OrderStatusOrderViewData order) async {
                           final String? error = await controller.markOrderCompleted(order.id);
-                          if (!mounted) {
+                          if (!context.mounted) {
                             return;
                           }
-                          final String message = error ?? "${order.orderNumber ?? "注文"} を完了に更新しました";
+                          final String message =
+                              error ?? "${order.orderNumber ?? "注文"} を完了に更新しました";
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(message)));
+                        },
+                        onCancelOrder: (OrderStatusOrderViewData order) async {
+                          final bool? confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (BuildContext dialogContext) {
+                              final String orderLabel = order.orderNumber ?? "この注文";
+                              return AlertDialog(
+                                title: const Text("注文をキャンセル"),
+                                content: Text("$orderLabel をキャンセルしますか？"),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                                    child: const Text("戻る"),
+                                  ),
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: YataColorTokens.danger,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                                    child: const Text("キャンセルする"),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
+                          if (confirmed != true) {
+                            return;
+                          }
+
+                          final String? error = await controller.cancelOrder(order.id);
+                          if (!context.mounted) {
+                            return;
+                          }
+
+                          final String message =
+                              error ?? "${order.orderNumber ?? "注文"} をキャンセルしました";
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text(message)));
@@ -214,6 +256,7 @@ class _InProgressOrderList extends StatelessWidget {
     required this.currencyFormat,
     required this.timeFormat,
     required this.onMarkCompleted,
+    required this.onCancelOrder,
   });
 
   final List<OrderStatusOrderViewData> orders;
@@ -222,7 +265,7 @@ class _InProgressOrderList extends StatelessWidget {
   final NumberFormat currencyFormat;
   final DateFormat timeFormat;
   final Future<void> Function(OrderStatusOrderViewData order) onMarkCompleted;
-
+  final Future<void> Function(OrderStatusOrderViewData order) onCancelOrder;
   @override
   Widget build(BuildContext context) {
     if (orders.isEmpty) {
@@ -292,10 +335,26 @@ class _InProgressOrderList extends StatelessWidget {
               const SizedBox(height: YataSpacingTokens.md),
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text("完了にする"),
-                  onPressed: isUpdating ? null : () => onMarkCompleted(order),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: YataSpacingTokens.sm,
+                  runSpacing: YataSpacingTokens.xs,
+                  children: <Widget>[
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.cancel_outlined),
+                      label: const Text("キャンセル"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: YataColorTokens.danger,
+                        side: const BorderSide(color: YataColorTokens.danger),
+                      ),
+                      onPressed: isUpdating ? null : () => onCancelOrder(order),
+                    ),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text("完了にする"),
+                      onPressed: isUpdating ? null : () => onMarkCompleted(order),
+                    ),
+                  ],
                 ),
               ),
             ],
