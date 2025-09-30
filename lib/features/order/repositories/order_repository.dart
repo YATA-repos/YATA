@@ -31,7 +31,6 @@ class OrderRepository implements OrderRepositoryContract<Order> {
           QueryConditionBuilder.eq("total_amount", 0),
           QueryConditionBuilder.isNull("total_amount"),
         ]),
-        QueryConditionBuilder.isNull("order_number"),
       ];
 
       // 最新のものを取得
@@ -266,7 +265,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
 
         if (existingOrders.isEmpty) {
           log.d(
-            "Generated next order number using timestamp+slug strategy",
+            "Generated next order display code",
             tag: "OrderRepository",
             fields: <String, Object?>{
               "orderNumber": candidate,
@@ -277,7 +276,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
         }
 
         log.w(
-          "Order number collision detected, regenerating",
+          "Order display code collision detected, regenerating",
           tag: "OrderRepository",
           fields: <String, Object?>{
             "orderNumber": candidate,
@@ -286,7 +285,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
         );
       } catch (error, stackTrace) {
         log.e(
-          "Failed to verify order number uniqueness",
+          "Failed to verify order display code uniqueness",
           tag: "OrderRepository",
           error: error,
           st: stackTrace,
@@ -302,7 +301,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     final Exception generationError =
         Exception("Failed to generate a unique order number after $maxAttempts attempts");
     log.e(
-      "Failed to generate a unique order number",
+  "Failed to generate a unique order display code",
       tag: "OrderRepository",
       error: generationError,
       fields: <String, Object?>{"maxAttempts": maxAttempts},

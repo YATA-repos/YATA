@@ -509,10 +509,10 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                             }
                             if (result.isSuccess) {
                               final String? orderNumber = result.order?.orderNumber;
-                              final String orderNumberLabel =
-                                  (orderNumber == null || orderNumber.isEmpty)
-                                      ? "新規注文"
-                                      : "注文番号 $orderNumber";
+                final String orderNumberLabel =
+                  (orderNumber == null || orderNumber.isEmpty)
+                    ? "新規注文"
+                    : "受付コード $orderNumber";
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text("会計が完了しました（$orderNumberLabel）。")),
                               );
@@ -557,7 +557,9 @@ class _OrderNumberBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String label = (orderNumber == null || orderNumber!.isEmpty) ? "未割り当て" : orderNumber!;
+  final String label = (orderNumber == null || orderNumber!.isEmpty)
+    ? "割り当て準備中"
+    : orderNumber!;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: YataSpacingTokens.md,
@@ -569,7 +571,7 @@ class _OrderNumberBadge extends StatelessWidget {
         border: Border.all(color: YataColorTokens.primary.withValues(alpha: 0.3)),
       ),
       child: Text(
-        "注文番号: $label",
+  "受付コード: $label",
         style:
             Theme.of(context).textTheme.labelLarge?.copyWith(color: YataColorTokens.primary) ??
             YataTypographyTokens.labelLarge.copyWith(color: YataColorTokens.primary),

@@ -147,7 +147,7 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                       // 検索フィールド
                       YataSearchField(
                         controller: _searchController,
-                        hintText: "注文番号、顧客名、メニュー名で検索...",
+                        hintText: "受付コード、顧客名、メニュー名で検索...",
                         onChanged: controller.setSearchQuery,
                       ),
 
@@ -323,7 +323,7 @@ class _OrderHistoryCard extends StatelessWidget {
                   child: Row(
                     children: <Widget>[
                       Text(
-                        order.orderNumber ?? "注文番号なし",
+                        order.orderNumber ?? "受付コード未設定",
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: YataColorTokens.textPrimary,
                           fontWeight: FontWeight.w600,
@@ -574,7 +574,7 @@ class _OrderDetailContent extends StatelessWidget {
             title: "注文情報",
             child: Column(
               children: <Widget>[
-                _DetailRow(label: "注文番号", value: order.orderNumber ?? "番号なし"),
+                _DetailRow(label: "受付コード", value: order.orderNumber ?? "未設定"),
                 _DetailRow(
                   label: "ステータス",
                   value: OrderStatusPresentation.label(order.status),

@@ -7,7 +7,9 @@ class OrderIdentifierGenerator {
       _random = random ?? Random.secure();
 
   static const String _base62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  static const String _base36Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   static const int defaultSlugLength = 11;
+  static const int defaultDisplayCodeLength = 4;
   static const Duration _jstOffset = Duration(hours: 9);
   static const String _jstSuffix = "+0900";
 
@@ -56,12 +58,27 @@ class OrderIdentifierGenerator {
     return buffer.toString();
   }
 
-  /// 新フォーマットの注文番号を生成する。
+  /// CSPRNG を利用して Base36 乱数文字列を生成する。
   ///
-  /// 形式: `<YYYYMMDDThhmmss+0900>-<Base62 乱数11桁>`
-  String generateOrderNumber() {
-    final String timestamp = generateJstTimestampString();
-    final String slug = generateBase62Slug(length: defaultSlugLength);
-    return "$timestamp-$slug";
+  /// [length] で文字数を指定し、デフォルトは 4 文字。
+  String generateDisplayCode({int length = defaultDisplayCodeLength}) {
+    if (length <= 0) {
+      throw ArgumentError.value(length, "length", "length must be greater than 0");
+    }
+
+    final StringBuffer buffer = StringBuffer();
+    while (buffer.length < length) {
+      final int index = _random.nextInt(_base36Alphabet.length);
+      buffer.write(_base36Alphabet[index]);
+    }
+
+    return buffer.toString();
+  }
+
+  /// 新フォーマットの注文番号（表示コード）を生成する。
+  ///
+  /// 形式: `^[A-Z0-9]{length}$`（デフォルトは4文字）
+  String generateOrderNumber({int length = defaultDisplayCodeLength}) {
+    return generateDisplayCode(length: length);
   }
 }

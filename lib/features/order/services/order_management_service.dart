@@ -102,8 +102,16 @@ class OrderManagementService {
       log.d("Consuming materials for order", tag: loggerComponent);
       await _orderStockService.consumeMaterialsForOrder(cartItems);
 
-      // 注文の確定
-      final String orderNumber = await _orderRepository.generateNextOrderNumber();
+      // 注文番号はカート生成時のコードを原則維持し、未設定時のみ生成する
+      String orderNumber = cart.orderNumber ?? "";
+      if (orderNumber.trim().isEmpty) {
+        orderNumber = await _orderRepository.generateNextOrderNumber();
+        log.w(
+          "Cart had no display code during checkout; generated fallback",
+          tag: loggerComponent,
+          fields: <String, Object?>{"cartId": cartId, "userId": userId, "orderNumber": orderNumber},
+        );
+      }
       final DateTime now = DateTime.now();
 
       final Order? confirmedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
@@ -112,7 +120,7 @@ class OrderManagementService {
         "discount_amount": request.discountAmount,
         "notes": request.notes,
         "ordered_at": now.toIso8601String(),
-  "status": OrderStatus.inProgress.value,
+        "status": OrderStatus.inProgress.value,
         "order_number": orderNumber,
         "updated_at": now.toIso8601String(),
         "is_cart": false,

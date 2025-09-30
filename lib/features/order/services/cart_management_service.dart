@@ -1,6 +1,7 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+import "../../../core/constants/exceptions/repository/repository_exception.dart";
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/logging/compat.dart" as log;
 import "../../menu/models/menu_model.dart";
@@ -36,11 +37,12 @@ class CartManagementService {
     log.i("Started retrieving active cart for user", tag: loggerComponent);
 
     try {
-  final Order? existingCart = await _orderRepository.findActiveDraftByUser(userId);
+      final Order? existingCart = await _orderRepository.findActiveDraftByUser(userId);
 
       if (existingCart != null) {
+        final Order ensuredCart = await _ensureCartHasDisplayCode(existingCart);
         log.i("Active cart found and returned", tag: loggerComponent);
-        return existingCart;
+        return ensuredCart;
       }
 
       log.i("Active cart not found", tag: loggerComponent);
@@ -64,6 +66,7 @@ class CartManagementService {
 
       log.d("Creating new cart for user", tag: loggerComponent);
       final DateTime now = DateTime.now();
+      final String displayCode = await _orderRepository.generateNextOrderNumber();
       final Order newCart = Order(
         totalAmount: 0,
         status: OrderStatus.inProgress,
@@ -74,16 +77,19 @@ class CartManagementService {
         createdAt: now,
         updatedAt: now,
         userId: userId,
+        orderNumber: displayCode,
       );
 
       final Order? createdCart = await _orderRepository.create(newCart);
 
       if (createdCart != null) {
-        log.i("New cart created successfully", tag: loggerComponent);
-      } else {
-        log.e("Failed to create new cart", tag: loggerComponent);
+        log.i("New cart created successfully", tag: loggerComponent, fields: <String, Object?>{
+          "orderNumber": createdCart.orderNumber,
+        });
+        return await _ensureCartHasDisplayCode(createdCart);
       }
 
+      log.e("Failed to create new cart", tag: loggerComponent);
       return createdCart;
     } catch (e, stackTrace) {
       log.e("Failed to get or create active cart", tag: loggerComponent, error: e, st: stackTrace);
@@ -386,5 +392,95 @@ class CartManagementService {
   Future<void> _updateCartTotal(String cartId) async {
     final int totalAmount = await _orderCalculationService.updateCartTotal(cartId);
     await _orderRepository.updateById(cartId, <String, dynamic>{"total_amount": totalAmount});
+  }
+
+  Future<Order> _ensureCartHasDisplayCode(Order cart) async {
+    if (!_needsDisplayCode(cart)) {
+      return cart;
+    }
+
+    if (cart.id == null) {
+      log.w(
+        "Cart has no ID; cannot assign order display code",
+        tag: loggerComponent,
+        fields: <String, Object?>{"userId": cart.userId},
+      );
+      return cart;
+    }
+
+    return _assignDisplayCodeWithRetry(cart);
+  }
+
+  Future<Order> _assignDisplayCodeWithRetry(Order cart) async {
+    const int maxAttempts = 5;
+
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      final String candidate = await _orderRepository.generateNextOrderNumber();
+      final DateTime now = DateTime.now();
+
+      try {
+        final Order? updated = await _orderRepository.updateById(cart.id!, <String, dynamic>{
+          "order_number": candidate,
+          "updated_at": now.toIso8601String(),
+        });
+
+        final Order result = updated ?? cart
+          ..orderNumber = candidate
+          ..updatedAt = now;
+
+        log.i(
+          "Assigned order display code to cart",
+          tag: loggerComponent,
+          fields: <String, Object?>{
+            "cartId": cart.id,
+            "orderNumber": candidate,
+            "attempt": attempt + 1,
+          },
+        );
+        return result;
+      } on RepositoryException catch (error, stackTrace) {
+        if (_isUniqueConstraintViolation(error)) {
+          log.w(
+            "Order display code collision detected during assignment",
+            tag: loggerComponent,
+            fields: <String, Object?>{
+              "cartId": cart.id,
+              "orderNumber": candidate,
+              "attempt": attempt + 1,
+              "exception": error.toString(),
+              "stackTrace": stackTrace.toString(),
+            },
+          );
+          continue;
+        }
+
+        rethrow;
+      }
+    }
+
+    final Exception assignmentError =
+        Exception("Failed to assign order display code to cart after $maxAttempts attempts");
+    log.e(
+      "Failed to assign order display code to cart",
+      tag: loggerComponent,
+      error: assignmentError,
+      fields: <String, Object?>{"cartId": cart.id},
+    );
+    throw assignmentError;
+  }
+
+  bool _needsDisplayCode(Order cart) {
+    final String? code = cart.orderNumber;
+    return code == null || code.trim().isEmpty;
+  }
+
+  bool _isUniqueConstraintViolation(RepositoryException error) {
+    final String? message = error.params["error"];
+    if (message == null) {
+      return false;
+    }
+
+    final String normalized = message.toLowerCase();
+    return normalized.contains("duplicate key") || normalized.contains("unique constraint");
   }
 }

@@ -40,28 +40,43 @@ void main() {
 
       final String slug = generator.generateBase62Slug();
 
-  expect(slug, equals("0AZaz1Bb2Cc"));
+      expect(slug, equals("0AZaz1Bb2Cc"));
       expect(slug.length, equals(OrderIdentifierGenerator.defaultSlugLength));
-  expect(slug, matches(RegExp(r"^[0-9A-Za-z]{11}$")));
+      expect(slug, matches(RegExp(r"^[0-9A-Za-z]{11}$")));
     });
 
-    test("generateOrderNumber combines timestamp and slug", () {
+    test("generateDisplayCode produces Base36 uppercase string", () {
       final _MockRandom random = _MockRandom();
-      final List<int> indices = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      final List<int> indices = <int>[0, 9, 35, 20, 1, 10];
       when(() => random.nextInt(any<int>())).thenAnswer((Invocation invocation) {
-        expect(invocation.positionalArguments.single, equals(62));
+        expect(invocation.positionalArguments.single, equals(36));
         return indices.removeAt(0);
       });
 
-      final OrderIdentifierGenerator generator = OrderIdentifierGenerator(
-        nowProvider: () => DateTime.utc(2025, 9, 29, 21, 59, 59, 123),
-        random: random,
-      );
+      final OrderIdentifierGenerator generator = OrderIdentifierGenerator(random: random);
+
+      final String displayCode = generator.generateDisplayCode(length: 6);
+
+      expect(displayCode, equals("09ZK1A"));
+      expect(displayCode.length, equals(6));
+      expect(displayCode, matches(RegExp(r"^[0-9A-Z]{6}$")));
+    });
+
+    test("generateOrderNumber returns 4-character Base36 code by default", () {
+      final _MockRandom random = _MockRandom();
+      final List<int> indices = <int>[0, 1, 2, 3];
+      when(() => random.nextInt(any<int>())).thenAnswer((Invocation invocation) {
+        expect(invocation.positionalArguments.single, equals(36));
+        return indices.removeAt(0);
+      });
+
+      final OrderIdentifierGenerator generator = OrderIdentifierGenerator(random: random);
 
       final String orderNumber = generator.generateOrderNumber();
 
-  expect(orderNumber, equals("20250930T065959+0900-0123456789A"));
-  expect(orderNumber, matches(RegExp(r"^[0-9]{8}T[0-9]{6}\+0900-[0-9A-Za-z]{11}$")));
+      expect(orderNumber, equals("0123"));
+      expect(orderNumber.length, equals(OrderIdentifierGenerator.defaultDisplayCodeLength));
+      expect(orderNumber, matches(RegExp(r"^[0-9A-Z]{4}$")));
     });
   });
 }

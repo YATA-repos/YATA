@@ -256,7 +256,7 @@ class _InProgressOrderList extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          order.orderNumber ?? "注文番号未設定",
+                          order.orderNumber ?? "受付コード未設定",
                           style:
                               textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
                               YataTypographyTokens.titleMedium,
@@ -347,7 +347,7 @@ class _CompletedOrderList extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      order.orderNumber ?? "注文番号未設定",
+                      order.orderNumber ?? "受付コード未設定",
                       style:
                           textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
                           YataTypographyTokens.titleMedium,
@@ -433,7 +433,7 @@ class _CancelledOrderList extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: Text(
-                      order.orderNumber ?? "注文番号未設定",
+                      order.orderNumber ?? "受付コード未設定",
                       style:
                           textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
                           YataTypographyTokens.titleMedium,

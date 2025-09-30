@@ -33,8 +33,8 @@ void main() {
   });
 
   group("generateNextOrderNumber", () {
-    test("returns timestamp-slug order number when candidate is unique", () async {
-      const String expectedNumber = "20250930T154512+0900-ABC123xyz90";
+    test("returns short display code when candidate is unique", () async {
+      const String expectedNumber = "AB12";
 
       when(() => identifierGenerator.generateOrderNumber()).thenReturn(expectedNumber);
       List<QueryFilter>? capturedFilters;
@@ -77,10 +77,7 @@ void main() {
     });
 
     test("retries when collision is detected", () async {
-      final List<String> candidates = <String>[
-        "20250930T154512+0900-ABC123xyz90",
-        "20250930T154513+0900-DEF456uvw12",
-      ];
+      final List<String> candidates = <String>["AB12", "CD34"];
   when(() => identifierGenerator.generateOrderNumber()).thenAnswer((Invocation _) => candidates.removeAt(0));
 
       int findCallCount = 0;
@@ -109,15 +106,13 @@ void main() {
 
       final String orderNumber = await repository.generateNextOrderNumber();
 
-      expect(orderNumber, equals("20250930T154513+0900-DEF456uvw12"));
+  expect(orderNumber, equals("CD34"));
       expect(findCallCount, equals(2));
   verify(() => identifierGenerator.generateOrderNumber()).called(2);
     });
 
     test("rethrows repository exception from count", () async {
-      when(() => identifierGenerator.generateOrderNumber()).thenReturn(
-        "20250930T154512+0900-ABC123xyz90",
-      );
+      when(() => identifierGenerator.generateOrderNumber()).thenReturn("AB12");
       when(
         () => delegate.find(
           filters: any(named: "filters"),
@@ -139,9 +134,7 @@ void main() {
     });
 
     test("throws after max attempts when collisions persist", () async {
-      when(() => identifierGenerator.generateOrderNumber()).thenReturn(
-        "20250930T154512+0900-ABC123xyz90",
-      );
+      when(() => identifierGenerator.generateOrderNumber()).thenReturn("AB12");
       when(
         () => delegate.find(
           filters: any(named: "filters"),
