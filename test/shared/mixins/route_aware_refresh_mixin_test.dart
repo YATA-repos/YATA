@@ -7,12 +7,18 @@ import "package:yata/shared/mixins/route_aware_refresh_mixin.dart";
 
 void main() {
   group("RouteAwareRefreshMixin", () {
+    late DateTime fakeNow;
+
     setUp(() {
+      fakeNow = DateTime(2025, 1, 1, 12);
       debugRouteObserverOverride = RouteObserver<PageRoute<dynamic>>();
+      debugNowProviderOverride = () => fakeNow;
+      RouteAwareRefreshMixin.resetExitTimestampsForTest();
     });
 
     tearDown(() {
       debugRouteObserverOverride = null;
+      debugNowProviderOverride = null;
     });
 
     testWidgets("calls onRouteReentered on didPush and didPopNext", (WidgetTester tester) async {
@@ -107,14 +113,63 @@ void main() {
 
       expect(callCount, 1);
     });
+
+    testWidgets("respects refresh cooldown before triggering", (WidgetTester tester) async {
+      int callCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TestRefreshWidget(
+            onRefresh: () async {
+              callCount++;
+            },
+            refreshOnPush: false,
+            refreshCooldown: const Duration(seconds: 5),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(callCount, 0);
+
+      final _TestRefreshWidgetState state = tester.state(find.byType(TestRefreshWidget));
+
+      state.triggerDidPushNext();
+      await tester.pump();
+
+      // re-enter immediately -> cooldown not elapsed
+      state.triggerDidPopNext();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(callCount, 0);
+
+      // leave again and wait for cooldown window
+      state.triggerDidPushNext();
+      await tester.pump();
+
+      fakeNow = fakeNow.add(const Duration(seconds: 6));
+
+      state.triggerDidPopNext();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(callCount, 1);
+    });
   });
 }
 
 class TestRefreshWidget extends StatefulWidget {
-  const TestRefreshWidget({required this.onRefresh, this.refreshOnPush = true, super.key});
+  const TestRefreshWidget({
+    required this.onRefresh,
+    this.refreshOnPush = true,
+    this.refreshCooldown,
+    super.key,
+  });
 
   final Future<void> Function() onRefresh;
   final bool refreshOnPush;
+  final Duration? refreshCooldown;
 
   @override
   State<TestRefreshWidget> createState() => _TestRefreshWidgetState();
@@ -126,6 +181,9 @@ class _TestRefreshWidgetState extends State<TestRefreshWidget>
 
   @override
   bool get shouldRefreshOnPush => widget.refreshOnPush;
+
+  @override
+  Duration? get refreshCooldown => widget.refreshCooldown;
 
   @override
   Future<void> onRouteReentered() {
@@ -143,6 +201,10 @@ class _TestRefreshWidgetState extends State<TestRefreshWidget>
 
   void triggerDidPopNext() {
     didPopNext();
+  }
+
+  void triggerDidPushNext() {
+    didPushNext();
   }
 
   @override

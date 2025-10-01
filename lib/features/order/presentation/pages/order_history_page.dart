@@ -49,6 +49,9 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
   bool get shouldRefreshOnPush => false;
 
   @override
+  Duration? get refreshCooldown => const Duration(seconds: 5);
+
+  @override
   Future<void> onRouteReentered() async {
     if (!mounted) {
       return;
