@@ -236,7 +236,7 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _notesController.dispose();
+    // _notesController.dispose();
     super.dispose();
   }
 
@@ -545,7 +545,7 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                                     name: item.menuItem.name,
                                     unitPriceLabel: state.formatPrice(item.menuItem.price),
                                     quantity: item.quantity,
-                                    lineSubtotalLabel: "x${item.quantity}: ${state.formatPrice(item.subtotal)}",
+                                    lineSubtotalLabel: state.formatPrice(item.subtotal),
                                     onQuantityChanged: (int value) =>
                                         controller.updateItemQuantity(item.menuItem.id, value),
                                     onRemove: () => controller.removeItem(item.menuItem.id),
@@ -566,6 +566,34 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
               selected: state.currentPaymentMethod,
               isDisabled: state.isCheckoutInProgress || state.isLoading,
               onChanged: controller.updatePaymentMethod,
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
+            TextField(
+              controller: _notesController,
+              onChanged: controller.updateOrderNotes,
+              maxLines: 1,
+              maxLength: 200,
+              enabled: !state.isCheckoutInProgress && !state.isLoading,
+              decoration: InputDecoration(
+                labelText: "メモ",
+                hintText: "例: アレルギー対応、調理指示など",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
+                  borderSide: const BorderSide(color: YataColorTokens.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
+                  borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: YataSpacingTokens.md,
+                  vertical: YataSpacingTokens.sm,
+                ),
+                counterStyle: (textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+              style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
             ),
             const SizedBox(height: YataSpacingTokens.lg),
             _SummaryRow(
@@ -589,34 +617,6 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                   style: textTheme.headlineSmall ?? YataTypographyTokens.headlineSmall,
                 ),
               ],
-            ),
-            const SizedBox(height: YataSpacingTokens.lg),
-            TextField(
-              controller: _notesController,
-              onChanged: controller.updateOrderNotes,
-              maxLines: 3,
-              maxLength: 500,
-              enabled: !state.isCheckoutInProgress && !state.isLoading,
-              decoration: InputDecoration(
-                labelText: "注文メモ",
-                hintText: "例: アレルギー対応、調理指示など",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
-                  borderSide: const BorderSide(color: YataColorTokens.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
-                  borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: YataSpacingTokens.md,
-                  vertical: YataSpacingTokens.sm,
-                ),
-                counterStyle: (textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
-                  color: YataColorTokens.textSecondary,
-                ),
-              ),
-              style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
             ),
             const SizedBox(height: YataSpacingTokens.lg),
             Row(
@@ -852,13 +852,10 @@ class _OrderRow extends StatelessWidget {
                     ),
                     const SizedBox(width: YataSpacingTokens.md),
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          lineSubtotalLabel,
-                          style: subtotalStyle,
-                          overflow: TextOverflow.fade,
-                        ),
+                      child: _SubtotalDisplay(
+                        value: lineSubtotalLabel,
+                        textStyle: subtotalStyle,
+                        quantity: quantity,
                       ),
                     ),
                   ],
@@ -891,13 +888,10 @@ class _OrderRow extends StatelessWidget {
               // 行小計
               Expanded(
                 flex: 2,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    lineSubtotalLabel,
-                    style: subtotalStyle,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                child: _SubtotalDisplay(
+                  value: lineSubtotalLabel,
+                  textStyle: subtotalStyle,
+                  quantity: quantity,
                 ),
               ),
               const SizedBox(width: YataSpacingTokens.sm),
@@ -916,6 +910,48 @@ class _OrderRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SubtotalDisplay extends StatelessWidget {
+  const _SubtotalDisplay({
+    required this.value,
+    required this.textStyle,
+    required this.quantity,
+  });
+
+  final String value;
+  final TextStyle textStyle;
+  final int quantity;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerRight,
+    child: Row(
+      mainAxisSize: MainAxisSize.max,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Text(
+          "x$quantity",
+          style: textStyle,
+        ),
+        const SizedBox(width: YataSpacingTokens.sm),
+        Icon(
+          Icons.arrow_forward,
+          size: 18,
+          color: YataColorTokens.textSecondary,
+        ),
+        const SizedBox(width: YataSpacingTokens.xs),
+        Flexible(
+          child: Text(
+            value,
+            style: textStyle,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _OrderPageErrorBanner extends StatelessWidget {
