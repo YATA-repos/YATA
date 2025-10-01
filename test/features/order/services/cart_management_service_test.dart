@@ -75,7 +75,9 @@ void main() {
       final Map<String, dynamic> capturedPayload = <String, dynamic>{};
 
       when(() => orderRepository.getById(existing.id!)).thenAnswer((_) async => existing);
-      when(() => orderRepository.updateById(existing.id!, any())).thenAnswer((Invocation invocation) async {
+      when(() => orderRepository.updateById(existing.id!, any())).thenAnswer((
+        Invocation invocation,
+      ) async {
         capturedPayload
           ..clear()
           ..addAll(invocation.positionalArguments[1] as Map<String, dynamic>);
@@ -97,7 +99,7 @@ void main() {
     });
 
     test("throws when cart does not belong to user", () async {
-  final Order existing = buildOrder(userId: "other-user");
+      final Order existing = buildOrder(userId: "other-user");
 
       when(() => orderRepository.getById(existing.id!)).thenAnswer((_) async => existing);
 
@@ -112,14 +114,17 @@ void main() {
 
   group("getActiveCart", () {
     test("assigns display code when active cart lacks code", () async {
-      final Order cart = buildOrder(id: "cart-missing", orderNumber: null);
+      final Order cart = buildOrder(id: "cart-missing");
 
       when(() => orderRepository.findActiveDraftByUser("user-1")).thenAnswer((_) async => cart);
       when(() => orderRepository.generateNextOrderNumber()).thenAnswer((_) async => "CD34");
 
       final List<Map<String, dynamic>> capturedPayloads = <Map<String, dynamic>>[];
-      when(() => orderRepository.updateById(cart.id!, any())).thenAnswer((Invocation invocation) async {
-        final Map<String, dynamic> payload = invocation.positionalArguments[1] as Map<String, dynamic>;
+      when(() => orderRepository.updateById(cart.id!, any())).thenAnswer((
+        Invocation invocation,
+      ) async {
+        final Map<String, dynamic> payload =
+            invocation.positionalArguments[1] as Map<String, dynamic>;
         capturedPayloads.add(payload);
         return buildOrder(id: cart.id!, userId: cart.userId!, orderNumber: "CD34");
       });

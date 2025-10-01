@@ -13,7 +13,7 @@ void main() {
         "status": OrderStatus.inProgress.value,
         "payment_method": PaymentMethod.cash.value,
         "discount_amount": 0,
-        "ordered_at": DateTime(2025, 1, 1).toIso8601String(),
+        "ordered_at": DateTime(2025).toIso8601String(),
       };
 
       final Order order = Order.fromJson(json);

@@ -76,7 +76,7 @@ void main() {
         status: OrderStatus.inProgress,
         paymentMethod: PaymentMethod.cash,
         discountAmount: 0,
-        orderedAt: DateTime(2025, 1, 1),
+        orderedAt: DateTime(2025),
         isCart: true,
       );
 
@@ -104,7 +104,6 @@ void main() {
         discountAmount: request.discountAmount,
         orderedAt: cart.orderedAt,
         orderNumber: "AB12",
-        isCart: false,
       );
 
       final Order recalculatedOrder = Order(
@@ -116,7 +115,6 @@ void main() {
         discountAmount: request.discountAmount,
         orderedAt: cart.orderedAt,
         orderNumber: "AB12",
-        isCart: false,
       );
 
       final Order newCart = Order(
@@ -130,7 +128,7 @@ void main() {
         isCart: true,
       );
 
-    final Map<String, bool> stockValidation = <String, bool>{item.id!: true};
+      final Map<String, bool> stockValidation = <String, bool>{item.id!: true};
       final OrderCalculationResult calculationResult = OrderCalculationResult(
         subtotal: 1200,
         taxAmount: 0,
@@ -139,21 +137,32 @@ void main() {
       );
 
       when(() => orderRepository.getById(cart.id!)).thenAnswer((_) async => cart);
-    when(() => orderItemRepository.findByOrderId(cart.id!))
-      .thenAnswer((_) async => <OrderItem>[item]);
-    when(() => stockService.validateCartStock(any<List<OrderItem>>()))
-      .thenAnswer((_) async => stockValidation);
-    when(() => stockService.consumeMaterialsForOrder(any<List<OrderItem>>()))
-      .thenAnswer((_) async {});
+      when(
+        () => orderItemRepository.findByOrderId(cart.id!),
+      ).thenAnswer((_) async => <OrderItem>[item]);
+      when(
+        () => stockService.validateCartStock(any<List<OrderItem>>()),
+      ).thenAnswer((_) async => stockValidation);
+      when(
+        () => stockService.consumeMaterialsForOrder(any<List<OrderItem>>()),
+      ).thenAnswer((_) async {});
       when(() => orderRepository.generateNextOrderNumber()).thenAnswer((_) async => "AB12");
-      when(() => calculationService.calculateOrderTotal(cart.id!, discountAmount: request.discountAmount))
-          .thenAnswer((_) async => calculationResult);
-      when(() => cartManagementService.getOrCreateActiveCart(cart.userId!))
-          .thenAnswer((_) async => newCart);
+      when(
+        () => calculationService.calculateOrderTotal(
+          cart.id!,
+          discountAmount: request.discountAmount,
+        ),
+      ).thenAnswer((_) async => calculationResult);
+      when(
+        () => cartManagementService.getOrCreateActiveCart(cart.userId!),
+      ).thenAnswer((_) async => newCart);
 
       final List<Map<String, dynamic>> capturedUpdates = <Map<String, dynamic>>[];
-      when(() => orderRepository.updateById(cart.id!, any())).thenAnswer((Invocation invocation) async {
-        final Map<String, dynamic> payload = invocation.positionalArguments[1] as Map<String, dynamic>;
+      when(() => orderRepository.updateById(cart.id!, any())).thenAnswer((
+        Invocation invocation,
+      ) async {
+        final Map<String, dynamic> payload =
+            invocation.positionalArguments[1] as Map<String, dynamic>;
         capturedUpdates.add(payload);
         if (payload.containsKey("order_number")) {
           return confirmedOrder;
@@ -161,21 +170,30 @@ void main() {
         return recalculatedOrder;
       });
 
-      final OrderCheckoutResult result = await service.checkoutCart(cart.id!, request, cart.userId!);
+      final OrderCheckoutResult result = await service.checkoutCart(
+        cart.id!,
+        request,
+        cart.userId!,
+      );
 
       expect(result.isSuccess, isTrue);
       expect(result.order.isCart, isFalse);
       expect(capturedUpdates, isNotEmpty);
       expect(capturedUpdates.first["is_cart"], isFalse);
-  expect(capturedUpdates.first["order_number"], equals("AB12"));
+      expect(capturedUpdates.first["order_number"], equals("AB12"));
 
       verify(() => orderRepository.getById(cart.id!)).called(1);
-  verify(() => orderItemRepository.findByOrderId(cart.id!)).called(1);
-  verify(() => stockService.validateCartStock(any<List<OrderItem>>())).called(1);
-  verify(() => stockService.consumeMaterialsForOrder(any<List<OrderItem>>())).called(1);
-  verify(() => orderRepository.generateNextOrderNumber()).called(1);
+      verify(() => orderItemRepository.findByOrderId(cart.id!)).called(1);
+      verify(() => stockService.validateCartStock(any<List<OrderItem>>())).called(1);
+      verify(() => stockService.consumeMaterialsForOrder(any<List<OrderItem>>())).called(1);
+      verify(() => orderRepository.generateNextOrderNumber()).called(1);
       verify(() => orderRepository.updateById(cart.id!, any())).called(2);
-      verify(() => calculationService.calculateOrderTotal(cart.id!, discountAmount: request.discountAmount)).called(1);
+      verify(
+        () => calculationService.calculateOrderTotal(
+          cart.id!,
+          discountAmount: request.discountAmount,
+        ),
+      ).called(1);
       verify(() => cartManagementService.getOrCreateActiveCart(cart.userId!)).called(1);
     });
 
@@ -187,7 +205,7 @@ void main() {
         status: OrderStatus.inProgress,
         paymentMethod: PaymentMethod.cash,
         discountAmount: 0,
-        orderedAt: DateTime(2025, 4, 1),
+        orderedAt: DateTime(2025, 4),
         isCart: true,
         orderNumber: "ZX99",
       );
@@ -224,29 +242,43 @@ void main() {
         discountAmount: request.discountAmount,
         orderedAt: cart.orderedAt,
         orderNumber: cart.orderNumber,
-        isCart: false,
       );
 
       when(() => orderRepository.getById(cart.id!)).thenAnswer((_) async => cart);
-      when(() => orderItemRepository.findByOrderId(cart.id!))
-          .thenAnswer((_) async => <OrderItem>[item]);
-      when(() => stockService.validateCartStock(any<List<OrderItem>>()))
-          .thenAnswer((_) async => stockValidation);
-      when(() => stockService.consumeMaterialsForOrder(any<List<OrderItem>>()))
-          .thenAnswer((_) async {});
-      when(() => calculationService.calculateOrderTotal(cart.id!, discountAmount: request.discountAmount))
-          .thenAnswer((_) async => calculationResult);
-      when(() => cartManagementService.getOrCreateActiveCart(cart.userId!))
-          .thenAnswer((_) async => null);
+      when(
+        () => orderItemRepository.findByOrderId(cart.id!),
+      ).thenAnswer((_) async => <OrderItem>[item]);
+      when(
+        () => stockService.validateCartStock(any<List<OrderItem>>()),
+      ).thenAnswer((_) async => stockValidation);
+      when(
+        () => stockService.consumeMaterialsForOrder(any<List<OrderItem>>()),
+      ).thenAnswer((_) async {});
+      when(
+        () => calculationService.calculateOrderTotal(
+          cart.id!,
+          discountAmount: request.discountAmount,
+        ),
+      ).thenAnswer((_) async => calculationResult);
+      when(
+        () => cartManagementService.getOrCreateActiveCart(cart.userId!),
+      ).thenAnswer((_) async => null);
 
       final List<Map<String, dynamic>> capturedUpdates = <Map<String, dynamic>>[];
-      when(() => orderRepository.updateById(cart.id!, any())).thenAnswer((Invocation invocation) async {
-        final Map<String, dynamic> payload = invocation.positionalArguments[1] as Map<String, dynamic>;
+      when(() => orderRepository.updateById(cart.id!, any())).thenAnswer((
+        Invocation invocation,
+      ) async {
+        final Map<String, dynamic> payload =
+            invocation.positionalArguments[1] as Map<String, dynamic>;
         capturedUpdates.add(payload);
         return updatedOrder;
       });
 
-      final OrderCheckoutResult result = await service.checkoutCart(cart.id!, request, cart.userId!);
+      final OrderCheckoutResult result = await service.checkoutCart(
+        cart.id!,
+        request,
+        cart.userId!,
+      );
 
       expect(result.order.orderNumber, equals("ZX99"));
       verifyNever(() => orderRepository.generateNextOrderNumber());
@@ -265,7 +297,7 @@ void main() {
         status: OrderStatus.inProgress,
         paymentMethod: PaymentMethod.cash,
         discountAmount: 0,
-        orderedAt: DateTime(2025, 3, 1),
+        orderedAt: DateTime(2025, 3),
         isCart: true,
       );
 
@@ -278,7 +310,6 @@ void main() {
         discountAmount: 0,
         orderedAt: DateTime(2025, 3, 2),
         completedAt: DateTime(2025, 3, 2, 12),
-        isCart: false,
       );
 
       final OrderItem orderItem = OrderItem(
@@ -300,14 +331,18 @@ void main() {
         displayOrder: 1,
       );
 
-      when(() => orderRepository.findByDateRange(any(), any())).thenAnswer(
-        (_) async => <Order>[cartOrder, finalizedOrder],
-      );
-      when(() => orderItemRepository.findByOrderId(cartOrder.id!))
-          .thenAnswer((_) async => <OrderItem>[]);
-      when(() => orderItemRepository.findByOrderId(finalizedOrder.id!))
-          .thenAnswer((_) async => <OrderItem>[orderItem]);
-      when(() => menuItemRepository.getById(orderItem.menuItemId)).thenAnswer((_) async => menuItem);
+      when(
+        () => orderRepository.findByDateRange(any(), any()),
+      ).thenAnswer((_) async => <Order>[cartOrder, finalizedOrder]);
+      when(
+        () => orderItemRepository.findByOrderId(cartOrder.id!),
+      ).thenAnswer((_) async => <OrderItem>[]);
+      when(
+        () => orderItemRepository.findByOrderId(finalizedOrder.id!),
+      ).thenAnswer((_) async => <OrderItem>[orderItem]);
+      when(
+        () => menuItemRepository.getById(orderItem.menuItemId),
+      ).thenAnswer((_) async => menuItem);
 
       final Map<String, dynamic> result = await service.getOrderHistory(
         OrderSearchRequest(page: 1, limit: 20),
@@ -320,7 +355,7 @@ void main() {
       expect(orders.first.id, equals(finalizedOrder.id));
       expect(result["total_count"], equals(1));
 
-    verify(() => orderRepository.findByDateRange(any<DateTime>(), any<DateTime>())).called(1);
+      verify(() => orderRepository.findByDateRange(any<DateTime>(), any<DateTime>())).called(1);
     });
   });
 }

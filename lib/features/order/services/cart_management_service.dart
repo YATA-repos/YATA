@@ -1,7 +1,7 @@
 import "../../../core/constants/enums.dart";
+import "../../../core/constants/exceptions/repository/repository_exception.dart";
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/constants/exceptions/repository/repository_exception.dart";
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/logging/compat.dart" as log;
 import "../../menu/models/menu_model.dart";
@@ -83,9 +83,11 @@ class CartManagementService {
       final Order? createdCart = await _orderRepository.create(newCart);
 
       if (createdCart != null) {
-        log.i("New cart created successfully", tag: loggerComponent, fields: <String, Object?>{
-          "orderNumber": createdCart.orderNumber,
-        });
+        log.i(
+          "New cart created successfully",
+          tag: loggerComponent,
+          fields: <String, Object?>{"orderNumber": createdCart.orderNumber},
+        );
         return await _ensureCartHasDisplayCode(createdCart);
       }
 
@@ -157,8 +159,10 @@ class CartManagementService {
           updatePayload["selected_options"] = request.selectedOptions;
         }
 
-        final OrderItem? updatedItem = await _orderItemRepository
-            .updateById(existingItem.id!, updatePayload);
+        final OrderItem? updatedItem = await _orderItemRepository.updateById(
+          existingItem.id!,
+          updatePayload,
+        );
 
         // カート合計を更新
         await _updateCartTotal(cartId);
@@ -330,11 +334,7 @@ class CartManagementService {
   }
 
   /// 支払い方法を更新する
-  Future<Order?> updateCartPaymentMethod(
-    String cartId,
-    PaymentMethod method,
-    String userId,
-  ) async {
+  Future<Order?> updateCartPaymentMethod(String cartId, PaymentMethod method, String userId) async {
     log.i("Started updating cart payment method", tag: loggerComponent);
 
     try {
@@ -458,8 +458,9 @@ class CartManagementService {
       }
     }
 
-    final Exception assignmentError =
-        Exception("Failed to assign order display code to cart after $maxAttempts attempts");
+    final Exception assignmentError = Exception(
+      "Failed to assign order display code to cart after $maxAttempts attempts",
+    );
     log.e(
       "Failed to assign order display code to cart",
       tag: loggerComponent,

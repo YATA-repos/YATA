@@ -88,7 +88,7 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
     final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
     final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
     final bool isCartEvent =
-        (newRecord?['is_cart'] as bool?) == true || (oldRecord?['is_cart'] as bool?) == true;
+        ((newRecord?["is_cart"] as bool?) ?? false) || ((oldRecord?["is_cart"] as bool?) ?? false);
     if (isCartEvent) {
       log.d(
         "Ignoring cart order event",
@@ -142,13 +142,12 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
 
   /// ステータスに応じた注文一覧を取得
   Future<Map<OrderStatus, List<Order>>> getOrdersByStatuses(
-  List<OrderStatus> statuses,
-  String userId, {
-  int limit = 50,
-  }) async =>
-    _orderManagementService.getOrdersByStatuses(statuses, userId, limit: limit);
+    List<OrderStatus> statuses,
+    String userId, {
+    int limit = 50,
+  }) async => _orderManagementService.getOrdersByStatuses(statuses, userId, limit: limit);
 
   /// 注文ステータスを更新
   Future<Order?> updateOrderStatus(String orderId, OrderStatus newStatus, String userId) async =>
-    _orderManagementService.updateOrderStatus(orderId, newStatus, userId);
+      _orderManagementService.updateOrderStatus(orderId, newStatus, userId);
 }
