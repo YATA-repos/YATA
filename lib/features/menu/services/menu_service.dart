@@ -16,6 +16,7 @@ import "../../auth/presentation/providers/auth_providers.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
 import "../dto/menu_dto.dart";
+import "../dto/menu_recipe_detail.dart";
 import "../models/menu_model.dart";
 
 /// メニュー機能のリアルタイムイベントをUI層へ伝搬するためのカウンタープロバイダー。
@@ -306,6 +307,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
   /// メニューアイテムを削除する。
   Future<void> deleteMenuItem(String id) async {
     try {
+      await _recipeRepository.deleteByMenuItemId(id);
       await _menuItemRepository.deleteById(id);
       log.i("Deleted menu item: $id", tag: loggerComponent);
     } catch (error, stackTrace) {
@@ -328,6 +330,66 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
   /// カテゴリ別メニューアイテム一覧を取得
   Future<List<MenuItem>> getMenuItemsByCategory(String? categoryId) async =>
       _menuItemRepository.findByCategoryId(categoryId);
+
+  /// 材料候補一覧を取得する。
+  Future<List<Material>> getMaterialCandidates({String? categoryId}) async =>
+    _materialRepository.findByCategoryId(categoryId);
+
+  /// メニューアイテムに紐づくレシピ一覧を取得する。
+  Future<List<MenuRecipeDetail>> getMenuRecipes(String menuItemId) async {
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(menuItemId, required: true, fieldName: "メニューID"),
+    ];
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
+    final List<Recipe> recipes = await _recipeRepository.findByMenuItemId(menuItemId);
+    if (recipes.isEmpty) {
+      return <MenuRecipeDetail>[];
+    }
+
+    final Set<String> materialIds = <String>{
+      for (final Recipe recipe in recipes) recipe.materialId,
+    };
+
+    final Map<String, Material> materialIndex;
+    if (materialIds.isEmpty) {
+      materialIndex = <String, Material>{};
+    } else {
+      final List<Material> materials = await _materialRepository.findByIds(
+        materialIds.toList(growable: false),
+      );
+      materialIndex = <String, Material>{
+        for (final Material material in materials)
+          if (material.id != null) material.id!: material,
+      };
+    }
+
+    final List<MenuRecipeDetail> details = recipes
+        .map(
+          (Recipe recipe) => MenuRecipeDetail.fromRecipe(
+            recipe: recipe,
+            material: materialIndex[recipe.materialId],
+          ),
+        )
+        .toList(growable: false)
+        ..sort(
+          (MenuRecipeDetail a, MenuRecipeDetail b) {
+            final String nameA = a.materialName.toLowerCase();
+            final String nameB = b.materialName.toLowerCase();
+            final int nameOrder = nameA.compareTo(nameB);
+            if (nameOrder != 0) {
+              return nameOrder;
+            }
+            return a.materialId.compareTo(b.materialId);
+          },
+        );
+
+    return details;
+  }
 
   /// メニューアイテムを検索
   Future<List<MenuItem>> searchMenuItems(String keyword, String userId) async {
@@ -621,6 +683,100 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     }
 
     return calculations;
+  }
+
+  /// レシピを追加または更新する。
+  Future<MenuRecipeDetail> upsertMenuRecipe({
+    required String menuItemId,
+    required String materialId,
+    required double requiredAmount,
+    bool isOptional = false,
+    String? notes,
+  }) async {
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(menuItemId, required: true, fieldName: "メニューID"),
+      InputValidator.validateString(materialId, required: true, fieldName: "材料ID"),
+      InputValidator.validateNumber(requiredAmount, required: true, min: 0, fieldName: "必要量"),
+    ];
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
+    if (requiredAmount < 0) {
+      throw ValidationException(<String>["必要量は0以上で入力してください"]);
+    }
+
+    final String? userId = currentUserId;
+    if (userId == null || userId.isEmpty) {
+      throw ValidationException(<String>["ユーザー情報を取得できませんでした"]);
+    }
+
+    final Material? material = await _materialRepository.getById(materialId);
+    if (material == null) {
+      throw ValidationException(<String>["指定した材料が見つかりません"]);
+    }
+
+    final Recipe? existing = await _recipeRepository.findByMenuItemAndMaterial(
+      menuItemId,
+      materialId,
+    );
+
+    final DateTime now = DateTime.now();
+    final Recipe payload = Recipe(
+      id: existing?.id,
+      menuItemId: menuItemId,
+      materialId: materialId,
+      requiredAmount: requiredAmount,
+      isOptional: isOptional,
+      notes: notes,
+      userId: userId,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    );
+
+    final Recipe? persisted = await _recipeRepository.upsertByMenuItemAndMaterial(payload);
+    final Recipe effective = persisted ?? payload;
+
+    await _recalculateAvailabilityForMenu(menuItemId);
+
+    return MenuRecipeDetail.fromRecipe(recipe: effective, material: material);
+  }
+
+  /// レシピを削除する。
+  Future<void> deleteMenuRecipe(String recipeId) async {
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(recipeId, required: true, fieldName: "レシピID"),
+    ];
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
+    final Recipe? recipe = await _recipeRepository.getById(recipeId);
+    if (recipe == null) {
+      log.w("レシピID($recipeId)が見つかりませんでした", tag: loggerComponent);
+      return;
+    }
+
+    await _recipeRepository.deleteById(recipeId);
+    await _recalculateAvailabilityForMenu(recipe.menuItemId);
+  }
+
+  /// レシピ更新後の在庫可用性を再計算する。
+  Future<MenuAvailabilityInfo?> refreshMenuAvailabilityForMenu(String menuItemId) async {
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateString(menuItemId, required: true, fieldName: "メニューID"),
+    ];
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      throw ValidationException(InputValidator.getErrorMessages(errors));
+    }
+
+    return _recalculateAvailabilityForMenu(menuItemId);
   }
 
   /// メニューアイテムの販売可否を切り替え
@@ -952,6 +1108,30 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     };
 
     return (recipesByMenuItemId: recipesByMenuItemId, materialIndex: materialIndex);
+  }
+
+  Future<MenuAvailabilityInfo?> _recalculateAvailabilityForMenu(String menuItemId) async {
+    final String? userId = currentUserId;
+    if (userId == null || userId.isEmpty) {
+      log.w("ユーザーIDが取得できないため在庫可用性の再計算をスキップします", tag: loggerComponent);
+      return null;
+    }
+
+    try {
+      final Map<String, MenuAvailabilityInfo> result = await bulkCheckMenuAvailability(
+        userId,
+        menuItemIds: <String>[menuItemId],
+      );
+      return result[menuItemId];
+    } catch (error, stackTrace) {
+      log.e(
+        "在庫可用性の再計算に失敗しました",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+      );
+      return null;
+    }
   }
 
   String _describeMissingMaterial(Material? material, Recipe recipe) {

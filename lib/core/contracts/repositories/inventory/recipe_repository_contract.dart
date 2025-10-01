@@ -6,4 +6,7 @@ abstract interface class RecipeRepositoryContract<T extends BaseModel>
   Future<List<T>> findByMenuItemId(String menuItemId);
   Future<List<T>> findByMaterialId(String materialId);
   Future<List<T>> findByMenuItemIds(List<String> menuItemIds);
+  Future<T?> findByMenuItemAndMaterial(String menuItemId, String materialId);
+  Future<T?> upsertByMenuItemAndMaterial(T entity);
+  Future<void> deleteByMenuItemId(String menuItemId);
 }
