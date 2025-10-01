@@ -71,6 +71,7 @@ class OrderManagementState {
     this.orderNumber = "#1046",
     this.taxRate = 0.1,
     this.highlightedItemId,
+    this.orderNotes = "",
   }) : categories = List<MenuCategoryViewData>.unmodifiable(categories),
        menuItems = List<MenuItemViewData>.unmodifiable(menuItems),
        cartItems = List<CartItemViewData>.unmodifiable(cartItems);
@@ -159,6 +160,9 @@ class OrderManagementState {
   /// 直近にハイライト表示する対象のメニューID（UI用・一時的）。
   final String? highlightedItemId;
 
+  /// 注文メモ。
+  final String orderNotes;
+
   /// 選択中のカテゴリ。
   MenuCategoryViewData? get selectedCategory {
     if (categories.isEmpty ||
@@ -210,6 +214,7 @@ class OrderManagementState {
     double? taxRate,
     String? highlightedItemId,
     bool clearHighlightedItemId = false,
+    String? orderNotes,
   }) => OrderManagementState(
     categories: categories,
     menuItems: menuItems,
@@ -221,6 +226,7 @@ class OrderManagementState {
     highlightedItemId: clearHighlightedItemId
         ? null
         : (highlightedItemId ?? this.highlightedItemId),
+    orderNotes: orderNotes ?? this.orderNotes,
   );
 }
 
@@ -321,7 +327,19 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     if (state.cartItems.isEmpty) {
       return;
     }
-    state = state.copyWith(cartItems: <CartItemViewData>[], clearHighlightedItemId: true);
+    state = state.copyWith(
+      cartItems: <CartItemViewData>[],
+      clearHighlightedItemId: true,
+      orderNotes: "",
+    );
+  }
+
+  /// 注文メモを更新する。
+  void updateOrderNotes(String notes) {
+    if (notes == state.orderNotes) {
+      return;
+    }
+    state = state.copyWith(orderNotes: notes);
   }
 
   MenuItemViewData? _findMenuItem(String menuItemId) {

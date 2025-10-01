@@ -244,11 +244,30 @@ class _CurrentOrderSection extends StatefulWidget {
 class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _itemKeys = <String, GlobalKey>{};
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: widget.state.orderNotes);
+  }
 
   @override
   void didUpdateWidget(covariant _CurrentOrderSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 自動スクロールは無効化（ハイライトのみ有効）
+    
+    // 状態が変更された場合（例: カートクリア時）にテキストコントローラを同期
+    if (widget.state.orderNotes != _notesController.text) {
+      _notesController.text = widget.state.orderNotes;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 
   // 自動スクロールは無効化
@@ -401,6 +420,33 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                   style: textTheme.headlineSmall ?? YataTypographyTokens.headlineSmall,
                 ),
               ],
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
+            TextField(
+              controller: _notesController,
+              onChanged: controller.updateOrderNotes,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: InputDecoration(
+                labelText: "注文メモ",
+                hintText: "例: アレルギー対応、調理指示など",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.sm),
+                  borderSide: const BorderSide(color: YataColorTokens.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.sm),
+                  borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: YataSpacingTokens.md,
+                  vertical: YataSpacingTokens.sm,
+                ),
+                counterStyle: textTheme.bodySmall?.copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+              style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
             ),
             const SizedBox(height: YataSpacingTokens.lg),
             Row(
