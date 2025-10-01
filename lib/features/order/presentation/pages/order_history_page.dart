@@ -4,6 +4,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
+import "package:meta/meta.dart";
 
 import "../../../../core/constants/enums.dart";
 import "../../../../shared/components/buttons/icon_button.dart";
@@ -322,7 +323,7 @@ class _OrderHistoryList extends StatelessWidget {
     return ListView.separated(
       itemCount: orders.length,
       separatorBuilder: (BuildContext context, int index) =>
-          const SizedBox(height: YataSpacingTokens.md),
+          const SizedBox(height: YataSpacingTokens.sm),
       itemBuilder: (BuildContext context, int index) {
         final OrderHistoryViewData order = orders[index];
         return _OrderHistoryCard(order: order, onTap: () => controller.selectOrder(order));
@@ -383,7 +384,7 @@ class _OrderHistoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(YataSpacingTokens.lg),
+        padding: const EdgeInsets.all(YataSpacingTokens.md),
         decoration: BoxDecoration(
           color: YataColorTokens.surface,
           borderRadius: YataRadiusTokens.borderRadiusCard,
@@ -400,7 +401,7 @@ class _OrderHistoryCard extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         order.orderNumber ?? "受付コード未設定",
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: YataColorTokens.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
@@ -431,127 +432,97 @@ class _OrderHistoryCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: YataSpacingTokens.md),
+            const SizedBox(height: YataSpacingTokens.sm),
 
-            // 顧客名・注文日時
+            // 顧客・日時・注文明細サマリー
             Row(
               children: <Widget>[
+                const Icon(Icons.person_outline, size: 14, color: YataColorTokens.textSecondary),
+                const SizedBox(width: YataSpacingTokens.xs),
+                Text(
+                  order.customerName ?? "名前なし",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                ),
+                const SizedBox(width: YataSpacingTokens.sm),
+                Text(
+                  "|",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                ),
+                const SizedBox(width: YataSpacingTokens.sm),
+                const Icon(
+                  Icons.access_time_outlined,
+                  size: 14,
+                  color: YataColorTokens.textSecondary,
+                ),
+                const SizedBox(width: YataSpacingTokens.xs),
+                Text(
+                  dateFormat.format(order.orderedAt),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                ),
+                const SizedBox(width: YataSpacingTokens.sm),
+                Text(
+                  "|",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                ),
+                const SizedBox(width: YataSpacingTokens.sm),
                 Expanded(
                   child: Row(
                     children: <Widget>[
                       const Icon(
-                        Icons.person_outline,
-                        size: 16,
+                        Icons.shopping_bag_outlined,
+                        size: 14,
                         color: YataColorTokens.textSecondary,
                       ),
                       const SizedBox(width: YataSpacingTokens.xs),
-                      Text(
-                        order.customerName ?? "名前なし",
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
+                      Expanded(
+                        child: Text(
+                          orderHistoryItemsSummary(order.items),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  children: <Widget>[
-                    const Icon(
-                      Icons.access_time_outlined,
-                      size: 16,
-                      color: YataColorTokens.textSecondary,
-                    ),
-                    const SizedBox(width: YataSpacingTokens.xs),
-                    Text(
-                      dateFormat.format(order.orderedAt),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
-                    ),
-                  ],
-                ),
               ],
             ),
-
-            const SizedBox(height: YataSpacingTokens.md),
-
-            // 注文明細（最大3件まで表示）
-            ...order.items
-                .take(3)
-                .map(
-                  (OrderItemViewData item) => Padding(
-                    padding: const EdgeInsets.only(bottom: YataSpacingTokens.xs),
-                    child: Row(
-                      children: <Widget>[
-                        Text(
-                          "${item.quantity}x",
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: YataColorTokens.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: YataSpacingTokens.sm),
-                        Expanded(
-                          child: Text(
-                            item.menuItemName,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textPrimary),
-                          ),
-                        ),
-                        Text(
-                          "¥${currencyFormat.format(item.subtotal)}",
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-            // 項目が3件より多い場合の表示
-            if (order.items.length > 3) ...<Widget>[
-              const SizedBox(height: YataSpacingTokens.xs),
-              Text(
-                "他${order.items.length - 3}件",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: YataColorTokens.textSecondary,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-
-            // 備考（ある場合のみ表示）
-            if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
-              const SizedBox(height: YataSpacingTokens.md),
-              Container(
-                padding: const EdgeInsets.all(YataSpacingTokens.sm),
-                decoration: BoxDecoration(
-                  color: YataColorTokens.surfaceAlt,
-                  borderRadius: YataRadiusTokens.borderRadiusSmall,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    const Icon(Icons.note_outlined, size: 16, color: YataColorTokens.textSecondary),
-                    const SizedBox(width: YataSpacingTokens.xs),
-                    Expanded(
-                      child: Text(
-                        order.notes!,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
+}
+
+/// 注文明細のサマリーテキストを生成する。
+@visibleForTesting
+String orderHistoryItemsSummary(List<OrderItemViewData> items) {
+  if (items.isEmpty) {
+    return "商品なし";
+  }
+
+  final List<String> displayItems = items
+      .take(3)
+      .map((OrderItemViewData item) => item.menuItemName)
+      .toList();
+
+  final String summary = displayItems.join(", ");
+
+  if (items.length > 3) {
+    return "$summary, 他${items.length - 3}件";
+  }
+
+  return summary;
 }
 
 /// 注文ステータスバッジウィジェット。
