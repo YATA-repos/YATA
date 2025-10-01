@@ -1,5 +1,7 @@
 # TODO
 
+Next ID No: 18
+
 --- 
 
 Definitions to suppress Markdown warnings
@@ -12,42 +14,13 @@ Definitions to suppress Markdown warnings
 [Chore]: #
 
 ## あとでタスク定義
-- 注文状況画面に、キャンセルボタンを追加する
-- まだ注文がひとまとめにされてしまう問題が解消されていない。
-  - 思いついたのだが、注文番号をDB側で採番しているのが原因では？こちら側で生成するようにしてみる
 - loggingのlevelやconfigが全体的にうまく動いていないので修正する
+- app_router.dartで、pathをハードコードするのか、Page側で定義するのか、統一する
 
 ## Backlog
 
-### [Bugfix] 注文番号が採番されない問題を解消
-- **ID**: Order-Bugfix-1
-- **Priority**: P0
-- **Size**: M
-- **Area**: Order
-- **Dependencies**: None
-- **Goal**: すべての注文にユニークな注文番号が割り当てられ、注文フロー全体で参照できるようにする。
-- **Steps**:
-  1. 既存のSupabaseスキーマと採番ロジックが存在するか調査する。
-  2. 採番方式を設計し、バックエンドで番号を生成・永続化できるようにする。
-  3. フロントエンドの注文作成フローで番号を取得・表示する処理を実装する。
-  4. 会計・履歴・分析画面で新しい注文番号が利用できるか確認する。
-- **Description**: 現状、注文番号が採番されず履歴参照や重複注文の判別が困難。採番方式を整備し、アプリ全体で利用できるようにする。
-
-### [Bugfix] 連続注文が統合される問題を解消
-- **ID**: Order-Bugfix-2
-- **Priority**: P0
-- **Size**: S
-- **Area**: Order
-- **Dependencies**: Order-Bugfix-1
-- **Goal**: 同じ商品を連続で注文しても、各注文が独立したレコードとして保存される。
-- **Steps**:
-  1. 現状の注文セッション管理と再現手順を確認し原因を特定する。
-  2. 注文確定タイミングでセッションとカートをクリアする処理を実装する。
-  3. 連続注文の再現テストで独立した注文が登録されることを確認する。
-- **Description**: 採番未対応やセッション管理が原因で連続注文が一つにまとまってしまう。注文確定処理を見直し、独立したレコードとして保持する。
-
 ### [Feature] 注文にメモを追加できるようにする
-- **ID**: Order-Feature-2
+- **ID**: Order-Feature-1
 - **Priority**: P1
 - **Size**: M
 - **Area**: Order
@@ -59,21 +32,8 @@ Definitions to suppress Markdown warnings
   3. 保存したメモを履歴・詳細画面で表示する。
 - **Description**: 注文ごとの補足情報を記録できずオペレーションの伝達が困難。メモ入力・保存・表示を実装する。
 
-### [Enhancement] 注文状態にキャンセル済みを追加する
-- **ID**: Order-Enhancement-1
-- **Priority**: P1
-- **Size**: M
-- **Area**: Order
-- **Dependencies**: None
-- **Goal**: キャンセル済み状態がUIとバックエンド双方で扱え、履歴にも反映される。
-- **Steps**:
-  1. ステータス定義とデータモデルにキャンセル状態を追加する。
-  2. 状態変更UIとフィルタリング処理を更新する。
-  3. 状態遷移テストでキャンセルが正しく反映されることを確認する。
-- **Description**: キャンセルフローが未整備で、注文の実際の状態管理ができない。キャンセル状態を定義し、全レイヤーで扱えるようにする。
-
 ### [Enhancement] 在庫管理画面をmockベースで再設計するか検討
-- **ID**: Inventory-Enhancement-1
+- **ID**: Inventory-Enhancement-2
 - **Priority**: P2
 - **Size**: L
 - **Area**: Inventory
@@ -86,7 +46,7 @@ Definitions to suppress Markdown warnings
 - **Description**: モックの方が完成度が高い現状を解消するため、再設計の方針を決定し後続開発を進められる状態にする。
 
 ### [Enhancement] 注文カート行内小計の表示を改善する
-- **ID**: UI/UX-Enhancement-1
+- **ID**: UI/UX-Enhancement-3
 - **Priority**: P2
 - **Size**: S
 - **Area**: UI/UX
@@ -99,7 +59,7 @@ Definitions to suppress Markdown warnings
 - **Description**: 行内小計が分かりづらく、会計確認に時間がかかっている。視認性の高いUIに改善する。
 
 ### [Enhancement] メニュー管理画面のUI整理方針を検討する
-- **ID**: Menu-Enhancement-1
+- **ID**: Menu-Enhancement-4
 - **Priority**: P2
 - **Size**: M
 - **Area**: Menu
@@ -112,7 +72,7 @@ Definitions to suppress Markdown warnings
 - **Description**: メニュー管理画面がごちゃついているため、改善方針を整理し次の実装につなげる準備を行う。
 
 ### [Enhancement] PC表示時にレイアウト幅を最適化する
-- **ID**: UI/UX-Enhancement-2
+- **ID**: UI/UX-Enhancement-5
 - **Priority**: P2
 - **Size**: S
 - **Area**: UI/UX
@@ -137,8 +97,34 @@ Definitions to suppress Markdown warnings
   3. 主要シナリオでの動作確認と回帰テスト手順を整備し、ドキュメントへ反映する。
 - **Description**: Order-Bugfix-3 で検討中の遷移直後 `refresh()` パターンを全画面へ展開し、古い状態が残らないようにする。
 
+### [Enhancement] 30秒間隔の自動更新タイマーを導入する
+- **ID**: UI/UX-Enhancement-7
+- **Priority**: P2
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: UI/UX-Enhancement-6
+- **Goal**: 注文・在庫・メニューなど鮮度が重要な画面で、表示中は30秒ごとに自動で最新データへ更新される。
+- **Steps**:
+  1. タイマー更新が必要な画面と許容インターバル、停止条件（バックグラウンド／非表示時）を整理する。
+  2. `Timer` ベースの共通仕組み（Mixin やヘルパー）を実装し、多重実行を防ぐ制御を組み込む。
+  3. 対象ページへ組み込み、AppLifecycle や `mounted` チェックを含む動作確認とドキュメント更新を行う。
+- **Description**: 手動リフレッシュに頼らず一定間隔で自動更新することで、戻らずとも最新状態を確認できるようにする。
+
+### [Feature] Realtime 監視対象を主要画面へ拡張する
+- **ID**: Core-Feature-8
+- **Priority**: P2
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: UI/UX-Enhancement-7
+- **Goal**: 注文・在庫・履歴等の主要データで Supabase Realtime を活用し、他端末からの更新を即座に UI へ反映できるようにする。
+- **Steps**:
+  1. 各機能で必要なチャンネル／イベント種別を定義し、既存サービス層へ監視フックを追加する。
+  2. Realtime イベントを StateNotifier へ伝搬させる共通ハンドリング（デバウンスやエラー処理を含む）を実装する。
+  3. 対象ページでの UI 反映と回帰テスト、運用ドキュメントの更新を行う。
+- **Description**: 端末間でデータが乖離しないよう Realtime を段階的に導入し、周期更新と組み合わせて鮮度を高める。
+
 ### [Documentation] menuとrecipeの依存関係を整理する
-- **ID**: Documentation-Documentation-1
+- **ID**: Documentation-Documentation-9
 - **Priority**: P2
 - **Size**: M
 - **Area**: Documentation
@@ -151,7 +137,7 @@ Definitions to suppress Markdown warnings
 - **Description**: menuが材料依存を持つ必要があるか判断できておらず、データモデリングの整理が必要。調査と指針策定を行う。
 
 ### [Documentation] リファレンス系ドキュメントを拡充する
-- **ID**: Documentation-Documentation-2
+- **ID**: Documentation-Documentation-10
 - **Priority**: P2
 - **Size**: L
 - **Area**: Documentation
@@ -164,7 +150,7 @@ Definitions to suppress Markdown warnings
 - **Description**: リファレンスやガイド文書が不足しており、知識共有が難しい。必要なドキュメントを整理し追加する。
 
 ### [Bugfix] ログのファイル書き込みが失敗する問題を修正
-- **ID**: Core-Bugfix-1
+- **ID**: Core-Bugfix-11
 - **Priority**: P1
 - **Size**: M
 - **Area**: Core
@@ -177,7 +163,7 @@ Definitions to suppress Markdown warnings
 - **Description**: ログがファイルに残らず、運用でのトラブルシュートが困難。設定や実装を修正し、安定したログ出力を実現する。
 
 ### [Enhancement] 注文状態ボードの左→右導線を強化する
-- **ID**: UI/UX-Enhancement-3
+- **ID**: UI/UX-Enhancement-12
 - **Priority**: P3
 - **Size**: S
 - **Area**: UI/UX
@@ -190,7 +176,7 @@ Definitions to suppress Markdown warnings
 - **Description**: 注文状態画面の進行方向が分かりづらい。視覚的な導線を強化し操作性を高める。
 
 ### [Performance] 注文画面のlogging設定を見直しパフォーマンス確認
-- **ID**: Order-Performance-1
+- **ID**: Order-Performance-13
 - **Priority**: P2
 - **Size**: S
 - **Area**: Order
@@ -207,7 +193,7 @@ Definitions to suppress Markdown warnings
 ## Ready
 
 ### [Enhancement] 注文詳細モーダルをオーバーレイクリックで閉じる
-- **ID**: UI/UX-Enhancement-4
+- **ID**: UI/UX-Enhancement-14
 - **Priority**: P2
 - **Size**: XS
 - **Area**: UI/UX
@@ -220,7 +206,7 @@ Definitions to suppress Markdown warnings
 - **Description**: モーダル外をクリックしても閉じられず操作性が低い。一般的なモーダル挙動に合わせる。
 
 ### [Enhancement] 注文履歴カードの高さを調整する
-- **ID**: UI/UX-Enhancement-5
+- **ID**: UI/UX-Enhancement-15
 - **Priority**: P3
 - **Size**: XS
 - **Area**: UI/UX
@@ -233,7 +219,7 @@ Definitions to suppress Markdown warnings
 - **Description**: 履歴カードが縦方向に大きすぎるため情報密度が低い。スタイル調整で視認性を向上させる。
 
 ### [Bugfix] 注文履歴の「返金済み」UIを削除する
-- **ID**: UI/UX-Bugfix-2
+- **ID**: UI/UX-Bugfix-16
 - **Priority**: P2
 - **Size**: XS
 - **Area**: UI/UX
@@ -246,7 +232,7 @@ Definitions to suppress Markdown warnings
 - **Description**: 存在しない状態のUIが残っており利用者を混乱させる。不要な表示を削除する。
 
 ### [Chore] 在庫管理画面の適用ボタンアイコンを削除する
-- **ID**: UI/UX-Chore-1
+- **ID**: UI/UX-Chore-17
 - **Priority**: P3
 - **Size**: XS
 - **Area**: UI/UX
@@ -269,7 +255,7 @@ Definitions to suppress Markdown warnings
 ### 基本原則
 - タスクは、Backlog, In Progress, Readyの3つのセクションに分類される
 - タスクは、タイトル, ID, Priority, Size, Area, Dependencies, Goal, Steps, Descriptionの各フィールドを持つ
-- タスクIDは`{エリア}-{タスクカテゴリ}-{連番}`形式で一意に採番する
+- タスクIDは`{エリア}-{タスクカテゴリ}-{連番}`形式で一意に採番する(連番は全カテゴリで通し番号)
 - タスクは可能な限り少ない関心事を保持するように分割され、各タスクは独立して遂行可能であることが望ましい
 - タスクの内容は、他のタスクと重複しないように注意する
 
