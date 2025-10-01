@@ -452,7 +452,7 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                   horizontal: YataSpacingTokens.md,
                   vertical: YataSpacingTokens.sm,
                 ),
-                counterStyle: textTheme.bodySmall?.copyWith(
+                counterStyle: (textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
                   color: YataColorTokens.textSecondary,
                 ),
               ),
