@@ -15,6 +15,7 @@ Definitions to suppress Markdown warnings
 
 ## あとでタスク定義
 - loggingのlevelやconfigが全体的にうまく動いていないので修正する
+- 注文状況ペーにおいて、注文カードクリック時に詳細モーダルを開く（履歴に移動するのか、ページ維持でモーダルだけ開くのか要検討）
 - app_router.dartで、pathをハードコードするのか、Page側で定義するのか、統一する
 
 ## Backlog
