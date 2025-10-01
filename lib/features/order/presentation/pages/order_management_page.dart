@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -12,6 +14,7 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
+import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_management_controller.dart";
@@ -27,13 +30,91 @@ class OrderManagementPage extends ConsumerStatefulWidget {
   ConsumerState<OrderManagementPage> createState() => _OrderManagementPageState();
 }
 
-class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
+class _OrderManagementPageState extends ConsumerState<OrderManagementPage>
+    with RouteAwareRefreshMixin<OrderManagementPage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  bool get shouldRefreshOnPush => false;
+
+  @override
+  Future<void> onRouteReentered() async {
+    if (!mounted) {
+      return;
+    }
+
+    final OrderManagementController controller = ref.read(
+      orderManagementControllerProvider.notifier,
+    );
+    await _waitForStateIdle<OrderManagementState>(
+      controller,
+      ref.read(orderManagementControllerProvider),
+      (OrderManagementState state) => !state.isLoading && !state.isCheckoutInProgress,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await controller.loadInitialData();
+  }
+
+  Future<void> _waitForStateIdle<S>(
+    StateNotifier<S> controller,
+    S currentState,
+    bool Function(S state) isIdle,
+  ) async {
+    if (isIdle(currentState)) {
+      return;
+    }
+
+    final Completer<void> completer = Completer<void>();
+    bool cancelled = false;
+    late final StreamSubscription<S> subscription;
+
+    subscription = controller.stream.listen(
+      (S next) {
+        if (isIdle(next) && !cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        }
+      },
+      onError: (Object _, StackTrace __) {
+        if (!cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onDone: () {
+        if (!cancelled) {
+          cancelled = true;
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      cancelOnError: false,
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      if (!cancelled) {
+        await subscription.cancel();
+      }
+    }
   }
 
   @override
@@ -509,18 +590,18 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                             }
                             if (result.isSuccess) {
                               final String? orderNumber = result.order?.orderNumber;
-                final String orderNumberLabel =
-                  (orderNumber == null || orderNumber.isEmpty)
-                    ? "新規注文"
-                    : "受付コード $orderNumber";
+                              final String orderNumberLabel =
+                                  (orderNumber == null || orderNumber.isEmpty)
+                                  ? "新規注文"
+                                  : "受付コード $orderNumber";
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text("会計が完了しました（$orderNumberLabel）。")),
                               );
                             } else {
                               final String message = _checkoutFailureMessage(result);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(message)),
-                              );
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(message)));
                             }
                           },
                     icon: state.isCheckoutInProgress
@@ -557,9 +638,7 @@ class _OrderNumberBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  final String label = (orderNumber == null || orderNumber!.isEmpty)
-    ? "割り当て準備中"
-    : orderNumber!;
+    final String label = (orderNumber == null || orderNumber!.isEmpty) ? "割り当て準備中" : orderNumber!;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: YataSpacingTokens.md,
@@ -571,7 +650,7 @@ class _OrderNumberBadge extends StatelessWidget {
         border: Border.all(color: YataColorTokens.primary.withValues(alpha: 0.3)),
       ),
       child: Text(
-  "受付コード: $label",
+        "受付コード: $label",
         style:
             Theme.of(context).textTheme.labelLarge?.copyWith(color: YataColorTokens.primary) ??
             YataTypographyTokens.labelLarge.copyWith(color: YataColorTokens.primary),

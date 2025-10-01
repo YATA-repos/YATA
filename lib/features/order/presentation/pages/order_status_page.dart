@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -11,6 +13,7 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
+import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/navigation/app_top_bar.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../../shared/order_status_presentation.dart";
@@ -28,10 +31,86 @@ class OrderStatusPage extends ConsumerStatefulWidget {
   ConsumerState<OrderStatusPage> createState() => _OrderStatusPageState();
 }
 
-class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
+class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
+    with RouteAwareRefreshMixin<OrderStatusPage> {
   final NumberFormat _currencyFormat = NumberFormat("#,###");
   final DateFormat _timeFormat = DateFormat("HH:mm");
   final DateFormat _dateTimeFormat = DateFormat("yyyy/MM/dd HH:mm");
+
+  @override
+  bool get shouldRefreshOnPush => false;
+
+  @override
+  Future<void> onRouteReentered() async {
+    if (!mounted) {
+      return;
+    }
+
+    final OrderStatusController controller = ref.read(orderStatusControllerProvider.notifier);
+    await _waitForStateIdle<OrderStatusState>(
+      controller,
+      ref.read(orderStatusControllerProvider),
+      (OrderStatusState state) => !state.isLoading,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await controller.loadOrders(showLoadingIndicator: false);
+  }
+
+  Future<void> _waitForStateIdle<S>(
+    StateNotifier<S> controller,
+    S currentState,
+    bool Function(S state) isIdle,
+  ) async {
+    if (isIdle(currentState)) {
+      return;
+    }
+
+    final Completer<void> completer = Completer<void>();
+    bool cancelled = false;
+    late final StreamSubscription<S> subscription;
+
+    subscription = controller.stream.listen(
+      (S next) {
+        if (isIdle(next) && !cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        }
+      },
+      onError: (Object _, StackTrace __) {
+        if (!cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onDone: () {
+        if (!cancelled) {
+          cancelled = true;
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      cancelOnError: false,
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      if (!cancelled) {
+        await subscription.cancel();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +208,7 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
                           if (!context.mounted) {
                             return;
                           }
-                          final String message =
-                              error ?? "${order.orderNumber ?? "注文"} を完了に更新しました";
+                          final String message = error ?? "${order.orderNumber ?? "注文"} を完了に更新しました";
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text(message)));
@@ -170,8 +248,7 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage> {
                             return;
                           }
 
-                          final String message =
-                              error ?? "${order.orderNumber ?? "注文"} をキャンセルしました";
+                          final String message = error ?? "${order.orderNumber ?? "注文"} をキャンセルしました";
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text(message)));

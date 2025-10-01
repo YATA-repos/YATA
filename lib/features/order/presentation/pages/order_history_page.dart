@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -14,6 +16,7 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
+import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../../../shared/utils/payment_method_label.dart";
@@ -31,7 +34,8 @@ class OrderHistoryPage extends ConsumerStatefulWidget {
   ConsumerState<OrderHistoryPage> createState() => _OrderHistoryPageState();
 }
 
-class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
+class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
+    with RouteAwareRefreshMixin<OrderHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -41,11 +45,86 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
   }
 
   @override
+  bool get shouldRefreshOnPush => false;
+
+  @override
+  Future<void> onRouteReentered() async {
+    if (!mounted) {
+      return;
+    }
+
+    final OrderHistoryController controller = ref.read(orderHistoryControllerProvider.notifier);
+    await _waitForStateIdle<OrderHistoryState>(
+      controller,
+      ref.read(orderHistoryControllerProvider),
+      (OrderHistoryState state) => !state.isLoading,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await controller.loadHistory();
+  }
+
+  Future<void> _waitForStateIdle<S>(
+    StateNotifier<S> controller,
+    S currentState,
+    bool Function(S state) isIdle,
+  ) async {
+    if (isIdle(currentState)) {
+      return;
+    }
+
+    final Completer<void> completer = Completer<void>();
+    bool cancelled = false;
+    late final StreamSubscription<S> subscription;
+
+    subscription = controller.stream.listen(
+      (S next) {
+        if (isIdle(next) && !cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        }
+      },
+      onError: (Object _, StackTrace __) {
+        if (!cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onDone: () {
+        if (!cancelled) {
+          cancelled = true;
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      cancelOnError: false,
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      if (!cancelled) {
+        await subscription.cancel();
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final OrderHistoryState state = ref.watch(orderHistoryControllerProvider);
     final OrderHistoryController controller = ref.watch(orderHistoryControllerProvider.notifier);
-  final List<(String label, OrderStatus status)> statusOptions =
-    OrderStatusPresentation.segmentOptions();
+    final List<(String label, OrderStatus status)> statusOptions =
+        OrderStatusPresentation.segmentOptions();
 
     return Scaffold(
       backgroundColor: YataColorTokens.background,
@@ -128,10 +207,9 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                     const SizedBox(height: YataSpacingTokens.xs),
                     Text(
                       "過去の注文履歴を確認できます（全${state.totalCount}件）",
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: YataColorTokens.textSecondary),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
                     ),
                   ],
                 ),
@@ -159,10 +237,8 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                           const YataFilterSegment(label: "全て", value: 0),
                           ...List<YataFilterSegment>.generate(
                             statusOptions.length,
-                            (int index) => YataFilterSegment(
-                              label: statusOptions[index].$1,
-                              value: index + 1,
-                            ),
+                            (int index) =>
+                                YataFilterSegment(label: statusOptions[index].$1, value: index + 1),
                           ),
                         ],
                         selectedIndex: state.selectedStatusFilter,
@@ -344,12 +420,12 @@ class _OrderHistoryCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                        Text(
-                          paymentMethodLabel(order.paymentMethod),
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
-                        ),
+                    Text(
+                      paymentMethodLabel(order.paymentMethod),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary),
+                    ),
                   ],
                 ),
               ],
@@ -476,7 +552,6 @@ class _OrderHistoryCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 /// 注文ステータスバッジウィジェット。
@@ -581,7 +656,7 @@ class _OrderDetailContent extends StatelessWidget {
                   valueWidget: _OrderStatusBadge(status: order.status),
                 ),
                 _DetailRow(label: "顧客名", value: order.customerName ?? "名前なし"),
-                    _DetailRow(label: "支払い方法", value: paymentMethodLabel(order.paymentMethod)),
+                _DetailRow(label: "支払い方法", value: paymentMethodLabel(order.paymentMethod)),
                 _DetailRow(label: "注文日時", value: detailDateFormat.format(order.orderedAt)),
                 if (order.completedAt != null)
                   _DetailRow(label: "完了日時", value: detailDateFormat.format(order.completedAt!)),
@@ -646,7 +721,6 @@ class _OrderDetailContent extends StatelessWidget {
       ),
     );
   }
-
 }
 
 /// 詳細セクションウィジェット。

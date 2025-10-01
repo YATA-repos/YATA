@@ -18,10 +18,14 @@ import "guards/auth_guard.dart";
 class AppRouter {
   const AppRouter._();
 
+  static final RouteObserver<PageRoute<dynamic>> routeObserver =
+      RouteObserver<PageRoute<dynamic>>();
+
   static GoRouter getRouter(WidgetRef ref) {
     final AuthState authState = ref.watch(authStateNotifierProvider);
 
     return GoRouter(
+      observers: <NavigatorObserver>[routeObserver],
       routes: <RouteBase>[
         GoRoute(
           path: "/auth",

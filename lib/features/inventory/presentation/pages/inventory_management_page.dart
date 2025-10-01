@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -8,6 +10,7 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
+import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../../shared/utils/unit_config.dart";
 import "../../../order/presentation/pages/order_status_page.dart";
@@ -25,7 +28,8 @@ class InventoryManagementPage extends ConsumerStatefulWidget {
   ConsumerState<InventoryManagementPage> createState() => _InventoryManagementPageState();
 }
 
-class _InventoryManagementPageState extends ConsumerState<InventoryManagementPage> {
+class _InventoryManagementPageState extends ConsumerState<InventoryManagementPage>
+    with RouteAwareRefreshMixin<InventoryManagementPage> {
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey _tableKey = GlobalKey();
 
@@ -33,6 +37,83 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  bool get shouldRefreshOnPush => false;
+
+  @override
+  Future<void> onRouteReentered() async {
+    if (!mounted) {
+      return;
+    }
+
+    final InventoryManagementController controller = ref.read(
+      inventoryManagementControllerProvider.notifier,
+    );
+    await _waitForStateIdle<InventoryManagementState>(
+      controller,
+      ref.read(inventoryManagementControllerProvider),
+      (InventoryManagementState state) => !state.isLoading,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await controller.loadInventory();
+  }
+
+  Future<void> _waitForStateIdle<S>(
+    StateNotifier<S> controller,
+    S currentState,
+    bool Function(S state) isIdle,
+  ) async {
+    if (isIdle(currentState)) {
+      return;
+    }
+
+    final Completer<void> completer = Completer<void>();
+    bool cancelled = false;
+    late final StreamSubscription<S> subscription;
+
+    subscription = controller.stream.listen(
+      (S next) {
+        if (isIdle(next) && !cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        }
+      },
+      onError: (Object _, StackTrace __) {
+        if (!cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onDone: () {
+        if (!cancelled) {
+          cancelled = true;
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      cancelOnError: false,
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      if (!cancelled) {
+        await subscription.cancel();
+      }
+    }
   }
 
   @override
@@ -824,9 +905,6 @@ class _CategorySidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int categoryCount = state.categories.length > 1 ? state.categories.length - 1 : 0;
-    final int sufficientCountRaw = state.totalItems - state.lowCount - state.criticalCount;
-    final int sufficientCount = sufficientCountRaw < 0 ? 0 : sufficientCountRaw;
     final List<_CategorySummary> summaries = _buildCategorySummaries(state);
     final bool isBusy = state.isLoading;
 
@@ -1032,6 +1110,7 @@ Color _categoryAccentForIndex(int index) {
   ];
   return palette[index % palette.length];
 }
+
 /// 在庫一覧の検索欄と操作ボタンをまとめたコンポーネント。
 class _ControlsRow extends StatelessWidget {
   const _ControlsRow({
@@ -1091,7 +1170,6 @@ class _ControlsRow extends StatelessWidget {
         }
 
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             Expanded(child: searchField),
             const SizedBox(width: YataSpacingTokens.md),

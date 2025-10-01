@@ -1,3 +1,4 @@
+import "dart:async";
 import "dart:math" as math;
 
 import "package:flutter/material.dart";
@@ -9,6 +10,7 @@ import "../../../../shared/components/components.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
+import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/menu_management_controller.dart";
@@ -28,7 +30,8 @@ class MenuManagementPage extends ConsumerStatefulWidget {
   ConsumerState<MenuManagementPage> createState() => _MenuManagementPageState();
 }
 
-class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
+class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
+    with RouteAwareRefreshMixin<MenuManagementPage> {
   late final TextEditingController _categorySearchController;
   late final TextEditingController _itemSearchController;
 
@@ -65,6 +68,81 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage> {
     _categorySearchController.dispose();
     _itemSearchController.dispose();
     super.dispose();
+  }
+
+  @override
+  bool get shouldRefreshOnPush => false;
+
+  @override
+  Future<void> onRouteReentered() async {
+    if (!mounted) {
+      return;
+    }
+
+    final MenuManagementController controller = ref.read(menuManagementControllerProvider.notifier);
+    await _waitForStateIdle<MenuManagementState>(
+      controller,
+      ref.read(menuManagementControllerProvider),
+      (MenuManagementState state) => !state.isInitializing,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await controller.refreshAll();
+  }
+
+  Future<void> _waitForStateIdle<S>(
+    StateNotifier<S> controller,
+    S currentState,
+    bool Function(S state) isIdle,
+  ) async {
+    if (isIdle(currentState)) {
+      return;
+    }
+
+    final Completer<void> completer = Completer<void>();
+    bool cancelled = false;
+    late final StreamSubscription<S> subscription;
+
+    subscription = controller.stream.listen(
+      (S next) {
+        if (isIdle(next) && !cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        }
+      },
+      onError: (Object _, StackTrace __) {
+        if (!cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onDone: () {
+        if (!cancelled) {
+          cancelled = true;
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      cancelOnError: false,
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      if (!cancelled) {
+        await subscription.cancel();
+      }
+    }
   }
 
   @override
