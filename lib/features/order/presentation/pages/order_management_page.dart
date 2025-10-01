@@ -259,7 +259,17 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
     
     // 状態が変更された場合（例: カートクリア時）にテキストコントローラを同期
     if (widget.state.orderNotes != _notesController.text) {
-      _notesController.text = widget.state.orderNotes;
+      final oldValue = _notesController.value;
+      final newText = widget.state.orderNotes;
+      final newSelection = oldValue.selection.copyWith(
+        baseOffset: newText.length < oldValue.selection.baseOffset ? newText.length : oldValue.selection.baseOffset,
+        extentOffset: newText.length < oldValue.selection.extentOffset ? newText.length : oldValue.selection.extentOffset,
+      );
+      _notesController.value = TextEditingValue(
+        text: newText,
+        selection: newSelection,
+        composing: TextRange.empty,
+      );
     }
   }
 
