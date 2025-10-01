@@ -377,13 +377,6 @@ class _CurrentOrderSection extends StatefulWidget {
 class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _itemKeys = <String, GlobalKey>{};
-  late final TextEditingController _notesController;
-
-  @override
-  void initState() {
-    super.initState();
-    _notesController = TextEditingController(text: widget.state.orderNotes);
-  }
 
   @override
   void didUpdateWidget(covariant _CurrentOrderSection oldWidget) {
