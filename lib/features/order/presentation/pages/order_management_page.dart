@@ -433,7 +433,7 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                                     name: item.menuItem.name,
                                     unitPriceLabel: state.formatPrice(item.menuItem.price),
                                     quantity: item.quantity,
-                                    lineSubtotalLabel: state.formatPrice(item.subtotal),
+                                    lineSubtotalLabel: "x${item.quantity}: ${state.formatPrice(item.subtotal)}",
                                     onQuantityChanged: (int value) =>
                                         controller.updateItemQuantity(item.menuItem.id, value),
                                     onRemove: () => controller.removeItem(item.menuItem.id),
