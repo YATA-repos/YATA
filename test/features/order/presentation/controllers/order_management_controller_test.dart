@@ -47,6 +47,7 @@ void main() {
       paymentMethod: PaymentMethod.card,
       discountAmount: 0,
       orderedAt: DateTime(2025),
+      notes: "常連様: ネギ抜き",
     );
 
     orderUser456 = Order(
@@ -57,6 +58,7 @@ void main() {
       paymentMethod: PaymentMethod.cash,
       discountAmount: 0,
       orderedAt: DateTime(2025, 6, 15),
+      notes: "フェス向け注文メモ",
     );
 
     when(() => menuService.getMenuCategories()).thenAnswer((_) async => <MenuCategory>[]);
@@ -216,6 +218,54 @@ void main() {
       expect(controller.state.cartId, orderUser456.id);
       expect(controller.state.currentPaymentMethod, orderUser456.paymentMethod);
       verify(() => cartService.getActiveCart("user-456")).called(greaterThanOrEqualTo(1));
+    });
+  });
+
+  group("order notes", () {
+    test("loads existing notes from active cart", () async {
+      final OrderManagementController controller = await createController();
+
+      expect(controller.state.orderNotes, "常連様: ネギ抜き");
+    });
+
+    test("updateOrderNotes updates local state", () async {
+      final OrderManagementController controller = await createController();
+
+      controller.updateOrderNotes("辛さ控えめでお願いします");
+
+      expect(controller.state.orderNotes, "辛さ控えめでお願いします");
+    });
+
+    test("clearCart resets order notes", () async {
+      when(() => cartService.clearCart(orderUser123.id!, orderUser123.userId!)).thenAnswer(
+        (_) async {
+          orderUser123.notes = null;
+          return true;
+        },
+      );
+
+      final OrderManagementController controller = await createController();
+      controller.updateOrderNotes("テストメモ");
+      controller.state = controller.state.copyWith(
+        cartItems: <CartItemViewData>[
+          CartItemViewData(
+            menuItem: const MenuItemViewData(
+              id: "menu-1",
+              name: "テスト商品",
+              categoryId: "cat-1",
+              price: 800,
+            ),
+            quantity: 1,
+            orderItemId: "order-item-1",
+          ),
+        ],
+      );
+
+      controller.clearCart();
+      await pumpEventQueue(times: 5);
+
+      expect(controller.state.orderNotes, "");
+      expect(controller.state.cartItems, isEmpty);
     });
   });
 }

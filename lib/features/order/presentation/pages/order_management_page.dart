@@ -236,6 +236,7 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -376,11 +377,41 @@ class _CurrentOrderSection extends StatefulWidget {
 class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _itemKeys = <String, GlobalKey>{};
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: widget.state.orderNotes);
+  }
 
   @override
   void didUpdateWidget(covariant _CurrentOrderSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 自動スクロールは無効化（ハイライトのみ有効）
+    if (widget.state.orderNotes != _notesController.text) {
+      final TextEditingValue oldValue = _notesController.value;
+      final String newText = widget.state.orderNotes;
+      final int maxOffset = newText.length;
+      final int baseOffset = oldValue.selection.baseOffset;
+      final int extentOffset = oldValue.selection.extentOffset;
+      final TextSelection newSelection = TextSelection(
+        baseOffset: baseOffset.clamp(0, maxOffset),
+        extentOffset: extentOffset.clamp(0, maxOffset),
+      );
+      _notesController.value = TextEditingValue(
+        text: newText,
+        selection: newSelection,
+        composing: TextRange.empty,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 
   // 自動スクロールは無効化
@@ -558,6 +589,34 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                   style: textTheme.headlineSmall ?? YataTypographyTokens.headlineSmall,
                 ),
               ],
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
+            TextField(
+              controller: _notesController,
+              onChanged: controller.updateOrderNotes,
+              maxLines: 3,
+              maxLength: 500,
+              enabled: !state.isCheckoutInProgress && !state.isLoading,
+              decoration: InputDecoration(
+                labelText: "注文メモ",
+                hintText: "例: アレルギー対応、調理指示など",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
+                  borderSide: const BorderSide(color: YataColorTokens.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
+                  borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: YataSpacingTokens.md,
+                  vertical: YataSpacingTokens.sm,
+                ),
+                counterStyle: (textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+              style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
             ),
             const SizedBox(height: YataSpacingTokens.lg),
             Row(

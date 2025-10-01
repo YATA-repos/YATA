@@ -319,8 +319,14 @@ class CartManagementService {
       final bool success = await _orderItemRepository.deleteByOrderId(cartId);
 
       if (success) {
-        // カートの合計金額をリセット
-        await _orderRepository.updateById(cartId, <String, dynamic>{"total_amount": 0});
+        // カートの合計金額と備考をリセット
+        await _orderRepository.updateById(
+          cartId,
+          <String, dynamic>{
+            "total_amount": 0,
+            "notes": null,
+          },
+        );
         log.i("Cart cleared successfully", tag: loggerComponent);
       } else {
         log.w("Failed to clear cart items", tag: loggerComponent);

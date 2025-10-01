@@ -165,6 +165,7 @@ class OrderManagementState {
     this.isCheckoutInProgress = false,
     this.isLoading = false,
     this.errorMessage,
+    this.orderNotes = "",
   }) : categories = List<MenuCategoryViewData>.unmodifiable(categories),
        menuItems = List<MenuItemViewData>.unmodifiable(menuItems),
        cartItems = List<CartItemViewData>.unmodifiable(cartItems);
@@ -175,6 +176,7 @@ class OrderManagementState {
     menuItems: const <MenuItemViewData>[],
     cartItems: const <CartItemViewData>[],
     isLoading: true,
+    orderNotes: "",
   );
 
   /// 表示するカテゴリ一覧。
@@ -218,6 +220,9 @@ class OrderManagementState {
 
   /// エラーメッセージ。
   final String? errorMessage;
+
+  /// 注文メモ。
+  final String orderNotes;
 
   /// 選択中のカテゴリ。
   MenuCategoryViewData? get selectedCategory {
@@ -283,6 +288,7 @@ class OrderManagementState {
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
+    String? orderNotes,
   }) => OrderManagementState(
     categories: categories ?? this.categories,
     menuItems: menuItems ?? this.menuItems,
@@ -300,6 +306,7 @@ class OrderManagementState {
     isCheckoutInProgress: isCheckoutInProgress ?? this.isCheckoutInProgress,
     isLoading: isLoading ?? this.isLoading,
     errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+    orderNotes: orderNotes ?? this.orderNotes,
   );
 }
 
@@ -399,6 +406,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         cartId: cartId,
         orderNumber: snapshot.orderNumber ?? cart?.orderNumber,
         discountAmount: snapshot.discountAmount ?? cart?.discountAmount ?? 0,
+        orderNotes: snapshot.orderNotes ?? cart?.notes ?? state.orderNotes,
         selectedCategoryIndex: safeIndex,
         isLoading: false,
         clearErrorMessage: true,
@@ -649,6 +657,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       final OrderCheckoutRequest request = OrderCheckoutRequest(
         paymentMethod: state.currentPaymentMethod,
         discountAmount: state.discountAmount,
+        notes: state.orderNotes.isEmpty ? null : state.orderNotes,
       );
 
       final OrderCheckoutResult result =
@@ -682,6 +691,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         currentPaymentMethod: newCart.paymentMethod,
         clearHighlightedItemId: true,
         clearErrorMessage: true,
+        orderNotes: "",
       );
 
   await loadInitialData(reset: true);
@@ -715,12 +725,16 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
     final String? cartId = state.cartId;
     if (cartId == null) {
-      state = state.copyWith(cartItems: <CartItemViewData>[], clearHighlightedItemId: true);
+      state = state.copyWith(
+        cartItems: <CartItemViewData>[],
+        clearHighlightedItemId: true,
+        orderNotes: "",
+      );
       return;
     }
 
     try {
-      state = state.copyWith(clearErrorMessage: true);
+      state = state.copyWith(clearErrorMessage: true, orderNotes: "");
       await _cartService.clearCart(cartId, userId);
       await _refreshCart(cartId, userId);
       state = state.copyWith(clearHighlightedItemId: true);
@@ -728,6 +742,14 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       final String message = ErrorHandler.instance.handleError(error);
       state = state.copyWith(errorMessage: message);
     }
+  }
+
+  /// 注文メモを更新する。
+  void updateOrderNotes(String notes) {
+    if (notes == state.orderNotes) {
+      return;
+    }
+    state = state.copyWith(orderNotes: notes, clearErrorMessage: true);
   }
 
   MenuItemViewData? _findMenuItem(String menuItemId) {
@@ -762,6 +784,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         orderNumber: cart.orderNumber,
         discountAmount: cart.discountAmount,
         currentPaymentMethod: cart.paymentMethod,
+        orderNotes: cart.notes ?? "",
         clearErrorMessage: true,
       );
       return cart.id;
@@ -861,6 +884,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         discountAmount: order.discountAmount,
         paymentMethod: order.paymentMethod,
         cartId: order.id ?? cartId,
+        orderNotes: order.notes,
       );
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
@@ -881,6 +905,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       orderNumber: snapshot.orderNumber ?? state.orderNumber,
       discountAmount: snapshot.discountAmount ?? state.discountAmount,
       cartId: snapshot.cartId ?? state.cartId,
+      orderNotes: snapshot.orderNotes ?? state.orderNotes,
       clearErrorMessage: true,
     );
   }
@@ -905,6 +930,7 @@ class _CartSnapshot {
     this.discountAmount,
     this.paymentMethod,
     this.cartId,
+    this.orderNotes,
   });
 
   final List<CartItemViewData> items;
@@ -912,6 +938,7 @@ class _CartSnapshot {
   final int? discountAmount;
   final PaymentMethod? paymentMethod;
   final String? cartId;
+  final String? orderNotes;
 }
 
 String _formatCurrency(int amount) {
