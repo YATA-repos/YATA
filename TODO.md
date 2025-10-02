@@ -1,6 +1,6 @@
 # TODO
 
-Next ID No: 18
+Next ID No: 23
 
 --- 
 
@@ -19,6 +19,71 @@ Definitions to suppress Markdown warnings
 - app_router.dartで、pathをハードコードするのか、Page側で定義するのか、統一する
 
 ## Backlog
+
+### [Documentation] CSVデータ辞書を整備する
+- **ID**: Documentation-Documentation-18
+- **Priority**: P1
+- **Size**: M
+- **Area**: Documentation
+- **Dependencies**: None
+- **Goal**: `docs/reference/dataset_dictionary.md` に主要CSVのカラム定義とキー方針が整理され、チームが参照できる状態になる。
+- **Steps**:
+  1. 既存スキーマと草案CSVを突き合わせて必要なカラム・キー情報を洗い出す。
+  2. データセットごとの定義・データ型・計算式をドキュメントに記載する。
+  3. レビューを経て`docs/reference/`配下に公開し、TODOのNext Stepsへ反映する。
+- **Description**: CSVエクスポート実装の前提としてデータ辞書を整備し、Phase 0の基盤準備を完了させる。
+
+### [Enhancement] ExportService API設計レビューを完了する
+- **ID**: Core-Enhancement-19
+- **Priority**: P1
+- **Size**: S
+- **Area**: Core
+- **Dependencies**: Documentation-Documentation-18
+- **Goal**: ExportServiceのAPI仕様がレビュー承認され、実装に必要なインターフェースとエラーハンドリング方針が固まる。
+- **Steps**:
+  1. 提案中のAPI仕様を整理し、入出力・エラーケース・認可要件を明文化する。
+  2. Backendリードとのレビューを実施し、指摘事項を反映する。
+  3. 承認済み仕様を`docs/plan/`または`docs/reference/`に更新し、実装チケットへリンクする。
+- **Description**: CSVエクスポートのサービス層実装を開始するために、API契約とレビューを完了させる。
+
+### [Enhancement] CSVエクスポート画面のUIモックを作成する
+- **ID**: UI/UX-Enhancement-20
+- **Priority**: P1
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: Core-Enhancement-19
+- **Goal**: エクスポート設定画面のUIモックが作成され、デザインレビューで承認される。
+- **Steps**:
+  1. フィルタ・進捗表示・完了通知を含むワイヤーフレームを作成する。
+  2. デザインレビューを実施し、フィードバックを反映する。
+  3. 最終モックとUXノートを`docs/plan/2025-10-02-csv-export-implementation-plan.md`へ追記する。
+- **Description**: Flutter実装前にUI/UXを固め、Phase 1での画面開発を円滑に進める。
+
+### [Feature] Supabase RPCプロトタイプで売上明細CSVを生成する
+- **ID**: Core-Feature-21
+- **Priority**: P1
+- **Size**: M
+- **Area**: Core
+- **Dependencies**: Core-Enhancement-19
+- **Goal**: `fn_export_csv` プロトタイプが構築され、売上明細CSVを指定期間で出力できることを確認する。
+- **Steps**:
+  1. モックデータ環境で必要なビュー・サンプルデータを準備する。
+  2. Supabase RPCを実装し、期間・店舗パラメータでCSV文字列を返す。
+  3. 出力フォーマットと性能を検証し、改善点を記録する。
+- **Description**: Phase 1の実装に向けて、Supabase側のエクスポート基盤を技術検証する。
+
+### [Chore] セキュリティ・権限レビューを実施する
+- **ID**: DevOps-Chore-22
+- **Priority**: P1
+- **Size**: S
+- **Area**: DevOps
+- **Dependencies**: Core-Enhancement-19
+- **Goal**: CSVエクスポート用のRLS・ロール定義がSecurity WGでレビューされ、承認または修正アクションが明確になる。
+- **Steps**:
+  1. CSVエクスポートで必要な権限要件とRLSポリシー案を整理する。
+  2. Security WGとのレビューセッションを実施し、フィードバックを収集する。
+  3. 反映内容とフォローアップタスクをドキュメント化しTODOに登録する。
+- **Description**: データ抽出機能のリリース前にセキュリティ観点の確認を行い、運用リスクを抑える。
 
 ### [Enhancement] 在庫管理画面をmockベースで再設計するか検討
 - **ID**: Inventory-Enhancement-2
