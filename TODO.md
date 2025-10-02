@@ -20,19 +20,6 @@ Definitions to suppress Markdown warnings
 
 ## Backlog
 
-### [Feature] 注文にメモを追加できるようにする
-- **ID**: Order-Feature-1
-- **Priority**: P1
-- **Size**: M
-- **Area**: Order
-- **Dependencies**: None
-- **Goal**: 注文作成時に任意のメモを入力・保存でき、履歴や詳細画面で確認できるようにする。
-- **Steps**:
-  1. メモ項目のデータ構造と保存先を定義する。
-  2. 注文画面にメモ入力UIを追加し、状態管理を実装する。
-  3. 保存したメモを履歴・詳細画面で表示する。
-- **Description**: 注文ごとの補足情報を記録できずオペレーションの伝達が困難。メモ入力・保存・表示を実装する。
-
 ### [Enhancement] 在庫管理画面をmockベースで再設計するか検討
 - **ID**: Inventory-Enhancement-2
 - **Priority**: P2
@@ -45,19 +32,6 @@ Definitions to suppress Markdown warnings
   2. 改善事項を優先度と影響範囲ごとに整理する。
   3. 再設計方針と必要タスクをドキュメントにまとめる。
 - **Description**: モックの方が完成度が高い現状を解消するため、再設計の方針を決定し後続開発を進められる状態にする。
-
-### [Enhancement] 注文カート行内小計の表示を改善する
-- **ID**: UI/UX-Enhancement-3
-- **Priority**: P2
-- **Size**: S
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: 注文カート内の小計が直感的に読める表示となり、利用者が金額を素早く把握できる。
-- **Steps**:
-  1. 現在の小計表示とユーザーフィードバックを確認する。
-  2. 視認性を向上させるUI案を作成し合意形成する。
-  3. 選定したUI案を実装し、主要ケースで表示を確認する。
-- **Description**: 行内小計が分かりづらく、会計確認に時間がかかっている。視認性の高いUIに改善する。
 
 ### [Enhancement] メニュー管理画面のUI整理方針を検討する
 - **ID**: Menu-Enhancement-4
@@ -84,32 +58,6 @@ Definitions to suppress Markdown warnings
   2. 望ましいレイアウト幅とコンポーネント配置を設計する。
   3. レスポンシブ設定を調整し、主要解像度で表示を確認する。
 - **Description**: PC全画面に近い表示で余白が大きく非効率なため、ブレークポイントやレイアウトを調整して広い画面を活かす。
-
-### [Enhancement] 画面復帰時に状態を自動更新する
-- **ID**: UI/UX-Enhancement-6
-- **Priority**: P2
-- **Size**: M
-- **Area**: UI/UX
-- **Dependencies**: Order-Bugfix-3
-- **Goal**: 主要な注文・在庫・メニュー画面で遷移復帰時に `refresh()` が実行され、最新状態が表示される。
-- **Steps**:
-  1. 遷移復帰時の `refresh()` 呼び出しを共通化する仕組みと影響範囲の画面を洗い出す。
-  2. 対象コントローラ／ページへ `refresh()` フックや `autoDispose` 設定を追加し、重複実行を防ぐ制御を実装する。
-  3. 主要シナリオでの動作確認と回帰テスト手順を整備し、ドキュメントへ反映する。
-- **Description**: Order-Bugfix-3 で検討中の遷移直後 `refresh()` パターンを全画面へ展開し、古い状態が残らないようにする。
-
-### [Enhancement] 30秒間隔の自動更新タイマーを導入する
-- **ID**: UI/UX-Enhancement-7
-- **Priority**: P2
-- **Size**: M
-- **Area**: UI/UX
-- **Dependencies**: UI/UX-Enhancement-6
-- **Goal**: 注文・在庫・メニューなど鮮度が重要な画面で、表示中は30秒ごとに自動で最新データへ更新される。
-- **Steps**:
-  1. タイマー更新が必要な画面と許容インターバル、停止条件（バックグラウンド／非表示時）を整理する。
-  2. `Timer` ベースの共通仕組み（Mixin やヘルパー）を実装し、多重実行を防ぐ制御を組み込む。
-  3. 対象ページへ組み込み、AppLifecycle や `mounted` チェックを含む動作確認とドキュメント更新を行う。
-- **Description**: 手動リフレッシュに頼らず一定間隔で自動更新することで、戻らずとも最新状態を確認できるようにする。
 
 ### [Feature] Realtime 監視対象を主要画面へ拡張する
 - **ID**: Core-Feature-8
@@ -205,32 +153,6 @@ Definitions to suppress Markdown warnings
   2. オーバーレイクリック時にモーダルを閉じる処理を追加する。
   3. モバイル・PCの双方で挙動を確認する。
 - **Description**: モーダル外をクリックしても閉じられず操作性が低い。一般的なモーダル挙動に合わせる。
-
-### [Enhancement] 注文履歴カードの高さを調整する
-- **ID**: UI/UX-Enhancement-15
-- **Priority**: P3
-- **Size**: XS
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: 注文履歴リストの1件あたりの高さが圧縮され、一覧性が向上する。
-- **Steps**:
-  1. 現行のカードスタイルと余白設定を確認する。
-  2. 高さ削減のためのスタイル調整を実装する。
-  3. 各ブレークポイントでレイアウト崩れがないことを確認する。
-- **Description**: 履歴カードが縦方向に大きすぎるため情報密度が低い。スタイル調整で視認性を向上させる。
-
-### [Bugfix] 注文履歴の「返金済み」UIを削除する
-- **ID**: UI/UX-Bugfix-16
-- **Priority**: P2
-- **Size**: XS
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: 実在しない「返金済み」状態の表示がUIから取り除かれる。
-- **Steps**:
-  1. 「返金済み」状態を表示しているコンポーネントを特定する。
-  2. 該当する表示・分岐ロジックを削除または無効化する。
-  3. 注文履歴画面で状態表示が正しいことを確認する。
-- **Description**: 存在しない状態のUIが残っており利用者を混乱させる。不要な表示を削除する。
 
 ### [Chore] 在庫管理画面の適用ボタンアイコンを削除する
 - **ID**: UI/UX-Chore-17
