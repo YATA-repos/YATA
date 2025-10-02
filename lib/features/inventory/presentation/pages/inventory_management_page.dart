@@ -809,9 +809,9 @@ class _OverviewStatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(stat.icon, color: accent, size: 28),
-          const SizedBox(height: YataSpacingTokens.sm),
+          const SizedBox(height: YataSpacingTokens.xs),
           Text(stat.title, style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium),
-          const SizedBox(height: YataSpacingTokens.sm),
+          const SizedBox(height: YataSpacingTokens.xs),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
@@ -821,7 +821,7 @@ class _OverviewStatCard extends StatelessWidget {
                   color: accent,
                 ),
               ),
-              const SizedBox(width: YataSpacingTokens.xs),
+              const SizedBox(width: YataSpacingTokens.xxs),
               Text(
                 "件",
                 style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
