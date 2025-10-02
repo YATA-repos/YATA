@@ -32,6 +32,14 @@ class _MockRecipeRepository extends Mock implements RecipeRepositoryContract<Rec
 void main() {
 	setUpAll(() {
 		registerFallbackValue(() {});
+		registerFallbackValue(
+			Recipe(
+				menuItemId: "menu-fallback",
+				materialId: "material-fallback",
+				requiredAmount: 0,
+				isOptional: false,
+			),
+		);
 	});
 
 	late _MockRef ref;
@@ -88,9 +96,15 @@ void main() {
 		when(() => menuItemRepository.findByIds(any())).thenAnswer((_) async => <MenuItem>[yakisoba]);
 		when(() => recipeRepository.findByMenuItemIds(any())).thenAnswer((_) async => <Recipe>[]);
 		when(() => materialRepository.findByIds(any())).thenAnswer((_) async => <Material>[cabbage]);
+		when(() => recipeRepository.deleteByMenuItemId(any())).thenAnswer((_) async {});
+		when(() => menuItemRepository.deleteById(any())).thenAnswer((_) async {});
 	});
 
 	group("getMenuRecipes", () {
+		test("throws ValidationException when menu id is blank", () async {
+			expect(() => service.getMenuRecipes(""), throwsA(isA<ValidationException>()));
+		});
+
 		test("returns recipe details with material info", () async {
 			final Recipe recipe = Recipe(
 				id: "recipe-1",
@@ -114,6 +128,20 @@ void main() {
 	});
 
 	group("upsertMenuRecipe", () {
+		test("throws ValidationException when material is missing", () async {
+			when(() => materialRepository.getById("material-unknown"))
+					.thenAnswer((_) async => null);
+
+			expect(
+				() => service.upsertMenuRecipe(
+					menuItemId: "menu-1",
+					materialId: "material-unknown",
+					requiredAmount: 10,
+				),
+				throwsA(isA<ValidationException>()),
+			);
+		});
+
 		test("throws ValidationException when amount is negative", () async {
 			expect(
 				() => service.upsertMenuRecipe(
@@ -201,6 +229,14 @@ void main() {
 	});
 
 	group("deleteMenuRecipe", () {
+		test("silently returns when recipe does not exist", () async {
+			when(() => recipeRepository.getById("missing")).thenAnswer((_) async => null);
+
+			await service.deleteMenuRecipe("missing");
+
+			verifyNever(() => recipeRepository.deleteById(any()));
+		});
+
 		test("deletes recipe and refreshes availability", () async {
 			final Recipe recipe = Recipe(
 				id: "recipe-1",
@@ -220,6 +256,15 @@ void main() {
 			await service.deleteMenuRecipe("recipe-1");
 
 			verify(() => recipeRepository.deleteById("recipe-1")).called(1);
+		});
+	});
+
+	group("deleteMenuItem", () {
+		test("deletes associated recipes before removing menu item", () async {
+			await service.deleteMenuItem("menu-1");
+
+			verify(() => recipeRepository.deleteByMenuItemId("menu-1")).called(1);
+			verify(() => menuItemRepository.deleteById("menu-1")).called(1);
 		});
 	});
 }

@@ -6,6 +6,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
 
+import "../../../../core/constants/exceptions/base/validation_exception.dart";
 import "../../../../shared/components/components.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
@@ -13,10 +14,12 @@ import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/patterns.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
+import "../../dto/menu_recipe_detail.dart";
 import "../controllers/menu_management_controller.dart";
 import "../widgets/menu_category_panel.dart";
 import "../widgets/menu_item_detail_panel.dart";
 import "../widgets/menu_item_table.dart";
+import "../widgets/menu_recipe_editor_dialog.dart";
 
 /// メニュー管理画面。
 class MenuManagementPage extends ConsumerStatefulWidget {
@@ -34,6 +37,114 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     with RouteAwareRefreshMixin<MenuManagementPage> {
   late final TextEditingController _categorySearchController;
   late final TextEditingController _itemSearchController;
+
+  Future<void> _showRecipeEditorDialog(
+    BuildContext context,
+    MenuManagementController controller,
+    MenuItemViewData menuItem, {
+    MenuRecipeDetail? initialRecipe,
+  }) async {
+    final MenuManagementState snapshot = ref.read(menuManagementControllerProvider);
+
+    final Set<String> existingMaterialIds = snapshot
+        .recipesFor(menuItem.id)
+        .map((MenuRecipeDetail detail) => detail.materialId)
+        .toSet();
+
+    if (initialRecipe != null) {
+      existingMaterialIds.remove(initialRecipe.materialId);
+    }
+
+    final MenuRecipeEditorResult? result = await showDialog<MenuRecipeEditorResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext _) => MenuRecipeEditorDialog(
+        menuItemName: menuItem.name,
+        materialCandidates: snapshot.materialCandidates,
+        existingMaterialIds: existingMaterialIds,
+        initialRecipe: initialRecipe,
+      ),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await controller.saveRecipe(
+        menuItemId: menuItem.id,
+        materialId: result.materialId,
+        requiredAmount: result.requiredAmount,
+        isOptional: result.isOptional,
+        notes: result.notes,
+      );
+      messenger.showSnackBar(
+        SnackBar(content: Text(initialRecipe == null ? "材料を追加しました" : "材料を更新しました")),
+      );
+    } on ValidationException catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(error.errors.join("\n"))),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text("材料の保存に失敗しました: $error")),
+      );
+    }
+  }
+
+  Future<void> _confirmRecipeDeletion(
+    BuildContext context,
+    MenuManagementController controller,
+    MenuItemViewData menuItem,
+    MenuRecipeDetail recipe,
+  ) async {
+    final String? recipeId = recipe.recipeId;
+    if (recipeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("未保存の材料は削除できません")),
+      );
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text("材料の削除"),
+        content: Text(
+          "${recipe.materialName} を削除しますか？\n${menuItem.name} の材料リストから除外されます。",
+        ),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("キャンセル")),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: YataColorTokens.danger),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("削除"),
+          ),
+        ],
+      ),
+    );
+
+    if (!(confirmed ?? false)) {
+      return;
+    }
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await controller.deleteRecipe(menuItemId: menuItem.id, recipeId: recipeId);
+      messenger.showSnackBar(const SnackBar(content: Text("材料を削除しました")));
+    } on ValidationException catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(error.errors.join("\n"))),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text("材料の削除に失敗しました: $error")),
+      );
+    }
+  }
 
   /// 状態の検索クエリとテキストコントローラーを同期する。
   void _syncSearchControllers(MenuManagementState state) {
@@ -315,6 +426,31 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
                           _confirmMenuItemDeletion(context, controller, selected);
                         }
                       },
+                      recipes: state.selectedItem == null
+                          ? const <MenuRecipeDetail>[]
+                          : state.recipesFor(state.selectedItem!.id),
+                      isRecipeLoading: state.isRecipeLoading,
+                      recipeErrorMessage: state.recipeErrorMessage,
+                      onReloadRecipes: () {
+                        final MenuItemViewData? selected = state.selectedItem;
+                        if (selected != null) {
+                          controller.loadRecipesForItem(selected.id, force: true);
+                        }
+                      },
+                      onOpenRecipeEditor: (MenuRecipeDetail? recipe) {
+                        final MenuItemViewData? selected = state.selectedItem;
+                        if (selected != null) {
+                          _showRecipeEditorDialog(context, controller, selected, initialRecipe: recipe);
+                        }
+                      },
+                      onRequestRecipeDelete: (MenuRecipeDetail recipe) {
+                        final MenuItemViewData? selected = state.selectedItem;
+                        if (selected != null) {
+                          _confirmRecipeDeletion(context, controller, selected, recipe);
+                        }
+                      },
+                      savingRecipeMaterialIds: state.savingRecipeMaterialIds,
+                      deletingRecipeIds: state.deletingRecipeIds,
                     ),
                   ],
                 );

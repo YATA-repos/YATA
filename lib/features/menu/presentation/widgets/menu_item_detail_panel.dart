@@ -6,6 +6,10 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../controllers/menu_management_controller.dart";
+import "../../dto/menu_recipe_detail.dart";
+
+/// 材料テーブルで利用する単位フォーマット。
+final NumberFormat _amountFormat = NumberFormat("#,##0.###");
 
 /// メニューアイテムの詳細/編集パネル。
 class MenuItemDetailPanel extends StatelessWidget {
@@ -17,6 +21,14 @@ class MenuItemDetailPanel extends StatelessWidget {
     required this.onOpenOptions,
     required this.onRefreshAvailability,
     required this.onDelete,
+    required this.recipes,
+    required this.isRecipeLoading,
+    required this.recipeErrorMessage,
+    required this.onReloadRecipes,
+    required this.onOpenRecipeEditor,
+    required this.onRequestRecipeDelete,
+    required this.savingRecipeMaterialIds,
+    required this.deletingRecipeIds,
     super.key,
   });
 
@@ -37,6 +49,30 @@ class MenuItemDetailPanel extends StatelessWidget {
 
   /// 削除コールバック。
   final VoidCallback onDelete;
+
+  /// レシピ一覧。
+  final List<MenuRecipeDetail> recipes;
+
+  /// レシピ読み込み中かどうか。
+  final bool isRecipeLoading;
+
+  /// レシピ関連のエラーメッセージ。
+  final String? recipeErrorMessage;
+
+  /// レシピを再読込するコールバック。
+  final VoidCallback onReloadRecipes;
+
+  /// レシピ編集モーダルを開くコールバック。
+  final void Function(MenuRecipeDetail? recipe) onOpenRecipeEditor;
+
+  /// レシピ削除を要求するコールバック。
+  final void Function(MenuRecipeDetail recipe) onRequestRecipeDelete;
+
+  /// 保存処理中の材料ID集合。
+  final Set<String> savingRecipeMaterialIds;
+
+  /// 削除処理中のレシピID集合。
+  final Set<String> deletingRecipeIds;
 
   static final NumberFormat _currency = NumberFormat.currency(locale: "ja_JP", symbol: "¥");
   static final DateFormat _dateTime = DateFormat("yyyy/MM/dd HH:mm");
@@ -83,7 +119,7 @@ class MenuItemDetailPanel extends StatelessWidget {
         ),
       ],
       child: DefaultTabController(
-        length: 2,
+        length: 3,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -91,18 +127,30 @@ class MenuItemDetailPanel extends StatelessWidget {
               labelStyle: Theme.of(context).textTheme.titleSmall ?? YataTypographyTokens.titleSmall,
               tabs: const <Tab>[
                 Tab(text: "基本情報"),
+                Tab(text: "材料"),
                 Tab(text: "オプション"),
               ],
             ),
             const SizedBox(height: YataSpacingTokens.md),
             SizedBox(
-              height: 320,
+              height: 420,
               child: TabBarView(
                 children: <Widget>[
                   _BasicInfoTab(
                     item: current,
                     availability: availabilityState,
                     onOpenOptions: onOpenOptions,
+                  ),
+                  _RecipesTab(
+                    item: current,
+                    recipes: recipes,
+                    isLoading: isRecipeLoading,
+                    errorMessage: recipeErrorMessage,
+                    onReloadRecipes: onReloadRecipes,
+                    onOpenRecipeEditor: onOpenRecipeEditor,
+                    onRequestDelete: onRequestRecipeDelete,
+                    savingRecipeMaterialIds: savingRecipeMaterialIds,
+                    deletingRecipeIds: deletingRecipeIds,
                   ),
                   _OptionsTab(onOpenOptions: onOpenOptions),
                 ],
@@ -249,5 +297,198 @@ class _OptionsTab extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _RecipesTab extends StatelessWidget {
+  const _RecipesTab({
+    required this.item,
+    required this.recipes,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onReloadRecipes,
+    required this.onOpenRecipeEditor,
+    required this.onRequestDelete,
+    required this.savingRecipeMaterialIds,
+    required this.deletingRecipeIds,
+  });
+
+  final MenuItemViewData item;
+  final List<MenuRecipeDetail> recipes;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback onReloadRecipes;
+  final void Function(MenuRecipeDetail? recipe) onOpenRecipeEditor;
+  final void Function(MenuRecipeDetail recipe) onRequestDelete;
+  final Set<String> savingRecipeMaterialIds;
+  final Set<String> deletingRecipeIds;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            FilledButton.icon(
+              onPressed: isLoading ? null : () => onOpenRecipeEditor(null),
+              icon: const Icon(Icons.add),
+              label: const Text("材料追加"),
+            ),
+            OutlinedButton.icon(
+              onPressed: onReloadRecipes,
+              icon: const Icon(Icons.refresh_outlined),
+              label: const Text("再読込"),
+            ),
+          ],
+        ),
+        const SizedBox(height: YataSpacingTokens.sm),
+        if (errorMessage != null && errorMessage!.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(YataSpacingTokens.sm),
+            decoration: BoxDecoration(
+              color: YataColorTokens.dangerSoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: YataColorTokens.danger),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.error_outline, color: YataColorTokens.danger),
+                const SizedBox(width: YataSpacingTokens.sm),
+                Expanded(
+                  child: Text(
+                    errorMessage!,
+                    style: textTheme.bodyMedium?.copyWith(color: YataColorTokens.danger) ??
+                        YataTypographyTokens.bodyMedium.copyWith(color: YataColorTokens.danger),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: YataSpacingTokens.sm),
+        Expanded(
+          child: _buildTable(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTable(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (recipes.isEmpty) {
+      return Center(
+        child: Text(
+          "材料が登録されていません。\n『材料追加』から登録してください。",
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
+        ),
+      );
+    }
+
+    return YataDataTable(
+      columns: const <DataColumn>[
+        DataColumn(label: Text("材料")),
+        DataColumn(label: Text("必要量")),
+        DataColumn(label: Text("現在庫")),
+        DataColumn(label: Text("任意")),
+        DataColumn(label: Text("備考")),
+        DataColumn(label: Text("操作")),
+      ],
+      rows: recipes
+          .map((MenuRecipeDetail detail) => _buildRow(context, detail))
+          .toList(growable: false),
+      shrinkWrap: true,
+    );
+  }
+
+  DataRow _buildRow(BuildContext context, MenuRecipeDetail detail) {
+    final bool isSaving = savingRecipeMaterialIds.contains(detail.materialId);
+    final bool isDeleting = detail.recipeId != null &&
+        deletingRecipeIds.contains(detail.recipeId);
+    final bool isBusy = isSaving || isDeleting;
+
+    final String requiredAmount = _formatRequiredAmount(detail);
+    final String stockAmount = _formatStock(detail);
+    return DataRow(
+      cells: <DataCell>[
+        DataCell(Text(detail.materialName)),
+        DataCell(Text(requiredAmount)),
+        DataCell(Text(stockAmount)),
+        DataCell(
+          detail.isOptional
+              ? const YataStatusBadge(label: "任意", type: YataStatusBadgeType.info)
+              : const YataStatusBadge(label: "必須", type: YataStatusBadgeType.success),
+        ),
+        DataCell(
+          SizedBox(
+            width: 180,
+            child: Text(
+              detail.notes?.isNotEmpty ?? false ? detail.notes! : "-",
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+        DataCell(
+          SizedBox(
+            width: 160,
+            child: isBusy
+                ? const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : Wrap(
+                    spacing: YataSpacingTokens.sm,
+                    children: <Widget>[
+                      TextButton.icon(
+                        onPressed: () => onOpenRecipeEditor(detail),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text("編集"),
+                      ),
+                      TextButton.icon(
+                        onPressed: detail.recipeId == null
+                            ? null
+                            : () => onRequestDelete(detail),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text("削除"),
+                        style: TextButton.styleFrom(foregroundColor: YataColorTokens.danger),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _formatRequiredAmount(MenuRecipeDetail detail) {
+    final String formatted = _amountFormat.format(detail.requiredAmount);
+    final String unitSymbol = detail.materialUnitType?.symbol ?? "";
+    if (unitSymbol.isEmpty) {
+      return formatted;
+    }
+    return "$formatted $unitSymbol";
+  }
+
+  static String _formatStock(MenuRecipeDetail detail) {
+    final double? stock = detail.materialCurrentStock;
+    if (stock == null) {
+      return "-";
+    }
+    final String formatted = _amountFormat.format(stock);
+    final String unitSymbol = detail.materialUnitType?.symbol ?? "";
+    if (unitSymbol.isEmpty) {
+      return formatted;
+    }
+    return "$formatted $unitSymbol";
   }
 }
