@@ -20,6 +20,7 @@ class YataSectionCard extends StatelessWidget {
     this.actions,
     this.padding = YataSpacingTokens.cardPadding,
     this.backgroundColor = YataColorTokens.surface,
+    this.borderColor = YataColorTokens.border,
     this.expandChild = false,
   });
 
@@ -38,6 +39,9 @@ class YataSectionCard extends StatelessWidget {
   /// カードの背景色。
   final Color backgroundColor;
 
+  /// カードのボーダー色。
+  final Color borderColor;
+
   /// 本文コンテンツ。
   final Widget child;
 
@@ -53,7 +57,7 @@ class YataSectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: borderRadius,
-        border: Border.all(color: YataColorTokens.border),
+        border: Border.all(color: borderColor),
         boxShadow: shadow,
       ),
       child: Padding(
@@ -80,11 +84,11 @@ class YataSectionCard extends StatelessWidget {
                     padding: EdgeInsets.only(top: hasHeader ? YataSpacingTokens.xs : 0),
                     child: Text(
                       subtitle!,
-                      style: Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
+                      style:
+                          Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
                     ),
                   ),
-                if (hasHeader || hasSubtitle)
-                  const SizedBox(height: YataSpacingTokens.md),
+                if (hasHeader || hasSubtitle) const SizedBox(height: YataSpacingTokens.md),
                 if (canExpand) Expanded(child: child) else child,
               ],
             );

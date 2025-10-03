@@ -23,6 +23,8 @@ class YataDataTable extends StatelessWidget {
     this.headingRowHeight,
     this.dataRowMinHeight,
     this.dataRowMaxHeight,
+    this.horizontalMargin,
+    this.columnSpacing,
   });
 
   /// テーブルヘッダー。
@@ -53,6 +55,12 @@ class YataDataTable extends StatelessWidget {
   final double? dataRowMinHeight;
   final double? dataRowMaxHeight;
 
+  /// 左右余白を上書きする。
+  final double? horizontalMargin;
+
+  /// 列間スペースを上書きする。
+  final double? columnSpacing;
+
   @override
   Widget build(BuildContext context) {
     final TextStyle headingStyle =
@@ -79,8 +87,8 @@ class YataDataTable extends StatelessWidget {
           headingRowHeight: headingRowHeight ?? 52,
           dataRowMinHeight: dataRowMinHeight ?? 52,
           dataRowMaxHeight: dataRowMaxHeight ?? 56,
-          horizontalMargin: YataSpacingTokens.lg,
-          columnSpacing: YataSpacingTokens.lg,
+          horizontalMargin: horizontalMargin ?? YataSpacingTokens.lg,
+          columnSpacing: columnSpacing ?? YataSpacingTokens.lg,
         ),
       ),
       child: LayoutBuilder(
