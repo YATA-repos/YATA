@@ -3,7 +3,9 @@ import "package:flutter_test/flutter_test.dart";
 import "package:mocktail/mocktail.dart";
 
 import "package:yata/app/wiring/provider.dart";
+import "package:yata/core/constants/enums.dart";
 import "package:yata/features/auth/presentation/providers/auth_providers.dart";
+import "package:yata/features/inventory/models/inventory_model.dart" as inventory;
 import "package:yata/features/menu/dto/menu_dto.dart";
 import "package:yata/features/menu/dto/menu_recipe_detail.dart";
 import "package:yata/features/menu/models/menu_model.dart";
@@ -58,6 +60,7 @@ void main() {
       ],
     );
     when(() => menuService.getMenuRecipes(any())).thenAnswer((_) async => <MenuRecipeDetail>[]);
+    when(() => menuService.getMaterialCandidates()).thenAnswer((_) async => <inventory.Material>[]);
     when(() => menuService.bulkCheckMenuAvailability(any())).thenAnswer((_) async {
       availabilityCallCount += 1;
       return <String, MenuAvailabilityInfo>{
@@ -150,5 +153,222 @@ void main() {
     state = container.read(menuManagementControllerProvider);
     expect(state.detail, isNull);
     expect(state.selectedMenuId, isNull);
+  });
+
+  test("createMenu registers draft recipes and preserves cache", () async {
+    final MenuManagementController controller = await initializeController();
+
+    final inventory.Material pork = inventory.Material(
+      id: "mat-1",
+      userId: userId,
+      name: "豚肉",
+      categoryId: "meat",
+      unitType: UnitType.gram,
+      currentStock: 3200,
+      alertThreshold: 800,
+      criticalThreshold: 400,
+    );
+
+    when(
+      () => menuService.createMenuItem(
+        name: any(named: "name"),
+        categoryId: any(named: "categoryId"),
+        price: any(named: "price"),
+        isAvailable: any(named: "isAvailable"),
+        displayOrder: any(named: "displayOrder"),
+        description: any(named: "description"),
+      ),
+    ).thenAnswer(
+      (_) async => MenuItem(
+        id: "menu-2",
+        name: "唐揚げ",
+        categoryId: "cat-1",
+        price: 680,
+        isAvailable: true,
+        displayOrder: 2,
+      ),
+    );
+    when(
+      () => menuService.upsertMenuRecipe(
+        menuItemId: any(named: "menuItemId"),
+        materialId: any(named: "materialId"),
+        requiredAmount: any(named: "requiredAmount"),
+        isOptional: any(named: "isOptional"),
+        notes: any(named: "notes"),
+      ),
+    ).thenAnswer(
+      (_) async => MenuRecipeDetail(
+        recipeId: "recipe-1",
+        menuItemId: "menu-2",
+        materialId: pork.id!,
+        requiredAmount: 120,
+        isOptional: false,
+        material: pork,
+        notes: "下味済み",
+      ),
+    );
+
+    final MenuFormData formData = MenuFormData(
+      name: "唐揚げ",
+      categoryId: "cat-1",
+      price: 680,
+      isAvailable: true,
+      description: "ジューシー",
+      recipes: <MenuRecipeDraft>[
+        MenuRecipeDraft(
+          materialId: pork.id!,
+          materialName: pork.name,
+          unitType: pork.unitType,
+          requiredAmount: 120,
+          isOptional: false,
+          notes: "下味済み",
+        ),
+      ],
+    );
+
+    await controller.createMenu(formData);
+
+    verify(
+      () => menuService.createMenuItem(
+        name: "唐揚げ",
+        categoryId: "cat-1",
+        price: 680,
+        isAvailable: true,
+        displayOrder: 2,
+        description: "ジューシー",
+      ),
+    ).called(1);
+    verify(
+      () => menuService.upsertMenuRecipe(
+        menuItemId: "menu-2",
+        materialId: pork.id!,
+        requiredAmount: 120,
+        isOptional: false,
+        notes: "下味済み",
+      ),
+    ).called(1);
+  });
+
+  test("updateMenu syncs recipe changes including deletions", () async {
+    final inventory.Material cabbage = inventory.Material(
+      id: "mat-1",
+      userId: userId,
+      name: "キャベツ",
+      categoryId: "vegetable",
+      unitType: UnitType.gram,
+      currentStock: 1200,
+      alertThreshold: 400,
+      criticalThreshold: 200,
+    );
+    final MenuRecipeDetail existingRecipe = MenuRecipeDetail(
+      recipeId: "recipe-1",
+      menuItemId: menuId,
+      materialId: cabbage.id!,
+      requiredAmount: 80,
+      isOptional: false,
+      material: cabbage,
+    );
+
+    when(
+      () => menuService.getMenuRecipes(menuId),
+    ).thenAnswer((_) async => <MenuRecipeDetail>[existingRecipe]);
+
+    final MenuManagementController controller = await initializeController();
+
+    final inventory.Material flour = inventory.Material(
+      id: "mat-2",
+      userId: userId,
+      name: "小麦粉",
+      categoryId: "dry",
+      unitType: UnitType.gram,
+      currentStock: 2000,
+      alertThreshold: 600,
+      criticalThreshold: 300,
+    );
+
+    when(
+      () => menuService.updateMenuItem(
+        menuId,
+        name: any(named: "name"),
+        categoryId: any(named: "categoryId"),
+        price: any(named: "price"),
+        description: any(named: "description"),
+        isAvailable: any(named: "isAvailable"),
+        displayOrder: any(named: "displayOrder"),
+      ),
+    ).thenAnswer(
+      (_) async => MenuItem(
+        id: menuId,
+        name: "焼きそば",
+        categoryId: "cat-1",
+        price: 820,
+        isAvailable: true,
+        displayOrder: 1,
+      ),
+    );
+    when(() => menuService.deleteMenuRecipe("recipe-1")).thenAnswer((_) async {});
+    when(
+      () => menuService.upsertMenuRecipe(
+        menuItemId: menuId,
+        materialId: flour.id!,
+        requiredAmount: 30,
+        isOptional: true,
+        notes: any(named: "notes"),
+      ),
+    ).thenAnswer(
+      (_) async => MenuRecipeDetail(
+        recipeId: "recipe-2",
+        menuItemId: menuId,
+        materialId: flour.id!,
+        requiredAmount: 30,
+        isOptional: true,
+        material: flour,
+        notes: "仕上げ用",
+      ),
+    );
+
+    final MenuFormData formData = MenuFormData(
+      name: "焼きそば",
+      categoryId: "cat-1",
+      price: 820,
+      isAvailable: true,
+      description: "ソース増量",
+      recipes: <MenuRecipeDraft>[
+        MenuRecipeDraft(
+          recipeId: existingRecipe.recipeId,
+          materialId: flour.id!,
+          materialName: flour.name,
+          unitType: flour.unitType,
+          requiredAmount: 30,
+          isOptional: true,
+          notes: "仕上げ用",
+        ),
+      ],
+      removedRecipeIds: <String>["recipe-1"],
+    );
+
+    await controller.updateMenu(menuId, formData);
+
+    verify(
+      () => menuService.updateMenuItem(
+        menuId,
+        name: "焼きそば",
+        categoryId: "cat-1",
+        price: 820,
+        description: "ソース増量",
+        isAvailable: true,
+        displayOrder: null,
+      ),
+    ).called(1);
+    verify(() => menuService.deleteMenuRecipe("recipe-1")).called(1);
+    verify(
+      () => menuService.upsertMenuRecipe(
+        menuItemId: menuId,
+        materialId: flour.id!,
+        requiredAmount: 30,
+        isOptional: true,
+        notes: "仕上げ用",
+      ),
+    ).called(1);
   });
 }

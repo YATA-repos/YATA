@@ -230,7 +230,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     required bool isAvailable,
     required int displayOrder,
     String? description,
-    String? imageUrl,
   }) async {
     final MenuItem item = MenuItem(
       name: name,
@@ -239,7 +238,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       isAvailable: isAvailable,
       displayOrder: displayOrder,
       description: description,
-      imageUrl: imageUrl,
     );
     try {
       final MenuItem? created = await _menuItemRepository.create(item);
@@ -263,7 +261,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     String? description,
     bool? isAvailable,
     int? displayOrder,
-    String? imageUrl,
   }) async {
     final Map<String, dynamic> updates = <String, dynamic>{};
     if (name != null) {
@@ -284,10 +281,6 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     if (displayOrder != null) {
       updates["display_order"] = displayOrder;
     }
-    if (imageUrl != null) {
-      updates["image_url"] = imageUrl;
-    }
-
     if (updates.isEmpty) {
       return _menuItemRepository.getById(id);
     }
@@ -333,7 +326,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
   /// 材料候補一覧を取得する。
   Future<List<Material>> getMaterialCandidates({String? categoryId}) async =>
-    _materialRepository.findByCategoryId(categoryId);
+      _materialRepository.findByCategoryId(categoryId);
 
   /// メニューアイテムに紐づくレシピ一覧を取得する。
   Future<List<MenuRecipeDetail>> getMenuRecipes(String menuItemId) async {
@@ -368,16 +361,16 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       };
     }
 
-    final List<MenuRecipeDetail> details = recipes
-        .map(
-          (Recipe recipe) => MenuRecipeDetail.fromRecipe(
-            recipe: recipe,
-            material: materialIndex[recipe.materialId],
-          ),
-        )
-        .toList(growable: false)
-        ..sort(
-          (MenuRecipeDetail a, MenuRecipeDetail b) {
+    final List<MenuRecipeDetail> details =
+        recipes
+            .map(
+              (Recipe recipe) => MenuRecipeDetail.fromRecipe(
+                recipe: recipe,
+                material: materialIndex[recipe.materialId],
+              ),
+            )
+            .toList(growable: false)
+          ..sort((MenuRecipeDetail a, MenuRecipeDetail b) {
             final String nameA = a.materialName.toLowerCase();
             final String nameB = b.materialName.toLowerCase();
             final int nameOrder = nameA.compareTo(nameB);
@@ -385,8 +378,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
               return nameOrder;
             }
             return a.materialId.compareTo(b.materialId);
-          },
-        );
+          });
 
     return details;
   }
@@ -1124,12 +1116,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       );
       return result[menuItemId];
     } catch (error, stackTrace) {
-      log.e(
-        "在庫可用性の再計算に失敗しました",
-        tag: loggerComponent,
-        error: error,
-        st: stackTrace,
-      );
+      log.e("在庫可用性の再計算に失敗しました", tag: loggerComponent, error: error, st: stackTrace);
       return null;
     }
   }

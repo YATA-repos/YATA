@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 
 import "../../../../shared/components/components.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
+import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../controllers/menu_management_state.dart";
 
@@ -42,23 +43,23 @@ class MenuCategoryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => YataSectionCard(
-      title: "カテゴリ",
-      borderColor: Colors.transparent,
-      expandChild: true,
-      actions: <Widget>[
-        if (onAddCategory != null)
-          YataIconButton(icon: Icons.add, tooltip: "カテゴリを追加", onPressed: onAddCategory),
-      ],
-      child: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _CategoryList(
-              categories: categories,
-              selectedCategoryId: selectedCategoryId,
-              onCategorySelected: onCategorySelected,
-              onEditCategory: onEditCategory,
-              onDeleteCategory: onDeleteCategory,
-            ),
-    );
+    title: "カテゴリ",
+    borderColor: Colors.transparent,
+    expandChild: true,
+    actions: <Widget>[
+      if (onAddCategory != null)
+        YataIconButton(icon: Icons.add, tooltip: "カテゴリを追加", onPressed: onAddCategory),
+    ],
+    child: isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _CategoryList(
+            categories: categories,
+            selectedCategoryId: selectedCategoryId,
+            onCategorySelected: onCategorySelected,
+            onEditCategory: onEditCategory,
+            onDeleteCategory: onDeleteCategory,
+          ),
+  );
 }
 
 class _CategoryList extends StatelessWidget {
@@ -83,6 +84,7 @@ class _CategoryList extends StatelessWidget {
     }
 
     return ListView.separated(
+      padding: const EdgeInsets.only(top: YataSpacingTokens.xs, bottom: YataSpacingTokens.xs),
       shrinkWrap: true,
       itemCount: categories.length,
       separatorBuilder: (_, __) => const SizedBox(height: YataSpacingTokens.sm),
@@ -121,21 +123,33 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color foreground = selected ? YataColorTokens.primary : YataColorTokens.textSecondary;
-    final Color background = selected ? YataColorTokens.primarySoft : YataColorTokens.neutral100;
+    final Color foreground = selected ? YataColorTokens.primary : YataColorTokens.textPrimary;
+    final BoxDecoration decoration = BoxDecoration(
+      color: YataColorTokens.neutral0,
+      borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
+      border: Border.all(
+        color: selected ? YataColorTokens.primary : YataColorTokens.neutral200,
+        width: selected ? 1.4 : 1,
+      ),
+      boxShadow: selected
+          ? <BoxShadow>[
+              BoxShadow(
+                color: YataColorTokens.primary.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ]
+          : null,
+    );
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
         child: Ink(
           padding: const EdgeInsets.all(YataSpacingTokens.md),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: selected ? YataColorTokens.primary : YataColorTokens.border),
-          ),
+          decoration: decoration,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[

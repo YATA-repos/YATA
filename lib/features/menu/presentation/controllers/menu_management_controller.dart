@@ -23,7 +23,8 @@ class MenuFormData {
     required this.price,
     required this.isAvailable,
     this.description,
-    this.imageUrl,
+    this.recipes = const <MenuRecipeDraft>[],
+    this.removedRecipeIds = const <String>[],
   });
 
   /// メニュー名。
@@ -41,8 +42,46 @@ class MenuFormData {
   /// 説明文。
   final String? description;
 
-  /// 画像URL。
-  final String? imageUrl;
+  /// 保存対象のレシピ一覧。
+  final List<MenuRecipeDraft> recipes;
+
+  /// 削除対象のレシピID一覧。
+  final List<String> removedRecipeIds;
+}
+
+/// レシピ登録フォーム用の下書きデータ。
+class MenuRecipeDraft {
+  /// [MenuRecipeDraft]を生成する。
+  const MenuRecipeDraft({
+    required this.materialId,
+    required this.materialName,
+    required this.requiredAmount,
+    this.recipeId,
+    this.unitType,
+    this.isOptional = false,
+    this.notes,
+  });
+
+  /// レシピID（既存データの場合）。
+  final String? recipeId;
+
+  /// 材料ID。
+  final String materialId;
+
+  /// 材料名。
+  final String materialName;
+
+  /// 必要量。
+  final double requiredAmount;
+
+  /// 単位種別。
+  final UnitType? unitType;
+
+  /// 任意材料かどうか。
+  final bool isOptional;
+
+  /// 備考。
+  final String? notes;
 }
 
 /// レシピ編集フォームの入力値。
@@ -278,11 +317,7 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
     if (state.selectedMenuId == null && state.detail == null) {
       return;
     }
-    state = state.copyWith(
-      setSelectedMenu: true,
-      clearDetail: true,
-      clearError: true,
-    );
+    state = state.copyWith(setSelectedMenu: true, clearDetail: true, clearError: true);
   }
 
   /// カテゴリを新規作成する。
@@ -345,11 +380,7 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
     try {
       await _menuService.deleteCategory(categoryId);
       await _loadData(showLoading: false, resetCategorySelection: true);
-      state = state.copyWith(
-        isSubmitting: false,
-        setSelectedCategory: true,
-        clearError: true,
-      );
+      state = state.copyWith(isSubmitting: false, setSelectedCategory: true, clearError: true);
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
       state = state.copyWith(isSubmitting: false, errorMessage: message);
@@ -366,15 +397,24 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
-      await _menuService.createMenuItem(
+      final MenuItem created = await _menuService.createMenuItem(
         name: trimmedName,
         categoryId: data.categoryId,
         price: data.price,
         isAvailable: data.isAvailable,
         displayOrder: _nextMenuDisplayOrder(data.categoryId),
         description: _normalizeNullableText(data.description),
-        imageUrl: _normalizeNullableText(data.imageUrl),
       );
+
+      final String? createdId = created.id;
+      if (createdId != null && (data.recipes.isNotEmpty || data.removedRecipeIds.isNotEmpty)) {
+        await _syncMenuRecipes(
+          menuItemId: createdId,
+          drafts: data.recipes,
+          removedRecipeIds: data.removedRecipeIds,
+        );
+      }
+
       await _loadData(showLoading: false);
       state = state.copyWith(
         isSubmitting: false,
@@ -405,8 +445,16 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
         price: data.price,
         description: _normalizeNullableText(data.description),
         isAvailable: data.isAvailable,
-        imageUrl: _normalizeNullableText(data.imageUrl),
       );
+
+      if (data.recipes.isNotEmpty || data.removedRecipeIds.isNotEmpty) {
+        await _syncMenuRecipes(
+          menuItemId: menuItemId,
+          drafts: data.recipes,
+          removedRecipeIds: data.removedRecipeIds,
+        );
+      }
+
       await _loadData(showLoading: false);
       state = state.copyWith(
         isSubmitting: false,
@@ -449,9 +497,8 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
 
     final MenuItemViewData? previous = _findMenuInState(menuItemId);
     if (previous == null) {
-      final Map<String, String> errors =
-          Map<String, String>.from(state.availabilityErrorMessages)
-            ..[menuItemId] = "選択したメニューが見つかりませんでした。";
+      final Map<String, String> errors = Map<String, String>.from(state.availabilityErrorMessages)
+        ..[menuItemId] = "選択したメニューが見つかりませんでした。";
       state = state.copyWith(availabilityErrorMessages: errors, errorMessage: errors[menuItemId]);
       return;
     }
@@ -499,21 +546,20 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
         _menuItemIndex[updated.id!] = updated;
       }
       await _reloadAvailability(userId);
-      final Set<String> clearedPending =
-          Set<String>.from(state.pendingAvailabilityMenuIds)..remove(menuItemId);
+      final Set<String> clearedPending = Set<String>.from(state.pendingAvailabilityMenuIds)
+        ..remove(menuItemId);
       state = state.copyWith(pendingAvailabilityMenuIds: clearedPending, clearError: true);
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      final Set<String> clearedPending =
-          Set<String>.from(state.pendingAvailabilityMenuIds)..remove(menuItemId);
-      final Map<String, String> nextErrors =
-          Map<String, String>.from(state.availabilityErrorMessages)
-            ..[menuItemId] = message;
+      final Set<String> clearedPending = Set<String>.from(state.pendingAvailabilityMenuIds)
+        ..remove(menuItemId);
+      final Map<String, String> nextErrors = Map<String, String>.from(
+        state.availabilityErrorMessages,
+      )..[menuItemId] = message;
       final List<MenuItemViewData> revertedMenuItems = state.menuItems
           .map(
-            (MenuItemViewData item) => item.id == menuItemId
-                ? item.copyWith(isAvailable: previous.isAvailable)
-                : item,
+            (MenuItemViewData item) =>
+                item.id == menuItemId ? item.copyWith(isAvailable: previous.isAvailable) : item,
           )
           .toList(growable: false);
 
@@ -571,6 +617,25 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
       final String message = ErrorHandler.instance.handleError(error);
       state = state.copyWith(errorMessage: message);
       return const <MaterialOption>[];
+    }
+  }
+
+  /// メニューに紐づくレシピ詳細をフォーム用に取得する。
+  Future<List<MenuRecipeDetail>> loadRecipesForMenu(String menuItemId) async {
+    final List<MenuRecipeDetail>? cached = _recipeCache[menuItemId];
+    if (cached != null) {
+      return List<MenuRecipeDetail>.from(cached);
+    }
+
+    try {
+      final List<MenuRecipeDetail> recipes = await _menuService.getMenuRecipes(menuItemId);
+      _recipeCache[menuItemId] = recipes;
+      _recipePresence[menuItemId] = recipes.isNotEmpty;
+      return recipes;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(errorMessage: message);
+      return const <MenuRecipeDetail>[];
     }
   }
 
@@ -662,6 +727,44 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
       final String message = ErrorHandler.instance.handleError(error);
       state = state.copyWith(isSubmitting: false, errorMessage: message);
     }
+  }
+
+  Future<void> _syncMenuRecipes({
+    required String menuItemId,
+    required List<MenuRecipeDraft> drafts,
+    Iterable<String> removedRecipeIds = const <String>[],
+  }) async {
+    for (final String recipeId in removedRecipeIds) {
+      if (recipeId.isEmpty) {
+        continue;
+      }
+      await _menuService.deleteMenuRecipe(recipeId);
+    }
+
+    if (drafts.isEmpty) {
+      _recipeCache.remove(menuItemId);
+      _recipePresence[menuItemId] = false;
+      await _menuService.refreshMenuAvailabilityForMenu(menuItemId);
+      return;
+    }
+
+    final List<MenuRecipeDetail> saved = <MenuRecipeDetail>[];
+    for (final MenuRecipeDraft draft in drafts) {
+      final MenuRecipeDetail detail = await _menuService.upsertMenuRecipe(
+        menuItemId: menuItemId,
+        materialId: draft.materialId,
+        requiredAmount: draft.requiredAmount,
+        isOptional: draft.isOptional,
+        notes: _normalizeNullableText(draft.notes),
+      );
+      saved.add(detail);
+    }
+
+    saved.sort(
+      (MenuRecipeDetail a, MenuRecipeDetail b) => a.materialName.compareTo(b.materialName),
+    );
+    _recipeCache[menuItemId] = saved;
+    _recipePresence[menuItemId] = saved.isNotEmpty;
   }
 
   MenuItemViewData? _findMenuInState(String menuItemId) =>
@@ -799,19 +902,14 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
       ..addEntries(
         categories
             .where((MenuCategory category) => category.id != null)
-            .map(
-              (MenuCategory category) =>
-                  MapEntry<String, MenuCategory>(category.id!, category),
-            ),
+            .map((MenuCategory category) => MapEntry<String, MenuCategory>(category.id!, category)),
       );
     _menuItemIndex
       ..clear()
       ..addEntries(
         menuItems
             .where((MenuItem item) => item.id != null)
-            .map(
-              (MenuItem item) => MapEntry<String, MenuItem>(item.id!, item),
-            ),
+            .map((MenuItem item) => MapEntry<String, MenuItem>(item.id!, item)),
       );
     _availabilityIndex = Map<String, MenuAvailabilityInfo>.from(availability);
 
