@@ -13,6 +13,20 @@ class MenuRecipeDetail {
     this.material,
   });
 
+  /// レシピ情報からDTOを生成する。
+  factory MenuRecipeDetail.fromRecipe({
+    required Recipe recipe,
+    Material? material,
+  }) => MenuRecipeDetail(
+        recipeId: recipe.id,
+        menuItemId: recipe.menuItemId,
+        materialId: recipe.materialId,
+        requiredAmount: recipe.requiredAmount,
+        isOptional: recipe.isOptional,
+        notes: recipe.notes,
+        material: material,
+      );
+
   /// レシピID。
   final String? recipeId;
 
@@ -33,20 +47,6 @@ class MenuRecipeDetail {
 
   /// 関連する材料詳細。
   final Material? material;
-
-  /// レシピ情報からDTOを生成する。
-  factory MenuRecipeDetail.fromRecipe({
-    required Recipe recipe,
-    Material? material,
-  }) => MenuRecipeDetail(
-        recipeId: recipe.id,
-        menuItemId: recipe.menuItemId,
-        materialId: recipe.materialId,
-        requiredAmount: recipe.requiredAmount,
-        isOptional: recipe.isOptional,
-        notes: recipe.notes,
-        material: material,
-      );
 
   /// 材料名を取得する（未存在時はハイフン）。
   String get materialName => material?.name ?? "-";

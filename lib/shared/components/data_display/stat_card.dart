@@ -29,6 +29,8 @@ class YataStatCard extends StatelessWidget {
     this.suffix,
     this.trend,
     this.trendLabel,
+    this.indicatorColor,
+    this.indicatorLabel,
   });
 
   /// 指標名。
@@ -49,6 +51,12 @@ class YataStatCard extends StatelessWidget {
   /// トレンドの説明テキスト。
   final String? trendLabel;
 
+  /// ステータスを視覚的に示すカラーインジケータ。
+  final Color? indicatorColor;
+
+  /// インジケータのスクリーンリーダー向けラベル。
+  final String? indicatorLabel;
+
   @override
   Widget build(BuildContext context) {
     final BorderRadius borderRadius = const BorderRadius.all(
@@ -56,6 +64,24 @@ class YataStatCard extends StatelessWidget {
     );
     final List<BoxShadow> shadow = YataElevationTokens.level1;
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final TextStyle titleStyle =
+        textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium;
+    final Widget? indicator = indicatorColor == null
+        ? null
+        : _StatIndicator(color: indicatorColor!, semanticsLabel: indicatorLabel);
+
+    final Widget titleWidget;
+    if (indicator == null) {
+      titleWidget = Text(title, style: titleStyle);
+    } else {
+      titleWidget = Row(
+        children: <Widget>[
+          indicator,
+          const SizedBox(width: YataSpacingTokens.sm),
+          Expanded(child: Text(title, style: titleStyle)),
+        ],
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(YataSpacingTokens.lg),
@@ -68,7 +94,7 @@ class YataStatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium),
+          titleWidget,
           const SizedBox(height: YataSpacingTokens.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -86,6 +112,31 @@ class YataStatCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _StatIndicator extends StatelessWidget {
+  const _StatIndicator({required this.color, this.semanticsLabel});
+
+  final Color color;
+  final String? semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget dot = Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+    );
+
+    if (semanticsLabel == null) {
+      return dot;
+    }
+
+    return Semantics(label: semanticsLabel, child: dot);
   }
 }
 

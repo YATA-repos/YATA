@@ -2,216 +2,153 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:mocktail/mocktail.dart";
 
-import "package:yata/app/wiring/provider.dart" as wiring;
-import "package:yata/core/constants/enums.dart";
+import "package:yata/app/wiring/provider.dart";
 import "package:yata/features/auth/presentation/providers/auth_providers.dart";
-import "package:yata/features/inventory/models/inventory_model.dart";
 import "package:yata/features/menu/dto/menu_dto.dart";
 import "package:yata/features/menu/dto/menu_recipe_detail.dart";
 import "package:yata/features/menu/models/menu_model.dart";
 import "package:yata/features/menu/presentation/controllers/menu_management_controller.dart";
+import "package:yata/features/menu/presentation/controllers/menu_management_state.dart";
 import "package:yata/features/menu/services/menu_service.dart";
 
 class _MockMenuService extends Mock implements MenuService {}
 
-Future<void> _waitForInitialization(MenuManagementController controller) async {
-	for (int i = 0; i < 10 && controller.state.isInitializing; i++) {
-		await Future<void>.delayed(const Duration(milliseconds: 10));
-	}
-}
-
 void main() {
-	setUpAll(() {
-		registerFallbackValue(<String>[]);
-	});
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-	late _MockMenuService menuService;
-	late ProviderContainer container;
-	late MenuManagementController controller;
+  const String userId = "user-1";
+  const String menuId = "menu-1";
+  final MenuAvailabilityInfo initialAvailability = MenuAvailabilityInfo(
+    menuItemId: menuId,
+    isAvailable: true,
+    missingMaterials: <String>[],
+    estimatedServings: 5,
+  );
+  final MenuAvailabilityInfo toggledAvailability = MenuAvailabilityInfo(
+    menuItemId: menuId,
+    isAvailable: false,
+    missingMaterials: <String>[],
+    estimatedServings: 5,
+  );
 
-	final MenuCategory category = MenuCategory(
-		id: "cat-1",
-		name: "主菜",
-		displayOrder: 1,
-	);
+  late ProviderContainer container;
+  late _MockMenuService menuService;
+  late int availabilityCallCount;
 
-	final MenuItem menuItem = MenuItem(
-		id: "menu-1",
-		name: "焼きそば",
-		categoryId: "cat-1",
-		price: 800,
-		isAvailable: true,
-		displayOrder: 1,
-	);
+  setUp(() {
+    menuService = _MockMenuService();
+    availabilityCallCount = 0;
 
-	setUp(() async {
-		menuService = _MockMenuService();
+    when(() => menuService.enableRealtimeFeatures()).thenAnswer((_) async {});
+    when(() => menuService.disableRealtimeFeatures()).thenAnswer((_) async {});
+    when(() => menuService.isRealtimeConnected()).thenReturn(false);
+    when(() => menuService.getMenuCategories()).thenAnswer(
+      (_) async => <MenuCategory>[MenuCategory(id: "cat-1", name: "メイン", displayOrder: 1)],
+    );
+    when(() => menuService.getMenuItemsByCategory(any<String?>())).thenAnswer(
+      (_) async => <MenuItem>[
+        MenuItem(
+          id: menuId,
+          name: "焼きそば",
+          categoryId: "cat-1",
+          price: 800,
+          isAvailable: true,
+          displayOrder: 1,
+        ),
+      ],
+    );
+    when(() => menuService.getMenuRecipes(any())).thenAnswer((_) async => <MenuRecipeDetail>[]);
+    when(() => menuService.bulkCheckMenuAvailability(any())).thenAnswer((_) async {
+      availabilityCallCount += 1;
+      return <String, MenuAvailabilityInfo>{
+        menuId: availabilityCallCount == 1 ? initialAvailability : toggledAvailability,
+      };
+    });
 
-		when(() => menuService.getMenuCategories()).thenAnswer((_) async => <MenuCategory>[category]);
-		when(() => menuService.getMenuItemsByCategory(null)).thenAnswer((_) async => <MenuItem>[menuItem]);
-		when(() => menuService.getMaterialCandidates(categoryId: any(named: "categoryId")))
-				.thenAnswer((_) async => <Material>[]);
-		when(() => menuService.getMenuRecipes(any())).thenAnswer((_) async => <MenuRecipeDetail>[]);
-		when(() => menuService.bulkCheckMenuAvailability(any(), menuItemIds: any(named: "menuItemIds")))
-				.thenAnswer((_) async => <String, MenuAvailabilityInfo>{});
-		when(() => menuService.startRealtimeMonitoring()).thenAnswer((_) async {});
-		when(() => menuService.stopRealtimeMonitoring()).thenAnswer((_) async {});
-		when(() => menuService.refreshMenuAvailabilityForMenu(any())).thenAnswer((_) async => null);
+    container = ProviderContainer(
+      overrides: <Override>[
+        currentUserIdProvider.overrideWith((Ref _) => userId),
+        menuServiceProvider.overrideWithValue(menuService),
+      ],
+    );
+  });
 
-		container = ProviderContainer(
-			overrides: <Override>[
-				wiring.menuServiceProvider.overrideWith((Ref _) => menuService),
-				currentUserIdProvider.overrideWithValue("user-1"),
-			],
-		);
-		addTearDown(container.dispose);
+  tearDown(() => container.dispose());
 
-		controller = container.read(menuManagementControllerProvider.notifier);
-		await _waitForInitialization(controller);
-	});
+  Future<MenuManagementController> initializeController() async {
+    final MenuManagementController controller = container.read(
+      menuManagementControllerProvider.notifier,
+    );
+    await controller.loadInitialData();
+    return controller;
+  }
 
-	group("loadRecipesForItem", () {
-		test("populates recipes map and clears loading flag", () async {
-			final Material cabbage = Material(
-				id: "material-1",
-				name: "キャベツ",
-				categoryId: "veg",
-				unitType: UnitType.gram,
-				currentStock: 500,
-				alertThreshold: 100,
-				criticalThreshold: 50,
-			);
-			final MenuRecipeDetail detail = MenuRecipeDetail(
-				recipeId: "recipe-1",
-				menuItemId: "menu-1",
-				materialId: "material-1",
-				requiredAmount: 120,
-				isOptional: false,
-				material: cabbage,
-			);
+  test("toggleMenuAvailability updates state on success", () async {
+    when(() => menuService.toggleMenuItemAvailability(any(), any(), any())).thenAnswer(
+      (_) async => MenuItem(
+        id: menuId,
+        name: "焼きそば",
+        categoryId: "cat-1",
+        price: 800,
+        isAvailable: false,
+        displayOrder: 1,
+      ),
+    );
 
-			when(() => menuService.getMenuRecipes("menu-1"))
-					.thenAnswer((_) async => <MenuRecipeDetail>[detail]);
+    final MenuManagementController controller = await initializeController();
+    availabilityCallCount = 1; // next availability check should reflect toggled state
 
-			await controller.loadRecipesForItem("menu-1", force: true);
+    await controller.toggleMenuAvailability(menuId, false);
 
-			expect(controller.state.recipesFor("menu-1"), contains(detail));
-			expect(controller.state.isRecipeLoading, isFalse);
-			expect(controller.state.hasRecipeError, isFalse);
-		});
-	});
+    final MenuManagementState state = container.read(menuManagementControllerProvider);
 
-	group("saveRecipe", () {
-		test("stores recipe and updates availability", () async {
-			final Material pork = Material(
-				id: "material-2",
-				name: "豚肉",
-				categoryId: "meat",
-				unitType: UnitType.gram,
-				currentStock: 800,
-				alertThreshold: 200,
-				criticalThreshold: 80,
-			);
-			final MenuRecipeDetail savedDetail = MenuRecipeDetail(
-				recipeId: "recipe-2",
-				menuItemId: "menu-1",
-				materialId: "material-2",
-				requiredAmount: 150,
-				isOptional: false,
-				material: pork,
-			);
+    expect(state.pendingAvailabilityMenuIds, isEmpty);
+    expect(state.availabilityErrorMessages, isEmpty);
+    expect(
+      state.menuItems.firstWhere((MenuItemViewData item) => item.id == menuId).isAvailable,
+      isFalse,
+    );
+    verify(() => menuService.toggleMenuItemAvailability(menuId, false, userId)).called(1);
+  });
 
-			when(
-				() => menuService.upsertMenuRecipe(
-					menuItemId: any(named: "menuItemId"),
-					materialId: any(named: "materialId"),
-					requiredAmount: any(named: "requiredAmount"),
-					isOptional: any(named: "isOptional"),
-					notes: any(named: "notes"),
-				),
-			).thenAnswer((_) async => savedDetail);
+  test("toggleMenuAvailability reverts state on failure", () async {
+    when(
+      () => menuService.toggleMenuItemAvailability(any(), any(), any()),
+    ).thenThrow(Exception("network"));
 
-			when(() => menuService.refreshMenuAvailabilityForMenu("menu-1")).thenAnswer(
-				(_) async => MenuAvailabilityInfo(
-					menuItemId: "menu-1",
-					isAvailable: true,
-					missingMaterials: const <String>[],
-					estimatedServings: 5,
-				),
-			);
+    final MenuManagementController controller = await initializeController();
 
-			await controller.saveRecipe(
-				menuItemId: "menu-1",
-				materialId: "material-2",
-				requiredAmount: 150,
-			);
+    await controller.toggleMenuAvailability(menuId, false);
 
-			final List<MenuRecipeDetail> recipes = controller.state.recipesFor("menu-1");
-			expect(recipes, hasLength(1));
-			expect(recipes.first.recipeId, "recipe-2");
-			expect(controller.state.materialCandidates.any((Material m) => m.id == "material-2"), isTrue);
-			expect(controller.state.availabilityFor("menu-1").isAvailable, isTrue);
-		});
-	});
+    final MenuManagementState state = container.read(menuManagementControllerProvider);
 
-	group("deleteRecipe", () {
-		test("removes recipe entry and refreshes availability", () async {
-			final Material sauce = Material(
-				id: "material-3",
-				name: "ソース",
-				categoryId: "seasoning",
-				unitType: UnitType.liter,
-				currentStock: 10,
-				alertThreshold: 2,
-				criticalThreshold: 1,
-			);
-			final MenuRecipeDetail savedDetail = MenuRecipeDetail(
-				recipeId: "recipe-3",
-				menuItemId: "menu-1",
-				materialId: "material-3",
-				requiredAmount: 0.1,
-				isOptional: false,
-				material: sauce,
-			);
+    expect(state.pendingAvailabilityMenuIds, isEmpty);
+    expect(
+      state.menuItems.firstWhere((MenuItemViewData item) => item.id == menuId).isAvailable,
+      isTrue,
+    );
+    expect(state.availabilityErrorMessages[menuId], "予期しないエラーが発生しました。もう一度お試しください。");
+  });
 
-			when(
-				() => menuService.upsertMenuRecipe(
-					menuItemId: any(named: "menuItemId"),
-					materialId: any(named: "materialId"),
-					requiredAmount: any(named: "requiredAmount"),
-					isOptional: any(named: "isOptional"),
-					notes: any(named: "notes"),
-				),
-			).thenAnswer((_) async => savedDetail);
-			when(() => menuService.refreshMenuAvailabilityForMenu("menu-1")).thenAnswer(
-				(_) async => MenuAvailabilityInfo(
-					menuItemId: "menu-1",
-					isAvailable: true,
-					missingMaterials: const <String>[],
-					estimatedServings: 8,
-				),
-			);
+  test("openDetail sets detail and closeDetail clears it", () async {
+    when(
+      () => menuService.refreshMenuAvailabilityForMenu(menuId),
+    ).thenAnswer((_) async => initialAvailability);
+    when(() => menuService.calculateMaxServings(menuId, userId)).thenAnswer((_) async => 6);
 
-			await controller.saveRecipe(
-				menuItemId: "menu-1",
-				materialId: "material-3",
-				requiredAmount: 0.1,
-			);
+    final MenuManagementController controller = await initializeController();
 
-			when(() => menuService.deleteMenuRecipe("recipe-3")).thenAnswer((_) async {});
-			when(() => menuService.refreshMenuAvailabilityForMenu("menu-1")).thenAnswer(
-				(_) async => MenuAvailabilityInfo(
-					menuItemId: "menu-1",
-					isAvailable: true,
-					missingMaterials: const <String>[],
-					estimatedServings: 9,
-				),
-			);
+    await controller.openDetail(menuId);
 
-			await controller.deleteRecipe(menuItemId: "menu-1", recipeId: "recipe-3");
+    MenuManagementState state = container.read(menuManagementControllerProvider);
+    expect(state.detail, isNotNull);
+    expect(state.detail!.menu.id, menuId);
+    expect(state.selectedMenuId, menuId);
 
-			expect(controller.state.recipesFor("menu-1"), isEmpty);
-			expect(controller.state.hasRecipeError, isFalse);
-		});
-	});
+    controller.closeDetail();
+
+    state = container.read(menuManagementControllerProvider);
+    expect(state.detail, isNull);
+    expect(state.selectedMenuId, isNull);
+  });
 }
