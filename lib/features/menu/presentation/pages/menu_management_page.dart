@@ -442,133 +442,188 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
   Future<MenuFormData?> _showMenuFormDialog({
     required List<MenuCategoryViewData> categories,
     MenuItemViewData? initial,
-  }) async {
-    final TextEditingController nameController = TextEditingController(text: initial?.name ?? "");
-    final TextEditingController priceController = TextEditingController(
-      text: initial != null ? initial.price.toString() : "",
-    );
-    final TextEditingController descriptionController = TextEditingController(
-      text: initial?.description ?? "",
-    );
-    final TextEditingController imageController = TextEditingController(
-      text: initial?.imageUrl ?? "",
-    );
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    String selectedCategoryId = initial?.categoryId ?? categories.first.id!;
-    bool isAvailable = initial?.isAvailable ?? true;
-
-    final MenuFormData? result = await showDialog<MenuFormData>(
+  }) {
+    return showDialog<MenuFormData>(
       context: context,
-      builder: (BuildContext dialogContext) => StatefulBuilder(
-        builder: (BuildContext context, void Function(void Function()) setState) => AlertDialog(
-          title: Text(initial == null ? "メニューを追加" : "メニューを編集"),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "メニュー名"),
-                    autofocus: true,
-                    validator: (String? value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "名称を入力してください";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: YataSpacingTokens.sm),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedCategoryId,
-                    decoration: const InputDecoration(labelText: "カテゴリ"),
-                    items: categories
-                        .map(
-                          (MenuCategoryViewData category) => DropdownMenuItem<String>(
-                            value: category.id,
-                            child: Text(category.name),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (String? value) {
-                      if (value != null) {
-                        setState(() => selectedCategoryId = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: YataSpacingTokens.sm),
-                  TextFormField(
-                    controller: priceController,
-                    decoration: const InputDecoration(labelText: "価格"),
-                    keyboardType: TextInputType.number,
-                    validator: (String? value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "価格を入力してください";
-                      }
-                      final int? price = int.tryParse(value.trim());
-                      if (price == null || price < 0) {
-                        return "0以上の数値を入力してください";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: YataSpacingTokens.sm),
-                  TextFormField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: "説明", hintText: "任意"),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: YataSpacingTokens.sm),
-                  TextFormField(
-                    controller: imageController,
-                    decoration: const InputDecoration(labelText: "画像URL", hintText: "任意"),
-                  ),
-                  const SizedBox(height: YataSpacingTokens.sm),
-                  SwitchListTile(
-                    value: isAvailable,
-                    onChanged: (bool value) => setState(() => isAvailable = value),
-                    title: const Text("販売可能にする"),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text("キャンセル"),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (!formKey.currentState!.validate()) {
-                  return;
-                }
-                final int price = int.parse(priceController.text.trim());
-                Navigator.of(dialogContext).pop(
-                  MenuFormData(
-                    name: nameController.text.trim(),
-                    categoryId: selectedCategoryId,
-                    price: price,
-                    isAvailable: isAvailable,
-                    description: descriptionController.text,
-                    imageUrl: imageController.text,
-                  ),
-                );
-              },
-              child: const Text("保存"),
-            ),
-          ],
-        ),
+      builder: (BuildContext _) => _MenuFormDialog(
+        categories: categories,
+        initial: initial,
       ),
     );
+  }
+}
 
-    nameController.dispose();
-    priceController.dispose();
-    descriptionController.dispose();
-    imageController.dispose();
-    return result;
+class _MenuFormDialog extends StatefulWidget {
+  const _MenuFormDialog({
+    required this.categories,
+    this.initial,
+  });
+
+  /// 選択可能なカテゴリ一覧。
+  final List<MenuCategoryViewData> categories;
+
+  /// 編集対象メニュー情報。
+  final MenuItemViewData? initial;
+
+  @override
+  State<_MenuFormDialog> createState() => _MenuFormDialogState();
+}
+
+class _MenuFormDialogState extends State<_MenuFormDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _imageController;
+  late String _selectedCategoryId;
+  late bool _isAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    final List<MenuCategoryViewData> availableCategories =
+        widget.categories.where((MenuCategoryViewData category) => category.id != null).toList();
+
+    assert(
+      availableCategories.isNotEmpty,
+      "カテゴリが存在しない状態でメニュー追加ダイアログは開けません",
+    );
+
+    final String? initialCategoryId = widget.initial?.categoryId;
+    _selectedCategoryId =
+        initialCategoryId != null &&
+                availableCategories.any((MenuCategoryViewData category) => category.id == initialCategoryId)
+            ? initialCategoryId
+            : availableCategories.first.id!;
+
+    _isAvailable = widget.initial?.isAvailable ?? true;
+    _nameController = TextEditingController(text: widget.initial?.name ?? "");
+    _priceController = TextEditingController(
+      text: widget.initial != null ? widget.initial!.price.toString() : "",
+    );
+    _descriptionController = TextEditingController(text: widget.initial?.description ?? "");
+    _imageController = TextEditingController(text: widget.initial?.imageUrl ?? "");
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    _imageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<MenuCategoryViewData> categories =
+        widget.categories.where((MenuCategoryViewData category) => category.id != null).toList();
+
+    return AlertDialog(
+      title: Text(widget.initial == null ? "メニューを追加" : "メニューを編集"),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: "メニュー名"),
+                autofocus: true,
+                validator: (String? value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "名称を入力してください";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: YataSpacingTokens.sm),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategoryId,
+                decoration: const InputDecoration(labelText: "カテゴリ"),
+                items: categories
+                    .map(
+                      (MenuCategoryViewData category) => DropdownMenuItem<String>(
+                        value: category.id,
+                        child: Text(category.name),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (String? value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() => _selectedCategoryId = value);
+                },
+              ),
+              const SizedBox(height: YataSpacingTokens.sm),
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(labelText: "価格"),
+                keyboardType: TextInputType.number,
+                validator: (String? value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "価格を入力してください";
+                  }
+                  final int? price = int.tryParse(value.trim());
+                  if (price == null || price < 0) {
+                    return "0以上の数値を入力してください";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: YataSpacingTokens.sm),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: "説明", hintText: "任意"),
+                maxLines: 3,
+              ),
+              const SizedBox(height: YataSpacingTokens.sm),
+              TextFormField(
+                controller: _imageController,
+                decoration: const InputDecoration(labelText: "画像URL", hintText: "任意"),
+              ),
+              const SizedBox(height: YataSpacingTokens.sm),
+              SwitchListTile(
+                value: _isAvailable,
+                onChanged: (bool value) => setState(() => _isAvailable = value),
+                title: const Text("販売可能にする"),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("キャンセル"),
+        ),
+        FilledButton(
+          onPressed: _handleSubmit,
+          child: const Text("保存"),
+        ),
+      ],
+    );
+  }
+
+  void _handleSubmit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final int price = int.parse(_priceController.text.trim());
+    Navigator.of(context).pop(
+      MenuFormData(
+        name: _nameController.text.trim(),
+        categoryId: _selectedCategoryId,
+        price: price,
+        isAvailable: _isAvailable,
+        description: _descriptionController.text,
+        imageUrl: _imageController.text,
+      ),
+    );
   }
 }
 
