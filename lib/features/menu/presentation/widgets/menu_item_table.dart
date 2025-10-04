@@ -204,7 +204,6 @@ class _AvailabilityToggle extends StatelessWidget {
       opacity: interactionEnabled ? 1 : 0.6,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Switch.adaptive(
             value: isAvailable,

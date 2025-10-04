@@ -170,21 +170,7 @@ class AuthService with StreamControllerManagerMixin {
     log.i("Supabase session synchronized for user: ${userProfile.email}", tag: loggerComponent);
   }
 
-  Future<UserProfile?> _resolveUserProfile(supabase.Session session) async {
-    return UserProfile.fromSupabaseUser(session.user);
-  
-    try {
-      return await _authRepository.getCurrentUserProfile();
-    } on Object catch (error, stackTrace) {
-      log.e(
-        "Failed to fetch user profile during session sync: $error",
-        tag: loggerComponent,
-        error: error,
-        st: stackTrace,
-      );
-      return null;
-    }
-  }
+  Future<UserProfile?> _resolveUserProfile(supabase.Session session) async => UserProfile.fromSupabaseUser(session.user);
 
   // =================================================================
   // 認証操作

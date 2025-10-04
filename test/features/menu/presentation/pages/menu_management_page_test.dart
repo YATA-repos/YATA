@@ -2,10 +2,9 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:mocktail/mocktail.dart";
-
 import "package:yata/app/wiring/provider.dart";
-import "package:yata/features/auth/presentation/providers/auth_providers.dart";
 import "package:yata/core/constants/enums.dart";
+import "package:yata/features/auth/presentation/providers/auth_providers.dart";
 import "package:yata/features/inventory/models/inventory_model.dart" as inventory;
 import "package:yata/features/menu/dto/menu_dto.dart";
 import "package:yata/features/menu/dto/menu_recipe_detail.dart";
@@ -200,7 +199,6 @@ void main() {
         requiredAmount: 120,
         isOptional: false,
         material: pork,
-        notes: null,
       ),
     );
 
@@ -256,8 +254,6 @@ void main() {
         menuItemId: "menu-2",
         materialId: pork.id!,
         requiredAmount: 120,
-        isOptional: false,
-        notes: null,
       ),
     ).called(1);
   });

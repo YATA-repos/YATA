@@ -482,20 +482,17 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     });
   }
 
-  Future<String?> _showCategoryNameDialog({required String title, String? initialValue}) {
-    return showDialog<String>(
+  Future<String?> _showCategoryNameDialog({required String title, String? initialValue}) => showDialog<String>(
       context: context,
       builder: (BuildContext _) => _CategoryNameDialog(title: title, initialValue: initialValue),
     );
-  }
 
   Future<MenuFormData?> _showMenuFormDialog({
     required List<MenuCategoryViewData> categories,
     required List<MaterialOption> materialOptions,
     MenuItemViewData? initial,
     List<MenuRecipeDetail> initialRecipes = const <MenuRecipeDetail>[],
-  }) {
-    return showDialog<MenuFormData>(
+  }) => showDialog<MenuFormData>(
       context: context,
       builder: (BuildContext _) => _MenuFormDialog(
         categories: categories,
@@ -504,7 +501,6 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
         initialRecipes: initialRecipes,
       ),
     );
-  }
 }
 
 class _MenuFormDialog extends StatefulWidget {
@@ -679,8 +675,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
     );
   }
 
-  Widget _buildPrimaryFormFields() {
-    return Column(
+  Widget _buildPrimaryFormFields() => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         TextFormField(
@@ -696,7 +691,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
         ),
         const SizedBox(height: YataSpacingTokens.md),
         DropdownButtonFormField<String>(
-          value: _selectedCategoryId,
+          initialValue: _selectedCategoryId,
           decoration: const InputDecoration(labelText: "カテゴリ"),
           items: _availableCategories
               .map(
@@ -736,10 +731,8 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
         ),
       ],
     );
-  }
 
-  Widget _buildSecondaryFormFields() {
-    return Column(
+  Widget _buildSecondaryFormFields() => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         TextFormField(
@@ -751,7 +744,6 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
         _buildRecipeSection(),
       ],
     );
-  }
 
   Widget _buildRecipeSection() {
     final TextTheme textTheme = Theme.of(context).textTheme;
@@ -834,7 +826,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
             ),
             const SizedBox(height: YataSpacingTokens.xs),
             DropdownButtonFormField<String>(
-              value: form.materialId,
+              initialValue: form.materialId,
               decoration: const InputDecoration(labelText: "材料"),
               isExpanded: true,
               items: _materialOptions

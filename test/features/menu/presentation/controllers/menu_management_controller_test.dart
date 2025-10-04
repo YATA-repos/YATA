@@ -220,7 +220,6 @@ void main() {
           materialName: pork.name,
           unitType: pork.unitType,
           requiredAmount: 120,
-          isOptional: false,
           notes: "下味済み",
         ),
       ],
@@ -243,7 +242,6 @@ void main() {
         menuItemId: "menu-2",
         materialId: pork.id!,
         requiredAmount: 120,
-        isOptional: false,
         notes: "下味済み",
       ),
     ).called(1);
@@ -357,7 +355,6 @@ void main() {
         price: 820,
         description: "ソース増量",
         isAvailable: true,
-        displayOrder: null,
       ),
     ).called(1);
     verify(() => menuService.deleteMenuRecipe("recipe-1")).called(1);
