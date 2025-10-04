@@ -45,6 +45,7 @@ dev_dependencies:
     sdk: flutter
 
   mocktail: any
+  test: any
 flutter:
   uses-material-design: true
   assets:
