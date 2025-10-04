@@ -67,6 +67,9 @@ class Logger {
     final Map<String, LogLevel> m = <String, LogLevel>{...c.tagLevels}..remove(tag);
     return c.copyWith(tagLevels: m);
   });
+
+  /// ロガーの構成全体を更新するユーティリティ。
+  void updateConfig(LogConfig Function(LogConfig) mutate) => _core.updateConfig(mutate);
   T withTempConfig<T>(T Function() body, LogConfig Function(LogConfig) mutate) {
     final LogConfig prev = _core.config;
     _core.updateConfig((_) => mutate(prev));
@@ -120,6 +123,9 @@ LogConfig get config => _globalLogger.config;
 void setGlobalLevel(LogLevel level) => _globalLogger.setGlobalLevel(level);
 void setTagLevel(String tag, LogLevel level) => _globalLogger.setTagLevel(tag, level);
 void clearTagLevel(String tag) => _globalLogger.clearTagLevel(tag);
+
+/// ロガー設定をアトミックに更新する。
+void updateLoggerConfig(LogConfig Function(LogConfig) mutate) => _globalLogger.updateConfig(mutate);
 
 // ------------------
 // Core implementation

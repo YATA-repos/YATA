@@ -4,6 +4,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app/app.dart";
 import "core/validation/env_validator.dart";
+import "infra/logging/log_runtime_config.dart";
 import "infra/logging/logger.dart";
 import "infra/supabase/supabase_client.dart";
 
@@ -17,7 +18,9 @@ void main() async {
   try {
     // 統合環境変数管理システムで初期化
     await EnvValidator.initialize();
-  i("環境変数をロードしました: ${EnvValidator.env.keys.join(", ")}", tag: "main");
+    applyLogRuntimeConfig();
+
+    i("環境変数をロードしました: ${EnvValidator.env.keys.join(", ")}", tag: "main");
 
     final EnvValidationResult validationResult = EnvValidator.validate();
     EnvValidator.printValidationResult(validationResult);
