@@ -402,7 +402,6 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
       _notesController.value = TextEditingValue(
         text: newText,
         selection: newSelection,
-        composing: TextRange.empty,
       );
     }
   }
@@ -571,7 +570,6 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
             TextField(
               controller: _notesController,
               onChanged: controller.updateOrderNotes,
-              maxLines: 1,
               maxLength: 200,
               enabled: !state.isCheckoutInProgress && !state.isLoading,
               decoration: InputDecoration(
@@ -927,7 +925,6 @@ class _SubtotalDisplay extends StatelessWidget {
   Widget build(BuildContext context) => Align(
     alignment: Alignment.centerRight,
     child: Row(
-      mainAxisSize: MainAxisSize.max,
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
         Text(

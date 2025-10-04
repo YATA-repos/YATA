@@ -4,7 +4,6 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:intl/intl.dart";
-import "package:meta/meta.dart";
 
 import "../../../../core/constants/enums.dart";
 import "../../../../shared/components/buttons/icon_button.dart";

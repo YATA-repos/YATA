@@ -176,7 +176,6 @@ class OrderManagementState {
     menuItems: const <MenuItemViewData>[],
     cartItems: const <CartItemViewData>[],
     isLoading: true,
-    orderNotes: "",
   );
 
   /// 表示するカテゴリ一覧。
