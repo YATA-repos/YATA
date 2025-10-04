@@ -429,45 +429,14 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     );
   }
 
-  Future<String?> _showCategoryNameDialog({required String title, String? initialValue}) async {
-    final TextEditingController controller = TextEditingController(text: initialValue ?? "");
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    final String? result = await showDialog<String>(
+  Future<String?> _showCategoryNameDialog({required String title, String? initialValue}) {
+    return showDialog<String>(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: "カテゴリ名"),
-            validator: (String? value) {
-              if (value == null || value.trim().isEmpty) {
-                return "名称を入力してください";
-              }
-              return null;
-            },
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text("キャンセル"),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(dialogContext).pop(controller.text.trim());
-              }
-            },
-            child: const Text("保存"),
-          ),
-        ],
+      builder: (BuildContext _) => _CategoryNameDialog(
+        title: title,
+        initialValue: initialValue,
       ),
     );
-    controller.dispose();
-    return result;
   }
 
   Future<MenuFormData?> _showMenuFormDialog({
@@ -601,6 +570,67 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     imageController.dispose();
     return result;
   }
+}
+
+/// カテゴリ名の入力ダイアログ。
+class _CategoryNameDialog extends StatefulWidget {
+  const _CategoryNameDialog({required this.title, this.initialValue});
+
+  final String title;
+  final String? initialValue;
+
+  @override
+  State<_CategoryNameDialog> createState() => _CategoryNameDialogState();
+}
+
+class _CategoryNameDialogState extends State<_CategoryNameDialog> {
+  late final TextEditingController _controller;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue ?? "");
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text(widget.title),
+        content: Form(
+          key: _formKey,
+          child: TextFormField(
+            controller: _controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: "カテゴリ名"),
+            validator: (String? value) {
+              if (value == null || value.trim().isEmpty) {
+                return "名称を入力してください";
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("キャンセル"),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                Navigator.of(context).pop(_controller.text.trim());
+              }
+            },
+            child: const Text("保存"),
+          ),
+        ],
+      );
 }
 
 class _RecipeEditorDialog extends ConsumerStatefulWidget {
