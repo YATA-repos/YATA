@@ -1,0 +1,4 @@
+- 変更後は `flutter analyze` を実行してエラー/警告を確認し、該当テスト (`flutter test` や対象ドメインのテスト) を走らせる。
+- コード生成が関わる場合は `flutter pub run build_runner build --delete-conflicting-outputs` を忘れずに実行。
+- 手動確認が必要なUI/フローは `flutter run` でスモークテストを行う。
+- 差分を `git diff` で確認し、関連ドキュメント (特に `docs/` のガイド/リファレンス) の更新要否をチェック。
