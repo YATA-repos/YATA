@@ -1,6 +1,5 @@
 export "buttons/icon_button.dart";
 export "category/category_panel.dart";
-export "overview/overview_stat_cards.dart";
 export "data_display/data_table.dart";
 export "data_display/key_value_row.dart";
 export "data_display/progress_bar.dart";
@@ -12,3 +11,4 @@ export "inputs/search_field.dart";
 export "inputs/segmented_filter.dart";
 export "layout/page_container.dart";
 export "layout/section_card.dart";
+export "overview/overview_stat_cards.dart";

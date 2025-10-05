@@ -4,14 +4,14 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/constants.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
-import "../../../core/contracts/logging/logger.dart" as log_contract;
-import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/validation/input_validator.dart";
+import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../../inventory/dto/inventory_dto.dart";
 import "../../inventory/models/inventory_model.dart";
@@ -246,7 +246,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     );
     final Stopwatch sw = Stopwatch()..start();
     final String? userId = currentUserId;
-    LogFieldsBuilder _fields({String? itemId}) => _buildMenuItemFields(
+    LogFieldsBuilder fields({String? itemId}) => _buildMenuItemFields(
           operation: "menu.item.create",
           userId: userId,
           itemId: itemId,
@@ -256,7 +256,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     log.i(
       "Creating menu item",
       tag: loggerComponent,
-      fields: _fields()
+      fields: fields()
           .started()
           .addMetadata(<String, dynamic>{
             "name": name,
@@ -276,7 +276,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       log.i(
         "Created menu item: ${created.name}",
         tag: loggerComponent,
-        fields: _fields(itemId: created.id)
+        fields: fields(itemId: created.id)
             .succeeded(durationMs: sw.elapsedMilliseconds)
             .addMetadata(<String, dynamic>{
               "display_order": created.displayOrder,
@@ -294,7 +294,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         tag: loggerComponent,
         error: error,
         st: stackTrace,
-        fields: _fields()
+        fields: fields()
             .failed(reason: error.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("message", error.toString())
             .build(),
@@ -338,7 +338,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
 
     final Stopwatch sw = Stopwatch()..start();
     final String? userId = currentUserId;
-    LogFieldsBuilder _fields() => _buildMenuItemFields(
+    LogFieldsBuilder fields() => _buildMenuItemFields(
           operation: "menu.item.update",
           userId: userId,
           itemId: id,
@@ -348,7 +348,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     log.i(
       "Updating menu item",
       tag: loggerComponent,
-      fields: _fields()
+      fields: fields()
           .started()
           .addMetadataEntry("changes", updates.keys.toList())
           .build(),
@@ -362,7 +362,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         log.i(
           "Updated menu item: ${updated.name}",
           tag: loggerComponent,
-          fields: _fields()
+          fields: fields()
               .succeeded(durationMs: sw.elapsedMilliseconds)
               .addMetadata(<String, dynamic>{
                 "price": updated.price,
@@ -381,7 +381,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         tag: loggerComponent,
         error: error,
         st: stackTrace,
-        fields: _fields()
+        fields: fields()
             .failed(reason: error.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("message", error.toString())
             .build(),
@@ -394,7 +394,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
   Future<void> deleteMenuItem(String id) async {
     final Stopwatch sw = Stopwatch()..start();
     final String? userId = currentUserId;
-    LogFieldsBuilder _fields() => _buildMenuItemFields(
+    LogFieldsBuilder fields() => _buildMenuItemFields(
           operation: "menu.item.delete",
           userId: userId,
           itemId: id,
@@ -403,7 +403,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     log.i(
       "Deleting menu item",
       tag: loggerComponent,
-      fields: _fields().started().build(),
+      fields: fields().started().build(),
     );
     try {
       await _recipeRepository.deleteByMenuItemId(id);
@@ -414,7 +414,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       log.i(
         "Deleted menu item: $id",
         tag: loggerComponent,
-        fields: _fields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
+        fields: fields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
       );
     } catch (error, stackTrace) {
       if (sw.isRunning) {
@@ -425,7 +425,7 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         tag: loggerComponent,
         error: error,
         st: stackTrace,
-        fields: _fields()
+        fields: fields()
             .failed(reason: error.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("message", error.toString())
             .build(),
@@ -439,15 +439,13 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     String? userId,
     String? itemId,
     String? categoryId,
-  }) {
-    return LogFieldsBuilder.operation(operation)
+  }) => LogFieldsBuilder.operation(operation)
         .withActor(userId: userId)
         .withResource(type: "menu_item", id: itemId)
         .addMetadata(<String, dynamic>{
           if (itemId != null) "menu_item_id": itemId,
           if (categoryId != null) "category_id": categoryId,
         });
-  }
 
   /// リアルタイム更新をUI層へ通知する。
   void _notifyRealtimeUpdate(String featureName) {

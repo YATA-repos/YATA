@@ -9,6 +9,7 @@ import "../../../../core/constants/enums.dart";
 import "../../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
+import "../../../auth/services/auth_service.dart";
 import "../../../menu/models/menu_model.dart";
 import "../../../menu/services/menu_service.dart";
 import "../../../shared/logging/ui_action_logger.dart";
@@ -345,7 +346,6 @@ class OrderManagementState {
 
 /// 注文管理画面の振る舞いを担うコントローラ。
 class OrderManagementController extends StateNotifier<OrderManagementState> {
-  static const String _loggerTag = "OrderManagementController";
 
   /// [OrderManagementController]を生成する。
   OrderManagementController({
@@ -367,6 +367,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     );
     unawaited(loadInitialData());
   }
+  static const String _loggerTag = "OrderManagementController";
 
   final Ref _ref;
   final MenuService _menuService;
@@ -455,7 +456,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         state = state.copyWith(isLoading: true, clearErrorMessage: true);
       }
 
-      final authService = _ref.read(authServiceProvider);
+      final AuthService authService = _ref.read(authServiceProvider);
 
       try {
         await _traceAsyncSection<void>(

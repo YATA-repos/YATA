@@ -3,11 +3,11 @@ import "dart:math" as math;
 import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../order/models/order_model.dart";
 import "../models/inventory_model.dart";
@@ -40,12 +40,12 @@ class OrderStockService {
   /// 注文に対する材料を消費（在庫減算）
   Future<bool> consumeMaterialsForOrder(String orderId, String userId) async {
     final Stopwatch sw = Stopwatch()..start();
-    LogFieldsBuilder _fields() => _buildConsumptionFields(orderId: orderId, userId: userId);
+    LogFieldsBuilder fields() => _buildConsumptionFields(orderId: orderId, userId: userId);
 
     log.i(
       ServiceInfo.materialConsumptionStarted.message,
       tag: loggerComponent,
-      fields: _fields().started().build(),
+      fields: fields().started().build(),
     );
 
     try {
@@ -59,7 +59,7 @@ class OrderStockService {
         log.d(
           ServiceDebug.consumptionCompletedSuccessfully.message,
           tag: loggerComponent,
-          fields: _fields()
+          fields: fields()
               .succeeded(durationMs: sw.elapsedMilliseconds)
               .addMetadataEntry("processed_order_items", 0)
               .build(),
@@ -148,7 +148,7 @@ class OrderStockService {
           "materialCount": processedMaterials.toString(),
         }),
         tag: loggerComponent,
-        fields: _fields()
+        fields: fields()
             .succeeded(durationMs: sw.elapsedMilliseconds)
             .addMetadata(<String, dynamic>{
               "materials_processed": processedMaterials,
@@ -166,7 +166,7 @@ class OrderStockService {
         tag: loggerComponent,
         error: e,
         st: stackTrace,
-        fields: _fields()
+        fields: fields()
             .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("message", e.toString())
             .build(),
@@ -178,12 +178,12 @@ class OrderStockService {
   /// 注文キャンセル時の材料を復元（在庫復旧）
   Future<bool> restoreMaterialsForOrder(String orderId, String userId) async {
     final Stopwatch sw = Stopwatch()..start();
-    LogFieldsBuilder _fields() => _buildRestorationFields(orderId: orderId, userId: userId);
+    LogFieldsBuilder fields() => _buildRestorationFields(orderId: orderId, userId: userId);
 
     log.i(
       ServiceInfo.materialRestorationStarted.message,
       tag: loggerComponent,
-      fields: _fields().started().build(),
+      fields: fields().started().build(),
     );
 
     try {
@@ -205,7 +205,7 @@ class OrderStockService {
         log.d(
           ServiceDebug.restorationCompletedSuccessfully.message,
           tag: loggerComponent,
-          fields: _fields()
+          fields: fields()
               .succeeded(durationMs: sw.elapsedMilliseconds)
               .addMetadataEntry("restored_transactions", 0)
               .build(),
@@ -271,7 +271,7 @@ class OrderStockService {
           "materialCount": restoredMaterials.toString(),
         }),
         tag: loggerComponent,
-        fields: _fields()
+        fields: fields()
             .succeeded(durationMs: sw.elapsedMilliseconds)
             .addMetadata(<String, dynamic>{
               "materials_restored": restoredMaterials,
@@ -289,7 +289,7 @@ class OrderStockService {
         tag: loggerComponent,
         error: e,
         st: stackTrace,
-        fields: _fields()
+        fields: fields()
             .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("message", e.toString())
             .build(),
@@ -301,20 +301,16 @@ class OrderStockService {
   LogFieldsBuilder _buildConsumptionFields({
     required String orderId,
     required String userId,
-  }) {
-    return LogFieldsBuilder.operation("inventory.consume_materials")
+  }) => LogFieldsBuilder.operation("inventory.consume_materials")
         .withActor(userId: userId)
         .withResource(type: "order", id: orderId)
         .addMetadata(<String, dynamic>{"order_id": orderId});
-  }
 
   LogFieldsBuilder _buildRestorationFields({
     required String orderId,
     required String userId,
-  }) {
-    return LogFieldsBuilder.operation("inventory.restore_materials")
+  }) => LogFieldsBuilder.operation("inventory.restore_materials")
         .withActor(userId: userId)
         .withResource(type: "order", id: orderId)
         .addMetadata(<String, dynamic>{"order_id": orderId});
-  }
 }

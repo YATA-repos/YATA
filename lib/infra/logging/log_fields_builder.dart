@@ -5,9 +5,7 @@ class LogFieldsBuilder {
   factory LogFieldsBuilder.empty() => LogFieldsBuilder._(<String, dynamic>{});
 
   /// Create a builder for a specific business operation.
-  factory LogFieldsBuilder.operation(String operation) {
-    return LogFieldsBuilder.empty().._setString("operation", operation);
-  }
+  factory LogFieldsBuilder.operation(String operation) => LogFieldsBuilder.empty().._setString("operation", operation);
 
   final Map<String, dynamic> _fields;
   final Map<String, dynamic> _actor = <String, dynamic>{};

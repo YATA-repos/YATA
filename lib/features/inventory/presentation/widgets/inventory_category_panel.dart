@@ -3,8 +3,8 @@ import "package:flutter/material.dart";
 import "../../../../shared/components/category/category_panel.dart";
 import "../../../../shared/components/data_display/status_badge.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
-import "../controllers/inventory_management_controller.dart";
 import "../../models/inventory_model.dart";
+import "../controllers/inventory_management_controller.dart";
 
 /// 在庫カテゴリ一覧を表示するパネル。
 class InventoryCategoryPanel extends StatelessWidget {

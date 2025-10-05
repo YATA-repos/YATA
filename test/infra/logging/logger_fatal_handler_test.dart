@@ -54,9 +54,9 @@ void main() {
 
     test("removing fatal handler prevents invocation", () async {
       int counter = 0;
-      contract.FatalHandler handler = (contract.FatalLogContext _) {
+      FutureOr<void> handler(contract.FatalLogContext _) {
         counter++;
-      };
+      }
       registerFatalHandler(handler);
       removeFatalHandler(handler);
 

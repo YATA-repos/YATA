@@ -1,6 +1,6 @@
 // Removed LoggerComponent mixin; use local tag
-import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
 import "../../../core/contracts/logging/logger.dart" as log_contract;
+import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 

@@ -1,6 +1,7 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../../app/wiring/provider.dart";
+import "../../../../core/contracts/logging/logger.dart";
 import "../../models/auth_state.dart";
 import "../controllers/auth_controller.dart";
 
@@ -18,7 +19,7 @@ final StateNotifierProvider<AuthController, AuthState> authStateNotifierProvider
 final Provider<String?> currentUserIdProvider = Provider<String?>((Ref ref) {
   try {
     final AuthState state = ref.watch(authStateNotifierProvider);
-    final logger = ref.read(loggerProvider);
+    final LoggerContract logger = ref.read(loggerProvider);
 
     // 認証状態のログ記録
     if (state.isAuthenticated && state.userId != null) {
@@ -32,7 +33,7 @@ final Provider<String?> currentUserIdProvider = Provider<String?>((Ref ref) {
 
     return state.userId;
   } catch (error, stackTrace) {
-    final logger = ref.read(loggerProvider);
+    final LoggerContract logger = ref.read(loggerProvider);
     logger.e("ユーザーID取得中にエラーが発生しました", error: error, st: stackTrace, tag: "auth_providers");
     return null;
   }

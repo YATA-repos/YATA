@@ -27,11 +27,8 @@ class LogRecord {
 class FatalLogContext {
   FatalLogContext({
     required this.record,
-    this.error,
+    required this.defaultFlushTimeout, required this.flush, required this.shutdown, this.error,
     this.stackTrace,
-    required this.defaultFlushTimeout,
-    required this.flush,
-    required this.shutdown,
     this.willShutdownAfterHandlers = false,
   });
 

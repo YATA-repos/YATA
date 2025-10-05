@@ -1,8 +1,8 @@
 // Riverpod not required here; DI is handled by provider wiring
 
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
-import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../inventory/models/inventory_model.dart";
 import "../models/order_model.dart";
 

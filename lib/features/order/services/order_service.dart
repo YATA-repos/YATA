@@ -1,8 +1,8 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
-import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/contracts/logging/logger.dart" as log_contract;
+import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/order_dto.dart";

@@ -209,7 +209,6 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
       defaultFlushTimeout: const Duration(milliseconds: 100),
       flush: ({Duration? timeout}) async {},
       shutdown: ({Duration? timeout}) async {},
-      willShutdownAfterHandlers: false,
     );
     for (final contract.FatalHandler handler in List<contract.FatalHandler>.from(_fatalHandlers)) {
       unawaited(Future<void>.microtask(() => handler(context)));

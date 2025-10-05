@@ -1,9 +1,9 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/repository/repository_exception.dart";
 import "../../../core/constants/query_types.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/crud_repository.dart" as repo_contract;
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../shared/utils/order_identifier_generator.dart";
 import "../models/order_model.dart";
 import "../shared/order_status_mapper.dart";

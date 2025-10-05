@@ -680,6 +680,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
           materialOptions: widget.materialOptions,
           initial: widget.initial,
           initialRecipes: widget.initialRecipes,
+          submitLabel: widget.initial == null ? "追加" : "保存",
           onCancel: () => Navigator.of(context).pop(),
           onSubmit: (MenuFormData data) => Navigator.of(context).pop(data),
           headerActions: <Widget>[
@@ -706,10 +707,10 @@ class _MenuFormEditor extends StatefulWidget {
     this.initialRecipes = const <MenuRecipeDetail>[],
     this.headerActions = const <Widget>[],
     this.footerLeading,
-  this.submitLabel = "保存",
-  this.cancelLabel = "キャンセル",
-  this.isBusy = false,
-  this.errorMessage,
+    this.submitLabel = "保存",
+    this.cancelLabel = "キャンセル",
+    this.isBusy = false,
+    this.errorMessage,
   });
 
   final String title;
@@ -1797,8 +1798,7 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FocusTraversalGroup(
+  Widget build(BuildContext context) => FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: Semantics(
         container: true,
@@ -1807,7 +1807,6 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
         child: _buildBody(context),
       ),
     );
-  }
 
   Widget _buildBody(BuildContext context) {
     if (_isLoading) {
@@ -1858,7 +1857,7 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
       ),
     ];
 
-    final Widget? footerLeading = TextButton.icon(
+    final Widget footerLeading = TextButton.icon(
       onPressed: _isSubmitting ? null : _handleDeleteMenu,
       icon: const Icon(Icons.delete_outline),
       style: TextButton.styleFrom(foregroundColor: YataColorTokens.danger),
@@ -1875,7 +1874,6 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
       onCancel: widget.onClose,
       headerActions: headerActions,
       footerLeading: footerLeading,
-      submitLabel: "保存",
       cancelLabel: "閉じる",
       isBusy: _isSubmitting,
       errorMessage: _formErrorMessage,

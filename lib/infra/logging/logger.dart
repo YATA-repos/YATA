@@ -2,6 +2,7 @@ import "dart:async";
 import "dart:collection";
 import "dart:io";
 import "dart:math";
+
 // PlatformDispatcher is available via flutter foundation exports
 import "package:flutter/foundation.dart";
 
@@ -11,8 +12,8 @@ import "context.dart";
 import "fatal_notifier.dart";
 import "formatters.dart";
 import "log_config.dart";
-import "log_fields_builder.dart";
 import "log_event.dart";
+import "log_fields_builder.dart";
 import "log_level.dart";
 import "pii_masker.dart";
 import "sinks.dart";
@@ -67,7 +68,7 @@ class Logger {
     _core.removeFatalHandler(handler);
   void clearFatalHandlers() => _core.clearFatalHandlers();
   contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) {
-    final contract.FatalHandler handler = (contract.FatalLogContext ctx) => notifier.notify(ctx);
+    FutureOr<void> handler(contract.FatalLogContext ctx) => notifier.notify(ctx);
     registerFatalHandler(handler);
     return handler;
   }
@@ -402,7 +403,7 @@ class _LoggerCore {
   }
 
   Future<void> _handleFatal(LogEvent event, _Pending pending) async {
-    final fatalConfig = _configHub.value.fatal;
+    final FatalConfig fatalConfig = _configHub.value.fatal;
     if (_handlingFatal) {
       return;
     }
@@ -436,8 +437,8 @@ class _LoggerCore {
         error: pending.error,
         stackTrace: pending.st,
         defaultFlushTimeout: fatalConfig.flushTimeout,
-        flush: ({Duration? timeout}) => flushFn(timeout: timeout),
-        shutdown: ({Duration? timeout}) => shutdownFn(timeout: timeout),
+        flush: flushFn,
+        shutdown: shutdownFn,
         willShutdownAfterHandlers: fatalConfig.autoShutdown || fatalConfig.exitProcess,
       );
 

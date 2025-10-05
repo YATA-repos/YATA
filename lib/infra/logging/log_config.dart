@@ -54,8 +54,7 @@ class FatalConfig {
     bool? exitProcess,
     int? exitCode,
     Duration? shutdownDelay,
-  }) {
-    return FatalConfig(
+  }) => FatalConfig(
       flushBeforeHandlers: flushBeforeHandlers ?? this.flushBeforeHandlers,
       flushTimeout: flushTimeout ?? this.flushTimeout,
       handlerTimeout: handlerTimeout ?? this.handlerTimeout,
@@ -64,7 +63,6 @@ class FatalConfig {
       exitCode: exitCode ?? this.exitCode,
       shutdownDelay: shutdownDelay ?? this.shutdownDelay,
     );
-  }
 }
 class LogConfig {
   LogConfig({

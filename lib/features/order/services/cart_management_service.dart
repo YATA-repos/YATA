@@ -1,8 +1,8 @@
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/repository/repository_exception.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../menu/models/menu_model.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
@@ -386,7 +386,7 @@ class CartManagementService {
         "updated_at": now.toIso8601String(),
       });
 
-      final Order baseOrder = (updated ?? cart);
+      final Order baseOrder = updated ?? cart;
       baseOrder
         ..totalAmount = 0
         ..notes = null;

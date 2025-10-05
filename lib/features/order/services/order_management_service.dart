@@ -267,12 +267,12 @@ class OrderManagementService {
   /// 注文をキャンセル（在庫復元含む）
   Future<(Order?, bool)> cancelOrder(String orderId, String reason, String userId) async {
     final Stopwatch sw = Stopwatch()..start();
-    LogFieldsBuilder _cancelFields() => _buildCancellationFields(orderId: orderId, userId: userId);
+    LogFieldsBuilder cancelFields() => _buildCancellationFields(orderId: orderId, userId: userId);
 
     log.i(
       "Started order cancellation process",
       tag: loggerComponent,
-      fields: _cancelFields().started().addMetadataEntry("reason", reason).build(),
+      fields: cancelFields().started().addMetadataEntry("reason", reason).build(),
     );
 
     try {
@@ -282,7 +282,7 @@ class OrderManagementService {
         log.e(
           "Order access denied or order not found",
           tag: loggerComponent,
-          fields: _cancelFields()
+          fields: cancelFields()
               .failed(reason: "order_not_found", durationMs: sw.elapsedMilliseconds)
               .build(),
         );
@@ -296,7 +296,7 @@ class OrderManagementService {
         log.w(
           "Order already canceled",
           tag: loggerComponent,
-          fields: _cancelFields().cancelled(reason: "already_cancelled").build(),
+          fields: cancelFields().cancelled(reason: "already_cancelled").build(),
         );
         return (order, false); // 既にキャンセル済み
       }
@@ -305,7 +305,7 @@ class OrderManagementService {
         log.e(
           "Cannot cancel completed order",
           tag: loggerComponent,
-          fields: _cancelFields()
+          fields: cancelFields()
               .failed(reason: "completed_order", durationMs: sw.elapsedMilliseconds)
               .build(),
         );
@@ -337,7 +337,7 @@ class OrderManagementService {
       log.i(
         "Order canceled successfully",
         tag: loggerComponent,
-        fields: _cancelFields()
+        fields: cancelFields()
             .succeeded(durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("notes_updated", order.notes != newNotes)
             .build(),
@@ -352,7 +352,7 @@ class OrderManagementService {
         tag: loggerComponent,
         error: e,
         st: stackTrace,
-        fields: _cancelFields()
+        fields: cancelFields()
             .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
             .addMetadataEntry("message", e.toString())
             .build(),
@@ -365,25 +365,21 @@ class OrderManagementService {
     required String cartId,
     required String userId,
     String? orderId,
-  }) {
-    return LogFieldsBuilder.operation("order.checkout")
+  }) => LogFieldsBuilder.operation("order.checkout")
         .withActor(userId: userId)
         .withResource(type: orderId == null ? "cart" : "order", id: orderId ?? cartId)
         .addMetadata(<String, dynamic>{
           "cart_id": cartId,
           if (orderId != null) "order_id": orderId,
         });
-  }
 
   LogFieldsBuilder _buildCancellationFields({
     required String orderId,
     required String userId,
-  }) {
-    return LogFieldsBuilder.operation("order.cancel")
+  }) => LogFieldsBuilder.operation("order.cancel")
         .withActor(userId: userId)
         .withResource(type: "order", id: orderId)
         .addMetadata(<String, dynamic>{"order_id": orderId});
-  }
 
   /// 注文履歴を取得（ページネーション付き）
   Future<Map<String, dynamic>> getOrderHistory(OrderSearchRequest request, String userId) async {

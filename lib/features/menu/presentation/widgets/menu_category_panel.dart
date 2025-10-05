@@ -42,7 +42,6 @@ class MenuCategoryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CategoryPanel<MenuCategoryViewData>(
-        title: "カテゴリ",
         items: categories.map(_mapToItem).toList(growable: false),
         selectedId: selectedCategoryId,
         onSelect: onCategorySelected,
@@ -50,7 +49,6 @@ class MenuCategoryPanel extends StatelessWidget {
         onEdit: onEditCategory,
         onDelete: onDeleteCategory,
         isLoading: isLoading,
-        emptyMessage: "カテゴリが登録されていません",
       );
 
   CategoryPanelItem<MenuCategoryViewData> _mapToItem(MenuCategoryViewData category) {
