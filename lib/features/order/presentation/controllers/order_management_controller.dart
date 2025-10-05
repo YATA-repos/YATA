@@ -14,6 +14,7 @@ import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../services/cart_service.dart";
 import "../../services/order_service.dart";
+import "../performance/order_management_tracing.dart";
 
 /// 注文管理画面で扱うメニューカテゴリの表示用データ。
 @immutable
@@ -168,7 +169,10 @@ class OrderManagementState {
     this.orderNotes = "",
   }) : categories = List<MenuCategoryViewData>.unmodifiable(categories),
        menuItems = List<MenuItemViewData>.unmodifiable(menuItems),
-       cartItems = List<CartItemViewData>.unmodifiable(cartItems);
+       cartItems = List<CartItemViewData>.unmodifiable(cartItems),
+       cartItemByMenuId = Map<String, CartItemViewData>.unmodifiable(<String, CartItemViewData>{
+         for (final CartItemViewData item in cartItems) item.menuItem.id: item,
+       });
 
   /// デフォルトの初期状態を取得する。
   factory OrderManagementState.initial() => OrderManagementState(
@@ -186,6 +190,9 @@ class OrderManagementState {
 
   /// カート内アイテム。
   final List<CartItemViewData> cartItems;
+
+  /// メニューIDをキーとしたカートアイテムの参照キャッシュ。
+  final Map<String, CartItemViewData> cartItemByMenuId;
 
   /// 選択中の支払い方法。
   final PaymentMethod currentPaymentMethod;
@@ -236,22 +243,46 @@ class OrderManagementState {
   /// カテゴリ・検索条件で絞り込んだメニュー一覧。
   List<MenuItemViewData> get filteredMenuItems {
     final MenuCategoryViewData? category = selectedCategory;
-    final String query = searchQuery.trim().toLowerCase();
+    final String rawQuery = searchQuery.trim();
+    final String normalizedQuery = rawQuery.toLowerCase();
+    int resultCount = 0;
 
-    return menuItems
-        .where((MenuItemViewData item) {
+    final List<MenuItemViewData> result = OrderManagementTracer.traceSync<List<MenuItemViewData>>(
+      "state.filteredMenuItems",
+      () {
+        final Iterable<MenuItemViewData> filtered = menuItems.where((MenuItemViewData item) {
           final bool matchesCategory =
               category == null || category.id == "all" || item.categoryId == category.id;
-          final bool matchesQuery = query.isEmpty || item.name.toLowerCase().contains(query);
+          final bool matchesQuery =
+              normalizedQuery.isEmpty || item.name.toLowerCase().contains(normalizedQuery);
           return matchesCategory && matchesQuery;
-        })
-        .toList(growable: false)
-      ..sort((MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder));
+        });
+        final List<MenuItemViewData> list = List<MenuItemViewData>.unmodifiable(filtered);
+        resultCount = list.length;
+        return list;
+      },
+      startArguments: () => <String, dynamic>{
+        "category": category?.id ?? "all",
+        "queryLength": normalizedQuery.length,
+        "sourceCount": menuItems.length,
+      },
+      finishArguments: () => <String, dynamic>{"resultCount": resultCount},
+      logThreshold: const Duration(milliseconds: 4),
+    );
+
+    OrderManagementTracer.logLazy(
+      () =>
+          "state.filteredMenuItems category=${category?.id ?? "all"} query=\"${rawQuery.replaceAll("\n", " ")}\" result=$resultCount/${menuItems.length}",
+    );
+
+    return result;
   }
 
   /// カート内に指定IDのアイテムが存在するか。
-  bool isInCart(String menuItemId) =>
-      cartItems.any((CartItemViewData item) => item.menuItem.id == menuItemId);
+  bool isInCart(String menuItemId) => cartItemByMenuId.containsKey(menuItemId);
+
+  /// 指定IDのアイテム数量を取得する。
+  int? quantityFor(String menuItemId) => cartItemByMenuId[menuItemId]?.quantity;
 
   /// 小計金額。
   int get subtotal =>
@@ -292,7 +323,7 @@ class OrderManagementState {
     categories: categories ?? this.categories,
     menuItems: menuItems ?? this.menuItems,
     cartItems: cartItems ?? this.cartItems,
-  currentPaymentMethod: currentPaymentMethod ?? this.currentPaymentMethod,
+    currentPaymentMethod: currentPaymentMethod ?? this.currentPaymentMethod,
     selectedCategoryIndex: selectedCategoryIndex ?? this.selectedCategoryIndex,
     searchQuery: searchQuery ?? this.searchQuery,
     orderNumber: orderNumber ?? this.orderNumber,
@@ -339,6 +370,42 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   final Map<String, MenuItemViewData> _menuItemCache = <String, MenuItemViewData>{};
   int _highlightSeq = 0;
 
+  Future<T> _traceAsyncSection<T>(
+    String name,
+    Future<T> Function() action, {
+    TraceArgumentsBuilder? startArguments,
+    TraceArgumentsBuilder? finishArguments,
+    Duration? logThreshold,
+  }) => OrderManagementTracer.traceAsync<T>(
+    "controller.$name",
+    action,
+    startArguments: startArguments,
+    finishArguments: finishArguments,
+    logThreshold: logThreshold,
+  );
+
+  T _traceSyncSection<T>(
+    String name,
+    T Function() action, {
+    TraceArgumentsBuilder? startArguments,
+    TraceArgumentsBuilder? finishArguments,
+    Duration? logThreshold,
+  }) => OrderManagementTracer.traceSync<T>(
+    "controller.$name",
+    action,
+    startArguments: startArguments,
+    finishArguments: finishArguments,
+    logThreshold: logThreshold,
+  );
+
+  void _logPerf(String message) {
+    OrderManagementTracer.logMessage("controller.$message");
+  }
+
+  void _logPerfLazy(LazyLogMessageBuilder builder) {
+    OrderManagementTracer.logLazy(() => "controller.${builder()}");
+  }
+
   void _handleUserChange(String? previousUserId, String? nextUserId) {
     if (previousUserId == nextUserId) {
       return;
@@ -361,36 +428,81 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   }
 
   /// 初期データを読み込む。
-  Future<void> loadInitialData({bool reset = false}) async {
+  Future<void> loadInitialData({
+    bool reset = false,
+  }) async => _traceAsyncSection<void>("loadInitialData", () async {
     if (reset) {
       state = OrderManagementState.initial();
     } else {
       state = state.copyWith(isLoading: true, clearErrorMessage: true);
     }
+
     final String? userId = _ref.read(currentUserIdProvider);
     if (userId == null) {
       state = state.copyWith(isLoading: false, errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
+      _logPerf("loadInitialData.userMissing");
       return;
     }
 
     try {
-      final List<MenuCategory> categoryModels = await _menuService.getMenuCategories();
-      final List<MenuItem> menuItemModels = await _menuService.getMenuItemsByCategory(null);
-      _updateMenuCache(menuItemModels);
+      final List<MenuCategory> categoryModels = await _traceAsyncSection<List<MenuCategory>>(
+        "loadInitialData.getMenuCategories",
+        _menuService.getMenuCategories,
+        startArguments: () => <String, dynamic>{"userId": userId},
+      );
+      final List<MenuItem> menuItemModels = await _traceAsyncSection<List<MenuItem>>(
+        "loadInitialData.getMenuItemsByCategory",
+        () => _menuService.getMenuItemsByCategory(null),
+        startArguments: () => <String, dynamic>{"userId": userId},
+      );
 
-      final List<MenuCategoryViewData> categoryView = _buildCategoryView(categoryModels);
-      final Order? cart = await _cartService.getActiveCart(userId);
+      _traceSyncSection<void>(
+        "loadInitialData.updateMenuCache",
+        () => _updateMenuCache(menuItemModels),
+        startArguments: () => <String, dynamic>{"items": menuItemModels.length},
+        logThreshold: const Duration(milliseconds: 2),
+      );
+
+      late final List<MenuCategoryViewData> categoryView;
+      categoryView = _traceSyncSection<List<MenuCategoryViewData>>(
+        "loadInitialData.buildCategoryView",
+        () => _buildCategoryView(categoryModels),
+        startArguments: () => <String, dynamic>{"categories": categoryModels.length},
+        logThreshold: const Duration(milliseconds: 2),
+      );
+
+      final Order? cart = await _traceAsyncSection<Order?>(
+        "loadInitialData.getActiveCart",
+        () => _cartService.getActiveCart(userId),
+        startArguments: () => <String, dynamic>{"userId": userId},
+      );
+
       String? cartId = cart?.id;
       _CartSnapshot snapshot = const _CartSnapshot(items: <CartItemViewData>[]);
       if (cartId != null) {
-        snapshot = await _loadCartSnapshot(cartId, userId);
+        snapshot = await _traceAsyncSection<_CartSnapshot>(
+          "loadInitialData.loadCartSnapshot",
+          () => _loadCartSnapshot(cartId!, userId),
+          startArguments: () => <String, dynamic>{"cartId": cartId},
+        );
         cartId = snapshot.cartId ?? cartId;
       }
 
-      final List<MenuItemViewData> synchronisedMenu = _menuItemCache.values.toList()
-        ..sort(
-          (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
-        );
+      int menuCount = 0;
+      final List<MenuItemViewData> synchronisedMenu = _traceSyncSection<List<MenuItemViewData>>(
+        "loadInitialData.synchroniseMenu",
+        () {
+          final List<MenuItemViewData> list = _menuItemCache.values.toList()
+            ..sort(
+              (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
+            );
+          menuCount = list.length;
+          return list;
+        },
+        startArguments: () => <String, dynamic>{"cacheSize": _menuItemCache.length},
+        finishArguments: () => <String, dynamic>{"menuCount": menuCount},
+        logThreshold: const Duration(milliseconds: 2),
+      );
 
       final int safeIndex = categoryView.isEmpty
           ? 0
@@ -410,11 +522,17 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         isLoading: false,
         clearErrorMessage: true,
       );
+
+      _logPerfLazy(
+        () =>
+            "loadInitialData.completed categories=${categoryView.length} menu=${synchronisedMenu.length} cartItems=${snapshot.items.length}",
+      );
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
       state = state.copyWith(isLoading: false, errorMessage: message);
+      _logPerfLazy(() => "loadInitialData.error message=$message");
     }
-  }
+  }, startArguments: () => <String, dynamic>{"reset": reset});
 
   /// データを再読み込みする。
   void refresh() {
@@ -436,56 +554,90 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
   /// カテゴリを選択する。
   void selectCategory(int index) {
-    if (index == state.selectedCategoryIndex) {
-      return;
-    }
-    state = state.copyWith(selectedCategoryIndex: index, clearErrorMessage: true);
+    final int previousIndex = state.selectedCategoryIndex;
+    _traceSyncSection<void>(
+      "selectCategory",
+      () {
+        if (index == previousIndex) {
+          _logPerfLazy(() => "selectCategory.skip index=$index");
+          return;
+        }
+        state = state.copyWith(selectedCategoryIndex: index, clearErrorMessage: true);
+      },
+      startArguments: () => <String, dynamic>{"from": previousIndex, "to": index},
+      finishArguments: () => <String, dynamic>{
+        "changed": previousIndex != state.selectedCategoryIndex,
+      },
+      logThreshold: const Duration(milliseconds: 1),
+    );
   }
 
   /// 検索キーワードを更新する。
   void updateSearchQuery(String query) {
-    if (query == state.searchQuery) {
-      return;
-    }
-    state = state.copyWith(searchQuery: query, clearErrorMessage: true);
+    final String previous = state.searchQuery;
+    _traceSyncSection<void>(
+      "updateSearchQuery",
+      () {
+        if (query == previous) {
+          _logPerfLazy(() => "updateSearchQuery.skip length=${query.length}");
+          return;
+        }
+        state = state.copyWith(searchQuery: query, clearErrorMessage: true);
+      },
+      startArguments: () => <String, dynamic>{
+        "previousLength": previous.length,
+        "nextLength": query.length,
+      },
+      finishArguments: () => <String, dynamic>{"changed": previous != state.searchQuery},
+      logThreshold: const Duration(milliseconds: 1),
+    );
   }
 
   /// メニューをカートへ追加する。
   void addMenuItem(String menuItemId) => unawaited(_addMenuItem(menuItemId));
 
   Future<void> _addMenuItem(String menuItemId) async {
-    if (state.isCheckoutInProgress) {
-      return;
-    }
-    final String? userId = _ensureUserId();
-    if (userId == null) {
-      return;
-    }
+    await _traceAsyncSection<void>("addMenuItem", () async {
+      if (state.isCheckoutInProgress) {
+        _logPerfLazy(() => "addMenuItem.skip checkoutInProgress item=$menuItemId");
+        return;
+      }
+      final String? userId = _ensureUserId();
+      if (userId == null) {
+        return;
+      }
 
-    final MenuItemViewData? menuItem = _menuItemCache[menuItemId] ?? _findMenuItem(menuItemId);
-    if (menuItem == null) {
-      state = state.copyWith(errorMessage: "選択したメニューが見つかりませんでした。");
-      return;
-    }
+      final MenuItemViewData? menuItem = _menuItemCache[menuItemId] ?? _findMenuItem(menuItemId);
+      if (menuItem == null) {
+        state = state.copyWith(errorMessage: "選択したメニューが見つかりませんでした。");
+        return;
+      }
 
-    final String? cartId = await _ensureCart(userId);
-    if (cartId == null) {
-      return;
-    }
+      final String? cartId = await _ensureCart(userId);
+      if (cartId == null) {
+        return;
+      }
 
-    try {
-      state = state.copyWith(clearErrorMessage: true);
-      await _cartService.addItemToCart(
-        cartId,
-        CartItemRequest(menuItemId: menuItemId, quantity: 1),
-        userId,
-      );
-      await _refreshCart(cartId, userId);
-      _triggerHighlight(menuItemId);
-    } catch (error) {
-      final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(errorMessage: message);
-    }
+      try {
+        state = state.copyWith(clearErrorMessage: true);
+        await _traceAsyncSection<void>(
+          "addMenuItem.addItemToCart",
+          () => _cartService.addItemToCart(
+            cartId,
+            CartItemRequest(menuItemId: menuItemId, quantity: 1),
+            userId,
+          ),
+          startArguments: () => <String, dynamic>{"cartId": cartId, "menuItemId": menuItemId},
+          logThreshold: const Duration(milliseconds: 4),
+        );
+        await _refreshCart(cartId, userId);
+        _triggerHighlight(menuItemId);
+      } catch (error) {
+        final String message = ErrorHandler.instance.handleError(error);
+        state = state.copyWith(errorMessage: message);
+        _logPerfLazy(() => "addMenuItem.error item=$menuItemId message=$message");
+      }
+    }, startArguments: () => <String, dynamic>{"menuItemId": menuItemId});
   }
 
   /// カート内アイテムの数量を更新する。
@@ -493,101 +645,122 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       unawaited(_updateItemQuantity(menuItemId, quantity));
 
   Future<void> _updateItemQuantity(String menuItemId, int quantity) async {
-    if (state.isCheckoutInProgress) {
-      return;
-    }
-    final String? userId = _ensureUserId();
-    if (userId == null) {
-      return;
-    }
+    await _traceAsyncSection<void>(
+      "updateItemQuantity",
+      () async {
+        if (state.isCheckoutInProgress) {
+          _logPerfLazy(
+            () => "updateItemQuantity.skip checkoutInProgress item=$menuItemId quantity=$quantity",
+          );
+          return;
+        }
+        final String? userId = _ensureUserId();
+        if (userId == null) {
+          return;
+        }
 
-    final String? cartId = state.cartId ?? await _ensureCart(userId);
-    if (cartId == null) {
-      return;
-    }
+        final String? cartId = state.cartId ?? await _ensureCart(userId);
+        if (cartId == null) {
+          return;
+        }
 
-    CartItemViewData? target;
-    String? orderItemId;
-    for (final CartItemViewData item in state.cartItems) {
-      if (item.menuItem.id == menuItemId) {
-        target = item;
-        orderItemId = item.orderItemId;
-        break;
-      }
-    }
+        final CartItemViewData? target = state.cartItemByMenuId[menuItemId];
+        final String? orderItemId = target?.orderItemId;
 
-    if (target == null || orderItemId == null) {
-      if (quantity > 0) {
-        await _addMenuItem(menuItemId);
-      }
-      return;
-    }
+        if (target == null || orderItemId == null) {
+          if (quantity > 0) {
+            await _addMenuItem(menuItemId);
+          }
+          return;
+        }
 
-    try {
-      state = state.copyWith(clearErrorMessage: true);
-      if (quantity <= 0) {
-        await _cartService.removeItemFromCart(cartId, orderItemId, userId);
-      } else {
-        await _cartService.updateCartItemQuantity(cartId, orderItemId, quantity, userId);
-      }
-      await _refreshCart(cartId, userId);
-      if (quantity > 0) {
-        _triggerHighlight(menuItemId);
-      }
-    } catch (error) {
-      final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(errorMessage: message);
-    }
+        try {
+          state = state.copyWith(clearErrorMessage: true);
+          if (quantity <= 0) {
+            await _traceAsyncSection<void>(
+              "updateItemQuantity.removeItemFromCart",
+              () => _cartService.removeItemFromCart(cartId, orderItemId, userId),
+              startArguments: () => <String, dynamic>{"cartId": cartId, "orderItemId": orderItemId},
+              logThreshold: const Duration(milliseconds: 4),
+            );
+          } else {
+            await _traceAsyncSection<void>(
+              "updateItemQuantity.updateCartItemQuantity",
+              () => _cartService.updateCartItemQuantity(cartId, orderItemId, quantity, userId),
+              startArguments: () => <String, dynamic>{
+                "cartId": cartId,
+                "orderItemId": orderItemId,
+                "quantity": quantity,
+              },
+              logThreshold: const Duration(milliseconds: 4),
+            );
+          }
+          await _refreshCart(cartId, userId);
+          if (quantity > 0) {
+            _triggerHighlight(menuItemId);
+          }
+        } catch (error) {
+          final String message = ErrorHandler.instance.handleError(error);
+          state = state.copyWith(errorMessage: message);
+          _logPerfLazy(
+            () => "updateItemQuantity.error item=$menuItemId quantity=$quantity message=$message",
+          );
+        }
+      },
+      startArguments: () => <String, dynamic>{"menuItemId": menuItemId, "quantity": quantity},
+    );
   }
 
   /// アイテムをカートから削除する。
   void removeItem(String menuItemId) => unawaited(_removeItem(menuItemId));
 
   Future<void> _removeItem(String menuItemId) async {
-    if (state.isCheckoutInProgress) {
-      return;
-    }
-    final String? userId = _ensureUserId();
-    if (userId == null) {
-      return;
-    }
-
-    final String? cartId = state.cartId;
-    if (cartId == null) {
-      return;
-    }
-
-    CartItemViewData? target;
-    String? orderItemId;
-    for (final CartItemViewData item in state.cartItems) {
-      if (item.menuItem.id == menuItemId) {
-        target = item;
-        orderItemId = item.orderItemId;
-        break;
+    await _traceAsyncSection<void>("removeItem", () async {
+      if (state.isCheckoutInProgress) {
+        _logPerfLazy(() => "removeItem.skip checkoutInProgress item=$menuItemId");
+        return;
       }
-    }
-
-    if (target == null || orderItemId == null) {
-      state = state.copyWith(
-        cartItems: state.cartItems
-            .where((CartItemViewData item) => item.menuItem.id != menuItemId)
-            .toList(growable: false),
-        clearHighlightedItemId: state.highlightedItemId == menuItemId,
-      );
-      return;
-    }
-
-    try {
-      state = state.copyWith(clearErrorMessage: true);
-      await _cartService.removeItemFromCart(cartId, orderItemId, userId);
-      await _refreshCart(cartId, userId);
-      if (state.highlightedItemId == menuItemId) {
-        state = state.copyWith(clearHighlightedItemId: true);
+      final String? userId = _ensureUserId();
+      if (userId == null) {
+        return;
       }
-    } catch (error) {
-      final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(errorMessage: message);
-    }
+
+      final String? cartId = state.cartId;
+      if (cartId == null) {
+        return;
+      }
+
+      final CartItemViewData? target = state.cartItemByMenuId[menuItemId];
+      final String? orderItemId = target?.orderItemId;
+
+      if (target == null || orderItemId == null) {
+        state = state.copyWith(
+          cartItems: state.cartItems
+              .where((CartItemViewData item) => item.menuItem.id != menuItemId)
+              .toList(growable: false),
+          clearHighlightedItemId: state.highlightedItemId == menuItemId,
+        );
+        return;
+      }
+
+      try {
+        state = state.copyWith(clearErrorMessage: true);
+        await _traceAsyncSection<void>(
+          "removeItem.cartService",
+          () => _cartService.removeItemFromCart(cartId, orderItemId, userId),
+          startArguments: () => <String, dynamic>{"cartId": cartId, "orderItemId": orderItemId},
+          logThreshold: const Duration(milliseconds: 4),
+        );
+        await _refreshCart(cartId, userId);
+        if (state.highlightedItemId == menuItemId) {
+          state = state.copyWith(clearHighlightedItemId: true);
+        }
+      } catch (error) {
+        final String message = ErrorHandler.instance.handleError(error);
+        state = state.copyWith(errorMessage: message);
+        _logPerfLazy(() => "removeItem.error item=$menuItemId message=$message");
+      }
+    }, startArguments: () => <String, dynamic>{"menuItemId": menuItemId});
   }
 
   /// 支払い方法を更新する。
@@ -619,10 +792,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       await _cartService.updateCartPaymentMethod(cartId, method, userId);
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(
-        currentPaymentMethod: previous,
-        errorMessage: message,
-      );
+      state = state.copyWith(currentPaymentMethod: previous, errorMessage: message);
     }
   }
 
@@ -638,9 +808,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
     final String? userId = _ensureUserId();
     if (userId == null) {
-      return CheckoutActionResult.authenticationFailed(
-        message: "ユーザー情報を取得できませんでした。再度ログインしてください。",
-      );
+      return CheckoutActionResult.authenticationFailed(message: "ユーザー情報を取得できませんでした。再度ログインしてください。");
     }
 
     state = state.copyWith(isCheckoutInProgress: true, clearErrorMessage: true);
@@ -659,25 +827,18 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         notes: state.orderNotes.isEmpty ? null : state.orderNotes,
       );
 
-      final OrderCheckoutResult result =
-          await _orderService.checkoutCart(cartId, request, userId);
+      final OrderCheckoutResult result = await _orderService.checkoutCart(cartId, request, userId);
 
       if (!result.isSuccess || result.isStockInsufficient) {
         const String message = "在庫が不足している商品があります。数量を調整して再度お試しください。";
-        state = state.copyWith(
-          isCheckoutInProgress: false,
-          errorMessage: message,
-        );
+        state = state.copyWith(isCheckoutInProgress: false, errorMessage: message);
         return CheckoutActionResult.stockInsufficient(result.order, message: message);
       }
 
       final Order? newCart = result.newCart;
       if (newCart == null) {
         const String message = "新しいカートの初期化に失敗しました。";
-        state = state.copyWith(
-          isCheckoutInProgress: false,
-          errorMessage: message,
-        );
+        state = state.copyWith(isCheckoutInProgress: false, errorMessage: message);
         return CheckoutActionResult.failure(order: result.order, message: message);
       }
 
@@ -693,15 +854,12 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         orderNotes: "",
       );
 
-  await loadInitialData(reset: true);
+      await loadInitialData(reset: true);
 
       return CheckoutActionResult.success(result.order);
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(
-        isCheckoutInProgress: false,
-        errorMessage: message,
-      );
+      state = state.copyWith(isCheckoutInProgress: false, errorMessage: message);
       return CheckoutActionResult.failure(message: message);
     }
   }
@@ -745,10 +903,23 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
   /// 注文メモを更新する。
   void updateOrderNotes(String notes) {
-    if (notes == state.orderNotes) {
-      return;
-    }
-    state = state.copyWith(orderNotes: notes, clearErrorMessage: true);
+    final String previous = state.orderNotes;
+    _traceSyncSection<void>(
+      "updateOrderNotes",
+      () {
+        if (notes == previous) {
+          _logPerfLazy(() => "updateOrderNotes.skip length=${notes.length}");
+          return;
+        }
+        state = state.copyWith(orderNotes: notes, clearErrorMessage: true);
+      },
+      startArguments: () => <String, dynamic>{
+        "previousLength": previous.length,
+        "nextLength": notes.length,
+      },
+      finishArguments: () => <String, dynamic>{"changed": previous != state.orderNotes},
+      logThreshold: const Duration(milliseconds: 1),
+    );
   }
 
   MenuItemViewData? _findMenuItem(String menuItemId) {
@@ -840,62 +1011,103 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     );
   }
 
-  Future<_CartSnapshot> _loadCartSnapshot(String cartId, String userId) async {
-    try {
-      final Map<String, dynamic>? data = await _orderService.getOrderWithItems(cartId, userId);
-      if (data == null) {
-        return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
-      }
-
-      final Order order = data["order"] as Order;
-      final List<Map<String, dynamic>> rawItems = (data["items"] as List<dynamic>)
-          .cast<Map<String, dynamic>>();
-
-      final List<CartItemViewData> items = <CartItemViewData>[];
-      for (final Map<String, dynamic> entry in rawItems) {
-        final OrderItem orderItem = entry["order_item"] as OrderItem;
-        MenuItemViewData? menuView = _menuItemCache[orderItem.menuItemId];
-        final MenuItem? menuItemModel = entry["menu_item"] as MenuItem?;
-        if (menuView == null && menuItemModel != null) {
-          final MenuItemViewData? mapped = _mapMenuItem(menuItemModel);
-          if (mapped != null) {
-            _menuItemCache[mapped.id] = mapped;
-            menuView = mapped;
+  Future<_CartSnapshot> _loadCartSnapshot(String cartId, String userId) async =>
+      _traceAsyncSection<_CartSnapshot>("loadCartSnapshot", () async {
+        try {
+          final Map<String, dynamic>? data = await _traceAsyncSection<Map<String, dynamic>?>(
+            "loadCartSnapshot.getOrderWithItems",
+            () => _orderService.getOrderWithItems(cartId, userId),
+            startArguments: () => <String, dynamic>{"cartId": cartId},
+          );
+          if (data == null) {
+            return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
           }
-        }
-        if (menuView == null) {
-          continue;
-        }
-        items.add(
-          CartItemViewData(
-            menuItem: menuView,
-            quantity: orderItem.quantity,
-            orderItemId: orderItem.id,
-            selectedOptions: orderItem.selectedOptions,
-            notes: orderItem.specialRequest,
-          ),
-        );
-      }
 
-      return _CartSnapshot(
-        items: items,
-        orderNumber: order.orderNumber,
-        discountAmount: order.discountAmount,
-        paymentMethod: order.paymentMethod,
-        cartId: order.id ?? cartId,
-        orderNotes: order.notes,
-      );
-    } catch (error) {
-      final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(errorMessage: message);
-      return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
-    }
-  }
+          final Order order = data["order"] as Order;
+          final List<Map<String, dynamic>> rawItems = (data["items"] as List<dynamic>)
+              .cast<Map<String, dynamic>>();
 
-  Future<void> _refreshCart(String cartId, String userId) async {
-    final _CartSnapshot snapshot = await _loadCartSnapshot(cartId, userId);
-    final List<MenuItemViewData> menuView = _menuItemCache.values.toList()
-      ..sort((MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder));
+          int mappedCount = 0;
+          final List<CartItemViewData> items = _traceSyncSection<List<CartItemViewData>>(
+            "loadCartSnapshot.mapItems",
+            () {
+              final List<CartItemViewData> list = <CartItemViewData>[];
+              for (final Map<String, dynamic> entry in rawItems) {
+                final OrderItem orderItem = entry["order_item"] as OrderItem;
+                MenuItemViewData? menuView = _menuItemCache[orderItem.menuItemId];
+                final MenuItem? menuItemModel = entry["menu_item"] as MenuItem?;
+                if (menuView == null && menuItemModel != null) {
+                  final MenuItemViewData? mapped = _mapMenuItem(menuItemModel);
+                  if (mapped != null) {
+                    _menuItemCache[mapped.id] = mapped;
+                    menuView = mapped;
+                  }
+                }
+                if (menuView == null) {
+                  continue;
+                }
+                mappedCount++;
+                list.add(
+                  CartItemViewData(
+                    menuItem: menuView,
+                    quantity: orderItem.quantity,
+                    orderItemId: orderItem.id,
+                    selectedOptions: orderItem.selectedOptions,
+                    notes: orderItem.specialRequest,
+                  ),
+                );
+              }
+              return list;
+            },
+            startArguments: () => <String, dynamic>{"rawItems": rawItems.length},
+            finishArguments: () => <String, dynamic>{"mapped": mappedCount},
+            logThreshold: const Duration(milliseconds: 2),
+          );
+
+          _logPerfLazy(
+            () => "loadCartSnapshot.completed cartId=${order.id ?? cartId} items=${items.length}",
+          );
+
+          return _CartSnapshot(
+            items: items,
+            orderNumber: order.orderNumber,
+            discountAmount: order.discountAmount,
+            paymentMethod: order.paymentMethod,
+            cartId: order.id ?? cartId,
+            orderNotes: order.notes,
+          );
+        } catch (error) {
+          final String message = ErrorHandler.instance.handleError(error);
+          state = state.copyWith(errorMessage: message);
+          _logPerfLazy(() => "loadCartSnapshot.error cartId=$cartId message=$message");
+          return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
+        }
+      }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
+
+  Future<void> _refreshCart(
+    String cartId,
+    String userId,
+  ) async => _traceAsyncSection<void>("refreshCart", () async {
+    final _CartSnapshot snapshot = await _traceAsyncSection<_CartSnapshot>(
+      "refreshCart.loadCartSnapshot",
+      () => _loadCartSnapshot(cartId, userId),
+      startArguments: () => <String, dynamic>{"cartId": cartId},
+    );
+    int menuCount = 0;
+    final List<MenuItemViewData> menuView = _traceSyncSection<List<MenuItemViewData>>(
+      "refreshCart.sortMenu",
+      () {
+        final List<MenuItemViewData> list = _menuItemCache.values.toList()
+          ..sort(
+            (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
+          );
+        menuCount = list.length;
+        return list;
+      },
+      startArguments: () => <String, dynamic>{"cacheSize": _menuItemCache.length},
+      finishArguments: () => <String, dynamic>{"menuCount": menuCount},
+      logThreshold: const Duration(milliseconds: 2),
+    );
 
     state = state.copyWith(
       cartItems: snapshot.items,
@@ -907,12 +1119,17 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       orderNotes: snapshot.orderNotes ?? state.orderNotes,
       clearErrorMessage: true,
     );
-  }
+
+    _logPerfLazy(
+      () =>
+          "refreshCart.completed cartId=${snapshot.cartId ?? cartId} items=${snapshot.items.length} menu=$menuCount",
+    );
+  }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。
 final StateNotifierProvider<OrderManagementController, OrderManagementState>
-    orderManagementControllerProvider =
+orderManagementControllerProvider =
     StateNotifierProvider<OrderManagementController, OrderManagementState>(
       (Ref ref) => OrderManagementController(
         ref: ref,
@@ -979,17 +1196,11 @@ enum CheckoutActionStatus {
 
 /// 会計アクションの結果情報。
 class CheckoutActionResult {
-  const CheckoutActionResult._({
-    required this.status,
-    this.order,
-    this.message,
-  });
+  const CheckoutActionResult._({required this.status, this.order, this.message});
 
   /// 成功結果を生成する。
-  factory CheckoutActionResult.success(Order order) => CheckoutActionResult._(
-        status: CheckoutActionStatus.success,
-        order: order,
-      );
+  factory CheckoutActionResult.success(Order order) =>
+      CheckoutActionResult._(status: CheckoutActionStatus.success, order: order);
 
   /// 在庫不足による失敗結果を生成する。
   factory CheckoutActionResult.stockInsufficient(Order order, {String? message}) =>
@@ -1000,31 +1211,20 @@ class CheckoutActionResult {
       );
 
   /// カートが空の場合の結果を生成する。
-  factory CheckoutActionResult.emptyCart({String? message}) => CheckoutActionResult._(
-        status: CheckoutActionStatus.emptyCart,
-        message: message,
-      );
+  factory CheckoutActionResult.emptyCart({String? message}) =>
+      CheckoutActionResult._(status: CheckoutActionStatus.emptyCart, message: message);
 
   /// 認証失敗時の結果を生成する。
   factory CheckoutActionResult.authenticationFailed({String? message}) =>
-      CheckoutActionResult._(
-        status: CheckoutActionStatus.authenticationFailed,
-        message: message,
-      );
+      CheckoutActionResult._(status: CheckoutActionStatus.authenticationFailed, message: message);
 
   /// カート取得失敗時の結果を生成する。
-  factory CheckoutActionResult.missingCart({String? message}) => CheckoutActionResult._(
-        status: CheckoutActionStatus.missingCart,
-        message: message,
-      );
+  factory CheckoutActionResult.missingCart({String? message}) =>
+      CheckoutActionResult._(status: CheckoutActionStatus.missingCart, message: message);
 
   /// その他のエラーの場合の結果を生成する。
   factory CheckoutActionResult.failure({String? message, Order? order}) =>
-      CheckoutActionResult._(
-        status: CheckoutActionStatus.failure,
-        order: order,
-        message: message,
-      );
+      CheckoutActionResult._(status: CheckoutActionStatus.failure, order: order, message: message);
 
   /// 結果状態。
   final CheckoutActionStatus status;

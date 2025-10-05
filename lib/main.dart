@@ -7,6 +7,7 @@ import "core/validation/env_validator.dart";
 import "infra/logging/log_runtime_config.dart";
 import "infra/logging/logger.dart";
 import "infra/supabase/supabase_client.dart";
+import "features/order/presentation/performance/order_management_tracing.dart";
 
 void main() async {
   // flutter初期化
@@ -19,6 +20,7 @@ void main() async {
     // 統合環境変数管理システムで初期化
     await EnvValidator.initialize();
     applyLogRuntimeConfig();
+    OrderManagementTracer.configureFromEnvironment();
 
     i("環境変数をロードしました: ${EnvValidator.env.keys.join(", ")}", tag: "main");
 

@@ -78,6 +78,7 @@ class EnvValidator {
     "LOG_MAX_DISK_MB",
     "LOG_RETENTION_DAYS",
     "LOG_BACKPRESSURE",
+    "ORDER_MANAGEMENT_PERF_TRACING",
   ];
 
   static Map<String, String> _cachedEnv = _initializeCachedEnv();
@@ -222,6 +223,15 @@ class EnvValidator {
           warnings.add("LOG_BACKPRESSUREは ${validPolicies.join(', ')} のいずれかである必要があります: $value");
         }
         break;
+
+      case "ORDER_MANAGEMENT_PERF_TRACING":
+        if (value.toLowerCase() != "true" &&
+            value.toLowerCase() != "false" &&
+            value != "1" &&
+            value != "0") {
+          warnings.add("ORDER_MANAGEMENT_PERF_TRACING は true/false (または 1/0) で指定してください: $value");
+        }
+        break;
     }
   }
 
@@ -239,7 +249,7 @@ class EnvValidator {
     if (kIsWeb) {
       info.add("🌐 プラットフォーム: Web");
       // Web特有のチェック
-  final String? devUrl = _cachedEnv["SUPABASE_OAUTH_CALLBACK_URL_DEV"];
+      final String? devUrl = _cachedEnv["SUPABASE_OAUTH_CALLBACK_URL_DEV"];
       if (devUrl != null && !devUrl.startsWith("http://localhost:")) {
         warnings.add("Web開発環境では localhost のコールバックURLが推奨されます");
       }
@@ -251,7 +261,7 @@ class EnvValidator {
     }
 
     // 本番環境の準備状況
-  final String? prodUrl = _cachedEnv["SUPABASE_OAUTH_CALLBACK_URL_PROD"];
+    final String? prodUrl = _cachedEnv["SUPABASE_OAUTH_CALLBACK_URL_PROD"];
     if (prodUrl == null || prodUrl == "https://yourdomain.com") {
       warnings.add("本番環境の準備が完了していません（コールバックURL未設定）");
     } else {
@@ -323,19 +333,14 @@ class EnvValidator {
     try {
       await dotenv.load();
       fileEnv = Map<String, String>.from(dotenv.env);
-      _log(
-        ".envファイルから${fileEnv.length}個の環境変数を読み込みました",
-      );
+      _log(".envファイルから${fileEnv.length}個の環境変数を読み込みました");
     } on FlutterError catch (error, stackTrace) {
       _log(".envファイルの読み込みに失敗しました", error, stackTrace);
       // Flutterアセットとしての読み込みに失敗した場合は、直接ファイルからの読み込みを試みる
       fileEnv = loadFromFile();
     }
 
-    final Map<String, String> mergedEnv = mergeEnvironments(
-      fileEnv,
-      systemEnv: systemEnv,
-    );
+    final Map<String, String> mergedEnv = mergeEnvironments(fileEnv, systemEnv: systemEnv);
 
     _cachedEnv = Map<String, String>.from(mergedEnv);
     _fileFallbackAttempted = true;
@@ -448,6 +453,10 @@ class EnvValidator {
   /// ログバックプレッシャーポリシー
   static String get logBackpressure => getEnv("LOG_BACKPRESSURE", defaultValue: "drop-oldest");
 
+  /// 注文管理トレーシングの有効状態
+  static bool get orderManagementPerfTracing =>
+      getBoolEnv("ORDER_MANAGEMENT_PERF_TRACING", defaultValue: false);
+
   // =================================================================
   // 代替環境ローダー機能（DotEnvLoader統合）
   // =================================================================
@@ -529,11 +538,7 @@ class EnvValidator {
     try {
       return Map<String, String>.from(Platform.environment);
     } on UnsupportedError catch (error, stackTrace) {
-      _log(
-        "システム環境変数へのアクセスがサポートされていないプラットフォームです",
-        error,
-        stackTrace,
-      );
+      _log("システム環境変数へのアクセスがサポートされていないプラットフォームです", error, stackTrace);
       return <String, String>{};
     }
   }
