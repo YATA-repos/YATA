@@ -124,19 +124,6 @@ Definitions to suppress Markdown warnings
   3. 保存処理とテストを更新し、登録・編集フローでレシピ依存情報が正しく扱われることを確認する。
 - **Description**: 現在のモーダルでは材料依存を設定できず、メニューと在庫の紐付けが管理できない課題を解消する。
 
-### [Enhancement] 操作カラムを販売状態トグルへ整理する
-- **ID**: Menu-Enhancement-7
-- **Priority**: P1
-- **Size**: M
-- **Area**: Menu
-- **Dependencies**: Menu-Enhancement-5
-- **Goal**: テーブルの"操作"カラムでは販売停止／販売トグルのみをラジオボタンで提供し、その他操作は詳細モーダルで編集できる。
-- **Steps**:
-  1. 現行の操作カラムと詳細編集導線を棚卸しし、モーダル移行後の権限・バリデーション要件を整理する。
-  2. 操作カラムを販売状態トグルへ置き換え、ラジオボタンで状態切替できるようUIと処理を実装する。
-  3. 詳細モーダルにその他の編集項目を移管し、テーブル操作後の同期処理を確認する。
-- **Description**: 操作カラムに多数のボタンが並び視認性が低いため、販売状態のみ即時切替可能とし、詳細編集はモーダルへ集約する。
-
 ### [Enhancement] カテゴリペインの区切りスタイルを再設計する
 - **ID**: Menu-Enhancement-8
 - **Priority**: P2
@@ -175,32 +162,6 @@ Definitions to suppress Markdown warnings
   2. Realtime イベントを StateNotifier へ伝搬させる共通ハンドリング（デバウンスやエラー処理を含む）を実装する。
   3. 対象ページでの UI 反映と回帰テスト、運用ドキュメントの更新を行う。
 - **Description**: 端末間でデータが乖離しないよう Realtime を段階的に導入し、周期更新と組み合わせて鮮度を高める。
-
-### [Documentation] menuとrecipeの依存関係を整理する
-- **ID**: Documentation-Documentation-9
-- **Priority**: P2
-- **Size**: M
-- **Area**: Documentation
-- **Dependencies**: None
-- **Goal**: menuとrecipeの依存関係と設計方針が`docs/`配下に整理され、開発チームで共有できる。
-- **Steps**:
-  1. 現在のデータモデルとコード実装を調査する。
-  2. 依存関係上の課題と改善案を整理する。
-  3. 最終的な設計指針と影響範囲をドキュメント化する。
-- **Description**: menuが材料依存を持つ必要があるか判断できておらず、データモデリングの整理が必要。調査と指針策定を行う。
-
-### [Documentation] リファレンス系ドキュメントを拡充する
-- **ID**: Documentation-Documentation-10
-- **Priority**: P2
-- **Size**: L
-- **Area**: Documentation
-- **Dependencies**: None
-- **Goal**: 主要機能ごとのリファレンス／ガイド文書が追加され、開発と運用で参照できる。
-- **Steps**:
-  1. 不足しているリファレンス・ガイドの範囲を洗い出す。
-  2. 優先度の高い領域からドキュメント原稿を作成する。
-  3. レビューを経て`docs/`配下へ公開する。
-- **Description**: リファレンスやガイド文書が不足しており、知識共有が難しい。必要なドキュメントを整理し追加する。
 
 ### [Bugfix] ログのファイル書き込みが失敗する問題を修正
 - **ID**: Core-Bugfix-11
