@@ -59,3 +59,6 @@ _reports/
 
 # dotenv
 .env
+
+# logging
+_logs/
