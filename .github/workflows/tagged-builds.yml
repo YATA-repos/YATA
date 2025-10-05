@@ -14,8 +14,8 @@ jobs:
         include:
           - os: ubuntu-latest
             build-target: linux
-            artifact-path: build/linux/x64/release/bundle
-            artifact-name: yata-linux-bundle
+            artifact-path: build/linux/x64/release/appimage/YATA-${{ github.ref_name }}.AppImage
+            artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
             artifact-path: build/windows/x64/runner/Release
@@ -114,6 +114,65 @@ jobs:
 
       - name: Build release bundle
         run: flutter build ${{ matrix.build-target }} --release
+
+      - name: Package Linux AppImage
+        if: matrix.build-target == 'linux'
+        run: |
+          set -euo pipefail
+
+          BUNDLE_DIR="build/linux/x64/release/bundle"
+          APPDIR="build/linux/x64/release/AppDir"
+          APPIMAGE_DIR="build/linux/x64/release/appimage"
+
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR/usr/bin"
+          cp -a "$BUNDLE_DIR/." "$APPDIR/usr/bin"
+
+          cat <<'EOF' > "$APPDIR/AppRun"
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          export LD_LIBRARY_PATH="$HERE/usr/bin/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          cd "$HERE/usr/bin"
+          exec ./yata "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+
+          cat <<'DESKTOP' > "$APPDIR/yata.desktop"
+          [Desktop Entry]
+          Type=Application
+          Name=YATA
+          Comment=Inventory and order management system for food stalls
+          Exec=yata
+          Icon=yata
+          Categories=Office;Utility;
+          StartupNotify=true
+          DESKTOP
+
+          install -Dm644 assets/icon/icon.png "$APPDIR/yata.png"
+          install -Dm644 "$APPDIR/yata.desktop" "$APPDIR/usr/share/applications/yata.desktop"
+          install -Dm644 assets/icon/icon.png "$APPDIR/usr/share/icons/hicolor/512x512/apps/yata.png"
+
+          wget -O appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+
+          mkdir -p "$APPIMAGE_DIR"
+
+          rm -f ./*.AppImage
+
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run "$APPDIR"
+
+          GENERATED_APPIMAGE="$(ls -1 *.AppImage | head -n 1)"
+          if [ -z "$GENERATED_APPIMAGE" ]; then
+            echo "::error::Failed to generate AppImage"
+            exit 1
+          fi
+
+          VERSION="${GITHUB_REF_NAME:-linux}"
+          TARGET_APPIMAGE="$APPIMAGE_DIR/YATA-$VERSION.AppImage"
+
+          mv "$GENERATED_APPIMAGE" "$TARGET_APPIMAGE"
+
+          echo "AppImage created at $TARGET_APPIMAGE"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
