@@ -1,5 +1,5 @@
 import "../contracts/realtime/realtime_manager.dart" as contract;
-import "../logging/compat.dart" as log;
+import "../logging/logger_binding.dart";
 
 /// Service層で契約ベースのリアルタイム機能を提供するMixin
 mixin RealtimeServiceContractMixin {
@@ -30,21 +30,25 @@ mixin RealtimeServiceContractMixin {
     final String subscriptionId = generateSubscriptionId(featureName);
     await realtimeManager.startMonitoring(cfg, subscriptionId, (Map<String, dynamic> data) {
       try {
-        log.d("$serviceName: Received $featureName update", tag: serviceName);
+        LoggerBinding.instance.d("$serviceName: Received $featureName update", tag: serviceName);
         onData(data);
       } catch (e) {
-        log.e("$serviceName: Error processing $featureName update", error: e, tag: serviceName);
+        LoggerBinding.instance.e(
+          "$serviceName: Error processing $featureName update",
+          error: e,
+          tag: serviceName,
+        );
       }
     });
 
-    log.i("$serviceName: Started monitoring $featureName", tag: serviceName);
+    LoggerBinding.instance.i("$serviceName: Started monitoring $featureName", tag: serviceName);
   }
 
   /// リアルタイム監視停止
   Future<void> stopFeatureMonitoring(String featureName) async {
     final String subscriptionId = generateSubscriptionId(featureName);
     await realtimeManager.stopMonitoring(subscriptionId);
-    log.i("$serviceName: Stopped monitoring $featureName", tag: serviceName);
+    LoggerBinding.instance.i("$serviceName: Stopped monitoring $featureName", tag: serviceName);
   }
 
   /// 監視状態確認
@@ -62,7 +66,7 @@ mixin RealtimeServiceContractMixin {
         await realtimeManager.stopMonitoring(id);
       }
     }
-    log.i("$serviceName: Stopped all monitoring", tag: serviceName);
+    LoggerBinding.instance.i("$serviceName: Stopped all monitoring", tag: serviceName);
   }
 
   /// 統計情報取得

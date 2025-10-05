@@ -2,7 +2,7 @@ import "package:flutter/material.dart";
 
 import "../constants/app_constants.dart";
 import "../constants/exceptions/exceptions.dart";
-import "../logging/compat.dart" as log;
+import "../logging/logger_binding.dart";
 
 /// エラーハンドリングユーティリティクラス
 ///
@@ -17,7 +17,7 @@ class ErrorHandler {
 
   /// エラーをハンドリングしてユーザーフレンドリーなメッセージを生成
   String handleError(dynamic error, {String? fallbackMessage}) {
-    log.e("Handling error", error: error);
+    LoggerBinding.instance.e("Handling error", error: error);
 
     if (error is RepositoryException) {
       return error.userMessage;
@@ -120,7 +120,7 @@ class ErrorHandler {
   /// サービス層用のエラーハンドリング
   /// ログ記録とエラー再スローを行う
   Never handleServiceError(String operation, dynamic error, [StackTrace? stackTrace]) {
-    log.e("Service error in $operation", error: error, st: stackTrace);
+    LoggerBinding.instance.e("Service error in $operation", error: error, st: stackTrace);
 
     if (error is BaseContextException) {
       throw error; // 既知の例外はそのまま再スロー

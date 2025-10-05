@@ -3,7 +3,7 @@ import "../../../core/constants/exceptions/repository/repository_exception.dart"
 import "../../../core/constants/query_types.dart";
 import "../../../core/contracts/repositories/crud_repository.dart" as repo_contract;
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../shared/utils/order_identifier_generator.dart";
 import "../models/order_model.dart";
 import "../shared/order_status_mapper.dart";
@@ -11,10 +11,15 @@ import "../shared/order_status_mapper.dart";
 /// 注文リポジトリ
 class OrderRepository implements OrderRepositoryContract<Order> {
   OrderRepository({
+    required log_contract.LoggerContract logger,
     required repo_contract.CrudRepository<Order, String> delegate,
     OrderIdentifierGenerator? identifierGenerator,
-  })  : _delegate = delegate,
+  })  : _logger = logger,
+        _delegate = delegate,
         _identifierGenerator = identifierGenerator ?? OrderIdentifierGenerator();
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final repo_contract.CrudRepository<Order, String> _delegate;
   final OrderIdentifierGenerator _identifierGenerator;

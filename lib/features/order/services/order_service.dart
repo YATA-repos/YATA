@@ -2,7 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
 import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/order_dto.dart";
@@ -13,12 +13,17 @@ import "order_management_service.dart";
 /// OrderManagementServiceを使用
 class OrderService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   OrderService({
+    required log_contract.LoggerContract logger,
     required Ref ref,
     required r_contract.RealtimeManagerContract realtimeManager,
     required OrderManagementService orderManagementService,
-  }) : _ref = ref,
+  }) : _logger = logger,
+    _ref = ref,
        _realtimeManager = realtimeManager,
        _orderManagementService = orderManagementService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final Ref _ref;
   final OrderManagementService _orderManagementService;

@@ -1,12 +1,22 @@
 import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
-import "../logging/compat.dart" as log;
+import "../logging/logger_binding.dart";
 
 /// Supabaseクエリ構築用ユーティリティクラス
 ///
 /// 静的メソッドのみを提供するため、YataLoggerの静的メソッドを直接使用
 class QueryUtils {
   QueryUtils._();
+
+  static const String _tag = "QueryUtils";
+
+  static void _debug(String message) {
+    LoggerBinding.instance.d(message, tag: _tag);
+  }
+
+  static void _error(String message) {
+    LoggerBinding.instance.e(message, tag: _tag);
+  }
 
   // フィルタ演算子をSupabaseメソッド名にマッピング
   static const Map<FilterOperator, String> _operatorMethodMap = <FilterOperator, String>{
@@ -38,13 +48,12 @@ class QueryUtils {
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
-      log.e("Unsupported operator: ${condition.operator}", tag: "QueryUtils");
+  _error("Unsupported operator: ${condition.operator}");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
-    log.d(
+    _debug(
       "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
-      tag: "QueryUtils",
     );
 
     // NULL判定
@@ -59,7 +68,7 @@ class QueryUtils {
     if (condition.operator == FilterOperator.inList ||
         condition.operator == FilterOperator.notInList) {
       if (condition.value is! List) {
-        log.e("List type value required for ${condition.operator} operator", tag: "QueryUtils");
+  _error("List type value required for ${condition.operator} operator");
         throw ArgumentError("${condition.operator}演算子にはList型の値が必要です");
       }
       final List<dynamic> values = condition.value as List<dynamic>;
@@ -109,9 +118,8 @@ class QueryUtils {
       case FilterOperator.notInList:
         // これらは上記で処理済み
 
-        log.e(
+        _error(
           "This operator should be handled in preprocessing: ${condition.operator}",
-          tag: "QueryUtils",
         );
         throw ArgumentError("この演算子は事前処理で処理される必要があります: ${condition.operator}");
     }
@@ -123,9 +131,8 @@ class QueryUtils {
 
     for (final FilterCondition condition in conditions) {
       if (!_operatorMethodMap.containsKey(condition.operator)) {
-        log.e(
+        _error(
           "Unsupported operator in OR condition: ${condition.operator} | OR条件でサポートされていない演算子: ${condition.operator}",
-          tag: "QueryUtils",
         );
         throw ArgumentError("サポートされていない演算子: ${condition.operator}");
       }
@@ -137,9 +144,8 @@ class QueryUtils {
         orParts.add("${condition.column}.not.is.null");
       } else if (condition.operator == FilterOperator.inList) {
         if (condition.value is! List) {
-          log.e(
+          _error(
             "List type value required for inList operator | inList演算子にはList型の値が必要です",
-            tag: "QueryUtils",
           );
           throw ArgumentError("inList演算子にはList型の値が必要です");
         }
@@ -148,9 +154,8 @@ class QueryUtils {
         orParts.add("${condition.column}.in.($valueStr)");
       } else if (condition.operator == FilterOperator.notInList) {
         if (condition.value is! List) {
-          log.e(
+          _error(
             "List type value required for notInList operator | notInList演算子にはList型の値が必要です",
-            tag: "QueryUtils",
           );
           throw ArgumentError("notInList演算子にはList型の値が必要です");
         }
@@ -177,9 +182,8 @@ class QueryUtils {
     } else if (condition is ComplexCondition) {
       return _applyComplexCondition(query, condition);
     } else {
-      log.e(
+      _error(
         "Unknown logical condition type: ${condition.runtimeType} | 不明な論理条件タイプ: ${condition.runtimeType}",
-        tag: "QueryUtils",
       );
       throw ArgumentError("不明な論理条件タイプ: ${condition.runtimeType}");
     }
@@ -216,9 +220,8 @@ class QueryUtils {
           }
         }
       } else {
-        log.e(
+        _error(
           "Unsupported condition type in OR: ${cond.runtimeType} | OR条件内でサポートされていない条件タイプ: ${cond.runtimeType}",
-          tag: "QueryUtils",
         );
         throw ArgumentError("OR条件内でサポートされていない条件タイプ: ${cond.runtimeType}");
       }
@@ -230,7 +233,7 @@ class QueryUtils {
 
     final String orString = _buildOrConditionString(filterConditions);
 
-    log.d("Applying OR condition: $orString", tag: "QueryUtils");
+  _debug("Applying OR condition: $orString");
     return query.or(orString);
   }
 
@@ -256,9 +259,8 @@ class QueryUtils {
     } else if (filter is LogicalCondition) {
       return _applyLogicalCondition(query, filter);
     } else {
-      log.e(
+      _error(
         "Unsupported filter type: ${filter.runtimeType} | サポートされていないフィルタタイプ: ${filter.runtimeType}",
-        tag: "QueryUtils",
       );
       throw ArgumentError("サポートされていないフィルタタイプ: ${filter.runtimeType}");
     }
@@ -269,7 +271,7 @@ class QueryUtils {
     PostgrestFilterBuilder<T> query,
     List<QueryFilter> filters,
   ) {
-    log.d("Applying ${filters.length} filters with AND combination", tag: "QueryUtils");
+  _debug("Applying ${filters.length} filters with AND combination");
     PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter filter in filters) {
       result = applyFilter(result, filter);
@@ -282,10 +284,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     OrderByCondition orderBy,
   ) {
-    log.d(
-      "Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}",
-      tag: "QueryUtils",
-    );
+    _debug("Applying order by: ${orderBy.column} ${orderBy.ascending ? 'ASC' : 'DESC'}");
     return query.order(orderBy.column, ascending: orderBy.ascending);
   }
 
@@ -294,7 +293,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
-    log.d("Applying ${orderBys.length} order by conditions", tag: "QueryUtils");
+  _debug("Applying ${orderBys.length} order by conditions");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
       result = applyOrderBy(result, orderBy);

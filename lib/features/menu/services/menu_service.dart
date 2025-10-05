@@ -8,8 +8,7 @@ import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
@@ -29,18 +28,23 @@ typedef _AvailabilityContext = ({
 
 class MenuService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   MenuService({
+    required log_contract.LoggerContract logger,
     required Ref ref,
     required r_contract.RealtimeManagerContract realtimeManager,
     required MenuItemRepositoryContract<MenuItem> menuItemRepository,
     required MenuCategoryRepositoryContract<MenuCategory> menuCategoryRepository,
     required MaterialRepositoryContract<Material> materialRepository,
     required RecipeRepositoryContract<Recipe> recipeRepository,
-  }) : _ref = ref,
+  }) : _logger = logger,
+       _ref = ref,
        _realtimeManager = realtimeManager,
        _menuItemRepository = menuItemRepository,
        _menuCategoryRepository = menuCategoryRepository,
        _materialRepository = materialRepository,
        _recipeRepository = recipeRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final Ref _ref;
   final MenuItemRepositoryContract<MenuItem> _menuItemRepository;

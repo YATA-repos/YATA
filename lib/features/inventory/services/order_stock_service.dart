@@ -7,8 +7,7 @@ import "../../../core/contracts/repositories/inventory/material_repository_contr
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../order/models/order_model.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
@@ -16,14 +15,19 @@ import "../models/transaction_model.dart";
 /// 注文関連在庫操作サービス
 class OrderStockService {
   OrderStockService({
+    required log_contract.LoggerContract logger,
     required MaterialRepositoryContract<Material> materialRepository,
     required RecipeRepositoryContract<Recipe> recipeRepository,
     required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
-  }) : _materialRepository = materialRepository,
+  }) : _logger = logger,
+       _materialRepository = materialRepository,
        _recipeRepository = recipeRepository,
        _stockTransactionRepository = stockTransactionRepository,
        _orderItemRepository = orderItemRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialRepositoryContract<Material> _materialRepository;
   final RecipeRepositoryContract<Recipe> _recipeRepository;

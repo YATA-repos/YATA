@@ -5,8 +5,7 @@ import "package:supabase_flutter/supabase_flutter.dart" as supabase
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/utils/stream_manager_mixin.dart";
 import "../../../infra/supabase/supabase_client.dart";
 import "../dto/auth_response.dart" as local;
@@ -22,14 +21,19 @@ import "../repositories/auth_repository.dart";
 /// アプリケーション全体の認証状態を管理します。
 class AuthService with StreamControllerManagerMixin {
   AuthService({
+    required log_contract.LoggerContract logger,
     contract.AuthRepositoryContract<UserProfile, local.AuthResponse>? authRepository,
     AuthConfig? config,
-  }) : _authRepository = authRepository ?? AuthRepository(config: config),
+  }) : _logger = logger,
+       _authRepository = authRepository ?? AuthRepository(logger: logger, config: config),
        _config = config ?? AuthConfig.forCurrentPlatform() {
     // StreamControllerを管理対象に追加
     addController(_stateController, debugName: "auth_state_controller", source: "AuthService");
     _attachSupabaseAuthListener();
   }
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final contract.AuthRepositoryContract<UserProfile, local.AuthResponse> _authRepository;
   final AuthConfig _config;
@@ -129,15 +133,16 @@ class AuthService with StreamControllerManagerMixin {
         case supabase.AuthChangeEvent.signedOut:
           _updateState(AuthState.initial());
           break;
+        // ignore: deprecated_member_use
+        case supabase.AuthChangeEvent.userDeleted:
+          _updateState(AuthState.initial());
+          break;
         case supabase.AuthChangeEvent.passwordRecovery:
         case supabase.AuthChangeEvent.mfaChallengeVerified:
           log.d(
             "Supabase auth event '${supabaseState.event.name}' received; no state transition",
             tag: loggerComponent,
           );
-          break;
-        default:
-          _updateState(AuthState.initial());
           break;
       }
     } on Object catch (error, stackTrace) {

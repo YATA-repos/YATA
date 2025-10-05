@@ -2,8 +2,7 @@ import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/repository/repository_exception.dart";
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../menu/models/menu_model.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
@@ -14,16 +13,21 @@ import "order_stock_service.dart";
 /// カート管理サービス
 class CartManagementService {
   CartManagementService({
+    required log_contract.LoggerContract logger,
     required OrderRepositoryContract<Order> orderRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
     required MenuItemRepositoryContract<MenuItem> menuItemRepository,
     required OrderCalculationService orderCalculationService,
     required OrderStockService orderStockService,
-  }) : _orderRepository = orderRepository,
+  }) : _logger = logger,
+       _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
        _menuItemRepository = menuItemRepository,
        _orderCalculationService = orderCalculationService,
        _orderStockService = orderStockService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;

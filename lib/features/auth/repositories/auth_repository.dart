@@ -5,8 +5,7 @@ import "package:supabase_flutter/supabase_flutter.dart" hide AuthException;
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 // Use Supabase instance directly to avoid infra import
 import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
-// Using final logging API directly
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../dto/auth_request.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";
@@ -18,7 +17,14 @@ import "desktop_oauth_redirect_server.dart";
 /// Supabase Authとの通信を管理します。
 /// OAuth認証、セッション管理、ユーザー情報取得を提供します。
 class AuthRepository implements contract.AuthRepositoryContract<UserProfile, local.AuthResponse> {
-  AuthRepository({AuthConfig? config}) : _config = config ?? AuthConfig.forCurrentPlatform();
+  AuthRepository({
+    required log_contract.LoggerContract logger,
+    AuthConfig? config,
+  })  : _logger = logger,
+        _config = config ?? AuthConfig.forCurrentPlatform();
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   /// 認証設定
   final AuthConfig _config;
@@ -83,6 +89,7 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
   Future<local.AuthResponse> _signInWithGoogleDesktop(AuthRequest request) async {
     final Uri desktopCallbackUri = Uri.parse(request.redirectTo);
     final DesktopOAuthRedirectServer redirectServer = DesktopOAuthRedirectServer(
+      logger: log,
       callbackUri: desktopCallbackUri,
     );
 

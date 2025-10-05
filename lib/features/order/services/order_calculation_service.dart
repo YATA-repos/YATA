@@ -1,13 +1,19 @@
 // Removed LoggerComponent mixin; use local tag
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 
 /// 注文金額計算サービス
 class OrderCalculationService {
-  OrderCalculationService({required OrderItemRepositoryContract<OrderItem> orderItemRepository})
-    : _orderItemRepository = orderItemRepository;
+  OrderCalculationService({
+    required log_contract.LoggerContract logger,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+  })  : _logger = logger,
+        _orderItemRepository = orderItemRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
 

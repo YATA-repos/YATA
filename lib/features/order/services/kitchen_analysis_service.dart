@@ -2,8 +2,7 @@ import "dart:math" as math;
 
 import "../../../core/constants/enums.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../models/order_model.dart";
 import "../shared/order_status_mapper.dart";
 import "kitchen_operation_service.dart";
@@ -11,12 +10,17 @@ import "kitchen_operation_service.dart";
 /// キッチン分析・予測サービス
 class KitchenAnalysisService {
   KitchenAnalysisService({
+    required log_contract.LoggerContract logger,
     required OrderRepositoryContract<Order> orderRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
     required KitchenOperationService kitchenOperationService,
-  }) : _orderRepository = orderRepository,
+  }) : _logger = logger,
+       _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
        _kitchenOperationService = kitchenOperationService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;

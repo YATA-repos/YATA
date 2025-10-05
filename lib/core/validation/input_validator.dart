@@ -1,5 +1,5 @@
 import "../constants/app_strings/app_strings.dart";
-import "../logging/compat.dart" as log;
+import "../logging/logger_binding.dart";
 
 /// 検証結果クラス
 class ValidationResult {
@@ -14,6 +14,24 @@ class ValidationResult {
 
 /// 入力検証用ヘルパークラス
 class InputValidator {
+  static const String _tag = "InputValidator";
+
+  static void _debug(String message) {
+    LoggerBinding.instance.d(message, tag: _tag);
+  }
+
+  static void _warn(String message) {
+    LoggerBinding.instance.w(message, tag: _tag);
+  }
+
+  static void _trace(String message) {
+    LoggerBinding.instance.t(message, tag: _tag);
+  }
+
+  static void _error(String message) {
+    LoggerBinding.instance.e(message, tag: _tag);
+  }
+
   /// 基本的な文字列検証
   static ValidationResult validateString(
     String? value, {
@@ -124,12 +142,12 @@ class InputValidator {
     try {
       final Uri uri = Uri.parse(value);
       if (!uri.hasScheme || (!uri.scheme.startsWith("http"))) {
-        log.w("URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value", tag: "InputValidator");
+          _warn("URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value");
         return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
       }
       return ValidationResult.success();
     } catch (e) {
-      log.w("URL検証中にURIパースエラーが発生: ${e.toString()}", tag: "InputValidator");
+        _warn("URL検証中にURIパースエラーが発生: ${e.toString()}");
       return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
     }
   }
@@ -178,7 +196,7 @@ class InputValidator {
         .where((ValidationResult result) => !result.isValid)
         .toList();
     if (errors.isNotEmpty) {
-      log.d("バリデーションエラーが${errors.length}件発見されました", tag: "InputValidator");
+      _debug("バリデーションエラーが${errors.length}件発見されました");
     }
     return errors;
   }
@@ -437,13 +455,13 @@ class InputValidator {
       // 個別の値が有効かチェック
       final ValidationResult priceValidation = validatePrice(price, required: true);
       if (!priceValidation.isValid) {
-        log.d("価格バリデーションエラー: ${priceValidation.errorMessage}", tag: "InputValidator");
+          _debug("価格バリデーションエラー: ${priceValidation.errorMessage}");
         return priceValidation;
       }
 
       final ValidationResult quantityValidation = validateQuantity(quantity, required: true);
       if (!quantityValidation.isValid) {
-        log.d("数量バリデーションエラー: ${quantityValidation.errorMessage}", tag: "InputValidator");
+          _debug("数量バリデーションエラー: ${quantityValidation.errorMessage}");
         return quantityValidation;
       }
 
@@ -456,19 +474,18 @@ class InputValidator {
         final num totalAmount = priceValue * quantityValue;
 
         if (totalAmount > maxTotalAmount) {
-          log.w("合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円", tag: "InputValidator");
+            _warn("合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円");
           return ValidationResult.error("合計金額が上限（$maxTotalAmount円）を超えています");
         }
 
-        log.t(
+          _trace(
           "価格数量一貫性チェック成功: 価格=$priceValue, 数量=$quantityValue, 合計=$totalAmount",
-          tag: "InputValidator",
         );
       }
 
       return ValidationResult.success();
     } catch (e) {
-      log.e("価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}", tag: "InputValidator");
+        _error("価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}");
       return ValidationResult.error("バリデーション中にエラーが発生しました");
     }
   }

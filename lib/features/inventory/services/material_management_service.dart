@@ -2,18 +2,22 @@ import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
 import "../../../core/contracts/repositories/inventory/material_category_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/validation/input_validator.dart";
 import "../models/inventory_model.dart";
 
 /// 材料管理サービス
 class MaterialManagementService {
   MaterialManagementService({
+    required log_contract.LoggerContract logger,
     required MaterialRepositoryContract<Material> materialRepository,
     required MaterialCategoryRepositoryContract<MaterialCategory> materialCategoryRepository,
-  }) : _materialRepository = materialRepository,
+  }) : _logger = logger,
+       _materialRepository = materialRepository,
        _materialCategoryRepository = materialCategoryRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialRepositoryContract<Material> _materialRepository;
   final MaterialCategoryRepositoryContract<MaterialCategory> _materialCategoryRepository;

@@ -633,9 +633,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         );
         _applyCartMutationResult(result);
         final String highlightTarget = result.highlightMenuItemId ?? menuItemId;
-        if (highlightTarget != null) {
-          _triggerHighlight(highlightTarget);
-        }
+        _triggerHighlight(highlightTarget);
       } catch (error) {
         final String message = ErrorHandler.instance.handleError(error);
         state = state.copyWith(errorMessage: message);
@@ -704,9 +702,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
           if (quantity > 0) {
             final String highlightTarget = result.highlightMenuItemId ?? menuItemId;
-            if (highlightTarget != null) {
-              _triggerHighlight(highlightTarget);
-            }
+            _triggerHighlight(highlightTarget);
           } else if (state.highlightedItemId == menuItemId) {
             state = state.copyWith(clearHighlightedItemId: true);
           }
@@ -1190,17 +1186,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           _logPerfLazy(() => "loadCartSnapshot.error cartId=$cartId message=$message");
           return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
         }
-      }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
-
-  Future<void> _refreshCart(String cartId, String userId) async =>
-      _traceAsyncSection<void>("refreshCart", () async {
-        final _CartSnapshot snapshot = await _traceAsyncSection<_CartSnapshot>(
-          "refreshCart.loadCartSnapshot",
-          () => _loadCartSnapshot(cartId, userId),
-          startArguments: () => <String, dynamic>{"cartId": cartId},
-        );
-        _applyCartSnapshot(snapshot);
-      }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
+  }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。

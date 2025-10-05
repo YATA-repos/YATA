@@ -2,8 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
 import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/utils/error_handler.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
@@ -23,6 +22,7 @@ class InventoryService
     with RealtimeServiceContractMixin
     implements RealtimeServiceControl, InventoryServiceContract {
   InventoryService({
+    required log_contract.LoggerContract logger,
     required Ref ref,
     required r_contract.RealtimeManagerContract realtimeManager,
     required MaterialManagementService materialManagementService,
@@ -30,13 +30,17 @@ class InventoryService
     required StockOperationService stockOperationService,
     required UsageAnalysisService usageAnalysisService,
     required OrderStockService orderStockService,
-  }) : _ref = ref,
+  }) : _logger = logger,
+    _ref = ref,
        _realtimeManager = realtimeManager,
        _materialManagementService = materialManagementService,
        _stockLevelService = stockLevelService,
        _stockOperationService = stockOperationService,
        _usageAnalysisService = usageAnalysisService,
        _orderStockService = orderStockService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final Ref _ref;
   final MaterialManagementService _materialManagementService;

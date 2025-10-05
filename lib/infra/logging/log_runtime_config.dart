@@ -66,14 +66,14 @@ class LogRuntimeConfig {
   }
 }
 
-typedef _WarnEmitter = void Function(String message);
-typedef _InfoEmitter = void Function(String message);
+typedef WarnEmitter = void Function(String message);
+typedef InfoEmitter = void Function(String message);
 
 /// 環境変数からロガー設定オーバーライドを構築するローダー。
 class LogRuntimeConfigLoader {
   const LogRuntimeConfigLoader({this.warn});
 
-  final _WarnEmitter? warn;
+  final WarnEmitter? warn;
 
   LogRuntimeConfig load(Map<String, String> env) {
     final String? rawLevel = env["LOG_LEVEL"];
@@ -161,11 +161,11 @@ class LogRuntimeConfigLoader {
 }
 
 /// 環境変数からロガー設定を読み取り適用するヘルパー。
-void applyLogRuntimeConfig({Map<String, String>? env, _WarnEmitter? warn, _InfoEmitter? info}) {
+void applyLogRuntimeConfig({Map<String, String>? env, WarnEmitter? warn, InfoEmitter? info}) {
   final Map<String, String> source = env ?? EnvValidator.env;
-  final _WarnEmitter warnEmitter =
+  final WarnEmitter warnEmitter =
       warn ?? (String message) => w(message, tag: "logger");
-  final _InfoEmitter infoEmitter =
+  final InfoEmitter infoEmitter =
       info ?? (String message) => i(message, tag: "logger");
 
   final LogRuntimeConfig config = LogRuntimeConfigLoader(warn: warnEmitter).load(source);

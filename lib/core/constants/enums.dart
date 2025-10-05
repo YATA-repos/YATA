@@ -223,49 +223,47 @@ enum OrderStatus {
 
   /// 現在のステータスを新しい3状態に正規化する。
   OrderStatus get primaryStatus {
-    switch (this) {
-      case OrderStatus.inProgress:
-      case OrderStatus.pending:
-      case OrderStatus.confirmed:
-      case OrderStatus.preparing:
-      case OrderStatus.ready:
+    switch (name) {
+      case "inProgress":
+      case "pending":
+      case "confirmed":
+      case "preparing":
+      case "ready":
         return OrderStatus.inProgress;
-      case OrderStatus.cancelled:
-      case OrderStatus.refunded:
+      case "cancelled":
+      case "refunded":
         return OrderStatus.cancelled;
-      case OrderStatus.completed:
-      case OrderStatus.delivered:
+      case "completed":
+      case "delivered":
         return OrderStatus.completed;
+      default:
+        return OrderStatus.inProgress;
     }
   }
 
   /// 日本語での表示名
   String get displayName {
-    switch (primaryStatus) {
-      case OrderStatus.inProgress:
-        return "準備中";
-      case OrderStatus.cancelled:
-        return "キャンセル済み";
-      case OrderStatus.completed:
-        return "完了";
-      default:
-        return "準備中";
+    final OrderStatus status = primaryStatus;
+    if (status == OrderStatus.inProgress) {
+      return "準備中";
     }
+    if (status == OrderStatus.cancelled) {
+      return "キャンセル済み";
+    }
+    return "完了";
   }
 
   /// 注文ステータスに対応する色を取得（Flutter用）
   /// 実際のColorオブジェクトは呼び出し側で定義する
   String get colorName {
-    switch (primaryStatus) {
-      case OrderStatus.inProgress:
-        return "orange";
-      case OrderStatus.cancelled:
-        return "red";
-      case OrderStatus.completed:
-        return "green";
-      default:
-        return "gray";
+    final OrderStatus status = primaryStatus;
+    if (status == OrderStatus.inProgress) {
+      return "orange";
     }
+    if (status == OrderStatus.cancelled) {
+      return "red";
+    }
+    return "green";
   }
 
   /// ステータスがアクティブ（進行中）かどうかを判定
@@ -278,7 +276,7 @@ enum OrderStatus {
   bool get isProcessing => primaryStatus == OrderStatus.inProgress;
 
   /// ステータスが顧客に表示すべきかどうかを判定
-  bool get isVisibleToCustomer => this != OrderStatus.refunded;
+  bool get isVisibleToCustomer => name != "refunded";
 
   /// 新しい3状態セットを返す。
   static const List<OrderStatus> primaryStatuses = <OrderStatus>[

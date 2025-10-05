@@ -2,7 +2,7 @@ import "dart:async";
 import "dart:io";
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 
 /// デスクトップ環境向けのローカルOAuthコールバックサーバーを管理する。
 ///
@@ -10,13 +10,18 @@ import "../../../core/logging/compat.dart" as log;
 /// アプリケーションへコールバックURLを通知する。
 class DesktopOAuthRedirectServer {
   DesktopOAuthRedirectServer({
+    required log_contract.LoggerContract logger,
     this.timeout = const Duration(minutes: 5),
     String? callbackPath,
     Uri? callbackUri,
-  }) : _initialCallbackUri = callbackUri,
+  }) : _logger = logger,
+       _initialCallbackUri = callbackUri,
        callbackPath = callbackUri != null && callbackUri.path.isNotEmpty
            ? callbackUri.path
            : (callbackPath ?? "/auth/callback");
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final Duration timeout;
   final String callbackPath;

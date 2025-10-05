@@ -8,6 +8,7 @@ import "../../core/contracts/auth/auth_repository_contract.dart" as auth_contrac
 import "../../core/contracts/batch/batch_processing_service.dart" as batch_contract;
 import "../../core/contracts/cache/cache.dart" as cache_contract;
 import "../../core/contracts/logging/logger.dart" as contract;
+import "../../core/logging/logger_binding.dart";
 import "../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 // Repository contracts
 import "../../core/contracts/repositories/crud_repository.dart" as repo_contract;
@@ -68,7 +69,12 @@ import "../../shared/utils/order_identifier_generator.dart";
 
 /// グローバルロガー（契約）
 final Provider<contract.LoggerContract> loggerProvider = Provider<contract.LoggerContract>(
-  (Ref ref) => const InfraLoggerAdapter(),
+  (Ref ref) {
+    final contract.LoggerContract logger = const InfraLoggerAdapter();
+    LoggerBinding.register(logger);
+    ref.onDispose(LoggerBinding.clear);
+    return logger;
+  },
 );
 
 /// リアルタイムマネージャー（契約）
@@ -194,6 +200,7 @@ final Provider<OrderIdentifierGenerator> orderIdentifierGeneratorProvider =
 final Provider<order_contract.OrderRepositoryContract<Order>> orderRepositoryProvider =
     Provider<order_contract.OrderRepositoryContract<Order>>(
       (Ref ref) => OrderRepository(
+        logger: ref.read(loggerProvider),
         delegate: GenericCrudRepository<Order>(
           ref: ref,
           tableName: "orders",
@@ -237,6 +244,7 @@ final Provider<cache_contract.Cache<String, dynamic>> ttlCacheProvider =
 
 /// InventoryService を契約の RealtimeManager で合成して公開
 final Provider<InventoryService> inventoryServiceProvider = Provider<InventoryService>((Ref ref) {
+  final contract.LoggerContract logger = ref.read(loggerProvider);
   final inv_contract.MaterialRepositoryContract<Material> materialRepo = ref.read(
     materialRepositoryProvider,
   );
@@ -259,6 +267,7 @@ final Provider<InventoryService> inventoryServiceProvider = Provider<InventorySe
   );
 
   final MaterialManagementService materialSvc = MaterialManagementService(
+    logger: logger,
     materialRepository: materialRepo,
     materialCategoryRepository: materialCategoryRepo,
   );
@@ -268,12 +277,14 @@ final Provider<InventoryService> inventoryServiceProvider = Provider<InventorySe
     stockTransactionRepository: stockTxRepo,
   );
   final OrderStockService orderStockSvc = OrderStockService(
+    logger: logger,
     materialRepository: materialRepo,
     recipeRepository: recipeRepo,
     stockTransactionRepository: stockTxRepo,
     orderItemRepository: ref.read(orderItemRepositoryProvider),
   );
   final StockOperationService stockOpSvc = StockOperationService(
+    logger: logger,
     materialRepository: materialRepo,
     purchaseRepository: purchaseRepo,
     purchaseItemRepository: purchaseItemRepo,
@@ -282,6 +293,7 @@ final Provider<InventoryService> inventoryServiceProvider = Provider<InventorySe
   );
 
   return InventoryService(
+    logger: logger,
     ref: ref,
     realtimeManager: ref.read(realtimeManagerProvider),
     materialManagementService: materialSvc,
@@ -293,32 +305,42 @@ final Provider<InventoryService> inventoryServiceProvider = Provider<InventorySe
 });
 
 final Provider<OrderCalculationService> orderCalculationServiceProvider =
-    Provider<OrderCalculationService>(
-  (Ref ref) => OrderCalculationService(
-    orderItemRepository: ref.read(orderItemRepositoryProvider),
-  ),
-);
+    Provider<OrderCalculationService>((Ref ref) {
+      final contract.LoggerContract logger = ref.read(loggerProvider);
+      return OrderCalculationService(
+        logger: logger,
+        orderItemRepository: ref.read(orderItemRepositoryProvider),
+      );
+    });
 
 final Provider<order_svc.OrderStockService> orderStockServiceProvider =
-    Provider<order_svc.OrderStockService>(
-  (Ref ref) => order_svc.OrderStockService(
-    materialRepository: ref.read(materialRepositoryProvider),
-    recipeRepository: ref.read(recipeRepositoryProvider),
-  ),
-);
+    Provider<order_svc.OrderStockService>((Ref ref) {
+      final contract.LoggerContract logger = ref.read(loggerProvider);
+      return order_svc.OrderStockService(
+        logger: logger,
+        materialRepository: ref.read(materialRepositoryProvider),
+        recipeRepository: ref.read(recipeRepositoryProvider),
+      );
+    });
 
 final Provider<CartManagementService> cartManagementServiceProvider =
-    Provider<CartManagementService>((Ref ref) => CartManagementService(
-    orderRepository: ref.read(orderRepositoryProvider),
-    orderItemRepository: ref.read(orderItemRepositoryProvider),
-    menuItemRepository: ref.read(menuItemRepositoryProvider),
-    orderCalculationService: ref.read(orderCalculationServiceProvider),
-    orderStockService: ref.read(orderStockServiceProvider),
-  ));
+    Provider<CartManagementService>((Ref ref) {
+      final contract.LoggerContract logger = ref.read(loggerProvider);
+      return CartManagementService(
+        logger: logger,
+        orderRepository: ref.read(orderRepositoryProvider),
+        orderItemRepository: ref.read(orderItemRepositoryProvider),
+        menuItemRepository: ref.read(menuItemRepositoryProvider),
+        orderCalculationService: ref.read(orderCalculationServiceProvider),
+        orderStockService: ref.read(orderStockServiceProvider),
+      );
+    });
 
 /// OrderService（契約Realtime注入）
 final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref ref) {
+  final contract.LoggerContract logger = ref.read(loggerProvider);
   final OrderManagementService orderMgmt = OrderManagementService(
+    logger: logger,
     orderRepository: ref.read(orderRepositoryProvider),
     orderItemRepository: ref.read(orderItemRepositoryProvider),
     menuItemRepository: ref.read(menuItemRepositoryProvider),
@@ -327,6 +349,7 @@ final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref 
     cartManagementService: ref.read(cartManagementServiceProvider),
   );
   return OrderService(
+    logger: logger,
     ref: ref,
     realtimeManager: ref.read(realtimeManagerProvider),
     orderManagementService: orderMgmt,
@@ -340,27 +363,32 @@ final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref
   ));
 
 /// MenuService（契約Realtime注入）
-final Provider<MenuService> menuServiceProvider = Provider<MenuService>(
-  (Ref ref) => MenuService(
+final Provider<MenuService> menuServiceProvider = Provider<MenuService>((Ref ref) {
+  final contract.LoggerContract logger = ref.read(loggerProvider);
+  return MenuService(
+    logger: logger,
     ref: ref,
     realtimeManager: ref.read(realtimeManagerProvider),
     menuItemRepository: ref.read(menuItemRepositoryProvider),
     menuCategoryRepository: ref.read(menuCategoryRepositoryProvider),
     materialRepository: ref.read(materialRepositoryProvider),
     recipeRepository: ref.read(recipeRepositoryProvider),
-  ),
-);
+  );
+});
 
 /// Auth: リポジトリ（契約型）
 final Provider<auth_contract.AuthRepositoryContract<UserProfile, auth_local.AuthResponse>>
 authRepositoryProvider =
     Provider<auth_contract.AuthRepositoryContract<UserProfile, auth_local.AuthResponse>>(
-      (Ref ref) => AuthRepository(),
+      (Ref ref) => AuthRepository(logger: ref.read(loggerProvider)),
     );
 
 /// Auth: サービス（契約注入）
 final Provider<AuthService> authServiceProvider = Provider<AuthService>(
-  (Ref ref) => AuthService(authRepository: ref.read(authRepositoryProvider)),
+  (Ref ref) => AuthService(
+    logger: ref.read(loggerProvider),
+    authRepository: ref.read(authRepositoryProvider),
+  ),
 );
 
 /// BatchProcessingService（契約型）
@@ -372,6 +400,7 @@ final Provider<batch_contract.BatchProcessingServiceContract> batchProcessingSer
 /// AnalyticsService（契約注入）
 final Provider<AnalyticsService> analyticsServiceProvider = Provider<AnalyticsService>(
   (Ref ref) => AnalyticsService(
+    logger: ref.read(loggerProvider),
     orderRepository: ref.read(orderRepositoryProvider),
     orderItemRepository: ref.read(orderItemRepositoryProvider),
     stockTransactionRepository: ref.read(stockTransactionRepositoryProvider),

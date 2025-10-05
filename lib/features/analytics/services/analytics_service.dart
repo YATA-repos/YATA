@@ -5,8 +5,7 @@ import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/analytics.dart";
 import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-// Removed LoggerComponent mixin; use local tag instead
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../inventory/models/transaction_model.dart";
 import "../../order/models/order_model.dart";
 import "../../order/shared/order_status_mapper.dart";
@@ -14,12 +13,17 @@ import "../dto/analytics_dto.dart";
 
 class AnalyticsService {
   AnalyticsService({
+    required log_contract.LoggerContract logger,
     required OrderRepositoryContract<Order> orderRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
     required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
-  }) : _orderRepository = orderRepository,
+  }) : _logger = logger,
+       _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
        _stockTransactionRepository = stockTransactionRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;

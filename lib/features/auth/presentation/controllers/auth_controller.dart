@@ -1,7 +1,7 @@
 import "dart:async";
 
 import "package:flutter_riverpod/flutter_riverpod.dart";
-import "../../../../core/logging/compat.dart" as log;
+import "../../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../models/auth_state.dart";
 import "../../services/auth_service.dart";
 
@@ -10,8 +10,11 @@ import "../../services/auth_service.dart";
 /// [AuthService]の状態更新ストリームを購読し、UI層へ反映する。
 class AuthController extends StateNotifier<AuthState> {
   /// [AuthController]を生成する。
-  AuthController({required AuthService authService})
-    : _authService = authService,
+  AuthController({
+    required log_contract.LoggerContract logger,
+    required AuthService authService,
+  })  : _logger = logger,
+        _authService = authService,
       super(authService.currentState) {
     _subscription = _authService.authStateChanges.listen(
       _handleStateChange,
@@ -22,6 +25,9 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   static const String _loggerTag = "AuthController";
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final AuthService _authService;
   StreamSubscription<AuthState>? _subscription;

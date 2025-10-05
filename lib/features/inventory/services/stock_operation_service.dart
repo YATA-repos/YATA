@@ -5,8 +5,7 @@ import "../../../core/contracts/repositories/inventory/material_repository_contr
 import "../../../core/contracts/repositories/inventory/purchase_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/stock_adjustment_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
@@ -14,16 +13,21 @@ import "../models/transaction_model.dart";
 /// 在庫操作サービス（手動更新・仕入れ記録）
 class StockOperationService {
   StockOperationService({
+    required log_contract.LoggerContract logger,
     required MaterialRepositoryContract<Material> materialRepository,
     required PurchaseRepositoryContract<Purchase> purchaseRepository,
     required PurchaseItemRepositoryContract<PurchaseItem> purchaseItemRepository,
     required StockAdjustmentRepositoryContract<StockAdjustment> stockAdjustmentRepository,
     required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
-  }) : _materialRepository = materialRepository,
+  }) : _logger = logger,
+       _materialRepository = materialRepository,
        _purchaseRepository = purchaseRepository,
        _purchaseItemRepository = purchaseItemRepository,
        _stockAdjustmentRepository = stockAdjustmentRepository,
        _stockTransactionRepository = stockTransactionRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialRepositoryContract<Material> _materialRepository;
   final PurchaseRepositoryContract<Purchase> _purchaseRepository;
