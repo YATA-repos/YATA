@@ -6,6 +6,7 @@ Status: Accepted (updated)
 - Primary API: `lib/infra/logging/logger.dart`（トップレベル関数 `t/d/i/w/e/f` と `withTag` を使用）
 - Compatibility: `lib/core/logging/compat.dart`（`logInfo/logDebug/logWarning/logError` の薄いラッパ）
 - Facade (temporary): `lib/core/logging/yata_logger.dart`（既存呼び出しの後方互換用。段階的に削除予定）
+- Structured fields catalog: `docs/standards/logging-structured-fields.md`（主要イベントで必須のキー設計）
 
 ## PII Masking Policy
 - Default: enabled.

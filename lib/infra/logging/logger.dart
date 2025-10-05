@@ -11,6 +11,7 @@ import "context.dart";
 import "fatal_notifier.dart";
 import "formatters.dart";
 import "log_config.dart";
+import "log_fields_builder.dart";
 import "log_event.dart";
 import "log_level.dart";
 import "pii_masker.dart";
@@ -582,12 +583,30 @@ class _LoggerCore {
     if (fieldsOrThunk == null) {
       return null;
     }
-    if (fieldsOrThunk is Map<String, dynamic>) {
-      return fieldsOrThunk;
+
+    Map<String, dynamic>? convert(Object? value) {
+      if (value == null) {
+        return null;
+      }
+      if (value is LogFieldsBuilder) {
+        final Map<String, dynamic> built = value.build();
+        return built.isEmpty ? null : built;
+      }
+      if (value is Map<String, dynamic>) {
+        return value.isEmpty ? null : value;
+      }
+      return null;
     }
+
     if (fieldsOrThunk is FieldsThunk) {
-      return fieldsOrThunk();
+      return convert(fieldsOrThunk());
     }
+
+    final Map<String, dynamic>? direct = convert(fieldsOrThunk);
+    if (direct != null) {
+      return direct;
+    }
+
     return null;
   }
 

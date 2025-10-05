@@ -9,6 +9,7 @@ import "../../../core/contracts/repositories/inventory/material_repository_contr
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/logging/logger.dart" as log_contract;
+import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
@@ -243,15 +244,61 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       displayOrder: displayOrder,
       description: description,
     );
+    final Stopwatch sw = Stopwatch()..start();
+    final String? userId = currentUserId;
+    LogFieldsBuilder _fields({String? itemId}) => _buildMenuItemFields(
+          operation: "menu.item.create",
+          userId: userId,
+          itemId: itemId,
+          categoryId: categoryId,
+        );
+
+    log.i(
+      "Creating menu item",
+      tag: loggerComponent,
+      fields: _fields()
+          .started()
+          .addMetadata(<String, dynamic>{
+            "name": name,
+            "price": price,
+            "is_available": isAvailable,
+          })
+          .build(),
+    );
     try {
       final MenuItem? created = await _menuItemRepository.create(item);
       if (created == null) {
         throw Exception("Failed to create menu item");
       }
-      log.i("Created menu item: ${created.name}", tag: loggerComponent);
+      if (sw.isRunning) {
+        sw.stop();
+      }
+      log.i(
+        "Created menu item: ${created.name}",
+        tag: loggerComponent,
+        fields: _fields(itemId: created.id)
+            .succeeded(durationMs: sw.elapsedMilliseconds)
+            .addMetadata(<String, dynamic>{
+              "display_order": created.displayOrder,
+              "price": created.price,
+            })
+            .build(),
+      );
       return created;
     } catch (error, stackTrace) {
-      log.e("Failed to create menu item", tag: loggerComponent, error: error, st: stackTrace);
+      if (sw.isRunning) {
+        sw.stop();
+      }
+      log.e(
+        "Failed to create menu item",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+        fields: _fields()
+            .failed(reason: error.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+            .addMetadataEntry("message", error.toString())
+            .build(),
+      );
       rethrow;
     }
   }
@@ -289,28 +336,117 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
       return _menuItemRepository.getById(id);
     }
 
+    final Stopwatch sw = Stopwatch()..start();
+    final String? userId = currentUserId;
+    LogFieldsBuilder _fields() => _buildMenuItemFields(
+          operation: "menu.item.update",
+          userId: userId,
+          itemId: id,
+          categoryId: categoryId,
+        );
+
+    log.i(
+      "Updating menu item",
+      tag: loggerComponent,
+      fields: _fields()
+          .started()
+          .addMetadataEntry("changes", updates.keys.toList())
+          .build(),
+    );
     try {
       final MenuItem? updated = await _menuItemRepository.updateById(id, updates);
       if (updated != null) {
-        log.i("Updated menu item: ${updated.name}", tag: loggerComponent);
+        if (sw.isRunning) {
+          sw.stop();
+        }
+        log.i(
+          "Updated menu item: ${updated.name}",
+          tag: loggerComponent,
+          fields: _fields()
+              .succeeded(durationMs: sw.elapsedMilliseconds)
+              .addMetadata(<String, dynamic>{
+                "price": updated.price,
+                "is_available": updated.isAvailable,
+              })
+              .build(),
+        );
       }
       return updated;
     } catch (error, stackTrace) {
-      log.e("Failed to update menu item", tag: loggerComponent, error: error, st: stackTrace);
+      if (sw.isRunning) {
+        sw.stop();
+      }
+      log.e(
+        "Failed to update menu item",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+        fields: _fields()
+            .failed(reason: error.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+            .addMetadataEntry("message", error.toString())
+            .build(),
+      );
       rethrow;
     }
   }
 
   /// メニューアイテムを削除する。
   Future<void> deleteMenuItem(String id) async {
+    final Stopwatch sw = Stopwatch()..start();
+    final String? userId = currentUserId;
+    LogFieldsBuilder _fields() => _buildMenuItemFields(
+          operation: "menu.item.delete",
+          userId: userId,
+          itemId: id,
+        );
+
+    log.i(
+      "Deleting menu item",
+      tag: loggerComponent,
+      fields: _fields().started().build(),
+    );
     try {
       await _recipeRepository.deleteByMenuItemId(id);
       await _menuItemRepository.deleteById(id);
-      log.i("Deleted menu item: $id", tag: loggerComponent);
+      if (sw.isRunning) {
+        sw.stop();
+      }
+      log.i(
+        "Deleted menu item: $id",
+        tag: loggerComponent,
+        fields: _fields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
+      );
     } catch (error, stackTrace) {
-      log.e("Failed to delete menu item", tag: loggerComponent, error: error, st: stackTrace);
+      if (sw.isRunning) {
+        sw.stop();
+      }
+      log.e(
+        "Failed to delete menu item",
+        tag: loggerComponent,
+        error: error,
+        st: stackTrace,
+        fields: _fields()
+            .failed(reason: error.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+            .addMetadataEntry("message", error.toString())
+            .build(),
+      );
       rethrow;
     }
+  }
+
+  LogFieldsBuilder _buildMenuItemFields({
+    required String operation,
+    String? userId,
+    String? itemId,
+    String? categoryId,
+  }) {
+    return LogFieldsBuilder.operation(operation)
+        .withActor(userId: userId)
+        .withResource(type: "menu_item", id: itemId)
+        .addMetadata(<String, dynamic>{
+          if (itemId != null) "menu_item_id": itemId,
+          if (categoryId != null) "category_id": categoryId,
+        });
   }
 
   /// リアルタイム更新をUI層へ通知する。

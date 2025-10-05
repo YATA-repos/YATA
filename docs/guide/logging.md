@@ -133,6 +133,25 @@ d('リクエスト処理', fields: {
 });
 ```
 
+### 標準フィールドビルダーの活用
+
+主要イベントでは `LogFieldsBuilder` を使って標準フィールドを組み立てると、検索性とレビューの統一感が高まります。フィールド一覧は `docs/standards/logging-structured-fields.md` を参照してください。
+
+```dart
+final fields = LogFieldsBuilder.operation("order.checkout")
+  .withActor(userId: userId)
+  .withResource(type: "order", id: orderId)
+  .started()
+  .addMetadata({
+    "cart_id": cartId,
+    "item_count": cartItems.length,
+  });
+
+log.i("Started cart checkout", tag: loggerComponent, fields: fields);
+```
+
+`started() / succeeded() / failed()` といったメソッドで `stage` と `result.status` が自動的に整形されるため、クエリや可視化の軸として再利用しやすくなります。
+
 ## 遅延評価
 
 パフォーマンスを向上させるため、重い処理は遅延評価を使用します。遅延評価により、ログレベルによってフィルタリングされるログの場合、不要な計算処理をスキップできます。
@@ -375,6 +394,47 @@ runWithContext({'requestId': generateRequestId()}, () {
   // API関連の処理
 });
 ```
+
+## 標準フィールドでの検索例
+
+以下は構造化フィールドを活用した代表的なクエリ例です。環境に合わせてタグや期間を加えてください。
+
+### Kibana (KQL)
+
+```text
+fields.operation: "order.checkout" and fields.result.status: "failure"
+```
+
+```text
+fields.flow_id: flow_supabase_sync_* and fields.stage: "started"
+```
+
+### Supabase (SQL / Log Explorer)
+
+```sql
+select *
+from logs
+where tag = 'OrderManagementService'
+  and fields->>'operation' = 'order.checkout'
+  and fields->'result'->>'status' = 'success'
+order by ts desc
+limit 50;
+```
+
+```sql
+select *
+from logs
+where fields->>'request_id' = 'req_01H9X7V6J3'
+order by ts;
+```
+
+### フィールド欠損チェック
+
+```text
+not fields.operation or not fields.result.status
+```
+
+上記のようなクエリをダッシュボードのテンプレートに追加しておくと、標準フィールドの抜け漏れ検知やフロー単位の調査が容易になります。
 
 ## トラブルシューティング
 
