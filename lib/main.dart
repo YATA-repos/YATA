@@ -5,6 +5,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "app/app.dart";
 import "core/validation/env_validator.dart";
 import "features/order/presentation/performance/order_management_tracing.dart";
+import "infra/logging/fatal_notifier.dart";
 import "infra/logging/log_runtime_config.dart";
 import "infra/logging/logger.dart";
 import "infra/supabase/supabase_client.dart";
@@ -15,6 +16,7 @@ void main() async {
 
   // ロガー初期化（クラッシュキャプチャ等）
   installCrashCapture();
+  registerFatalNotifier(const StdoutFatalNotifier());
 
   try {
     // 統合環境変数管理システムで初期化
@@ -39,11 +41,27 @@ void main() async {
       try {
         await SupabaseClientService.initialize();
       } catch (error, stackTrace) {
-        e("Supabaseの初期化に失敗しました: $error", error: error, st: stackTrace, tag: "main");
-        rethrow;
+        w(
+          "Supabase初期化に失敗したため安全モードで継続します: $error",
+          tag: "main",
+          fields: <String, dynamic>{
+            "safe_mode": SupabaseClientService.isInSafeMode,
+            "reason": SupabaseClientService.safeModeReason,
+            "stack": stackTrace.toString(),
+          },
+        );
+        // すでに SupabaseClientService.initialize 内で fatal ログおよび safe mode 切替を実施済み。
       }
     } else {
       w("Supabaseの初期化はスキップされました。環境変数が設定されていないか、無効です。", tag: "main");
+    }
+
+    if (SupabaseClientService.isInSafeMode) {
+      w(
+        "Supabase safe mode active: ${SupabaseClientService.safeModeReason ?? 'unknown'}",
+        tag: "main",
+        fields: <String, dynamic>{"safe_mode": true},
+      );
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {

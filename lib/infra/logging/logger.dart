@@ -1,10 +1,14 @@
 import "dart:async";
+import "dart:collection";
 import "dart:io";
 import "dart:math";
 // PlatformDispatcher is available via flutter foundation exports
 import "package:flutter/foundation.dart";
 
+import "../../core/contracts/logging/logger.dart" as contract;
+import "../../core/logging/levels.dart" as core_level;
 import "context.dart";
+import "fatal_notifier.dart";
 import "formatters.dart";
 import "log_config.dart";
 import "log_event.dart";
@@ -55,6 +59,17 @@ class Logger {
   LoggerStats get stats => _core.stats;
   void installCrashCapture({bool? rethrowOnError}) =>
       _core.installCrashCapture(rethrowOnError: rethrowOnError);
+
+  void registerFatalHandler(contract.FatalHandler handler) =>
+    _core.registerFatalHandler(handler);
+  void removeFatalHandler(contract.FatalHandler handler) =>
+    _core.removeFatalHandler(handler);
+  void clearFatalHandlers() => _core.clearFatalHandlers();
+  contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) {
+    final contract.FatalHandler handler = (contract.FatalLogContext ctx) => notifier.notify(ctx);
+    registerFatalHandler(handler);
+    return handler;
+  }
 
   // Dynamic config exposure (Fix Plan 02)
   LogConfig get config => _core.config;
@@ -118,6 +133,14 @@ LoggerStats get stats => _globalLogger.stats;
 void installCrashCapture({bool? rethrowOnError}) =>
     _globalLogger.installCrashCapture(rethrowOnError: rethrowOnError);
 
+void registerFatalHandler(contract.FatalHandler handler) =>
+  _globalLogger.registerFatalHandler(handler);
+void removeFatalHandler(contract.FatalHandler handler) =>
+  _globalLogger.removeFatalHandler(handler);
+void clearFatalHandlers() => _globalLogger.clearFatalHandlers();
+contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) =>
+  _globalLogger.registerFatalNotifier(notifier);
+
 // Dynamic config exposure (top-level)
 LogConfig get config => _globalLogger.config;
 void setGlobalLevel(LogLevel level) => _globalLogger.setGlobalLevel(level);
@@ -167,6 +190,8 @@ class _LoggerCore {
   // Ring buffer queue
   final List<_Pending> _queue = <_Pending>[];
   bool _draining = false;
+  final Set<contract.FatalHandler> _fatalHandlers = LinkedHashSet<contract.FatalHandler>.identity();
+  bool _handlingFatal = false;
 
   // Phase 3: stats and lifecycle
   final StreamController<LoggerStats> _statsCtrl = StreamController<LoggerStats>.broadcast();
@@ -222,6 +247,18 @@ class _LoggerCore {
       _fileSink = FileSink(current);
       unawaited(oldSink.close());
     }
+  }
+
+  void registerFatalHandler(contract.FatalHandler handler) {
+    _fatalHandlers.add(handler);
+  }
+
+  void removeFatalHandler(contract.FatalHandler handler) {
+    _fatalHandlers.remove(handler);
+  }
+
+  void clearFatalHandlers() {
+    _fatalHandlers.clear();
   }
 
   void log(
@@ -356,6 +393,143 @@ class _LoggerCore {
       await _fileSink.add(ndjsonLine);
       _activeLogFile = _fileSink.activeFilePath;
       _lastFileError = _fileSink.lastError;
+    }
+
+    if (enriched.lvl == LogLevel.fatal) {
+      await _handleFatal(enriched, p);
+    }
+  }
+
+  Future<void> _handleFatal(LogEvent event, _Pending pending) async {
+    final fatalConfig = _configHub.value.fatal;
+    if (_handlingFatal) {
+      return;
+    }
+    _handlingFatal = true;
+    try {
+      if (fatalConfig.flushBeforeHandlers) {
+        await _flushSinksWithTimeout(fatalConfig.flushTimeout);
+      }
+
+      final contract.LogRecord record = contract.LogRecord(
+        timestamp: event.ts,
+        level: _toContractLevel(event.lvl),
+        message: event.msg,
+        tag: event.tag,
+        fields: event.fields,
+        error: pending.error,
+        stackTrace: pending.st,
+      );
+
+      Future<void> flushFn({Duration? timeout}) =>
+          _flushSinksWithTimeout(timeout ?? fatalConfig.flushTimeout);
+      Future<void> shutdownFn({Duration? timeout}) => _shutdownLogger(
+        timeout: timeout ?? fatalConfig.flushTimeout,
+        exitProcess: fatalConfig.exitProcess,
+        exitCode: fatalConfig.exitCode,
+        delay: fatalConfig.shutdownDelay,
+      );
+
+      final contract.FatalLogContext context = contract.FatalLogContext(
+        record: record,
+        error: pending.error,
+        stackTrace: pending.st,
+        defaultFlushTimeout: fatalConfig.flushTimeout,
+        flush: ({Duration? timeout}) => flushFn(timeout: timeout),
+        shutdown: ({Duration? timeout}) => shutdownFn(timeout: timeout),
+        willShutdownAfterHandlers: fatalConfig.autoShutdown || fatalConfig.exitProcess,
+      );
+
+      if (_fatalHandlers.isNotEmpty) {
+        final Duration handlerTimeout = fatalConfig.handlerTimeout;
+        for (final contract.FatalHandler handler in
+            List<contract.FatalHandler>.from(_fatalHandlers)) {
+          try {
+            final Future<void> task = Future<void>.sync(() => handler(context));
+            if (handlerTimeout > Duration.zero) {
+              await task.timeout(handlerTimeout);
+            } else {
+              await task;
+            }
+          } on TimeoutException catch (_) {
+            stderr.writeln(
+              "Fatal handler timeout after ${handlerTimeout.inMilliseconds}ms",
+            );
+          } catch (err, st) {
+            stderr.writeln("Fatal handler error: $err\n$st");
+          }
+        }
+      }
+
+      if (fatalConfig.autoShutdown || fatalConfig.exitProcess) {
+        await shutdownFn(timeout: fatalConfig.flushTimeout);
+      }
+    } finally {
+      _handlingFatal = false;
+    }
+  }
+
+  Future<void> _flushSinks() async {
+    final List<Future<void>> futures = <Future<void>>[];
+    if (_configHub.value.consoleEnabled) {
+      futures.add(_consoleSink.flush());
+    }
+    if (_configHub.value.fileEnabled) {
+      futures.add(_fileSink.flush());
+    }
+    if (futures.isEmpty) {
+      return;
+    }
+    await Future.wait(futures);
+  }
+
+  Future<void> _flushSinksWithTimeout(Duration timeout) async {
+    try {
+      final Future<void> future = _flushSinks();
+      if (timeout <= Duration.zero) {
+        await future;
+        return;
+      }
+      await future.timeout(timeout);
+    } on TimeoutException catch (_) {
+      stderr.writeln(
+        "Logger flush timed out while handling fatal after ${timeout.inMilliseconds}ms",
+      );
+    } catch (err, st) {
+      stderr.writeln("Logger flush error while handling fatal: $err\n$st");
+    }
+  }
+
+  Future<void> _shutdownLogger({
+    required Duration timeout,
+    required bool exitProcess,
+    required int exitCode,
+    required Duration delay,
+  }) async {
+    await _flushSinksWithTimeout(timeout);
+    await flushAndClose(timeout: timeout);
+    if (exitProcess) {
+      if (delay > Duration.zero) {
+        await Future<void>.delayed(delay);
+      }
+      exit(exitCode);
+    }
+  }
+
+  core_level.Level _toContractLevel(LogLevel level) {
+    switch (level) {
+      case LogLevel.trace:
+        return core_level.Level.trace;
+      case LogLevel.debug:
+        return core_level.Level.debug;
+      case LogLevel.info:
+        return core_level.Level.info;
+      case LogLevel.warn:
+        return core_level.Level.warn;
+      case LogLevel.error:
+        return core_level.Level.error;
+      case LogLevel.fatal:
+        return core_level.Level.fatal;
     }
   }
 

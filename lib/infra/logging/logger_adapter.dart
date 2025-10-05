@@ -43,6 +43,17 @@ class InfraLoggerAdapter implements contract.LoggerContract {
   Future<void> flushAndClose({Duration timeout = const Duration(seconds: 2)}) =>
       impl.flushAndClose(timeout: timeout);
 
+  @override
+  void registerFatalHandler(contract.FatalHandler handler) =>
+    impl.registerFatalHandler(handler);
+
+  @override
+  void removeFatalHandler(contract.FatalHandler handler) =>
+    impl.removeFatalHandler(handler);
+
+  @override
+  void clearFatalHandlers() => impl.clearFatalHandlers();
+
   // 明示的なショートハンド実装（Analyzerの誤検知回避のため）
   @override
   void t(Object msgOrThunk, {String? tag, Object? fields}) =>

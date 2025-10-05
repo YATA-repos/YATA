@@ -13,6 +13,13 @@ class LogRuntimeConfig {
     this.queueCapacity,
     this.overflowPolicy,
     this.directory,
+    this.fatalFlushBeforeHandlers,
+    this.fatalFlushTimeoutMs,
+    this.fatalHandlerTimeoutMs,
+    this.fatalAutoShutdown,
+    this.fatalExitProcess,
+    this.fatalExitCode,
+    this.fatalShutdownDelayMs,
   });
 
   final LogLevel? level;
@@ -20,13 +27,27 @@ class LogRuntimeConfig {
   final int? queueCapacity;
   final OverflowPolicy? overflowPolicy;
   final String? directory;
+  final bool? fatalFlushBeforeHandlers;
+  final int? fatalFlushTimeoutMs;
+  final int? fatalHandlerTimeoutMs;
+  final bool? fatalAutoShutdown;
+  final bool? fatalExitProcess;
+  final int? fatalExitCode;
+  final int? fatalShutdownDelayMs;
 
   bool get hasOverrides =>
       level != null ||
       flushIntervalMs != null ||
       queueCapacity != null ||
       overflowPolicy != null ||
-      directory != null;
+      directory != null ||
+      fatalFlushBeforeHandlers != null ||
+      fatalFlushTimeoutMs != null ||
+      fatalHandlerTimeoutMs != null ||
+      fatalAutoShutdown != null ||
+      fatalExitProcess != null ||
+      fatalExitCode != null ||
+      fatalShutdownDelayMs != null;
 
   LogConfig applyTo(LogConfig base) {
     LogConfig next = base;
@@ -41,6 +62,31 @@ class LogRuntimeConfig {
     }
     if (directory != null && directory!.isNotEmpty) {
       next = next.copyWith(fileDirPath: directory);
+    }
+    if (fatalFlushBeforeHandlers != null ||
+        fatalFlushTimeoutMs != null ||
+        fatalHandlerTimeoutMs != null ||
+        fatalAutoShutdown != null ||
+        fatalExitProcess != null ||
+        fatalExitCode != null ||
+        fatalShutdownDelayMs != null) {
+      next = next.copyWith(
+        fatal: next.fatal.copyWith(
+          flushBeforeHandlers: fatalFlushBeforeHandlers,
+          flushTimeout: fatalFlushTimeoutMs != null
+              ? Duration(milliseconds: fatalFlushTimeoutMs!)
+              : null,
+          handlerTimeout: fatalHandlerTimeoutMs != null
+              ? Duration(milliseconds: fatalHandlerTimeoutMs!)
+              : null,
+          autoShutdown: fatalAutoShutdown,
+          exitProcess: fatalExitProcess,
+          exitCode: fatalExitCode,
+          shutdownDelay: fatalShutdownDelayMs != null
+              ? Duration(milliseconds: fatalShutdownDelayMs!)
+              : null,
+        ),
+      );
     }
     return next;
   }
@@ -62,6 +108,27 @@ class LogRuntimeConfig {
     if (directory != null) {
       statements.add("logDir=$directory");
     }
+    if (fatalFlushBeforeHandlers != null) {
+      statements.add("fatal.flushBeforeHandlers=$fatalFlushBeforeHandlers");
+    }
+    if (fatalFlushTimeoutMs != null) {
+      statements.add("fatal.flushTimeoutMs=$fatalFlushTimeoutMs");
+    }
+    if (fatalHandlerTimeoutMs != null) {
+      statements.add("fatal.handlerTimeoutMs=$fatalHandlerTimeoutMs");
+    }
+    if (fatalAutoShutdown != null) {
+      statements.add("fatal.autoShutdown=$fatalAutoShutdown");
+    }
+    if (fatalExitProcess != null) {
+      statements.add("fatal.exitProcess=$fatalExitProcess");
+    }
+    if (fatalExitCode != null) {
+      statements.add("fatal.exitCode=$fatalExitCode");
+    }
+    if (fatalShutdownDelayMs != null) {
+      statements.add("fatal.shutdownDelayMs=$fatalShutdownDelayMs");
+    }
     return statements;
   }
 }
@@ -81,12 +148,31 @@ class LogRuntimeConfigLoader {
     final String? rawQueue = env["LOG_MAX_QUEUE"];
     final String? rawBackpressure = env["LOG_BACKPRESSURE"];
     final String? rawDir = env["LOG_DIR"];
+    final String? rawFatalFlushBeforeHandlers = env["LOG_FATAL_FLUSH_BEFORE_HANDLERS"];
+    final String? rawFatalFlushTimeout = env["LOG_FATAL_FLUSH_TIMEOUT_MS"];
+    final String? rawFatalHandlerTimeout = env["LOG_FATAL_HANDLER_TIMEOUT_MS"];
+    final String? rawFatalAutoShutdown = env["LOG_FATAL_AUTO_SHUTDOWN"];
+    final String? rawFatalExitProcess = env["LOG_FATAL_EXIT_PROCESS"];
+    final String? rawFatalExitCode = env["LOG_FATAL_EXIT_CODE"];
+    final String? rawFatalShutdownDelay = env["LOG_FATAL_SHUTDOWN_DELAY_MS"];
 
     final LogLevel? level = _parseLevel(rawLevel);
     final int? flushMs = _parsePositiveInt("LOG_FLUSH_INTERVAL_MS", rawFlushMs);
     final int? queueCapacity = _parsePositiveInt("LOG_MAX_QUEUE", rawQueue);
     final OverflowPolicy? overflowPolicy = _parseOverflowPolicy(rawBackpressure);
     final String? directory = _normalizeDirectory(rawDir, env);
+    final bool? fatalFlushBeforeHandlers =
+        _parseBool("LOG_FATAL_FLUSH_BEFORE_HANDLERS", rawFatalFlushBeforeHandlers);
+    final int? fatalFlushTimeoutMs =
+        _parseNonNegativeInt("LOG_FATAL_FLUSH_TIMEOUT_MS", rawFatalFlushTimeout);
+    final int? fatalHandlerTimeoutMs =
+        _parseNonNegativeInt("LOG_FATAL_HANDLER_TIMEOUT_MS", rawFatalHandlerTimeout);
+    final bool? fatalAutoShutdown =
+        _parseBool("LOG_FATAL_AUTO_SHUTDOWN", rawFatalAutoShutdown);
+    final bool? fatalExitProcess = _parseBool("LOG_FATAL_EXIT_PROCESS", rawFatalExitProcess);
+    final int? fatalExitCode = _parseNonNegativeInt("LOG_FATAL_EXIT_CODE", rawFatalExitCode);
+    final int? fatalShutdownDelayMs =
+        _parseNonNegativeInt("LOG_FATAL_SHUTDOWN_DELAY_MS", rawFatalShutdownDelay);
 
     return LogRuntimeConfig(
       level: level,
@@ -94,6 +180,13 @@ class LogRuntimeConfigLoader {
       queueCapacity: queueCapacity,
       overflowPolicy: overflowPolicy,
       directory: directory,
+      fatalFlushBeforeHandlers: fatalFlushBeforeHandlers,
+      fatalFlushTimeoutMs: fatalFlushTimeoutMs,
+      fatalHandlerTimeoutMs: fatalHandlerTimeoutMs,
+      fatalAutoShutdown: fatalAutoShutdown,
+      fatalExitProcess: fatalExitProcess,
+      fatalExitCode: fatalExitCode,
+      fatalShutdownDelayMs: fatalShutdownDelayMs,
     );
   }
 
@@ -157,6 +250,33 @@ class LogRuntimeConfigLoader {
       }
     }
     return Directory(value).absolute.path;
+  }
+
+  bool? _parseBool(String key, String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    final String normalized = raw.trim().toLowerCase();
+    if (<String>{"1", "true", "yes", "on"}.contains(normalized)) {
+      return true;
+    }
+    if (<String>{"0", "false", "no", "off"}.contains(normalized)) {
+      return false;
+    }
+    warn?.call("$key='${raw.trim()}' は true/false 形式である必要があります。既定値を使用します。");
+    return null;
+  }
+
+  int? _parseNonNegativeInt(String key, String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    final int? value = int.tryParse(raw.trim());
+    if (value == null || value < 0) {
+      warn?.call("$key='${raw.trim()}' は 0 以上の整数である必要があります。既定値を使用します。");
+      return null;
+    }
+    return value;
   }
 }
 

@@ -73,4 +73,19 @@ class _NoopLogger implements contract.LoggerContract {
   Future<void> flushAndClose({Duration timeout = const Duration(seconds: 2)}) async {
     // no-op
   }
+
+  @override
+  void registerFatalHandler(contract.FatalHandler handler) {
+    // no-op
+  }
+
+  @override
+  void removeFatalHandler(contract.FatalHandler handler) {
+    // no-op
+  }
+
+  @override
+  void clearFatalHandlers() {
+    // no-op
+  }
 }

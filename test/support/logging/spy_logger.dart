@@ -73,6 +73,24 @@ class SpyLogger implements contract.LoggerContract, LogProbe {
   }
 
   @override
+  void registerFatalHandler(contract.FatalHandler handler) {
+    _fake.registerFatalHandler(handler);
+    _delegate?.registerFatalHandler(handler);
+  }
+
+  @override
+  void removeFatalHandler(contract.FatalHandler handler) {
+    _fake.removeFatalHandler(handler);
+    _delegate?.removeFatalHandler(handler);
+  }
+
+  @override
+  void clearFatalHandlers() {
+    _fake.clearFatalHandlers();
+    _delegate?.clearFatalHandlers();
+  }
+
+  @override
   void t(Object msgOrThunk, {String? tag, Object? fields}) =>
       log(Level.trace, msgOrThunk, tag: tag, fields: fields);
 

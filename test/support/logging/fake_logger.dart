@@ -55,6 +55,7 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
   final Duration defaultTimeout;
   final StreamController<CapturedLog> _controller;
   final List<CapturedLog> _entries = <CapturedLog>[];
+  final List<contract.FatalHandler> _fatalHandlers = <contract.FatalHandler>[];
 
   @override
   UnmodifiableListView<CapturedLog> get entries => UnmodifiableListView<CapturedLog>(_entries);
@@ -111,6 +112,9 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
   /// 内部レコードを直接追加（SpyLogger などの合成向け）。
   void addCapturedLog(CapturedLog log) {
     _record(log);
+    if (log.level == Level.fatal) {
+      _emitFatalHandlers(log);
+    }
   }
 
   @override
@@ -131,6 +135,9 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
       st: st,
     );
     _record(logEntry);
+    if (level == Level.fatal) {
+      _emitFatalHandlers(logEntry);
+    }
   }
 
   @override
@@ -160,10 +167,52 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
   void f(Object msgOrThunk, {Object? error, StackTrace? st, String? tag, Object? fields}) =>
       log(Level.fatal, msgOrThunk, tag: tag, fields: fields, error: error, st: st);
 
+  @override
+  void registerFatalHandler(contract.FatalHandler handler) {
+    _fatalHandlers.add(handler);
+  }
+
+  @override
+  void removeFatalHandler(contract.FatalHandler handler) {
+    _fatalHandlers.remove(handler);
+  }
+
+  @override
+  void clearFatalHandlers() {
+    _fatalHandlers.clear();
+  }
+
   void _record(CapturedLog log) {
     _entries.add(log);
     if (!_controller.isClosed) {
       _controller.add(log);
+    }
+  }
+
+  void _emitFatalHandlers(CapturedLog captured) {
+    if (_fatalHandlers.isEmpty) {
+      return;
+    }
+    final contract.LogRecord record = contract.LogRecord(
+      timestamp: captured.timestamp,
+      level: captured.level,
+      message: captured.message,
+      tag: captured.tag,
+      fields: captured.fields,
+      error: captured.error,
+      stackTrace: captured.stackTrace,
+    );
+    final contract.FatalLogContext context = contract.FatalLogContext(
+      record: record,
+      error: captured.error,
+      stackTrace: captured.stackTrace,
+      defaultFlushTimeout: const Duration(milliseconds: 100),
+      flush: ({Duration? timeout}) async {},
+      shutdown: ({Duration? timeout}) async {},
+      willShutdownAfterHandlers: false,
+    );
+    for (final contract.FatalHandler handler in List<contract.FatalHandler>.from(_fatalHandlers)) {
+      unawaited(Future<void>.microtask(() => handler(context)));
     }
   }
 }

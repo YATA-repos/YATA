@@ -22,10 +22,50 @@ class MaskModeHash extends MaskMode {
 }
 
 class MaskModePartial extends MaskMode {
-  const MaskModePartial({this.keepTail = 4});
+  const MaskModePartial({this.keepTail = 4}) : assert(keepTail >= 0, "keepTail must be >= 0");
+
   final int keepTail;
 }
 
+class FatalConfig {
+  const FatalConfig({
+    this.flushBeforeHandlers = true,
+    this.flushTimeout = const Duration(seconds: 5),
+    this.handlerTimeout = const Duration(seconds: 10),
+    this.autoShutdown = false,
+    this.exitProcess = false,
+    this.exitCode = 1,
+    this.shutdownDelay = Duration.zero,
+  }) : assert(exitCode >= 0, "exitCode must be >= 0");
+
+  final bool flushBeforeHandlers;
+  final Duration flushTimeout;
+  final Duration handlerTimeout;
+  final bool autoShutdown;
+  final bool exitProcess;
+  final int exitCode;
+  final Duration shutdownDelay;
+
+  FatalConfig copyWith({
+    bool? flushBeforeHandlers,
+    Duration? flushTimeout,
+    Duration? handlerTimeout,
+    bool? autoShutdown,
+    bool? exitProcess,
+    int? exitCode,
+    Duration? shutdownDelay,
+  }) {
+    return FatalConfig(
+      flushBeforeHandlers: flushBeforeHandlers ?? this.flushBeforeHandlers,
+      flushTimeout: flushTimeout ?? this.flushTimeout,
+      handlerTimeout: handlerTimeout ?? this.handlerTimeout,
+      autoShutdown: autoShutdown ?? this.autoShutdown,
+      exitProcess: exitProcess ?? this.exitProcess,
+      exitCode: exitCode ?? this.exitCode,
+      shutdownDelay: shutdownDelay ?? this.shutdownDelay,
+    );
+  }
+}
 class LogConfig {
   LogConfig({
     required this.globalLevel,
@@ -51,6 +91,7 @@ class LogConfig {
     required this.crashCaptureEnabled,
     required this.crashDedupWindow,
     required this.crashSummaryInterval,
+    required this.fatal,
     List<RegExp>? customPatterns,
     Map<String, LogLevel>? tagLevels,
     List<String>? allowListKeys,
@@ -84,6 +125,7 @@ class LogConfig {
   bool crashCaptureEnabled; // Phase 3
   Duration crashDedupWindow; // Phase 3
   Duration crashSummaryInterval; // Phase 3
+  FatalConfig fatal; // Fatal handling policy
 
   LogConfig copyWith({
     LogLevel? globalLevel,
@@ -112,6 +154,7 @@ class LogConfig {
     bool? crashCaptureEnabled,
     Duration? crashDedupWindow,
     Duration? crashSummaryInterval,
+    FatalConfig? fatal,
   }) {
     final LogConfig c = LogConfig(
       globalLevel: globalLevel ?? this.globalLevel,
@@ -140,6 +183,7 @@ class LogConfig {
       crashCaptureEnabled: crashCaptureEnabled ?? this.crashCaptureEnabled,
       crashDedupWindow: crashDedupWindow ?? this.crashDedupWindow,
       crashSummaryInterval: crashSummaryInterval ?? this.crashSummaryInterval,
+      fatal: fatal ?? this.fatal,
     );
     return c;
   }
@@ -173,6 +217,7 @@ class LogConfig {
       crashCaptureEnabled: true,
       crashDedupWindow: const Duration(seconds: 30),
       crashSummaryInterval: const Duration(seconds: 60),
+      fatal: const FatalConfig(),
     );
   }
 }
@@ -223,7 +268,6 @@ class TokenBucket {
 
   double _tokens;
   DateTime _lastRefill;
-
   void _refill() {
     final DateTime now = DateTime.now();
     final double elapsedSec = now.difference(_lastRefill).inMilliseconds / 1000.0;

@@ -15,6 +15,8 @@ class SupabaseClientService {
 
   static SupabaseClientService? _instance;
   static SupabaseClient? _client;
+  static bool _safeMode = false;
+  static String? _safeModeReason;
 
   /// シングルトンインスタンス取得
   static SupabaseClientService get instance {
@@ -30,6 +32,22 @@ class SupabaseClientService {
       );
     }
     return _client!;
+  }
+
+  /// Supabase安全モードが有効かどうか。
+  static bool get isInSafeMode => _safeMode;
+
+  /// 安全モードに入った理由。
+  static String? get safeModeReason => _safeModeReason;
+
+  /// Supabaseクライアントを安全モードに切り替える。
+  static void enterSafeMode(String reason) {
+    if (_safeMode) {
+      return;
+    }
+    _safeMode = true;
+    _safeModeReason = reason;
+    log.w("Supabase safe mode activated: $reason", tag: "SupabaseClientService");
   }
 
   /// 環境変数からSupabase URL取得
@@ -60,6 +78,13 @@ class SupabaseClientService {
       log.i("Client already initialized, skipping", tag: "SupabaseClientService");
       return;
     }
+    if (_safeMode) {
+      log.w(
+        "Supabase initialization skipped due to active safe mode: ${_safeModeReason ?? 'unknown'}",
+        tag: "SupabaseClientService",
+      );
+      return;
+    }
 
     try {
       log.i("Starting Supabase client initialization", tag: "SupabaseClientService");
@@ -72,11 +97,16 @@ class SupabaseClientService {
       _client = Supabase.instance.client;
       log.i(AuthInfo.clientInitialized.message, tag: "SupabaseClientService");
     } catch (e) {
-      log.e(
-        AuthError.initializationFailed.withParams(<String, String>{"error": e.toString()}),
+      final String message = AuthError.initializationFailed.withParams(
+        <String, String>{"error": e.toString()},
+      );
+      log.f(
+        message,
         error: e,
         tag: "SupabaseClientService",
+        fields: () => <String, dynamic>{"phase": "initialize", "safe_mode": true},
       );
+      enterSafeMode("Initialization failure: ${e.toString()}");
       throw AuthException.initializationFailed(e.toString());
     }
   }
@@ -106,5 +136,7 @@ class SupabaseClientService {
   static Future<void> dispose() async {
     _client = null;
     _instance = null;
+    _safeMode = false;
+    _safeModeReason = null;
   }
 }
