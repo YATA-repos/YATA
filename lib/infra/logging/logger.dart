@@ -193,21 +193,35 @@ class _LoggerCore {
   }
 
   void updateConfig(LogConfig Function(LogConfig) updater) {
+    final LogConfig previous = _configHub.value;
     _configHub.update(updater);
+    final LogConfig current = _configHub.value;
     // Recreate formatters/sinks if required
     _consoleFormatter = ConsolePrettyFormatter(
-      useColor: _configHub.value.consoleUseColor,
-      useEmojiFallback: _configHub.value.consoleUseEmojiFallback,
+      useColor: current.consoleUseColor,
+      useEmojiFallback: current.consoleUseEmojiFallback,
     );
     _pii = PiiMasker(
-      enabled: _configHub.value.piiMaskingEnabled,
-      mode: _configHub.value.maskMode,
-      customPatterns: _configHub.value.customPatterns,
-      allowListKeys: _configHub.value.allowListKeys,
+      enabled: current.piiMaskingEnabled,
+      mode: current.maskMode,
+      customPatterns: current.customPatterns,
+      allowListKeys: current.allowListKeys,
     );
-    _rateConfig = _configHub.value.rate;
-    // Note: File sink keeps file handle. Rotation/retention are configured at construction.
-    // If rotation settings change at runtime, recreate sink in future if needed.
+    _rateConfig = current.rate;
+
+    final bool fileConfigChanged =
+        previous.fileDirPath != current.fileDirPath ||
+        previous.fileBaseName != current.fileBaseName ||
+        previous.rotation.runtimeType != current.rotation.runtimeType ||
+        previous.retention.runtimeType != current.retention.runtimeType ||
+        previous.flushEveryLines != current.flushEveryLines ||
+        previous.flushEveryMs != current.flushEveryMs;
+
+    if (fileConfigChanged) {
+      final FileSink oldSink = _fileSink;
+      _fileSink = FileSink(current);
+      unawaited(oldSink.close());
+    }
   }
 
   void log(

@@ -2,7 +2,7 @@ import "dart:async";
 import "dart:developer";
 
 import "package:flutter/foundation.dart";
-import "package:yata/core/validation/env_validator.dart";
+import "../../../../core/validation/env_validator.dart";
 
 typedef TraceCallback<T> = T Function();
 typedef AsyncTraceCallback<T> = Future<T> Function();
@@ -13,11 +13,10 @@ typedef LazyLogMessageBuilder = String Function();
 ///
 /// 必要に応じて開発時に `true` へ変更するか、`OrderManagementTracer.overrideForDebug`
 /// を使用してセッション単位で切り替える。
-const String kOrderManagementPerformanceTracingEnvKey = 'ORDER_MANAGEMENT_PERF_TRACING';
+const String kOrderManagementPerformanceTracingEnvKey = "ORDER_MANAGEMENT_PERF_TRACING";
 
 const bool kOrderManagementPerformanceTracingEnabled = bool.fromEnvironment(
   kOrderManagementPerformanceTracingEnvKey,
-  defaultValue: false,
 );
 
 /// 注文管理画面向けのパフォーマンス計測ユーティリティ。

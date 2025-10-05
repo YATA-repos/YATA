@@ -632,7 +632,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           logThreshold: const Duration(milliseconds: 4),
         );
         _applyCartMutationResult(result);
-        final String? highlightTarget = result.highlightMenuItemId ?? menuItemId;
+        final String highlightTarget = result.highlightMenuItemId ?? menuItemId;
         if (highlightTarget != null) {
           _triggerHighlight(highlightTarget);
         }
@@ -703,7 +703,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           _applyCartMutationResult(result);
 
           if (quantity > 0) {
-            final String? highlightTarget = result.highlightMenuItemId ?? menuItemId;
+            final String highlightTarget = result.highlightMenuItemId ?? menuItemId;
             if (highlightTarget != null) {
               _triggerHighlight(highlightTarget);
             }
@@ -1037,7 +1037,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
         final List<CartItemViewData> items = <CartItemViewData>[];
         for (final OrderItem orderItem in data.orderItems) {
-          MenuItemViewData? menuView = _menuItemCache[orderItem.menuItemId];
+          final MenuItemViewData? menuView = _menuItemCache[orderItem.menuItemId];
           if (menuView == null) {
             missingMenuCount++;
             continue;

@@ -4,10 +4,10 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app/app.dart";
 import "core/validation/env_validator.dart";
+import "features/order/presentation/performance/order_management_tracing.dart";
 import "infra/logging/log_runtime_config.dart";
 import "infra/logging/logger.dart";
 import "infra/supabase/supabase_client.dart";
-import "features/order/presentation/performance/order_management_tracing.dart";
 
 void main() async {
   // flutter初期化
@@ -28,7 +28,7 @@ void main() async {
     EnvValidator.printValidationResult(validationResult);
 
     if (!validationResult.isValid) {
-      // 本番環境では起動を停止することも検討
+      // ! 本番環境では起動を停止することも検討
       w("環境変数の検証に失敗しました。", tag: "main");
     } else {
       i("環境変数の検証に成功しました。", tag: "main");

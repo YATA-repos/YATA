@@ -1,3 +1,5 @@
+import "dart:io";
+
 import "package:test/test.dart";
 
 import "package:yata/infra/logging/log_config.dart";
@@ -40,6 +42,22 @@ void main() {
 
       expect(config.level, isNull);
       expect(warnings, isEmpty);
+    });
+
+    test("LOG_DIR を正規化して返す", () async {
+      final Directory tmp = await Directory.systemTemp.createTemp("yata-log-dir-test");
+      addTearDown(() async {
+        if (await tmp.exists()) {
+          await tmp.delete(recursive: true);
+        }
+      });
+
+      final LogRuntimeConfigLoader loader = LogRuntimeConfigLoader();
+      final LogRuntimeConfig config = loader.load(<String, String>{
+        "LOG_DIR": tmp.path,
+      });
+
+      expect(config.directory, equals(tmp.path));
     });
   });
 
@@ -96,6 +114,25 @@ void main() {
       expect(config.flushEveryMs, equals(original.flushEveryMs));
       expect(config.overflowPolicy, equals(OverflowPolicy.dropNew));
       expect(warnMessages.length, equals(4));
+    });
+
+    test("LOG_DIR を設定すると fileDirPath を更新する", () async {
+      final Directory tmp = await Directory.systemTemp.createTemp("yata-log-dir-config");
+      addTearDown(() async {
+        if (await tmp.exists()) {
+          await tmp.delete(recursive: true);
+        }
+      });
+
+      applyLogRuntimeConfig(
+        env: <String, String>{
+          "LOG_DIR": tmp.path,
+        },
+        warn: (_) {},
+        info: (_) {},
+      );
+
+      expect(config.fileDirPath, equals(tmp.path));
     });
   });
 }

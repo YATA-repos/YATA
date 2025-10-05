@@ -1,3 +1,5 @@
+import "dart:io";
+
 import "../../core/validation/env_validator.dart";
 import "log_config.dart";
 import "log_level.dart";
@@ -10,18 +12,21 @@ class LogRuntimeConfig {
     this.flushIntervalMs,
     this.queueCapacity,
     this.overflowPolicy,
+    this.directory,
   });
 
   final LogLevel? level;
   final int? flushIntervalMs;
   final int? queueCapacity;
   final OverflowPolicy? overflowPolicy;
+  final String? directory;
 
   bool get hasOverrides =>
       level != null ||
       flushIntervalMs != null ||
       queueCapacity != null ||
-      overflowPolicy != null;
+      overflowPolicy != null ||
+      directory != null;
 
   LogConfig applyTo(LogConfig base) {
     LogConfig next = base;
@@ -33,6 +38,9 @@ class LogRuntimeConfig {
     }
     if (overflowPolicy != null) {
       next = next.copyWith(overflowPolicy: overflowPolicy);
+    }
+    if (directory != null && directory!.isNotEmpty) {
+      next = next.copyWith(fileDirPath: directory);
     }
     return next;
   }
@@ -50,6 +58,9 @@ class LogRuntimeConfig {
     }
     if (overflowPolicy != null) {
       statements.add("overflowPolicy=${overflowPolicy!.name}");
+    }
+    if (directory != null) {
+      statements.add("logDir=$directory");
     }
     return statements;
   }
@@ -69,17 +80,20 @@ class LogRuntimeConfigLoader {
     final String? rawFlushMs = env["LOG_FLUSH_INTERVAL_MS"];
     final String? rawQueue = env["LOG_MAX_QUEUE"];
     final String? rawBackpressure = env["LOG_BACKPRESSURE"];
+    final String? rawDir = env["LOG_DIR"];
 
     final LogLevel? level = _parseLevel(rawLevel);
     final int? flushMs = _parsePositiveInt("LOG_FLUSH_INTERVAL_MS", rawFlushMs);
     final int? queueCapacity = _parsePositiveInt("LOG_MAX_QUEUE", rawQueue);
     final OverflowPolicy? overflowPolicy = _parseOverflowPolicy(rawBackpressure);
+    final String? directory = _normalizeDirectory(rawDir, env);
 
     return LogRuntimeConfig(
       level: level,
       flushIntervalMs: flushMs,
       queueCapacity: queueCapacity,
       overflowPolicy: overflowPolicy,
+      directory: directory,
     );
   }
 
@@ -125,6 +139,25 @@ class LogRuntimeConfigLoader {
         return OverflowPolicy.dropNew;
     }
   }
+
+  String? _normalizeDirectory(String? raw, Map<String, String> env) {
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    String value = raw.trim();
+    if (value.startsWith("~")) {
+      final String? home =
+          env["HOME"] ?? env["USERPROFILE"] ?? Platform.environment["HOME"] ?? Platform.environment["USERPROFILE"];
+      if (home != null) {
+        if (value == "~") {
+          value = home;
+        } else if (value.startsWith("~/")) {
+          value = "$home${Platform.pathSeparator}${value.substring(2)}";
+        }
+      }
+    }
+    return Directory(value).absolute.path;
+  }
 }
 
 /// 環境変数からロガー設定を読み取り適用するヘルパー。
@@ -153,7 +186,8 @@ void applyLogRuntimeConfig({Map<String, String>? env, _WarnEmitter? warn, _InfoE
 
   if (config.flushIntervalMs != null ||
       config.queueCapacity != null ||
-      config.overflowPolicy != null) {
+      config.overflowPolicy != null ||
+      config.directory != null) {
     updateLoggerConfig(config.applyTo);
   }
 }

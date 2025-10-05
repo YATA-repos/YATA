@@ -341,7 +341,6 @@ class CartManagementService {
       return CartMutationResult(
         kind: CartMutationKind.remove,
         snapshot: snapshot,
-        highlightMenuItemId: null,
       );
     } catch (e, stackTrace) {
       log.e("Failed to remove item from cart", tag: loggerComponent, error: e, st: stackTrace);
@@ -369,7 +368,7 @@ class CartManagementService {
         "updated_at": now.toIso8601String(),
       });
 
-      final Order baseOrder = (updated ?? cart)!;
+      final Order baseOrder = (updated ?? cart);
       baseOrder
         ..totalAmount = 0
         ..notes = null;
@@ -390,7 +389,6 @@ class CartManagementService {
       return CartMutationResult(
         kind: CartMutationKind.clear,
         snapshot: snapshot,
-        highlightMenuItemId: null,
       );
     } catch (e, stackTrace) {
       log.e("Failed to clear cart", tag: loggerComponent, error: e, st: stackTrace);
