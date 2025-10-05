@@ -3,6 +3,7 @@ import "dart:developer";
 
 import "package:flutter/foundation.dart";
 import "../../../../core/validation/env_validator.dart";
+import "../../../../infra/logging/context_utils.dart" as log_ctx;
 
 typedef TraceCallback<T> = T Function();
 typedef AsyncTraceCallback<T> = Future<T> Function();
@@ -78,25 +79,34 @@ class OrderManagementTracer {
       return action();
     }
 
-    final Duration threshold = logThreshold ?? _defaultLogThreshold;
-    final Stopwatch stopwatch = Stopwatch()..start();
-    final TimelineTask task = TimelineTask(filterKey: _timelineCategory);
-    final Map<String, dynamic>? startArgs = _buildArguments(startArguments);
-    task.start(name, arguments: startArgs);
-    try {
-      return action();
-    } finally {
-      stopwatch.stop();
-      final Map<String, dynamic>? endArgs = _buildArguments(finishArguments);
-      final Map<String, dynamic> timelineArgs = <String, dynamic>{
-        if (startArgs != null) ...startArgs,
-        if (endArgs != null) ...endArgs,
-        "elapsedMs": _elapsedMs(stopwatch.elapsed),
-      };
-      task.finish(arguments: timelineArgs);
-      final Map<String, dynamic>? logArgs = _mergeArguments(startArgs, endArgs);
-      _logElapsed(name, stopwatch.elapsed, logArgs, threshold);
-    }
+    return log_ctx.traceSync<T>(
+      name,
+      (log_ctx.LogTrace trace) {
+        final Duration threshold = logThreshold ?? _defaultLogThreshold;
+        final Stopwatch stopwatch = Stopwatch()..start();
+        final TimelineTask task = TimelineTask(filterKey: _timelineCategory);
+        final Map<String, dynamic>? startArgs = _buildArguments(startArguments, trace: trace);
+        task.start(name, arguments: startArgs);
+        try {
+          return action();
+        } finally {
+          stopwatch.stop();
+          final Map<String, dynamic>? endArgs = _buildArguments(finishArguments, trace: trace);
+          final Map<String, dynamic> timelineArgs = <String, dynamic>{
+            if (startArgs != null) ...startArgs,
+            if (endArgs != null) ...endArgs,
+            "elapsedMs": _elapsedMs(stopwatch.elapsed),
+          };
+          task.finish(arguments: timelineArgs);
+          final Map<String, dynamic>? logArgs = _mergeArguments(startArgs, endArgs);
+          _logElapsed(name, stopwatch.elapsed, logArgs, threshold);
+        }
+      },
+      attributes: <String, Object?>{
+        log_ctx.LogContextKeys.source: _logPrefix,
+        log_ctx.LogContextKeys.operation: name,
+      },
+    );
   }
 
   /// 非同期ブロックを計測する。
@@ -111,25 +121,34 @@ class OrderManagementTracer {
       return action();
     }
 
-    final Duration threshold = logThreshold ?? _defaultLogThreshold;
-    final Stopwatch stopwatch = Stopwatch()..start();
-    final TimelineTask task = TimelineTask(filterKey: _timelineCategory);
-    final Map<String, dynamic>? startArgs = _buildArguments(startArguments);
-    task.start(name, arguments: startArgs);
-    try {
-      return await action();
-    } finally {
-      stopwatch.stop();
-      final Map<String, dynamic>? endArgs = _buildArguments(finishArguments);
-      final Map<String, dynamic> timelineArgs = <String, dynamic>{
-        if (startArgs != null) ...startArgs,
-        if (endArgs != null) ...endArgs,
-        "elapsedMs": _elapsedMs(stopwatch.elapsed),
-      };
-      task.finish(arguments: timelineArgs);
-      final Map<String, dynamic>? logArgs = _mergeArguments(startArgs, endArgs);
-      _logElapsed(name, stopwatch.elapsed, logArgs, threshold);
-    }
+    return log_ctx.traceAsync<T>(
+      name,
+      (log_ctx.LogTrace trace) async {
+        final Duration threshold = logThreshold ?? _defaultLogThreshold;
+        final Stopwatch stopwatch = Stopwatch()..start();
+        final TimelineTask task = TimelineTask(filterKey: _timelineCategory);
+        final Map<String, dynamic>? startArgs = _buildArguments(startArguments, trace: trace);
+        task.start(name, arguments: startArgs);
+        try {
+          return await action();
+        } finally {
+          stopwatch.stop();
+          final Map<String, dynamic>? endArgs = _buildArguments(finishArguments, trace: trace);
+          final Map<String, dynamic> timelineArgs = <String, dynamic>{
+            if (startArgs != null) ...startArgs,
+            if (endArgs != null) ...endArgs,
+            "elapsedMs": _elapsedMs(stopwatch.elapsed),
+          };
+          task.finish(arguments: timelineArgs);
+          final Map<String, dynamic>? logArgs = _mergeArguments(startArgs, endArgs);
+          _logElapsed(name, stopwatch.elapsed, logArgs, threshold);
+        }
+      },
+      attributes: <String, Object?>{
+        log_ctx.LogContextKeys.source: _logPrefix,
+        log_ctx.LogContextKeys.operation: name,
+      },
+    );
   }
 
   /// ログメッセージを出力する。実際に使用されるのはトレーシングが有効なときのみ。
@@ -156,13 +175,41 @@ class OrderManagementTracer {
     return index % sampleModulo == 0;
   }
 
-  static Map<String, dynamic>? _buildArguments(TraceArgumentsBuilder? builder) {
-    if (builder == null || !isEnabled) {
-      return null;
+  static Map<String, dynamic>? _buildArguments(
+    TraceArgumentsBuilder? builder, {
+    required log_ctx.LogTrace trace,
+  }) {
+    if (!isEnabled) {
+      return _attachTraceIdentifiers(null, trace);
+    }
+    if (builder == null) {
+      return _attachTraceIdentifiers(null, trace);
     }
     final Map<String, dynamic> result = builder();
-    return result.isEmpty ? null : Map<String, dynamic>.from(result);
+    final Map<String, dynamic>? normalized = result.isEmpty
+        ? null
+        : Map<String, dynamic>.from(result);
+    return _attachTraceIdentifiers(normalized, trace);
   }
+
+  static Map<String, dynamic>? _attachTraceIdentifiers(
+    Map<String, dynamic>? source,
+    log_ctx.LogTrace trace,
+  ) {
+    final Map<String, dynamic> combined = <String, dynamic>{
+      if (source != null) ...source,
+      ..._traceIdentifiers(trace),
+    };
+    return combined.isEmpty ? null : combined;
+  }
+
+  static Map<String, dynamic> _traceIdentifiers(log_ctx.LogTrace trace) =>
+      <String, dynamic>{
+        log_ctx.LogContextKeys.flowId: trace.flowId,
+        log_ctx.LogContextKeys.spanId: trace.spanId,
+        if (trace.parentSpanId != null)
+          log_ctx.LogContextKeys.parentSpanId: trace.parentSpanId,
+      };
 
   static double _elapsedMs(Duration duration) => duration.inMicroseconds / 1000;
 

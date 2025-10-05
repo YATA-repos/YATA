@@ -96,6 +96,58 @@ authLogger.i('パスワード変更完了');
 authLogger.w('無効なトークン');
 ```
 
+### トレーシングユーティリティ (`context_utils.dart`)
+
+`lib/infra/logging/context_utils.dart` には、`LogContext` を一貫して扱うためのヘルパーがまとまっています。代表的なキーは `LogContextKeys` に定義されており、以下のような標準化された snake_case キーを使用します。
+
+- `flow_id`: ビジネスフロー全体を関連付ける ID。
+- `span_id` / `parent_span_id`: サービス／UI層でのステップを表すスパン ID。
+- `span_name`: スパンの論理名（例: `controller.checkout`）。
+- `operation`: 構造化フィールドと揃えた業務アクション名。
+- `request_id`, `user_id`, `source` など、追跡に必要な補助情報。
+
+`traceAsync` / `traceSync` を使うと、これらの値を自動で付与しながらゾーンコンテキストを生成できます。Riverpod やサービス層での利用例は次の通りです。
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yata/infra/logging/context_utils.dart';
+import 'package:yata/infra/logging/logging.dart';
+
+final checkoutProvider = FutureProvider.autoDispose((ref) async {
+  return traceAsync('order.checkout.ui', (trace) async {
+    final fields = LogFieldsBuilder.operation('order.checkout')
+      .withFlow(flowId: trace.flowId, requestId: trace.context[LogContextKeys.requestId] as String?)
+      .withActor(userId: trace.context[LogContextKeys.userId] as String?);
+
+    i('UI checkout started', tag: 'OrderManagementController', fields: fields.started().build());
+
+    return ref.read(orderManagementServiceProvider).checkoutCart(/* ... */);
+  }, attributes: <String, Object?>{
+    LogContextKeys.source: 'OrderManagementController',
+  });
+});
+```
+
+サービス層では同じ `traceAsync` を呼び出すだけで、UI から渡された `flow_id` や `request_id` が自動的に引き継がれます。`LogFieldsBuilder.withFlow` を併用すると、構造化フィールドにも同じ ID が入り、Kibana/BigQuery などでの横断追跡が容易になります。
+
+```dart
+Future<OrderCheckoutResult> checkoutCart(/* ... */) {
+  return traceAsync('order.checkout', (trace) async {
+    final builder = LogFieldsBuilder.operation('order.checkout')
+      .withFlow(flowId: trace.flowId, requestId: trace.context[LogContextKeys.requestId] as String?)
+      .withActor(userId: userId);
+
+    log.i('Started cart checkout process', tag: loggerComponent, fields: builder.started().build());
+    // ... ビジネスロジック ...
+  }, attributes: <String, Object?>{
+    LogContextKeys.source: loggerComponent,
+    LogContextKeys.userId: userId,
+  });
+}
+```
+
+UI トレーサ（`OrderManagementTracer.traceAsync` など）も内部で `traceAsync` を利用するようになり、Timeline Task とログ両方に同一の `flow_id` / `span_id` が表示されます。長時間処理（例: リアルタイム同期、夜間バッチ）では、最初の入口で `traceAsync` を呼び出し、必要に応じて `LogTrace.child(...)` でサブスパンを切っておくと、後段のログからも容易に辿れるようになります。
+
 ### 推奨タグ
 
 プロジェクトでは以下のタグを推奨しています：

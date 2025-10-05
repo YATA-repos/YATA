@@ -1,10 +1,12 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
-import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/contracts/logging/logger.dart" as log_contract;
+import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/utils/error_handler.dart";
+import "../../../infra/logging/context_utils.dart" as log_ctx;
+import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";
@@ -70,32 +72,67 @@ class InventoryService
   @override
   String get serviceName => "InventoryService";
 
-  Future<void> startRealtimeMonitoring() async {
-    try {
-      log.i("Starting inventory realtime monitoring", tag: loggerComponent);
+  Future<void> startRealtimeMonitoring() => log_ctx.traceAsync<void>(
+      "inventory.realtime_monitoring.start",
+      (log_ctx.LogTrace trace) async {
+        final Stopwatch sw = Stopwatch()..start();
+        final String? requestId = trace.context[log_ctx.LogContextKeys.requestId] as String?;
+        LogFieldsBuilder buildTraceFields() => LogFieldsBuilder.operation("inventory.realtime_monitoring")
+            .withFlow(flowId: trace.flowId, requestId: requestId);
 
-      // 材料テーブルの監視開始
-      await startFeatureMonitoring(
-        "inventory",
-        "materials",
-        _handleMaterialUpdate,
-        eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
-      );
+        log.i(
+          "Starting inventory realtime monitoring",
+          tag: loggerComponent,
+          fields: buildTraceFields().started().build(),
+        );
 
-      // 在庫テーブルの監視開始
-      await startFeatureMonitoring(
-        "inventory",
-        "stock_levels",
-        _handleStockLevelUpdate,
-        eventTypes: const <String>["UPDATE"], // 在庫レベル変更のみ
-      );
+        try {
+          // 材料テーブルの監視開始
+          await startFeatureMonitoring(
+            "inventory",
+            "materials",
+            _handleMaterialUpdate,
+            eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
+          );
 
-      log.i("Inventory realtime monitoring started", tag: loggerComponent);
-    } catch (e) {
-      log.e("Failed to start inventory realtime monitoring", tag: loggerComponent, error: e);
-      rethrow;
-    }
-  }
+          // 在庫テーブルの監視開始
+          await startFeatureMonitoring(
+            "inventory",
+            "stock_levels",
+            _handleStockLevelUpdate,
+            eventTypes: const <String>["UPDATE"],
+          );
+
+          if (sw.isRunning) {
+            sw.stop();
+          }
+          log.i(
+            "Inventory realtime monitoring started",
+            tag: loggerComponent,
+            fields: buildTraceFields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
+          );
+        } catch (e, stackTrace) {
+          if (sw.isRunning) {
+            sw.stop();
+          }
+          log.e(
+            "Failed to start inventory realtime monitoring",
+            tag: loggerComponent,
+            error: e,
+            st: stackTrace,
+            fields: buildTraceFields()
+                .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+                .addMetadataEntry("message", e.toString())
+                .build(),
+          );
+          rethrow;
+        }
+      },
+      attributes: <String, Object?>{
+        log_ctx.LogContextKeys.source: loggerComponent,
+        log_ctx.LogContextKeys.operation: "inventory.realtime_monitoring.start",
+      },
+    );
 
   Future<void> stopRealtimeMonitoring() async {
     try {
