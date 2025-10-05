@@ -684,11 +684,11 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                 labelText: "注文メモ",
                 hintText: "例: アレルギー対応、調理指示など",
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(YataRadiusTokens.sm),
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
                   borderSide: const BorderSide(color: YataColorTokens.border),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(YataRadiusTokens.sm),
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
                   borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
