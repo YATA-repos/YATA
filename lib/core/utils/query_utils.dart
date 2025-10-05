@@ -1,3 +1,5 @@
+import "dart:convert";
+
 import "package:supabase_flutter/supabase_flutter.dart";
 import "../constants/query_types.dart";
 import "../logging/logger_binding.dart";
@@ -9,6 +11,34 @@ class QueryUtils {
   QueryUtils._();
 
   static const String _tag = "QueryUtils";
+  static int _querySequence = 0;
+
+  static String _nextQueryId() {
+    _querySequence = (_querySequence + 1) % 100000;
+    return "Q${_querySequence.toString().padLeft(5, '0')}";
+  }
+
+  static String _filterSignature(FilterCondition condition) =>
+      "${condition.column}|${condition.operator.name}|${_normalizeValue(condition.value)}";
+
+  static String _normalizeValue(Object? value) {
+    if (value == null) {
+      return "null";
+    }
+    if (value is DateTime) {
+      return value.toIso8601String();
+    }
+    if (value is Iterable) {
+      return value.map<dynamic>(_normalizeValue).join(",");
+    }
+    if (value is Map<String, dynamic>) {
+      return jsonEncode(value);
+    }
+    if (value is Map) {
+      return jsonEncode(value);
+    }
+    return value.toString();
+  }
 
   static void _debug(String message) {
     LoggerBinding.instance.d(message, tag: _tag);
@@ -173,14 +203,35 @@ class QueryUtils {
   /// 論理条件をクエリに適用（階層化対応済み）
   static PostgrestFilterBuilder<T> _applyLogicalCondition<T>(
     PostgrestFilterBuilder<T> query,
-    LogicalCondition condition,
-  ) {
+    LogicalCondition condition, {
+    required Set<String> appliedSignatures,
+    required List<String> appliedDescriptions,
+    required String queryId,
+  }) {
     if (condition is AndCondition) {
-      return _applyAndCondition(query, condition);
+      return _applyAndCondition(
+        query,
+        condition,
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     } else if (condition is OrCondition) {
-      return _applyOrCondition(query, condition);
+      return _applyOrCondition(
+        query,
+        condition,
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     } else if (condition is ComplexCondition) {
-      return _applyComplexCondition(query, condition);
+      return _applyComplexCondition(
+        query,
+        condition,
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     } else {
       _error(
         "Unknown logical condition type: ${condition.runtimeType} | 不明な論理条件タイプ: ${condition.runtimeType}",
@@ -192,11 +243,20 @@ class QueryUtils {
   /// AND条件を適用
   static PostgrestFilterBuilder<T> _applyAndCondition<T>(
     PostgrestFilterBuilder<T> query,
-    AndCondition condition,
-  ) {
+    AndCondition condition, {
+    required Set<String> appliedSignatures,
+    required List<String> appliedDescriptions,
+    required String queryId,
+  }) {
     PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter cond in condition.conditions) {
-      result = applyFilter(result, cond);
+      result = applyFilter(
+        result,
+        cond,
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     }
     return result;
   }
@@ -204,19 +264,33 @@ class QueryUtils {
   /// OR条件を適用
   static PostgrestFilterBuilder<T> _applyOrCondition<T>(
     PostgrestFilterBuilder<T> query,
-    OrCondition condition,
-  ) {
+    OrCondition condition, {
+    required Set<String> appliedSignatures,
+    required List<String> appliedDescriptions,
+    required String queryId,
+  }) {
     final List<FilterCondition> filterConditions = <FilterCondition>[];
+    final Set<String> localSignatures = <String>{};
 
     for (final QueryFilter cond in condition.conditions) {
       // OR条件内の条件はFilterConditionのみを対象
       if (cond is FilterCondition) {
-        filterConditions.add(cond);
+        final String signature = _filterSignature(cond);
+        if (localSignatures.add(signature)) {
+          filterConditions.add(cond);
+        } else {
+          _debug("[$queryId] Skipping duplicate OR filter: ${cond.description}");
+        }
       } else if (cond is AndCondition) {
         // AND条件だった場合はフラット化
         for (final QueryFilter innerCond in cond.conditions) {
           if (innerCond is FilterCondition) {
-            filterConditions.add(innerCond);
+            final String signature = _filterSignature(innerCond);
+            if (localSignatures.add(signature)) {
+              filterConditions.add(innerCond);
+            } else {
+              _debug("[$queryId] Skipping duplicate OR filter: ${innerCond.description}");
+            }
           }
         }
       } else {
@@ -233,31 +307,68 @@ class QueryUtils {
 
     final String orString = _buildOrConditionString(filterConditions);
 
-  _debug("Applying OR condition: $orString");
+    _debug("[$queryId] Applying OR condition: $orString");
+    for (final FilterCondition condition in filterConditions) {
+      final String signature = _filterSignature(condition);
+      if (appliedSignatures.add(signature)) {
+        appliedDescriptions.add("OR:${condition.description}");
+      }
+    }
     return query.or(orString);
   }
 
   /// 複合条件を適用
   static PostgrestFilterBuilder<T> _applyComplexCondition<T>(
     PostgrestFilterBuilder<T> query,
-    ComplexCondition condition,
-  ) {
+    ComplexCondition condition, {
+    required Set<String> appliedSignatures,
+    required List<String> appliedDescriptions,
+    required String queryId,
+  }) {
     if (condition.operator == LogicalOperator.and) {
-      return _applyAndCondition(query, AndCondition(condition.conditions));
+      return _applyAndCondition(
+        query,
+        AndCondition(condition.conditions),
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     } else {
-      return _applyOrCondition(query, OrCondition(condition.conditions));
+      return _applyOrCondition(
+        query,
+        OrCondition(condition.conditions),
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     }
   }
 
   /// フィルタ条件をクエリに適用
   static PostgrestFilterBuilder<T> applyFilter<T>(
     PostgrestFilterBuilder<T> query,
-    QueryFilter filter,
-  ) {
+    QueryFilter filter, {
+    required Set<String> appliedSignatures,
+    required List<String> appliedDescriptions,
+    required String queryId,
+  }) {
     if (filter is FilterCondition) {
+      final String signature = _filterSignature(filter);
+      if (appliedSignatures.contains(signature)) {
+        _debug("[$queryId] Skipping duplicate filter: ${filter.description}");
+        return query;
+      }
+      appliedSignatures.add(signature);
+      appliedDescriptions.add(filter.description);
       return _applySingleFilter(query, filter);
     } else if (filter is LogicalCondition) {
-      return _applyLogicalCondition(query, filter);
+      return _applyLogicalCondition(
+        query,
+        filter,
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     } else {
       _error(
         "Unsupported filter type: ${filter.runtimeType} | サポートされていないフィルタタイプ: ${filter.runtimeType}",
@@ -271,11 +382,30 @@ class QueryUtils {
     PostgrestFilterBuilder<T> query,
     List<QueryFilter> filters,
   ) {
-  _debug("Applying ${filters.length} filters with AND combination");
+    final String queryId = _nextQueryId();
+    final Set<String> appliedSignatures = <String>{};
+    final List<String> appliedDescriptions = <String>[];
+
+    _debug("[$queryId] Applying ${filters.length} filters with AND combination");
     PostgrestFilterBuilder<T> result = query;
     for (final QueryFilter filter in filters) {
-      result = applyFilter(result, filter);
+      result = applyFilter(
+        result,
+        filter,
+        appliedSignatures: appliedSignatures,
+        appliedDescriptions: appliedDescriptions,
+        queryId: queryId,
+      );
     }
+
+    if (appliedDescriptions.isNotEmpty) {
+      _debug(
+        "[$queryId] Applied filters (${appliedDescriptions.length}): ${appliedDescriptions.join('; ')}",
+      );
+    } else {
+      _debug("[$queryId] No filters applied after deduplication");
+    }
+
     return result;
   }
 
