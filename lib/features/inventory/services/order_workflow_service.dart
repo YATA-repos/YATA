@@ -1,7 +1,7 @@
 // Removed LoggerComponent mixin; use local tag
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/purchase_repository_contract.dart";
-import "../../../core/logging/compat.dart" as log;
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
 import "usage_analysis_service.dart";
@@ -69,12 +69,17 @@ class OrderCalculationResult {
 /// 発注ワークフローサービス
 class OrderWorkflowService {
   OrderWorkflowService({
+    required log_contract.LoggerContract logger,
     required MaterialRepositoryContract<Material> materialRepository,
     required PurchaseRepositoryContract<Purchase> purchaseRepository,
     required UsageAnalysisService usageAnalysisService,
-  }) : _materialRepository = materialRepository,
+  }) : _logger = logger,
+       _materialRepository = materialRepository,
        _purchaseRepository = purchaseRepository,
        _usageAnalysisService = usageAnalysisService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialRepositoryContract<Material> _materialRepository;
   final PurchaseRepositoryContract<Purchase> _purchaseRepository;

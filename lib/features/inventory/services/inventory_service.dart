@@ -1,15 +1,17 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../../core/constants/enums.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/utils/error_handler.dart";
+import "../../../infra/logging/context_utils.dart" as log_ctx;
+import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/inventory_dto.dart";
 import "../dto/transaction_dto.dart";
 import "../models/inventory_model.dart";
+import "inventory_service_contract.dart";
 import "material_management_service.dart";
 import "order_stock_service.dart";
 import "stock_level_service.dart";
@@ -18,8 +20,11 @@ import "usage_analysis_service.dart";
 
 /// 在庫管理統合サービス（リアルタイム対応）
 /// 複数のサービスを組み合わせて在庫管理の全機能を提供
-class InventoryService with RealtimeServiceContractMixin implements RealtimeServiceControl {
+class InventoryService
+    with RealtimeServiceContractMixin
+    implements RealtimeServiceControl, InventoryServiceContract {
   InventoryService({
+    required log_contract.LoggerContract logger,
     required Ref ref,
     required r_contract.RealtimeManagerContract realtimeManager,
     required MaterialManagementService materialManagementService,
@@ -27,13 +32,17 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
     required StockOperationService stockOperationService,
     required UsageAnalysisService usageAnalysisService,
     required OrderStockService orderStockService,
-  }) : _ref = ref,
+  }) : _logger = logger,
+    _ref = ref,
        _realtimeManager = realtimeManager,
        _materialManagementService = materialManagementService,
        _stockLevelService = stockLevelService,
        _stockOperationService = stockOperationService,
        _usageAnalysisService = usageAnalysisService,
        _orderStockService = orderStockService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final Ref _ref;
   final MaterialManagementService _materialManagementService;
@@ -63,32 +72,67 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
   @override
   String get serviceName => "InventoryService";
 
-  Future<void> startRealtimeMonitoring() async {
-    try {
-      log.i("Starting inventory realtime monitoring", tag: loggerComponent);
+  Future<void> startRealtimeMonitoring() => log_ctx.traceAsync<void>(
+      "inventory.realtime_monitoring.start",
+      (log_ctx.LogTrace trace) async {
+        final Stopwatch sw = Stopwatch()..start();
+        final String? requestId = trace.context[log_ctx.LogContextKeys.requestId] as String?;
+        LogFieldsBuilder buildTraceFields() => LogFieldsBuilder.operation("inventory.realtime_monitoring")
+            .withFlow(flowId: trace.flowId, requestId: requestId);
 
-      // 材料テーブルの監視開始
-      await startFeatureMonitoring(
-        "inventory",
-        "materials",
-        _handleMaterialUpdate,
-        eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
-      );
+        log.i(
+          "Starting inventory realtime monitoring",
+          tag: loggerComponent,
+          fields: buildTraceFields().started().build(),
+        );
 
-      // 在庫テーブルの監視開始
-      await startFeatureMonitoring(
-        "inventory",
-        "stock_levels",
-        _handleStockLevelUpdate,
-        eventTypes: const <String>["UPDATE"], // 在庫レベル変更のみ
-      );
+        try {
+          // 材料テーブルの監視開始
+          await startFeatureMonitoring(
+            "inventory",
+            "materials",
+            _handleMaterialUpdate,
+            eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
+          );
 
-      log.i("Inventory realtime monitoring started", tag: loggerComponent);
-    } catch (e) {
-      log.e("Failed to start inventory realtime monitoring", tag: loggerComponent, error: e);
-      rethrow;
-    }
-  }
+          // 在庫テーブルの監視開始
+          await startFeatureMonitoring(
+            "inventory",
+            "stock_levels",
+            _handleStockLevelUpdate,
+            eventTypes: const <String>["UPDATE"],
+          );
+
+          if (sw.isRunning) {
+            sw.stop();
+          }
+          log.i(
+            "Inventory realtime monitoring started",
+            tag: loggerComponent,
+            fields: buildTraceFields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
+          );
+        } catch (e, stackTrace) {
+          if (sw.isRunning) {
+            sw.stop();
+          }
+          log.e(
+            "Failed to start inventory realtime monitoring",
+            tag: loggerComponent,
+            error: e,
+            st: stackTrace,
+            fields: buildTraceFields()
+                .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+                .addMetadataEntry("message", e.toString())
+                .build(),
+          );
+          rethrow;
+        }
+      },
+      attributes: <String, Object?>{
+        log_ctx.LogContextKeys.source: loggerComponent,
+        log_ctx.LogContextKeys.operation: "inventory.realtime_monitoring.start",
+      },
+    );
 
   Future<void> stopRealtimeMonitoring() async {
     try {
@@ -246,10 +290,32 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
   // ===== 材料管理関連メソッド =====
 
   /// 材料を作成
+  @override
   Future<Material?> createMaterial(Material material) async =>
       _materialManagementService.createMaterial(material);
 
+  /// 材料カテゴリを作成
+  @override
+  Future<MaterialCategory?> createMaterialCategory(MaterialCategory category) async =>
+      _materialManagementService.createCategory(category);
+
+  /// 材料カテゴリを更新
+  @override
+  Future<MaterialCategory?> updateMaterialCategory(MaterialCategory category) async =>
+    _materialManagementService.updateCategory(category);
+
+  /// 材料カテゴリを削除
+  @override
+  Future<void> deleteMaterialCategory(String categoryId) async =>
+    _materialManagementService.deleteCategory(categoryId);
+
+  /// 材料を更新
+  @override
+  Future<Material?> updateMaterial(Material material) async =>
+      _materialManagementService.updateMaterial(material);
+
   /// 材料カテゴリ一覧を取得
+  @override
   Future<List<MaterialCategory>> getMaterialCategories() async =>
       _materialManagementService.getMaterialCategories();
 
@@ -279,6 +345,7 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
       _stockLevelService.getCriticalStockMaterials();
 
   /// 材料一覧を在庫レベル・使用可能日数付きで取得
+  @override
   Future<List<MaterialStockInfo>> getMaterialsWithStockInfo(
     String? categoryId,
     String userId,
@@ -313,6 +380,7 @@ class InventoryService with RealtimeServiceContractMixin implements RealtimeServ
   // ===== 在庫操作関連メソッド =====
 
   /// 材料在庫を手動更新
+  @override
   Future<Material?> updateMaterialStock(StockUpdateRequest request, String userId) async =>
       _stockOperationService.updateMaterialStock(request, userId);
 

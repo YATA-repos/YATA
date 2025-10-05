@@ -1,0 +1,5 @@
+- プロジェクト名: YATA（小規模飲食店・屋台向けの在庫・注文・分析管理アプリ）
+- 目的: Flutter製クロスプラットフォームアプリで在庫追跡・注文処理・売上分析・メニュー管理を一元化
+- 構成: `lib/` 配下に app（起動・DI・ルーティング）、core（共通基盤）、infra（外部IO/Supabase等）、features（ドメイン縦割りサービス/リポジトリ/UI）、shared（UIデザインシステム）を配置。`test/` はミラーツリー構造。
+- アーキテクチャ: UI → Service → Repository の直線依存を前提とした Feature-based Service Layer Architecture。feature間の直接依存は禁止し、core抽象やapp層で調停。
+- 重要ドキュメント: `docs/standards/architecture.md`（レイヤー/依存ルール）、`docs/standards/documentation_guidelines.md`（ドキュメント整備指針）、`AGENTS.md`（AIエージェント向け運用ガイド）。

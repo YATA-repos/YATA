@@ -2,11 +2,12 @@ import "package:json_annotation/json_annotation.dart";
 
 import "../../../core/base/base.dart";
 import "../../../core/constants/enums.dart";
+import "../shared/order_status_mapper.dart";
 
 part "order_model.g.dart";
 
 /// 注文
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Order extends BaseModel {
   Order({
     required this.totalAmount,
@@ -14,6 +15,7 @@ class Order extends BaseModel {
     required this.paymentMethod,
     required this.discountAmount,
     required this.orderedAt,
+    this.isCart = false,
     this.orderNumber,
     this.customerName,
     this.notes,
@@ -35,7 +37,12 @@ class Order extends BaseModel {
   /// 注文番号
   String? orderNumber;
 
+  /// カート注文フラグ
+  @JsonKey(defaultValue: false)
+  bool isCart;
+
   /// 注文ステータス
+  @JsonKey(fromJson: OrderStatusMapper.fromJson, toJson: OrderStatusMapper.toJson)
   OrderStatus status;
 
   /// 支払い方法
@@ -77,7 +84,7 @@ class Order extends BaseModel {
 }
 
 /// 注文明細
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class OrderItem extends BaseModel {
   OrderItem({
     required this.orderId,

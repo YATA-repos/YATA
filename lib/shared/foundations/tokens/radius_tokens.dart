@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import "package:flutter/widgets.dart";
 
 /// 角丸表現の統一トークン。
 class YataRadiusTokens {
@@ -18,6 +18,12 @@ class YataRadiusTokens {
 
   /// ヒーローカードやハイライトの角丸。
   static const double xLarge = 20.0;
+
+  /// ピル型形状にするための最大値。
+  static const double pill = 999.0;
+
+  /// 小規模なコンポーネント向けBorderRadius。
+  static const BorderRadius borderRadiusSmall = BorderRadius.all(Radius.circular(small));
 
   /// カードに共通するBorderRadius。
   static const BorderRadius borderRadiusCard = BorderRadius.all(Radius.circular(medium));

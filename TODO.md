@@ -1,20 +1,214 @@
 # TODO
-# 現在、このファイルは使用されていません。ここにタスクを記述しないでください。
 
----
+Next ID No: 23
+
+--- 
+
+Definitions to suppress Markdown warnings
+
+[Bugfix]: #
+[Feature]: #
+[Enhancement]: #
+[Performance]: #
+[Documentation]: #
+[Chore]: #
+
+## あとでタスク定義
+- 注文状況ページにおいて、注文カードクリック時に詳細モーダルを開く（履歴に移動するのか、ページ維持でモーダルだけ開くのか要検討）
+- app_router.dartで、pathをハードコードするのか、Page側で定義するのか、統一する
+- メニュー管理画面の刷新が終了したら、メニュー管理画面を踏襲する形式で在庫管理ページも刷新する
 
 ## Backlog
 
+### [Documentation] CSVデータ辞書を整備する
+- **ID**: Documentation-Documentation-18
+- **Priority**: P1
+- **Size**: M
+- **Area**: Documentation
+- **Dependencies**: None
+- **Goal**: `docs/reference/dataset_dictionary.md` に主要CSVのカラム定義とキー方針が整理され、チームが参照できる状態になる。
+- **Steps**:
+  1. 既存スキーマと草案CSVを突き合わせて必要なカラム・キー情報を洗い出す。
+  2. データセットごとの定義・データ型・計算式をドキュメントに記載する。
+  3. レビューを経て`docs/reference/`配下に公開し、TODOのNext Stepsへ反映する。
+- **Description**: CSVエクスポート実装の前提としてデータ辞書を整備し、Phase 0の基盤準備を完了させる。
+
+### [Enhancement] ExportService API設計レビューを完了する
+- **ID**: Core-Enhancement-19
+- **Priority**: P1
+- **Size**: S
+- **Area**: Core
+- **Dependencies**: Documentation-Documentation-18
+- **Goal**: ExportServiceのAPI仕様がレビュー承認され、実装に必要なインターフェースとエラーハンドリング方針が固まる。
+- **Steps**:
+  1. 提案中のAPI仕様を整理し、入出力・エラーケース・認可要件を明文化する。
+  2. Backendリードとのレビューを実施し、指摘事項を反映する。
+  3. 承認済み仕様を`docs/plan/`または`docs/reference/`に更新し、実装チケットへリンクする。
+- **Description**: CSVエクスポートのサービス層実装を開始するために、API契約とレビューを完了させる。
+
+### [Enhancement] CSVエクスポート画面のUIモックを作成する
+- **ID**: UI/UX-Enhancement-20
+- **Priority**: P1
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: Core-Enhancement-19
+- **Goal**: エクスポート設定画面のUIモックが作成され、デザインレビューで承認される。
+- **Steps**:
+  1. フィルタ・進捗表示・完了通知を含むワイヤーフレームを作成する。
+  2. デザインレビューを実施し、フィードバックを反映する。
+  3. 最終モックとUXノートを`docs/plan/2025-10-02-csv-export-implementation-plan.md`へ追記する。
+- **Description**: Flutter実装前にUI/UXを固め、Phase 1での画面開発を円滑に進める。
+
+### [Feature] Supabase RPCプロトタイプで売上明細CSVを生成する
+- **ID**: Core-Feature-21
+- **Priority**: P1
+- **Size**: M
+- **Area**: Core
+- **Dependencies**: Core-Enhancement-19
+- **Goal**: `fn_export_csv` プロトタイプが構築され、売上明細CSVを指定期間で出力できることを確認する。
+- **Steps**:
+  1. モックデータ環境で必要なビュー・サンプルデータを準備する。
+  2. Supabase RPCを実装し、期間・店舗パラメータでCSV文字列を返す。
+  3. 出力フォーマットと性能を検証し、改善点を記録する。
+- **Description**: Phase 1の実装に向けて、Supabase側のエクスポート基盤を技術検証する。
+
+### [Chore] セキュリティ・権限レビューを実施する
+- **ID**: DevOps-Chore-22
+- **Priority**: P1
+- **Size**: S
+- **Area**: DevOps
+- **Dependencies**: Core-Enhancement-19
+- **Goal**: CSVエクスポート用のRLS・ロール定義がSecurity WGでレビューされ、承認または修正アクションが明確になる。
+- **Steps**:
+  1. CSVエクスポートで必要な権限要件とRLSポリシー案を整理する。
+  2. Security WGとのレビューセッションを実施し、フィードバックを収集する。
+  3. 反映内容とフォローアップタスクをドキュメント化しTODOに登録する。
+- **Description**: データ抽出機能のリリース前にセキュリティ観点の確認を行い、運用リスクを抑える。
+
+### [Enhancement] 在庫管理画面をmockベースで再設計するか検討
+- **ID**: Inventory-Enhancement-2
+- **Priority**: P2
+- **Size**: L
+- **Area**: Inventory
+- **Dependencies**: None
+- **Goal**: モックと現行UIの差分が整理され、再設計方針と後続タスクがドキュメント化されている。
+- **Steps**:
+  1. 現行画面とモックUIを比較し差分・課題を洗い出す。
+  2. 改善事項を優先度と影響範囲ごとに整理する。
+  3. 再設計方針と必要タスクをドキュメントにまとめる。
+- **Description**: モックの方が完成度が高い現状を解消するため、再設計の方針を決定し後続開発を進められる状態にする。
+
+### [Enhancement] メニュー管理画面のUI整理方針を検討する
+- **ID**: Menu-Enhancement-4
+- **Priority**: P2
+- **Size**: M
+- **Area**: Menu
+- **Dependencies**: None
+- **Goal**: メニュー管理画面の問題点と改善指針を整理したドキュメントが用意され、具体的な改修タスクを切り出せる。
+- **Steps**:
+  1. 現行画面の情報量・導線・UIコンポーネントを棚卸しする。
+  2. 課題をカテゴリ分けし優先度と対応策を検討する。
+  3. 整理結果と推奨アクションをまとめたドキュメントを作成する。
+- **Description**: メニュー管理画面がごちゃついているため、改善方針を整理し次の実装につなげる準備を行う。
+
+### [Feature] メニュー追加モーダルでレシピ依存を設定可能にする
+- **ID**: Menu-Feature-1
+- **Priority**: P1
+- **Size**: M
+- **Area**: Menu
+- **Dependencies**: Documentation-Documentation-9
+- **Goal**: メニュー追加モーダルから材料依存（レシピ）を定義・保存でき、必要分の在庫計算に反映される。
+- **Steps**:
+  1. メニューとレシピのデータモデル／バリデーション要件を整理し、モーダルで扱う項目を決定する。
+  2. モーダルUIにレシピ選択・追加インターフェースを実装し、材料・数量の編集を可能にする。
+  3. 保存処理とテストを更新し、登録・編集フローでレシピ依存情報が正しく扱われることを確認する。
+- **Description**: 現在のモーダルでは材料依存を設定できず、メニューと在庫の紐付けが管理できない課題を解消する。
+
+### [Enhancement] PC表示時にレイアウト幅を最適化する
+- **ID**: UI/UX-Enhancement-5
+- **Priority**: P2
+- **Size**: S
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: PCフルスクリーン表示で利用可能領域が適切に広がり、空白が減って見やすいレイアウトになる。
+- **Steps**:
+  1. 現行のブレークポイント設定とレイアウト挙動を確認する。
+  2. 望ましいレイアウト幅とコンポーネント配置を設計する。
+  3. レスポンシブ設定を調整し、主要解像度で表示を確認する。
+- **Description**: PC全画面に近い表示で余白が大きく非効率なため、ブレークポイントやレイアウトを調整して広い画面を活かす。
+
+### [Feature] Realtime 監視対象を主要画面へ拡張する
+- **ID**: Core-Feature-8
+- **Priority**: P2
+- **Size**: L
+- **Area**: Core
+- **Dependencies**: UI/UX-Enhancement-7
+- **Goal**: 注文・在庫・履歴等の主要データで Supabase Realtime を活用し、他端末からの更新を即座に UI へ反映できるようにする。
+- **Steps**:
+  1. 各機能で必要なチャンネル／イベント種別を定義し、既存サービス層へ監視フックを追加する。
+  2. Realtime イベントを StateNotifier へ伝搬させる共通ハンドリング（デバウンスやエラー処理を含む）を実装する。
+  3. 対象ページでの UI 反映と回帰テスト、運用ドキュメントの更新を行う。
+- **Description**: 端末間でデータが乖離しないよう Realtime を段階的に導入し、周期更新と組み合わせて鮮度を高める。
+
+### [Bugfix] ログのファイル書き込みが失敗する問題を修正
+- **ID**: Core-Bugfix-11
+- **Priority**: P1
+- **Size**: M
+- **Area**: Core
+- **Dependencies**: None
+- **Goal**: ログが想定通りファイルへ書き込まれ、運用で追跡できるようになる。
+- **Steps**:
+  1. 現在のログ設定とエラー内容を調査する。
+  2. ファイル出力先や権限など原因を特定し修正する。
+  3. ログ出力が正常に行われることをテストで確認する。
+- **Description**: ログがファイルに残らず、運用でのトラブルシュートが困難。設定や実装を修正し、安定したログ出力を実現する。
+
+### [Enhancement] 注文状態ボードの左→右導線を強化する
+- **ID**: UI/UX-Enhancement-12
+- **Priority**: P3
+- **Size**: S
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: 注文状態画面で左から右への進行が視覚的に理解できるUIが実装される。
+- **Steps**:
+  1. 現行UIの導線と課題を整理する。
+  2. 矢印的な視覚要素や配置案を検討し決定する。
+  3. デザインを実装し、ユーザビリティを確認する。
+- **Description**: 注文状態画面の進行方向が分かりづらい。視覚的な導線を強化し操作性を高める。
 
 ---
 
 ## Ready
 
+### [Enhancement] 注文詳細モーダルをオーバーレイクリックで閉じる
+- **ID**: UI/UX-Enhancement-14
+- **Priority**: P2
+- **Size**: XS
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: 注文詳細モーダル表示中に背景クリックでモーダルが閉じる。
+- **Steps**:
+  1. モーダルコンポーネントのイベントハンドラを確認する。
+  2. オーバーレイクリック時にモーダルを閉じる処理を追加する。
+  3. モバイル・PCの双方で挙動を確認する。
+- **Description**: モーダル外をクリックしても閉じられず操作性が低い。一般的なモーダル挙動に合わせる。
+
+### [Chore] 在庫管理画面の適用ボタンアイコンを削除する
+- **ID**: UI/UX-Chore-17
+- **Priority**: P3
+- **Size**: XS
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: 在庫管理画面の適用ボタンからアイコンが取り除かれ、テキストのみで表示される。
+- **Steps**:
+  1. 対象ボタンのコンポーネントを特定する。
+  2. アイコンウィジェットの記述を削除し、スタイルを調整する。
+  3. ボタン表示が崩れないことを確認する。
+- **Description**: 適用ボタンのアイコンが不要で視覚的ノイズになっているため、テキストのみの表示にする。
 
 ---
 
 ## In Progress
-
 
 ---
 
@@ -22,7 +216,8 @@
 
 ### 基本原則
 - タスクは、Backlog, In Progress, Readyの3つのセクションに分類される
-- タスクは、タイトル, Priority, Size, Area, Dependencies, Goal, Steps, Descriptionの各フィールドを持つ
+- タスクは、タイトル, ID, Priority, Size, Area, Dependencies, Goal, Steps, Descriptionの各フィールドを持つ
+- タスクIDは`{エリア}-{タスクカテゴリ}-{連番}`形式で一意に採番する **(連番は全カテゴリで通し番号)**
 - タスクは可能な限り少ない関心事を保持するように分割され、各タスクは独立して遂行可能であることが望ましい
 - タスクの内容は、他のタスクと重複しないように注意する
 
@@ -49,7 +244,7 @@
 
 #### タスク追加時
 1. 重複タスクの確認
-2. Steps,Goal以外の各フィールドの記述
+2. タイトル, ID, Priority, Size, Area, Dependencies, Descriptionを記述
 3. Goalフィールドにタスクを達成とみなすための条件を記述
 4. Sizeが'S'以上である場合、決定事項から現時点で推測できるおおよその段階をStepsフィールドに記述
 5. タスクを、重要度・完成度・推定サイズから総合判断してBacklogもしくはReadyセクションに移動
@@ -86,6 +281,12 @@
   - Testing: テストコード追加・修正
   - Chore: 雑多な作業
 - `[種別] タスク内容`の形式で記載
+
+#### ID
+- タスク識別子。
+- 形式は`{エリア}-{タスクカテゴリ}-{連番}`。
+- 連番は同じエリア・タスクカテゴリの組み合わせごとに1から昇順で採番する。
+- 例: `Order-Bugfix-3`, `UI/UX-Enhancement-5`
 
 #### Priority
 - タスクの優先度を示す
@@ -158,6 +359,7 @@
 ### タスクの記述例
 ```markdown
 ### [Feature] 新規ユーザ登録機能の実装
+- **ID**: Core-Feature-1
 - **Priority**: P1
 - **Size**: M
 - **Area**: Core
@@ -171,6 +373,7 @@
 - **Description**: 新規ユーザがアプリケーションに登録できるようにする機能。ユーザ登録フォームを作成し、バックエンドAPIと連携してユーザ情報を保存する。入力バリデーションを実装し、登録後はログイン画面にリダイレクトする。
 
 ### [Bugfix] ログイン画面のバリデーションエラー表示修正
+- **ID**: UI/UX-Bugfix-1
 - **Priority**: P2
 - **Size**: S
 - **Area**: UI/UX

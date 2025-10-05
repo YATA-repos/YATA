@@ -5,6 +5,10 @@ import "../../foundations/tokens/spacing_tokens.dart";
 import "../../foundations/tokens/typography_tokens.dart";
 
 /// YATAのテーブル表現を標準化するラッパー。
+///
+/// 使用上の注意:
+/// - [columns] の数と、各 [DataRow.cells] の長さは必ず一致させてください。
+///   一致しない場合、Flutterの [DataTable] 内部アサーションにより実行時に失敗します。
 class YataDataTable extends StatelessWidget {
   /// [YataDataTable]を生成する。
   const YataDataTable({
@@ -13,6 +17,14 @@ class YataDataTable extends StatelessWidget {
     super.key,
     this.onRowTap,
     this.shrinkWrap = false,
+    this.sortColumnIndex,
+    this.sortAscending = true,
+    this.onSelectAll,
+    this.headingRowHeight,
+    this.dataRowMinHeight,
+    this.dataRowMaxHeight,
+    this.horizontalMargin,
+    this.columnSpacing,
   });
 
   /// テーブルヘッダー。
@@ -26,6 +38,28 @@ class YataDataTable extends StatelessWidget {
 
   /// shrinkWrapモードでビルドするかどうか。
   final bool shrinkWrap;
+
+  /// ソート対象のカラムインデックス。
+  final int? sortColumnIndex;
+
+  /// 昇順かどうか。
+  final bool sortAscending;
+
+  /// すべて選択/解除のハンドラ（チェックボックス列が表示される）。
+  final ValueChanged<bool?>? onSelectAll;
+
+  /// 見出し行の高さ（上書き用）。
+  final double? headingRowHeight;
+
+  /// データ行の最小/最大高さ（上書き用）。
+  final double? dataRowMinHeight;
+  final double? dataRowMaxHeight;
+
+  /// 左右余白を上書きする。
+  final double? horizontalMargin;
+
+  /// 列間スペースを上書きする。
+  final double? columnSpacing;
 
   @override
   Widget build(BuildContext context) {
@@ -50,16 +84,22 @@ class YataDataTable extends StatelessWidget {
           }),
           dataTextStyle: rowStyle,
           dividerThickness: 1,
-          headingRowHeight: 52,
-          dataRowMinHeight: 52,
-          dataRowMaxHeight: 56,
-          horizontalMargin: YataSpacingTokens.lg,
-          columnSpacing: YataSpacingTokens.lg,
+          headingRowHeight: headingRowHeight ?? 52,
+          dataRowMinHeight: dataRowMinHeight ?? 52,
+          dataRowMaxHeight: dataRowMaxHeight ?? 56,
+          horizontalMargin: horizontalMargin ?? YataSpacingTokens.lg,
+          columnSpacing: columnSpacing ?? YataSpacingTokens.lg,
         ),
       ),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          Widget table = DataTable(columns: columns, rows: _buildRows());
+          Widget table = DataTable(
+            columns: columns,
+            rows: _buildRows(),
+            sortColumnIndex: sortColumnIndex,
+            sortAscending: sortAscending,
+            onSelectAll: onSelectAll,
+          );
           if (shrinkWrap) {
             table = SingleChildScrollView(scrollDirection: Axis.horizontal, child: table);
           } else {

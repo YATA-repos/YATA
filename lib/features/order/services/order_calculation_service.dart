@@ -1,13 +1,19 @@
 // Removed LoggerComponent mixin; use local tag
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-import "../../../core/logging/compat.dart" as log;
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 
 /// 注文金額計算サービス
 class OrderCalculationService {
-  OrderCalculationService({required OrderItemRepositoryContract<OrderItem> orderItemRepository})
-    : _orderItemRepository = orderItemRepository;
+  OrderCalculationService({
+    required log_contract.LoggerContract logger,
+    required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+  })  : _logger = logger,
+        _orderItemRepository = orderItemRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
 
@@ -17,6 +23,7 @@ class OrderCalculationService {
   Future<OrderCalculationResult> calculateOrderTotal(
     String orderId, {
     int discountAmount = 0,
+    List<OrderItem>? preloadedItems,
   }) async {
     log.d(
       "Calculating order total for order: $orderId, discount: $discountAmount",
@@ -24,7 +31,8 @@ class OrderCalculationService {
     );
 
     try {
-      final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
+      final List<OrderItem> orderItems =
+          preloadedItems ?? await _orderItemRepository.findByOrderId(orderId);
 
       log.d("Retrieved ${orderItems.length} items for calculation", tag: loggerComponent);
 
@@ -56,17 +64,26 @@ class OrderCalculationService {
   }
 
   /// カートの金額を計算（注文計算と同じロジック）
-  Future<OrderCalculationResult> calculateCartTotal(String cartId, {int discountAmount = 0}) async {
+  Future<OrderCalculationResult> calculateCartTotal(
+    String cartId, {
+    int discountAmount = 0,
+    List<OrderItem>? preloadedItems,
+  }) async {
     log.d("Calculating cart total with discount: $discountAmount", tag: loggerComponent);
-    return calculateOrderTotal(cartId, discountAmount: discountAmount);
+    return calculateOrderTotal(
+      cartId,
+      discountAmount: discountAmount,
+      preloadedItems: preloadedItems,
+    );
   }
 
   /// カートの合計金額を更新（DBに保存）
-  Future<int> updateCartTotal(String cartId) async {
+  Future<int> updateCartTotal(String cartId, {List<OrderItem>? preloadedItems}) async {
     log.d("Updating cart total in database", tag: loggerComponent);
 
     try {
-      final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
+      final List<OrderItem> cartItems =
+          preloadedItems ?? await _orderItemRepository.findByOrderId(cartId);
       final int totalAmount = cartItems.fold(0, (int sum, OrderItem item) => sum + item.subtotal);
 
       log.d("Cart total updated: $totalAmount", tag: loggerComponent);

@@ -2,7 +2,6 @@ import "package:flutter/material.dart";
 
 import "../../components/inputs/quantity_stepper.dart";
 import "../../foundations/tokens/color_tokens.dart";
-import "../../foundations/tokens/radius_tokens.dart";
 import "../../foundations/tokens/spacing_tokens.dart";
 import "../../foundations/tokens/typography_tokens.dart";
 

@@ -14,6 +14,7 @@ class YataApp extends ConsumerWidget {
     title: AppStrings.titleApp,
     theme: AppTheme.lightTheme,
     darkTheme: AppTheme.darkTheme,
+    themeMode: ThemeMode.light,
     routerConfig: AppRouter.getRouter(ref),
     debugShowCheckedModeBanner: false,
   );

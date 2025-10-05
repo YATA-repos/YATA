@@ -3,6 +3,8 @@ import "dart:io";
 
 /// Rotation policy decides when to roll to a new log file.
 abstract class RotationPolicy {
+  String get name;
+
   bool shouldRotate({
     required DateTime now,
     required DateTime openedAt,
@@ -14,6 +16,9 @@ abstract class RotationPolicy {
 
 class NoRotation implements RotationPolicy {
   const NoRotation();
+
+  @override
+  String get name => "none";
 
   @override
   bool shouldRotate({
@@ -29,6 +34,9 @@ class DailyRotation implements RotationPolicy {
   const DailyRotation({this.timezone = "UTC"});
 
   final String timezone; // 'UTC' or 'local' supported (others treated as UTC)
+
+  @override
+  String get name => "daily";
 
   @override
   bool shouldRotate({
@@ -50,21 +58,25 @@ class SizeRotation implements RotationPolicy {
   final int maxBytes;
 
   @override
+  String get name => "size";
+
+  /// Rotates the log before exceeding the configured threshold.
+  @override
   bool shouldRotate({
     required DateTime now,
     required DateTime openedAt,
     required int currentBytes,
     required int nextRecordBytes,
     required String timezone,
-  }) {
-    // Rotate BEFORE exceeding the threshold
-    return (currentBytes + nextRecordBytes) > maxBytes;
-  }
+  }) => (currentBytes + nextRecordBytes) > maxBytes;
 }
 
 class CompositeRotation implements RotationPolicy {
   const CompositeRotation(this.policies);
   final List<RotationPolicy> policies;
+
+  @override
+  String get name => "composite";
 
   @override
   bool shouldRotate({
@@ -91,11 +103,16 @@ class CompositeRotation implements RotationPolicy {
 
 /// Retention policies applied after rotation.
 abstract class RetentionPolicy {
+  String get name;
+
   Future<void> apply(Directory dir, String baseName);
 }
 
 class NoRetention implements RetentionPolicy {
   const NoRetention();
+
+  @override
+  String get name => "none";
 
   @override
   Future<void> apply(Directory dir, String baseName) async {}
@@ -106,13 +123,18 @@ class MaxFiles implements RetentionPolicy {
   final int count;
 
   @override
+  String get name => "max_files";
+
+  @override
   Future<void> apply(Directory dir, String baseName) async {
     final List<FileSystemEntity> all = dir.existsSync() ? dir.listSync() : <FileSystemEntity>[];
-    final RegExp re = RegExp("^" + RegExp.escape(baseName) + r"-\d{8}-\d{2}\.log$");
+    final RegExp re = RegExp("^${RegExp.escape(baseName)}-\\d{8}-\\d{2}\\.log\$");
     final List<File> files =
         all.whereType<File>().where((File f) => re.hasMatch(f.uri.pathSegments.last)).toList()
           ..sort((File a, File b) => a.statSync().modified.compareTo(b.statSync().modified));
-    if (files.length <= count) return;
+    if (files.length <= count) {
+      return;
+    }
     final int toDelete = files.length - count;
     for (int i = 0; i < toDelete; i++) {
       try {
@@ -129,13 +151,22 @@ class MaxDays implements RetentionPolicy {
   final int days;
 
   @override
+  String get name => "max_days";
+
+  @override
   Future<void> apply(Directory dir, String baseName) async {
-    if (!dir.existsSync()) return;
+    if (!dir.existsSync()) {
+      return;
+    }
     final DateTime cutoff = DateTime.now().toUtc().subtract(Duration(days: days));
-    final RegExp re = RegExp("^" + RegExp.escape(baseName) + r"-\d{8}-\d{2}\.log$");
+    final RegExp re = RegExp("^${RegExp.escape(baseName)}-\\d{8}-\\d{2}\\.log\$");
     await for (final FileSystemEntity e in dir.list()) {
-      if (e is! File) continue;
-      if (!re.hasMatch(e.uri.pathSegments.last)) continue;
+      if (e is! File) {
+        continue;
+      }
+      if (!re.hasMatch(e.uri.pathSegments.last)) {
+        continue;
+      }
       try {
         final FileStat st = await e.stat();
         final DateTime m = st.modified.toUtc();
@@ -154,6 +185,9 @@ class CompositeRetention implements RetentionPolicy {
   final List<RetentionPolicy> policies;
 
   @override
+  String get name => "composite";
+
+  @override
   Future<void> apply(Directory dir, String baseName) async {
     for (final RetentionPolicy p in policies) {
       await p.apply(dir, baseName);
@@ -161,7 +195,5 @@ class CompositeRetention implements RetentionPolicy {
   }
 }
 
-int utf8BytesLengthWithNewline(String line) {
-  // NDJSON line + newline; ensure UTF-8 byte length accounting
-  return utf8.encode(line).length + 1;
-}
+/// Returns the UTF-8 byte length of the line including a trailing newline.
+int utf8BytesLengthWithNewline(String line) => utf8.encode(line).length + 1;

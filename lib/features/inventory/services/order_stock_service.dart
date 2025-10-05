@@ -3,12 +3,12 @@ import "dart:math" as math;
 import "../../../core/base/base_error_msg.dart";
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/log_enums/service.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/stock_transaction_repository_contract.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
-// Removed LoggerComponent mixin; use local tag
-import "../../../core/logging/compat.dart" as log;
+import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
 import "../../order/models/order_model.dart";
 import "../models/inventory_model.dart";
 import "../models/transaction_model.dart";
@@ -16,14 +16,19 @@ import "../models/transaction_model.dart";
 /// 注文関連在庫操作サービス
 class OrderStockService {
   OrderStockService({
+    required log_contract.LoggerContract logger,
     required MaterialRepositoryContract<Material> materialRepository,
     required RecipeRepositoryContract<Recipe> recipeRepository,
     required StockTransactionRepositoryContract<StockTransaction> stockTransactionRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
-  }) : _materialRepository = materialRepository,
+  }) : _logger = logger,
+       _materialRepository = materialRepository,
        _recipeRepository = recipeRepository,
        _stockTransactionRepository = stockTransactionRepository,
        _orderItemRepository = orderItemRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialRepositoryContract<Material> _materialRepository;
   final RecipeRepositoryContract<Recipe> _recipeRepository;
@@ -34,14 +39,31 @@ class OrderStockService {
 
   /// 注文に対する材料を消費（在庫減算）
   Future<bool> consumeMaterialsForOrder(String orderId, String userId) async {
-    log.i(ServiceInfo.materialConsumptionStarted.message, tag: loggerComponent);
+    final Stopwatch sw = Stopwatch()..start();
+    LogFieldsBuilder fields() => _buildConsumptionFields(orderId: orderId, userId: userId);
+
+    log.i(
+      ServiceInfo.materialConsumptionStarted.message,
+      tag: loggerComponent,
+      fields: fields().started().build(),
+    );
 
     try {
       // 注文明細を取得
       final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
 
       if (orderItems.isEmpty) {
-        log.d(ServiceDebug.consumptionCompletedSuccessfully.message, tag: loggerComponent);
+        if (sw.isRunning) {
+          sw.stop();
+        }
+        log.d(
+          ServiceDebug.consumptionCompletedSuccessfully.message,
+          tag: loggerComponent,
+          fields: fields()
+              .succeeded(durationMs: sw.elapsedMilliseconds)
+              .addMetadataEntry("processed_order_items", 0)
+              .build(),
+        );
         return true; // 注文明細がない場合は成功とみなす
       }
 
@@ -118,19 +140,36 @@ class OrderStockService {
         await _stockTransactionRepository.createBatch(transactions);
       }
 
+      if (sw.isRunning) {
+        sw.stop();
+      }
       log.i(
         ServiceInfo.materialConsumptionSuccessful.withParams(<String, String>{
           "materialCount": processedMaterials.toString(),
         }),
         tag: loggerComponent,
+        fields: fields()
+            .succeeded(durationMs: sw.elapsedMilliseconds)
+            .addMetadata(<String, dynamic>{
+              "materials_processed": processedMaterials,
+              "transactions_created": transactions.length,
+            })
+            .build(),
       );
       return true;
     } catch (e, stackTrace) {
+      if (sw.isRunning) {
+        sw.stop();
+      }
       log.e(
         ServiceError.materialConsumptionFailed.message,
         tag: loggerComponent,
         error: e,
         st: stackTrace,
+        fields: fields()
+            .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+            .addMetadataEntry("message", e.toString())
+            .build(),
       );
       return false;
     }
@@ -138,7 +177,14 @@ class OrderStockService {
 
   /// 注文キャンセル時の材料を復元（在庫復旧）
   Future<bool> restoreMaterialsForOrder(String orderId, String userId) async {
-    log.i(ServiceInfo.materialRestorationStarted.message, tag: loggerComponent);
+    final Stopwatch sw = Stopwatch()..start();
+    LogFieldsBuilder fields() => _buildRestorationFields(orderId: orderId, userId: userId);
+
+    log.i(
+      ServiceInfo.materialRestorationStarted.message,
+      tag: loggerComponent,
+      fields: fields().started().build(),
+    );
 
     try {
       // 該当注文の消費取引を取得
@@ -153,7 +199,17 @@ class OrderStockService {
           .toList();
 
       if (consumptionOnly.isEmpty) {
-        log.d(ServiceDebug.restorationCompletedSuccessfully.message, tag: loggerComponent);
+        if (sw.isRunning) {
+          sw.stop();
+        }
+        log.d(
+          ServiceDebug.restorationCompletedSuccessfully.message,
+          tag: loggerComponent,
+          fields: fields()
+              .succeeded(durationMs: sw.elapsedMilliseconds)
+              .addMetadataEntry("restored_transactions", 0)
+              .build(),
+        );
         return true; // 消費取引がない場合は成功とみなす
       }
 
@@ -207,21 +263,54 @@ class OrderStockService {
         await _stockTransactionRepository.createBatch(restoreTransactions);
       }
 
+      if (sw.isRunning) {
+        sw.stop();
+      }
       log.i(
         ServiceInfo.materialRestorationSuccessful.withParams(<String, String>{
           "materialCount": restoredMaterials.toString(),
         }),
         tag: loggerComponent,
+        fields: fields()
+            .succeeded(durationMs: sw.elapsedMilliseconds)
+            .addMetadata(<String, dynamic>{
+              "materials_restored": restoredMaterials,
+              "transactions_created": restoreTransactions.length,
+            })
+            .build(),
       );
       return true;
     } catch (e, stackTrace) {
+      if (sw.isRunning) {
+        sw.stop();
+      }
       log.e(
         ServiceError.materialRestorationFailed.message,
         tag: loggerComponent,
         error: e,
         st: stackTrace,
+        fields: fields()
+            .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+            .addMetadataEntry("message", e.toString())
+            .build(),
       );
       return false;
     }
   }
+
+  LogFieldsBuilder _buildConsumptionFields({
+    required String orderId,
+    required String userId,
+  }) => LogFieldsBuilder.operation("inventory.consume_materials")
+        .withActor(userId: userId)
+        .withResource(type: "order", id: orderId)
+        .addMetadata(<String, dynamic>{"order_id": orderId});
+
+  LogFieldsBuilder _buildRestorationFields({
+    required String orderId,
+    required String userId,
+  }) => LogFieldsBuilder.operation("inventory.restore_materials")
+        .withActor(userId: userId)
+        .withResource(type: "order", id: orderId)
+        .addMetadata(<String, dynamic>{"order_id": orderId});
 }

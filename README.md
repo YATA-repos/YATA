@@ -51,6 +51,15 @@ flutter pub get
 flutter run
 ```
 
+### 環境変数の設定
+
+1. `.env.example` を `.env` にコピーします。
+	```bash
+	cp .env.example .env
+	```
+2. `.env` の各項目を Supabase プロジェクトや運用環境に合わせて編集します。
+3. 値を更新したらアプリを再起動し、起動ログに `EnvValidator` のエラーが出ないことを確認してください。
+
 ## ライセンス
 
 [MIT License](LICENSE.txt)

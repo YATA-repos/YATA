@@ -4,6 +4,8 @@ import "log_event.dart";
 import "log_level.dart";
 
 abstract class Formatter<T> {
+  String get name;
+
   T format(LogEvent event);
 }
 
@@ -12,6 +14,9 @@ class ConsolePrettyFormatter implements Formatter<String> {
 
   final bool useColor;
   final bool useEmojiFallback;
+
+  @override
+  String get name => "console_pretty";
 
   static const Map<LogLevel, String> _ansi = <LogLevel, String>{
     LogLevel.trace: "\x1B[90m",
@@ -106,6 +111,9 @@ class ConsolePrettyFormatter implements Formatter<String> {
 }
 
 class NdjsonFormatter implements Formatter<String> {
+  @override
+  String get name => "ndjson";
+
   @override
   String format(LogEvent event) => event.toNdjson();
 }

@@ -1,21 +1,30 @@
+import "dart:async";
+
 import "package:supabase_flutter/supabase_flutter.dart" hide AuthException;
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 // Use Supabase instance directly to avoid infra import
 import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
-// Using final logging API directly
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../dto/auth_request.dart";
 import "../dto/auth_response.dart" as local;
 import "../models/auth_config.dart";
 import "../models/user_profile.dart";
+import "desktop_oauth_redirect_server.dart";
 
 /// 認証リポジトリ
 ///
 /// Supabase Authとの通信を管理します。
 /// OAuth認証、セッション管理、ユーザー情報取得を提供します。
 class AuthRepository implements contract.AuthRepositoryContract<UserProfile, local.AuthResponse> {
-  AuthRepository({AuthConfig? config}) : _config = config ?? AuthConfig.forCurrentPlatform();
+  AuthRepository({
+    required log_contract.LoggerContract logger,
+    AuthConfig? config,
+  })  : _logger = logger,
+        _config = config ?? AuthConfig.forCurrentPlatform();
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   /// 認証設定
   final AuthConfig _config;
@@ -49,7 +58,10 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
 
       log.d("OAuth request: ${request.toString()}", tag: "AuthRepository");
 
-      // Supabaseで認証開始
+      if (_config.platform == AuthPlatform.desktop) {
+        return await _signInWithGoogleDesktop(request);
+      }
+
       final bool success = await _client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: request.redirectTo,
@@ -62,19 +74,69 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
       }
 
       log.i("Google OAuth authentication started successfully", tag: "AuthRepository");
+      return local.AuthResponse.pending();
+    } on Object catch (error) {
+      log.e("Google OAuth authentication failed: $error", tag: "AuthRepository", error: error);
 
-      // OAuth開始成功を示すレスポンスを返す（実際のユーザー情報はコールバックで取得）
-      return local.AuthResponse.success(
-        user: UserProfile(email: "oauth_pending"), // 仮のユーザー情報
-      );
-    } catch (e) {
-      log.e("Google OAuth authentication failed: $e", tag: "AuthRepository", error: e);
-
-      if (e is AuthException) {
+      if (error is AuthException) {
         rethrow;
       } else {
-        throw AuthException.oauthFailed(e.toString(), provider: "google");
+        throw AuthException.oauthFailed(error.toString(), provider: "google");
       }
+    }
+  }
+
+  Future<local.AuthResponse> _signInWithGoogleDesktop(AuthRequest request) async {
+    final Uri desktopCallbackUri = Uri.parse(request.redirectTo);
+    final DesktopOAuthRedirectServer redirectServer = DesktopOAuthRedirectServer(
+      logger: log,
+      callbackUri: desktopCallbackUri,
+    );
+
+    await redirectServer.start();
+
+    try {
+      final bool success = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: redirectServer.callbackUri.toString(),
+        scopes: request.scopes.join(" "),
+        queryParams: request.queryParams,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+
+      if (!success) {
+        throw AuthException.oauthFailed("Failed to launch OAuth flow", provider: "google");
+      }
+
+      log.i("デスクトップ向けGoogle OAuthコールバック待機を開始しました", tag: "AuthRepository");
+
+      final Uri callbackUri = await redirectServer.waitForCallback();
+      final local.AuthResponse response = await _handleOAuthRedirectUri(callbackUri);
+
+      log.i("デスクトップ環境のOAuthフローが完了しました: ${response.user?.email}", tag: "AuthRepository");
+
+      return response;
+    } on TimeoutException catch (error, stackTrace) {
+      log.e(
+        "OAuth callback timed out: $error",
+        tag: "AuthRepository",
+        error: error,
+        st: stackTrace,
+      );
+      throw AuthException.oauthFailed("OAuth callback timed out", provider: "google");
+    } on Object catch (error, stackTrace) {
+      log.e(
+        "OAuth desktop flow failed: $error",
+        tag: "AuthRepository",
+        error: error,
+        st: stackTrace,
+      );
+      if (error is AuthException) {
+        rethrow;
+      }
+      throw AuthException.oauthFailed(error.toString(), provider: "google");
+    } finally {
+      await redirectServer.stop();
     }
   }
 
@@ -84,54 +146,45 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
     try {
       log.d("Handling OAuth callback: $callbackUrl", tag: "AuthRepository");
 
-      // URLからセッション情報を抽出
       final Uri uri = Uri.parse(callbackUrl);
-      final Map<String, String> params = uri.queryParameters;
+      return await _handleOAuthRedirectUri(uri);
+    } on Object catch (error) {
+      log.e("OAuth callback handling failed: $error", tag: "AuthRepository", error: error);
 
-      // エラーチェック
-      if (params.containsKey("error")) {
-        final String error = params["error"] ?? "unknown_error";
-        final String? errorDescription = params["error_description"];
-
-        log.e(
-          "OAuth callback error: $error${errorDescription != null ? ' - $errorDescription' : ''}",
-          tag: "AuthRepository",
-        );
-
-        return local.AuthResponse.failure(error: error, errorDescription: errorDescription);
+      if (error is AuthException) {
+        rethrow;
       }
+      throw AuthException.oauthFailed(error.toString());
+    }
+  }
 
-      // セッション情報の取得
-      final Session? session = currentSession;
-      if (session == null) {
-        throw AuthException.invalidSession();
-      }
+  Future<local.AuthResponse> _handleOAuthRedirectUri(Uri uri) async {
+    final Map<String, String> params = uri.queryParameters;
 
-      final User? user = currentUser;
-      if (user == null) {
-        throw AuthException.userInfoFetchFailed("No user data found in session");
-      }
+    if (params.containsKey("error")) {
+      final String error = params["error"] ?? "unknown_error";
+      final String? errorDescription = params["error_description"];
 
-      final UserProfile userProfile = UserProfile.fromSupabaseUser(user);
-
-      log.i(
-        "OAuth authentication successful for user: ${userProfile.email}",
+      log.e(
+        "OAuth callback error: $error${errorDescription != null ? ' - $errorDescription' : ''}",
         tag: "AuthRepository",
       );
 
-      return local.AuthResponse.success(
-        user: userProfile,
-        session: local.AuthSession.fromSupabase(session),
-      );
-    } catch (e) {
-      log.e("OAuth callback handling failed: $e", tag: "AuthRepository", error: e);
-
-      if (e is AuthException) {
-        rethrow;
-      } else {
-        throw AuthException.oauthFailed(e.toString());
-      }
+      return local.AuthResponse.failure(error: error, errorDescription: errorDescription);
     }
+
+    final AuthSessionUrlResponse response = await _client.auth.getSessionFromUrl(uri);
+    final Session session = response.session;
+    final User user = session.user;
+
+    final UserProfile userProfile = UserProfile.fromSupabaseUser(user);
+
+    log.i("OAuth authentication successful for user: ${userProfile.email}", tag: "AuthRepository");
+
+    return local.AuthResponse.success(
+      user: userProfile,
+      session: local.AuthSession.fromSupabase(session),
+    );
   }
 
   // =================================================================

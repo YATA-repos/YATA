@@ -35,5 +35,8 @@ class BatchResult<T> {
 
 /// バッチ処理サービス契約（汎用）
 abstract class BatchProcessingServiceContract {
+  /// サービスの識別子。
+  String get loggerComponent;
+
   Future<BatchResult<T>> run<T>(BatchRequest<T> request);
 }

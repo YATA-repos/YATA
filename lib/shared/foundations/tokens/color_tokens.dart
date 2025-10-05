@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import "package:flutter/material.dart";
 
 /// YATAアプリ全体のカラーパレット定義。
 class YataColorTokens {

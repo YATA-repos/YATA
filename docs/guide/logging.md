@@ -96,6 +96,58 @@ authLogger.i('パスワード変更完了');
 authLogger.w('無効なトークン');
 ```
 
+### トレーシングユーティリティ (`context_utils.dart`)
+
+`lib/infra/logging/context_utils.dart` には、`LogContext` を一貫して扱うためのヘルパーがまとまっています。代表的なキーは `LogContextKeys` に定義されており、以下のような標準化された snake_case キーを使用します。
+
+- `flow_id`: ビジネスフロー全体を関連付ける ID。
+- `span_id` / `parent_span_id`: サービス／UI層でのステップを表すスパン ID。
+- `span_name`: スパンの論理名（例: `controller.checkout`）。
+- `operation`: 構造化フィールドと揃えた業務アクション名。
+- `request_id`, `user_id`, `source` など、追跡に必要な補助情報。
+
+`traceAsync` / `traceSync` を使うと、これらの値を自動で付与しながらゾーンコンテキストを生成できます。Riverpod やサービス層での利用例は次の通りです。
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:yata/infra/logging/context_utils.dart';
+import 'package:yata/infra/logging/logging.dart';
+
+final checkoutProvider = FutureProvider.autoDispose((ref) async {
+  return traceAsync('order.checkout.ui', (trace) async {
+    final fields = LogFieldsBuilder.operation('order.checkout')
+      .withFlow(flowId: trace.flowId, requestId: trace.context[LogContextKeys.requestId] as String?)
+      .withActor(userId: trace.context[LogContextKeys.userId] as String?);
+
+    i('UI checkout started', tag: 'OrderManagementController', fields: fields.started().build());
+
+    return ref.read(orderManagementServiceProvider).checkoutCart(/* ... */);
+  }, attributes: <String, Object?>{
+    LogContextKeys.source: 'OrderManagementController',
+  });
+});
+```
+
+サービス層では同じ `traceAsync` を呼び出すだけで、UI から渡された `flow_id` や `request_id` が自動的に引き継がれます。`LogFieldsBuilder.withFlow` を併用すると、構造化フィールドにも同じ ID が入り、Kibana/BigQuery などでの横断追跡が容易になります。
+
+```dart
+Future<OrderCheckoutResult> checkoutCart(/* ... */) {
+  return traceAsync('order.checkout', (trace) async {
+    final builder = LogFieldsBuilder.operation('order.checkout')
+      .withFlow(flowId: trace.flowId, requestId: trace.context[LogContextKeys.requestId] as String?)
+      .withActor(userId: userId);
+
+    log.i('Started cart checkout process', tag: loggerComponent, fields: builder.started().build());
+    // ... ビジネスロジック ...
+  }, attributes: <String, Object?>{
+    LogContextKeys.source: loggerComponent,
+    LogContextKeys.userId: userId,
+  });
+}
+```
+
+UI トレーサ（`OrderManagementTracer.traceAsync` など）も内部で `traceAsync` を利用するようになり、Timeline Task とログ両方に同一の `flow_id` / `span_id` が表示されます。長時間処理（例: リアルタイム同期、夜間バッチ）では、最初の入口で `traceAsync` を呼び出し、必要に応じて `LogTrace.child(...)` でサブスパンを切っておくと、後段のログからも容易に辿れるようになります。
+
 ### 推奨タグ
 
 プロジェクトでは以下のタグを推奨しています：
@@ -132,6 +184,25 @@ d('リクエスト処理', fields: {
   },
 });
 ```
+
+### 標準フィールドビルダーの活用
+
+主要イベントでは `LogFieldsBuilder` を使って標準フィールドを組み立てると、検索性とレビューの統一感が高まります。フィールド一覧は `docs/standards/logging-structured-fields.md` を参照してください。
+
+```dart
+final fields = LogFieldsBuilder.operation("order.checkout")
+  .withActor(userId: userId)
+  .withResource(type: "order", id: orderId)
+  .started()
+  .addMetadata({
+    "cart_id": cartId,
+    "item_count": cartItems.length,
+  });
+
+log.i("Started cart checkout", tag: loggerComponent, fields: fields);
+```
+
+`started() / succeeded() / failed()` といったメソッドで `stage` と `result.status` が自動的に整形されるため、クエリや可視化の軸として再利用しやすくなります。
 
 ## 遅延評価
 
@@ -375,6 +446,47 @@ runWithContext({'requestId': generateRequestId()}, () {
   // API関連の処理
 });
 ```
+
+## 標準フィールドでの検索例
+
+以下は構造化フィールドを活用した代表的なクエリ例です。環境に合わせてタグや期間を加えてください。
+
+### Kibana (KQL)
+
+```text
+fields.operation: "order.checkout" and fields.result.status: "failure"
+```
+
+```text
+fields.flow_id: flow_supabase_sync_* and fields.stage: "started"
+```
+
+### Supabase (SQL / Log Explorer)
+
+```sql
+select *
+from logs
+where tag = 'OrderManagementService'
+  and fields->>'operation' = 'order.checkout'
+  and fields->'result'->>'status' = 'success'
+order by ts desc
+limit 50;
+```
+
+```sql
+select *
+from logs
+where fields->>'request_id' = 'req_01H9X7V6J3'
+order by ts;
+```
+
+### フィールド欠損チェック
+
+```text
+not fields.operation or not fields.result.status
+```
+
+上記のようなクエリをダッシュボードのテンプレートに追加しておくと、標準フィールドの抜け漏れ検知やフロー単位の調査が容易になります。
 
 ## トラブルシューティング
 

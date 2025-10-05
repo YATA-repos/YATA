@@ -5,7 +5,7 @@ import "../../../core/base/base.dart";
 part "menu_model.g.dart";
 
 /// メニューカテゴリ
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MenuCategory extends BaseModel {
   MenuCategory({
     required this.name,
@@ -26,9 +26,11 @@ class MenuCategory extends BaseModel {
   int displayOrder;
 
   /// 作成日時
+  @JsonKey(includeIfNull: false)
   DateTime? createdAt;
 
   /// 更新日時
+  @JsonKey(includeIfNull: false)
   DateTime? updatedAt;
 
   @override
@@ -40,14 +42,13 @@ class MenuCategory extends BaseModel {
 }
 
 /// メニュー（販売商品）
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MenuItem extends BaseModel {
   MenuItem({
     required this.name,
     required this.categoryId,
     required this.price,
     required this.isAvailable,
-    required this.estimatedPrepTimeMinutes,
     required this.displayOrder,
     this.description,
     this.imageUrl,
@@ -75,9 +76,6 @@ class MenuItem extends BaseModel {
   /// 販売可能フラグ
   bool isAvailable;
 
-  /// 推定調理時間（分）
-  int estimatedPrepTimeMinutes;
-
   /// 表示順序
   int displayOrder;
 
@@ -85,9 +83,11 @@ class MenuItem extends BaseModel {
   String? imageUrl;
 
   /// 作成日時
+  @JsonKey(includeIfNull: false)
   DateTime? createdAt;
 
   /// 更新日時
+  @JsonKey(includeIfNull: false)
   DateTime? updatedAt;
 
   @override
@@ -99,7 +99,7 @@ class MenuItem extends BaseModel {
 }
 
 /// メニューオプション（トッピングなど）
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class MenuItemOption extends BaseModel {
   MenuItemOption({
     required this.menuItemId,
@@ -132,9 +132,11 @@ class MenuItemOption extends BaseModel {
   int additionalPrice;
 
   /// 作成日時
+  @JsonKey(includeIfNull: false)
   DateTime? createdAt;
 
   /// 更新日時
+  @JsonKey(includeIfNull: false)
   DateTime? updatedAt;
 
   @override

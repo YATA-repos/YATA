@@ -1,10 +1,10 @@
 import "package:flutter/material.dart";
 
+import "../../components/inputs/quantity_stepper.dart";
 import "../../foundations/tokens/color_tokens.dart";
 import "../../foundations/tokens/radius_tokens.dart";
 import "../../foundations/tokens/spacing_tokens.dart";
 import "../../foundations/tokens/typography_tokens.dart";
-import "../../components/inputs/quantity_stepper.dart";
 
 /// メニュー一覧に表示するタイル。
 class YataMenuItemTile extends StatelessWidget {
@@ -82,7 +82,6 @@ class YataMenuItemTile extends StatelessWidget {
             border: Border.all(color: borderColor, width: isSelected ? 1.4 : 1),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               Expanded(
                 child: Column(

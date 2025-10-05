@@ -3,8 +3,7 @@ import "package:csv/csv.dart";
 
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
-// Using final logging API directly
-import "../../../core/logging/compat.dart" as log;
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../models/inventory_model.dart";
 import "material_management_service.dart";
 
@@ -61,8 +60,14 @@ class CSVImportPreview {
 
 /// CSVインポートサービス
 class CSVImportService {
-  CSVImportService({required MaterialManagementService materialManagementService})
-    : _materialManagementService = materialManagementService;
+  CSVImportService({
+    required log_contract.LoggerContract logger,
+    required MaterialManagementService materialManagementService,
+  })  : _logger = logger,
+        _materialManagementService = materialManagementService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialManagementService _materialManagementService;
 

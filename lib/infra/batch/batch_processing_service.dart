@@ -12,6 +12,7 @@ class BatchProcessingService implements contract.BatchProcessingServiceContract 
   BatchProcessingService();
   final Map<String, Completer<dynamic>> _pendingBatches = <String, Completer<dynamic>>{};
 
+  @override
   String get loggerComponent => "BatchProcessingService";
 
   @override
@@ -276,7 +277,9 @@ class BatchProcessingService implements contract.BatchProcessingServiceContract 
           final int minutes = DateTime.parse(
             readyStr,
           ).difference(DateTime.parse(startedStr)).inMinutes;
-          if (minutes >= 0) prepTimes.add(minutes);
+          if (minutes >= 0) {
+            prepTimes.add(minutes);
+          }
         }
       }
       final int? avgPrep = prepTimes.isNotEmpty

@@ -49,6 +49,7 @@ class FileSink implements LogSink<String> {
   bool _failedOnce = false; // one-time warning
   int _linesSinceFlush = 0;
   Timer? _flushTimer;
+  Future<void> _serial = Future<void>.value();
 
   // Rotation state
   DateTime? _openedAtUtc;
@@ -114,7 +115,7 @@ class FileSink implements LogSink<String> {
 
   static Future<int> _nextIndex(Directory dir, String base, String ymd) async {
     int maxIdx = 0;
-    final RegExp re = RegExp("^" + RegExp.escape(base) + "-" + ymd + r"-(\d{2})\.log$");
+  final RegExp re = RegExp("^${RegExp.escape(base)}-$ymd-(\\d{2})\\.log\$");
     if (await dir.exists()) {
       await for (final FileSystemEntity e in dir.list()) {
         if (e is! File) {
@@ -124,7 +125,9 @@ class FileSink implements LogSink<String> {
         final Match? m = re.firstMatch(name);
         if (m != null) {
           final int idx = int.tryParse(m.group(1)!) ?? 0;
-          if (idx > maxIdx) maxIdx = idx;
+          if (idx > maxIdx) {
+            maxIdx = idx;
+          }
         }
       }
     }
@@ -132,46 +135,52 @@ class FileSink implements LogSink<String> {
   }
 
   @override
-  Future<void> add(String data) async {
+  Future<void> add(String data) {
     if (_failedOnce) {
-      return; // disabled after failure
+      return Future<void>.value();
     }
-    try {
-      await _ensureOpened();
+    return _runSerial(() async {
+      try {
+        await _ensureOpened();
 
-      // Rotation check before append (size & daily composite)
-      final DateTime nowUtc = DateTime.now().toUtc();
-      final RotationPolicy r1 = _rotation;
-      final String tz = r1 is DailyRotation ? r1.timezone : "UTC";
-      final int nextBytes = utf8BytesLengthWithNewline(data);
-      if (!_rotationDisabled &&
-          _openedAtUtc != null &&
-          _rotation.shouldRotate(
-            now: nowUtc,
-            openedAt: _openedAtUtc!,
-            currentBytes: _currentBytes,
-            nextRecordBytes: nextBytes,
-            timezone: tz,
-          )) {
-        await _rotate(nowUtc);
-      }
+        final DateTime nowUtc = DateTime.now().toUtc();
+        final RotationPolicy rotation = _rotation;
+        final String timezone = rotation is DailyRotation ? rotation.timezone : "UTC";
+        final int nextBytes = utf8BytesLengthWithNewline(data);
+        if (!_rotationDisabled &&
+            _openedAtUtc != null &&
+            rotation.shouldRotate(
+              now: nowUtc,
+              openedAt: _openedAtUtc!,
+              currentBytes: _currentBytes,
+              nextRecordBytes: nextBytes,
+              timezone: timezone,
+            )) {
+          await _rotate(nowUtc);
+        }
 
-      _ioSink!.writeln(data);
-      _linesSinceFlush++;
-      _currentBytes += nextBytes;
-      _scheduleFlushIfNeeded();
-    } catch (e) {
-      lastError = e;
-      if (!_failedOnce) {
-        _failedOnce = true;
-        stderr.writeln("WARN: FileSink write failed, disabling file sink. ($e)");
+        _ioSink!.writeln(data);
+        _linesSinceFlush++;
+        _currentBytes += nextBytes;
+
+        if (_linesSinceFlush >= _config.flushEveryLines) {
+          await _performFlushUnsafe();
+        } else {
+          _scheduleFlushTimerUnsafe();
+        }
+      } on Object catch (e) {
+        lastError = e;
+        if (!_failedOnce) {
+          _failedOnce = true;
+          stderr.writeln("WARN: FileSink write failed, disabling file sink. ($e)");
+        }
       }
-    }
+    });
   }
 
   Future<void> _rotate(DateTime nowUtc) async {
     try {
-      await flush();
+      await _performFlushUnsafe();
       await _ioSink?.close();
     } catch (_) {}
 
@@ -219,48 +228,59 @@ class FileSink implements LogSink<String> {
     }
   }
 
-  void _scheduleFlushIfNeeded() {
-    if (_linesSinceFlush >= _config.flushEveryLines) {
-      // immediate flush
-      unawaited(flush());
+  void _scheduleFlushTimerUnsafe() {
+    if (_flushTimer != null) {
       return;
     }
-    _flushTimer ??= Timer(Duration(milliseconds: _config.flushEveryMs), () {
+    _flushTimer = Timer(Duration(milliseconds: _config.flushEveryMs), () {
       _flushTimer = null;
-      unawaited(flush());
+      if (_failedOnce) {
+        return;
+      }
+      unawaited(_runSerial(_performFlushUnsafe));
     });
   }
 
   @override
-  Future<void> flush() async {
+  Future<void> flush() => _runSerial(_performFlushUnsafe);
+
+  Future<void> _performFlushUnsafe() async {
+    _flushTimer?.cancel();
+    _flushTimer = null;
     if (_ioSink == null) {
+      _linesSinceFlush = 0;
       return;
     }
     try {
       await _ioSink!.flush();
-    } catch (_) {
-      // ignore further errors; already warned in add()
+    } on Object catch (e) {
+      lastError = e;
+      // Maintain previous behavior: keep console fallback without disabling sink.
     } finally {
       _linesSinceFlush = 0;
-      _flushTimer?.cancel();
-      _flushTimer = null;
     }
   }
 
   @override
-  Future<void> close() async {
+  Future<void> close() => _runSerial(() async {
     _flushTimer?.cancel();
     _flushTimer = null;
     try {
-      await _ioSink?.flush();
+      await _performFlushUnsafe();
       await _ioSink?.close();
-    } catch (e) {
+    } on Object catch (e) {
       lastError = e;
       // ignore
     } finally {
       _ioSink = null;
       _file = null;
     }
+  });
+
+  Future<void> _runSerial(FutureOr<void> Function() action) {
+    final Future<void> run = _serial.then((_) => Future.sync(action));
+    _serial = run.catchError((_) {});
+    return run;
   }
 
   String? get activeFilePath => _file?.path;

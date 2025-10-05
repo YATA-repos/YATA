@@ -1,3 +1,6 @@
+import "dart:async";
+import "dart:math" as math;
+
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -12,8 +15,13 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
+import "../../../../shared/mixins/route_aware_refresh_mixin.dart";
 import "../../../../shared/patterns/patterns.dart";
+import "../../../settings/presentation/pages/settings_page.dart";
 import "../controllers/order_management_controller.dart";
+import "../performance/order_management_tracing.dart";
+import "../widgets/order_payment_method_selector.dart";
+import "order_status_page.dart";
 
 /// 注文管理画面のメインページ。
 class OrderManagementPage extends ConsumerStatefulWidget {
@@ -24,13 +32,91 @@ class OrderManagementPage extends ConsumerStatefulWidget {
   ConsumerState<OrderManagementPage> createState() => _OrderManagementPageState();
 }
 
-class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
+class _OrderManagementPageState extends ConsumerState<OrderManagementPage>
+    with RouteAwareRefreshMixin<OrderManagementPage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  bool get shouldRefreshOnPush => false;
+
+  @override
+  Future<void> onRouteReentered() async {
+    if (!mounted) {
+      return;
+    }
+
+    final OrderManagementController controller = ref.read(
+      orderManagementControllerProvider.notifier,
+    );
+    await _waitForStateIdle<OrderManagementState>(
+      controller,
+      ref.read(orderManagementControllerProvider),
+      (OrderManagementState state) => !state.isLoading && !state.isCheckoutInProgress,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await controller.loadInitialData();
+  }
+
+  Future<void> _waitForStateIdle<S>(
+    StateNotifier<S> controller,
+    S currentState,
+    bool Function(S state) isIdle,
+  ) async {
+    if (isIdle(currentState)) {
+      return;
+    }
+
+    final Completer<void> completer = Completer<void>();
+    bool cancelled = false;
+    late final StreamSubscription<S> subscription;
+
+    subscription = controller.stream.listen(
+      (S next) {
+        if (isIdle(next) && !cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+        }
+      },
+      onError: (Object _, StackTrace __) {
+        if (!cancelled) {
+          cancelled = true;
+          unawaited(subscription.cancel());
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      onDone: () {
+        if (!cancelled) {
+          cancelled = true;
+        }
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      },
+      cancelOnError: false,
+    );
+
+    try {
+      await completer.future;
+    } finally {
+      if (!cancelled) {
+        await subscription.cancel();
+      }
+    }
   }
 
   @override
@@ -43,20 +129,50 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
     return Scaffold(
       backgroundColor: YataColorTokens.background,
       appBar: YataAppTopBar(
-        title: "フードスタンド管理",
-        navItems: const <YataNavItem>[
-          YataNavItem(label: "注文", icon: Icons.shopping_cart_outlined, isActive: true),
-          YataNavItem(label: "履歴", icon: Icons.receipt_long_outlined),
-          YataNavItem(label: "在庫管理", icon: Icons.inventory_2_outlined),
-          YataNavItem(label: "売上分析", icon: Icons.query_stats_outlined),
+        navItems: <YataNavItem>[
+          YataNavItem(
+            label: "注文",
+            icon: Icons.shopping_cart_outlined,
+            isActive: true,
+            onTap: () => context.go("/order"),
+          ),
+          YataNavItem(
+            label: "注文状況",
+            icon: Icons.dashboard_customize_outlined,
+            onTap: () => context.go(OrderStatusPage.routeName),
+          ),
+          YataNavItem(
+            label: "履歴",
+            icon: Icons.receipt_long_outlined,
+            onTap: () => context.go("/history"),
+          ),
+          YataNavItem(
+            label: "在庫管理",
+            icon: Icons.inventory_2_outlined,
+            onTap: () => context.go("/inventory"),
+          ),
+          YataNavItem(
+            label: "メニュー管理",
+            icon: Icons.restaurant_menu_outlined,
+            onTap: () => context.go("/menu"),
+          ),
+          YataNavItem(
+            label: "売上分析",
+            icon: Icons.query_stats_outlined,
+            onTap: () => context.go("/analytics"),
+          ),
         ],
         trailing: <Widget>[
-          YataIconLabelButton(
-            icon: Icons.dashboard_customize_outlined,
-            label: "注文状況画面",
-            onPressed: () {},
+          YataIconButton(
+            icon: Icons.refresh,
+            tooltip: "メニューとカートを再取得",
+            onPressed: state.isLoading ? null : controller.refresh,
           ),
-          YataIconButton(icon: Icons.settings, onPressed: () {}, tooltip: "設定"),
+          YataIconButton(
+            icon: Icons.settings,
+            onPressed: () => context.go(SettingsPage.routeName),
+            tooltip: "設定",
+          ),
         ],
       ),
       body: YataPageContainer(
@@ -65,6 +181,15 @@ class _OrderManagementPageState extends ConsumerState<OrderManagementPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: YataSpacingTokens.lg),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: state.isLoading ? const LinearProgressIndicator() : const SizedBox.shrink(),
+            ),
+            if (state.isLoading) const SizedBox(height: YataSpacingTokens.md),
+            if (state.errorMessage != null) ...<Widget>[
+              _OrderPageErrorBanner(message: state.errorMessage!, onRetry: controller.refresh),
+              const SizedBox(height: YataSpacingTokens.md),
+            ],
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,6 +238,7 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
   @override
   void dispose() {
     _scrollController.dispose();
+    // _notesController.dispose();
     super.dispose();
   }
 
@@ -131,9 +257,12 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
       expandChild: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
         children: <Widget>[
-          YataSearchField(controller: searchController, hintText: "メニュー検索..."),
+          YataSearchField(
+            controller: searchController,
+            hintText: "メニュー検索...",
+            onChanged: controller.updateSearchQuery,
+          ),
           const SizedBox(height: YataSpacingTokens.md),
           YataSegmentedFilter(
             segments: segments,
@@ -145,82 +274,119 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
           Expanded(
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                final List<MenuItemViewData> items = state.filteredMenuItems;
-                if (items.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.lg),
-                      child: Text(
-                        "該当するメニューが見つかりません",
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
-                      ),
-                    ),
-                  );
-                }
+                int itemCount = 0;
+                int sampledCrossAxisCount = 1;
+                double sampledTileHeight = 0;
 
-                const double spacing = YataSpacingTokens.xl;
-                const double scrollbarThickness = 8;
-                const double scrollPad = scrollbarThickness + YataSpacingTokens.xs;
-                final double availableWidth = (constraints.maxWidth - scrollPad).clamp(
-                  0,
-                  double.infinity,
-                );
+                return OrderManagementTracer.traceSync<Widget>(
+                  "page.menuGrid.build",
+                  () {
+                    final List<MenuItemViewData> items = state.filteredMenuItems;
+                    itemCount = items.length;
+                    if (state.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (items.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: YataSpacingTokens.lg),
+                          child: Text(
+                            "メニューが見つかりません",
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
+                          ),
+                        ),
+                      );
+                    }
 
-                final int crossAxisCount = availableWidth >= 900
-                    ? 3
-                    : availableWidth >= 600
-                    ? 2
-                    : 1;
-                final double itemWidth =
-                    (availableWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
+                    const double spacing = YataSpacingTokens.xl;
+                    const double scrollbarThickness = 8;
+                    const double scrollPad = scrollbarThickness + YataSpacingTokens.xs;
+                    final double availableWidth = (constraints.maxWidth - scrollPad).clamp(
+                      0,
+                      double.infinity,
+                    );
 
-                return RawScrollbar(
-                  controller: _scrollController,
-                  thumbVisibility: true,
-                  trackVisibility: true,
-                  thickness: scrollbarThickness,
-                  radius: const Radius.circular(8),
-                  thumbColor: YataColorTokens.textSecondary.withValues(alpha: 0.6),
-                  trackColor: YataColorTokens.divider,
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    primary: false,
-                    padding: const EdgeInsets.only(
-                      right: scrollbarThickness + YataSpacingTokens.xs,
-                    ),
-                    child: Wrap(
-                      spacing: spacing,
-                      runSpacing: spacing,
-                      children: <Widget>[
-                        ...items.map((MenuItemViewData item) {
+                    final int crossAxisCount = availableWidth >= 900
+                        ? 3
+                        : availableWidth >= 600
+                        ? 2
+                        : 1;
+                    final double itemWidth = crossAxisCount <= 0
+                        ? availableWidth
+                        : (availableWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
+                    final double tileHeight = _estimateMenuTileHeight(itemWidth, context);
+                    final int safeCrossAxisCount = crossAxisCount <= 0 ? 1 : crossAxisCount;
+                    sampledCrossAxisCount = safeCrossAxisCount;
+                    sampledTileHeight = tileHeight;
+
+                    return RawScrollbar(
+                      controller: _scrollController,
+                      thumbVisibility: true,
+                      trackVisibility: true,
+                      thickness: scrollbarThickness,
+                      radius: const Radius.circular(8),
+                      thumbColor: YataColorTokens.textSecondary.withValues(alpha: 0.6),
+                      trackColor: YataColorTokens.divider,
+                      child: GridView.builder(
+                        controller: _scrollController,
+                        primary: false,
+                        padding: const EdgeInsets.only(
+                          right: scrollPad,
+                          bottom: YataSpacingTokens.lg,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: safeCrossAxisCount,
+                          crossAxisSpacing: spacing,
+                          mainAxisSpacing: spacing,
+                          mainAxisExtent: tileHeight,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final MenuItemViewData item = items[index];
                           final bool isSelected = state.isInCart(item.id);
-                          int? quantityFor(String id) {
-                            for (final CartItemViewData ci in state.cartItems) {
-                              if (ci.menuItem.id == id) return ci.quantity;
-                            }
-                            return null;
+                          final int? quantity = state.quantityFor(item.id);
+
+                          Widget buildTile() => YataMenuItemTile(
+                            key: ValueKey<String>(item.id),
+                            name: item.name,
+                            priceLabel: state.formatPrice(item.price),
+                            isSelected: isSelected,
+                            minQuantity: 0,
+                            quantity: quantity,
+                            onQuantityChanged: state.isLoading
+                                ? null
+                                : (int value) => controller.updateItemQuantity(item.id, value),
+                            onTap: state.isLoading ? null : () => controller.addMenuItem(item.id),
+                          );
+
+                          if (OrderManagementTracer.shouldSample(index)) {
+                            return OrderManagementTracer.traceSync<Widget>(
+                              "page.menuTile.build",
+                              buildTile,
+                              startArguments: () => <String, dynamic>{
+                                "index": index,
+                                "menuItemId": item.id,
+                                "selected": isSelected,
+                              },
+                              finishArguments: () => <String, dynamic>{"quantity": quantity ?? 0},
+                              logThreshold: const Duration(milliseconds: 2),
+                            );
                           }
 
-                          final int? quantity = quantityFor(item.id);
-                          return SizedBox(
-                            width: itemWidth,
-                            child: YataMenuItemTile(
-                              name: item.name,
-                              priceLabel: state.formatPrice(item.price),
-                              isSelected: isSelected,
-                              minQuantity: 0,
-                              quantity: quantity,
-                              onQuantityChanged: (int value) =>
-                                  controller.updateItemQuantity(item.id, value),
-                              onTap: () => controller.addMenuItem(item.id),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
+                          return buildTile();
+                        },
+                      ),
+                    );
+                  },
+                  startArguments: () => <String, dynamic>{"maxWidth": constraints.maxWidth},
+                  finishArguments: () => <String, dynamic>{
+                    "itemCount": itemCount,
+                    "crossAxis": sampledCrossAxisCount,
+                    "tileHeight": sampledTileHeight,
+                  },
+                  logThreshold: const Duration(milliseconds: 2),
                 );
               },
             ),
@@ -229,6 +395,34 @@ class _MenuSelectionSectionState extends State<_MenuSelectionSection> {
       ),
     );
   }
+}
+
+const double _menuTileMinHeight = 92;
+const double _menuTileTrailingMinHeight = 32 + YataSpacingTokens.md * 2;
+
+double _lineHeight(TextStyle style, TextStyle fallback) {
+  final double baseFontSize = style.fontSize ?? fallback.fontSize ?? 14;
+  final double heightFactor = style.height ?? fallback.height ?? 1.4;
+  return baseFontSize * heightFactor;
+}
+
+double _estimateMenuTileHeight(double itemWidth, BuildContext context) {
+  final TextTheme textTheme = Theme.of(context).textTheme;
+  final TextStyle titleStyle = textTheme.titleMedium ?? YataTypographyTokens.titleMedium;
+  final TextStyle priceStyle = textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium;
+
+  final double titleLineHeight = _lineHeight(titleStyle, YataTypographyTokens.titleMedium);
+  final double priceLineHeight = _lineHeight(priceStyle, YataTypographyTokens.bodyMedium);
+  const double verticalPadding = YataSpacingTokens.md * 2;
+  const double textSpacing = YataSpacingTokens.xs;
+
+  // 横幅が狭い場合は2行になるケースを考慮して高さを確保する。
+  final bool allowTwoLines = itemWidth < 320;
+  final int titleLines = allowTwoLines ? 2 : 1;
+  final double heightFromText =
+      verticalPadding + titleLineHeight * titleLines + textSpacing + priceLineHeight;
+
+  return math.max(math.max(heightFromText, _menuTileTrailingMinHeight), _menuTileMinHeight);
 }
 
 class _CurrentOrderSection extends StatefulWidget {
@@ -256,20 +450,17 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
   void didUpdateWidget(covariant _CurrentOrderSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 自動スクロールは無効化（ハイライトのみ有効）
-    
-    // 状態が変更された場合（例: カートクリア時）にテキストコントローラを同期
     if (widget.state.orderNotes != _notesController.text) {
-      final oldValue = _notesController.value;
-      final newText = widget.state.orderNotes;
-      final newSelection = oldValue.selection.copyWith(
-        baseOffset: newText.length < oldValue.selection.baseOffset ? newText.length : oldValue.selection.baseOffset,
-        extentOffset: newText.length < oldValue.selection.extentOffset ? newText.length : oldValue.selection.extentOffset,
+      final TextEditingValue oldValue = _notesController.value;
+      final String newText = widget.state.orderNotes;
+      final int maxOffset = newText.length;
+      final int baseOffset = oldValue.selection.baseOffset;
+      final int extentOffset = oldValue.selection.extentOffset;
+      final TextSelection newSelection = TextSelection(
+        baseOffset: baseOffset.clamp(0, maxOffset),
+        extentOffset: extentOffset.clamp(0, maxOffset),
       );
-      _notesController.value = TextEditingValue(
-        text: newText,
-        selection: newSelection,
-        composing: TextRange.empty,
-      );
+      _notesController.value = TextEditingValue(text: newText, selection: newSelection);
     }
   }
 
@@ -281,6 +472,23 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
   }
 
   // 自動スクロールは無効化
+
+  String _checkoutFailureMessage(CheckoutActionResult result) {
+    switch (result.status) {
+      case CheckoutActionStatus.stockInsufficient:
+        return result.message ?? "在庫が不足している商品があります。数量を調整して再度お試しください。";
+      case CheckoutActionStatus.emptyCart:
+        return result.message ?? "カートに商品がありません。";
+      case CheckoutActionStatus.authenticationFailed:
+        return result.message ?? "ユーザー情報を取得できませんでした。再度ログインしてください。";
+      case CheckoutActionStatus.missingCart:
+        return result.message ?? "カート情報の取得に失敗しました。再度読み込みを行ってください。";
+      case CheckoutActionStatus.failure:
+        return result.message ?? "会計処理に失敗しました。時間をおいて再度お試しください。";
+      case CheckoutActionStatus.success:
+        return "";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +508,9 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final bool isNarrow = constraints.maxWidth < 640;
-                if (isNarrow || state.cartItems.isEmpty) return const SizedBox.shrink();
+                if (isNarrow || state.cartItems.isEmpty) {
+                  return const SizedBox.shrink();
+                }
                 final TextStyle headerStyle =
                     (textTheme.labelMedium ?? YataTypographyTokens.labelMedium).copyWith(
                       color: YataColorTokens.textSecondary,
@@ -309,7 +519,6 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
                         Expanded(flex: 6, child: Text("品名", style: headerStyle)),
                         const SizedBox(width: YataSpacingTokens.md),
@@ -382,7 +591,7 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                             ),
                             itemBuilder: (BuildContext context, int index) {
                               final CartItemViewData item = state.cartItems[index];
-                              _itemKeys.putIfAbsent(item.menuItem.id, () => GlobalKey());
+                              _itemKeys.putIfAbsent(item.menuItem.id, GlobalKey.new);
                               final bool isHighlighted =
                                   state.highlightedItemId == item.menuItem.id;
                               return KeyedSubtree(
@@ -409,6 +618,40 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
             const SizedBox(height: YataSpacingTokens.md),
             const Divider(),
             const SizedBox(height: YataSpacingTokens.md),
+            // 支払い方法セレクター
+            OrderPaymentMethodSelector(
+              selected: state.currentPaymentMethod,
+              isDisabled: state.isCheckoutInProgress || state.isLoading,
+              onChanged: controller.updatePaymentMethod,
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
+            TextField(
+              controller: _notesController,
+              onChanged: controller.updateOrderNotes,
+              maxLength: 200,
+              enabled: !state.isCheckoutInProgress && !state.isLoading,
+              decoration: InputDecoration(
+                labelText: "メモ",
+                hintText: "例: アレルギー対応、調理指示など",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
+                  borderSide: const BorderSide(color: YataColorTokens.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.small),
+                  borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: YataSpacingTokens.md,
+                  vertical: YataSpacingTokens.sm,
+                ),
+                counterStyle: (textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+              style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
             _SummaryRow(
               label: "小計",
               value: state.formatPrice(state.subtotal),
@@ -463,7 +706,9 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
               children: <Widget>[
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: state.cartItems.isEmpty ? null : controller.clearCart,
+                    onPressed: state.cartItems.isEmpty || state.isCheckoutInProgress
+                        ? null
+                        : controller.clearCart,
                     icon: const Icon(Icons.close),
                     label: const Text("クリア"),
                     style: OutlinedButton.styleFrom(
@@ -477,13 +722,41 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
                 const SizedBox(width: YataSpacingTokens.sm),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: state.cartItems.isEmpty
+                    onPressed: state.cartItems.isEmpty || state.isCheckoutInProgress
                         ? null
-                        : () {
-                            context.push("/history");
+                        : () async {
+                            // 会計処理
+                            final CheckoutActionResult result = await controller.checkout();
+                            if (!context.mounted) {
+                              return;
+                            }
+                            if (result.isSuccess) {
+                              final String? orderNumber = result.order?.orderNumber;
+                              final String orderNumberLabel =
+                                  (orderNumber == null || orderNumber.isEmpty)
+                                  ? "新規注文"
+                                  : "受付コード $orderNumber";
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("会計が完了しました（$orderNumberLabel）。")),
+                              );
+                            } else {
+                              final String message = _checkoutFailureMessage(result);
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(message)));
+                            }
                           },
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text("会計"),
+                    icon: state.isCheckoutInProgress
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              valueColor: AlwaysStoppedAnimation<Color>(YataColorTokens.neutral0),
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_outline),
+                    label: Text(state.isCheckoutInProgress ? "会計中…" : "会計"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: YataColorTokens.success,
                       foregroundColor: YataColorTokens.neutral0,
@@ -503,26 +776,29 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
 class _OrderNumberBadge extends StatelessWidget {
   const _OrderNumberBadge({required this.orderNumber});
 
-  final String orderNumber;
+  final String? orderNumber;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: YataSpacingTokens.md,
-      vertical: YataSpacingTokens.xs,
-    ),
-    decoration: BoxDecoration(
-      color: YataColorTokens.primarySoft,
-      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-      border: Border.all(color: YataColorTokens.primary.withValues(alpha: 0.3)),
-    ),
-    child: Text(
-      "注文番号: $orderNumber",
-      style:
-          Theme.of(context).textTheme.labelLarge?.copyWith(color: YataColorTokens.primary) ??
-          YataTypographyTokens.labelLarge.copyWith(color: YataColorTokens.primary),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final String label = (orderNumber == null || orderNumber!.isEmpty) ? "割り当て準備中" : orderNumber!;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: YataSpacingTokens.md,
+        vertical: YataSpacingTokens.xs,
+      ),
+      decoration: BoxDecoration(
+        color: YataColorTokens.primarySoft,
+        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+        border: Border.all(color: YataColorTokens.primary.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        "受付コード: $label",
+        style:
+            Theme.of(context).textTheme.labelLarge?.copyWith(color: YataColorTokens.primary) ??
+            YataTypographyTokens.labelLarge.copyWith(color: YataColorTokens.primary),
+      ),
+    );
+  }
 }
 
 class _SummaryRow extends StatelessWidget {
@@ -571,7 +847,7 @@ class _HighlightWrapper extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-        border: Border.all(color: borderColor, width: 1),
+        border: Border.all(color: borderColor),
         boxShadow: highlighted
             ? <BoxShadow>[
                 BoxShadow(
@@ -659,13 +935,10 @@ class _OrderRow extends StatelessWidget {
                     ),
                     const SizedBox(width: YataSpacingTokens.md),
                     Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          lineSubtotalLabel,
-                          style: subtotalStyle,
-                          overflow: TextOverflow.fade,
-                        ),
+                      child: _SubtotalDisplay(
+                        value: lineSubtotalLabel,
+                        textStyle: subtotalStyle,
+                        quantity: quantity,
                       ),
                     ),
                   ],
@@ -676,7 +949,6 @@ class _OrderRow extends StatelessWidget {
 
           // 1行レイアウト（できるだけ品名を優先して表示）
           return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               // 品名
               Expanded(
@@ -699,13 +971,10 @@ class _OrderRow extends StatelessWidget {
               // 行小計
               Expanded(
                 flex: 2,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    lineSubtotalLabel,
-                    style: subtotalStyle,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                child: _SubtotalDisplay(
+                  value: lineSubtotalLabel,
+                  textStyle: subtotalStyle,
+                  quantity: quantity,
                 ),
               ),
               const SizedBox(width: YataSpacingTokens.sm),
@@ -724,4 +993,66 @@ class _OrderRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SubtotalDisplay extends StatelessWidget {
+  const _SubtotalDisplay({required this.value, required this.textStyle, required this.quantity});
+
+  final String value;
+  final TextStyle textStyle;
+  final int quantity;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerRight,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Text("x$quantity", style: textStyle),
+        const SizedBox(width: YataSpacingTokens.sm),
+        Icon(Icons.arrow_forward, size: 18, color: YataColorTokens.textSecondary),
+        const SizedBox(width: YataSpacingTokens.xs),
+        Flexible(
+          child: Text(value, style: textStyle, overflow: TextOverflow.ellipsis, softWrap: false),
+        ),
+      ],
+    ),
+  );
+}
+
+class _OrderPageErrorBanner extends StatelessWidget {
+  const _OrderPageErrorBanner({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(YataSpacingTokens.md),
+    decoration: BoxDecoration(
+      color: YataColorTokens.dangerSoft,
+      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+      border: Border.all(color: YataColorTokens.danger.withValues(alpha: 0.3)),
+    ),
+    child: Row(
+      children: <Widget>[
+        const Icon(Icons.error_outline, color: YataColorTokens.danger),
+        const SizedBox(width: YataSpacingTokens.sm),
+        Expanded(
+          child: Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: YataColorTokens.danger,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text("再試行"),
+        ),
+      ],
+    ),
+  );
 }

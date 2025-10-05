@@ -51,7 +51,6 @@ _temp/
 _temp_images/
 _temp_log/
 _reports/
-_images/
 
 # Generated files
 *.g.dart
@@ -60,3 +59,6 @@ _images/
 
 # dotenv
 .env
+
+# logging
+_logs/

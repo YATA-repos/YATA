@@ -1,19 +1,23 @@
 // Riverpod not required here; DI is handled by provider wiring
 
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/recipe_repository_contract.dart";
-// Using final logging API directly
-import "../../../core/logging/compat.dart" as log;
 import "../../inventory/models/inventory_model.dart";
 import "../models/order_model.dart";
 
 /// 注文関連在庫操作サービス（在庫確認・材料消費・復元）
 class OrderStockService {
   OrderStockService({
+    required log_contract.LoggerContract logger,
     required MaterialRepositoryContract<Material> materialRepository,
     required RecipeRepositoryContract<Recipe> recipeRepository,
-  }) : _materialRepository = materialRepository,
+  }) : _logger = logger,
+       _materialRepository = materialRepository,
        _recipeRepository = recipeRepository;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final MaterialRepositoryContract<Material> _materialRepository;
   final RecipeRepositoryContract<Recipe> _recipeRepository;

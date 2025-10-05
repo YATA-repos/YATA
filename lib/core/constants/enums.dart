@@ -93,7 +93,13 @@ enum UnitType {
 
   /// グラム、重量。ただし、運用時に厳密に管理することは困難であるため、目安として使用
   /// 注意: 将来的に在庫確認アラート機能で定期的な実測確認を促す仕組みを検討
-  gram("gram");
+  gram("gram"),
+
+  /// キログラム（重量）
+  kilogram("kilogram"),
+
+  /// リットル（体積）
+  liter("liter");
 
   // NOTE: 将来的に液体系・長さ系の単位追加を検討（gramでの統一管理も可能）
 
@@ -111,6 +117,10 @@ enum UnitType {
         return "個数";
       case UnitType.gram:
         return "グラム";
+      case UnitType.kilogram:
+        return "キログラム";
+      case UnitType.liter:
+        return "リットル";
     }
   }
 
@@ -121,6 +131,10 @@ enum UnitType {
         return "個";
       case UnitType.gram:
         return "g";
+      case UnitType.kilogram:
+        return "kg";
+      case UnitType.liter:
+        return "L";
     }
   }
 }
@@ -172,28 +186,32 @@ enum StockLevel {
 /// 注文ステータス
 @JsonEnum()
 enum OrderStatus {
-  /// 待機中。注文が受け付けられ、まだ確認されていない状態。
-  pending("pending"),
+  /// 調理・提供に向けて進行中の注文。旧 `pending` / `confirmed` / `preparing` / `ready` に相当。
+  inProgress("in_progress"),
 
-  /// 確認済み。注文が確認され、処理が開始される状態。
-  confirmed("confirmed"),
+  /// キャンセル済み。旧 `cancelled` / `canceled` / `refunded` を包括。
+  cancelled("cancelled"),
 
-  /// 準備中。オーダーが作成され、キッチンが未対応もしくは調理中である状態。
-  preparing("preparing"),
-
-  /// 準備完了。調理が完了し、提供準備ができた状態。
-  ready("ready"),
-
-  /// 配達済み。顧客に提供された状態。
-  delivered("delivered"),
-
-  /// 完了。オーダー内の全てのアイテムが提供された状態。
+  /// 完了済み。旧 `ready` / `delivered` / `completed` を包括。
   completed("completed"),
 
-  /// キャンセル。オーダーがキャンセルされた状態。基本的にはオーダー作成後即座に割り当てられる想定。
-  cancelled("canceled"),
+  /// 以下の値は後方互換のため残存。
+  @Deprecated("OrderStatus.inProgress を使用してください")
+  pending("pending"),
 
-  /// 返金済み。キャンセルされた注文で返金が完了した状態。
+  @Deprecated("OrderStatus.inProgress を使用してください")
+  confirmed("confirmed"),
+
+  @Deprecated("OrderStatus.inProgress を使用してください")
+  preparing("preparing"),
+
+  @Deprecated("OrderStatus.inProgress を使用してください")
+  ready("ready"),
+
+  @Deprecated("OrderStatus.completed を使用してください")
+  delivered("delivered"),
+
+  @Deprecated("OrderStatus.cancelled を使用してください")
   refunded("refunded");
 
   const OrderStatus(this.value);
@@ -203,70 +221,69 @@ enum OrderStatus {
   @override
   String toString() => value;
 
+  /// 現在のステータスを新しい3状態に正規化する。
+  OrderStatus get primaryStatus {
+    switch (name) {
+      case "inProgress":
+      case "pending":
+      case "confirmed":
+      case "preparing":
+      case "ready":
+        return OrderStatus.inProgress;
+      case "cancelled":
+      case "refunded":
+        return OrderStatus.cancelled;
+      case "completed":
+      case "delivered":
+        return OrderStatus.completed;
+      default:
+        return OrderStatus.inProgress;
+    }
+  }
+
   /// 日本語での表示名
   String get displayName {
-    switch (this) {
-      case OrderStatus.pending:
-        return "待機中";
-      case OrderStatus.confirmed:
-        return "確認済み";
-      case OrderStatus.preparing:
-        return "準備中";
-      case OrderStatus.ready:
-        return "準備完了";
-      case OrderStatus.delivered:
-        return "配達済み";
-      case OrderStatus.completed:
-        return "完了";
-      case OrderStatus.cancelled:
-        return "キャンセル";
-      case OrderStatus.refunded:
-        return "返金済み";
+    final OrderStatus status = primaryStatus;
+    if (status == OrderStatus.inProgress) {
+      return "準備中";
     }
+    if (status == OrderStatus.cancelled) {
+      return "キャンセル済み";
+    }
+    return "完了";
   }
 
   /// 注文ステータスに対応する色を取得（Flutter用）
   /// 実際のColorオブジェクトは呼び出し側で定義する
   String get colorName {
-    switch (this) {
-      case OrderStatus.pending:
-        return "gray";
-      case OrderStatus.confirmed:
-        return "blue";
-      case OrderStatus.preparing:
-        return "orange";
-      case OrderStatus.ready:
-        return "green";
-      case OrderStatus.delivered:
-        return "purple";
-      case OrderStatus.completed:
-        return "green";
-      case OrderStatus.cancelled:
-        return "red";
-      case OrderStatus.refunded:
-        return "gray";
+    final OrderStatus status = primaryStatus;
+    if (status == OrderStatus.inProgress) {
+      return "orange";
     }
+    if (status == OrderStatus.cancelled) {
+      return "red";
+    }
+    return "green";
   }
 
-  /// ステータスがアクティブかどうかを判定
-  bool get isActive =>
-      this == OrderStatus.pending ||
-      this == OrderStatus.confirmed ||
-      this == OrderStatus.preparing ||
-      this == OrderStatus.ready;
+  /// ステータスがアクティブ（進行中）かどうかを判定
+  bool get isActive => primaryStatus == OrderStatus.inProgress;
 
   /// ステータスが完了しているかどうかを判定
-  bool get isFinished =>
-      this == OrderStatus.delivered ||
-      this == OrderStatus.completed ||
-      this == OrderStatus.cancelled ||
-      this == OrderStatus.refunded;
+  bool get isFinished => primaryStatus != OrderStatus.inProgress;
 
   /// ステータスが処理中かどうかを判定
-  bool get isProcessing => this == OrderStatus.confirmed || this == OrderStatus.preparing;
+  bool get isProcessing => primaryStatus == OrderStatus.inProgress;
 
   /// ステータスが顧客に表示すべきかどうかを判定
-  bool get isVisibleToCustomer => this != OrderStatus.refunded;
+  bool get isVisibleToCustomer => name != "refunded";
+
+  /// 新しい3状態セットを返す。
+  static const List<OrderStatus> primaryStatuses = <OrderStatus>[
+    OrderStatus.inProgress,
+    OrderStatus.completed,
+    OrderStatus.cancelled,
+  ];
 }
 
 /// 優先度

@@ -6,6 +6,7 @@ Status: Accepted (updated)
 - Primary API: `lib/infra/logging/logger.dart`（トップレベル関数 `t/d/i/w/e/f` と `withTag` を使用）
 - Compatibility: `lib/core/logging/compat.dart`（`logInfo/logDebug/logWarning/logError` の薄いラッパ）
 - Facade (temporary): `lib/core/logging/yata_logger.dart`（既存呼び出しの後方互換用。段階的に削除予定）
+- Structured fields catalog: `docs/standards/logging-structured-fields.md`（主要イベントで必須のキー設計）
 
 ## PII Masking Policy
 - Default: enabled.
@@ -38,6 +39,39 @@ Status: Accepted (updated)
 
 ## Crash Capture
 - Global capture enabled by default; dedup window 30s; periodic summary 60s.
+
+## Fatal レベル運用ポリシー
+- `fatal` は「アプリケーションを継続できない」か「即時のオペレーション対応が必要」な状態のみで使用する。
+- 代表例:
+  - 起動時にクリティカル依存（Supabase など）の初期化に失敗し、リトライ不能と判断した場合。
+  - 永続化できないデータ破損や不整合を検知し、監視・オンコール対応が必要なケース。
+  - ランタイムで復旧不能なクラッシュを捕捉した際のフォールバック通知。
+- `fatal` を発火すると以下が自動で行われる:
+  - ログシンクのフラッシュ（環境変数でタイムアウトを調整可能）。
+  - 登録済み Fatal ハンドラーの順次実行（Slack Webhook など外部通知に利用）。
+  - `FatalConfig` の `autoShutdown` / `exitProcess` が有効な場合は安全にクローズし、必要ならプロセスを終了。
+- 推奨メッセージテンプレート:
+  - `log.f("<大分類>: <概要>", error: err, fields: () => {"component": "...", "ticket": "INC-123"})`
+
+### Fatal ハンドラーとノーティファー
+- `registerFatalHandler` に `FatalHandler` を登録すると、fatal 発生時に任意処理を実行できる。
+- `registerFatalNotifier(FatalNotifier)` で `StdoutFatalNotifier` や `ClosureFatalNotifier` などを注入可能。
+- ハンドラー内では `context.flush()` / `context.shutdown()` を呼び出すことで同期的なフラッシュや安全終了を制御できる。
+- ハンドラー実行は `FatalConfig.handlerTimeout` でタイムアウト設定が可能（デフォルト10秒）。
+
+### 環境変数による調整（runtime override）
+- `LOG_FATAL_FLUSH_BEFORE_HANDLERS` (`true`/`false`): ハンドラー実行前に強制フラッシュするか。
+- `LOG_FATAL_FLUSH_TIMEOUT_MS`: フラッシュ待機のタイムアウト（ミリ秒）。
+- `LOG_FATAL_HANDLER_TIMEOUT_MS`: 各ハンドラーの実行タイムアウト（ミリ秒）。
+- `LOG_FATAL_AUTO_SHUTDOWN`: ハンドラー完了後に自動的に `shutdown()` を呼び出すか。
+- `LOG_FATAL_EXIT_PROCESS`: 自動シャットダウン時にプロセス終了まで行うか。
+- `LOG_FATAL_EXIT_CODE`: `exitProcess=true` の際に使用する終了コード。
+- `LOG_FATAL_SHUTDOWN_DELAY_MS`: 終了前に待機するディレイ（ミリ秒）。
+
+### 安全モード（PoC）
+- Supabase 初期化が致命的に失敗した場合、`SupabaseClientService` が自動で `fatal` を発火し安全モードへ移行する。
+- 安全モード中は再初期化をスキップし、`safeModeReason` をログおよび運用側へ通知する。
+- UI/サービス層は `SupabaseClientService.isInSafeMode` を参照することでフェイルセーフ分岐を実装できる。
 
 ## Usage
 - 既存コードは `compat.dart` の `log*` 関数、または `YataLogger` 後方互換を利用。新規コードは `logger.dart` の `i/w/d/e` などを直接使用。

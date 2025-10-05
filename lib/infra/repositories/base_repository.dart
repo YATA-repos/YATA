@@ -209,7 +209,7 @@ abstract class BaseRepository<T extends BaseModel, ID> implements CrudRepository
   Future<T?> create(T entity) async {
     try {
       final T entityWithUserId = _setUserIdForEntity(entity);
-      final Map<String, dynamic> data = entityWithUserId.toJson();
+      final Map<String, dynamic> data = _sanitizeInsertPayload(entityWithUserId.toJson());
       final List<Map<String, dynamic>> response = await _table.insert(data).select();
 
       if (response.isNotEmpty) {
@@ -238,7 +238,7 @@ abstract class BaseRepository<T extends BaseModel, ID> implements CrudRepository
     try {
       final List<T> entitiesWithUserId = _setUserIdForEntities(entities);
       final List<Map<String, dynamic>> dataList = entitiesWithUserId
-          .map((T e) => e.toJson())
+          .map((T e) => _sanitizeInsertPayload(e.toJson()))
           .toList();
       final List<Map<String, dynamic>> response = await _table.insert(dataList).select();
 
@@ -252,6 +252,19 @@ abstract class BaseRepository<T extends BaseModel, ID> implements CrudRepository
         params: <String, String>{"error": e.toString()},
       );
     }
+  }
+
+  /// Supabase挿入時にNULL主キーを除去してDBのデフォルト生成に委ねる。
+  Map<String, dynamic> _sanitizeInsertPayload(Map<String, dynamic> data) {
+    final Map<String, dynamic> sanitized = Map<String, dynamic>.from(data);
+
+    for (final String primaryKey in primaryKeyColumns) {
+      if (sanitized[primaryKey] == null) {
+        sanitized.remove(primaryKey);
+      }
+    }
+
+    return sanitized;
   }
 
   /// IDによってエンティティを取得（user_idフィルタ自動適用）

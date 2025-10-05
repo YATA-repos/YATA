@@ -20,6 +20,7 @@ class YataSectionCard extends StatelessWidget {
     this.actions,
     this.padding = YataSpacingTokens.cardPadding,
     this.backgroundColor = YataColorTokens.surface,
+    this.borderColor = YataColorTokens.border,
     this.expandChild = false,
   });
 
@@ -38,6 +39,9 @@ class YataSectionCard extends StatelessWidget {
   /// カードの背景色。
   final Color backgroundColor;
 
+  /// カードのボーダー色。
+  final Color borderColor;
+
   /// 本文コンテンツ。
   final Widget child;
 
@@ -53,21 +57,42 @@ class YataSectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: borderRadius,
-        border: Border.all(color: YataColorTokens.border),
+        border: Border.all(color: borderColor),
         boxShadow: shadow,
       ),
       child: Padding(
         padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: expandChild ? MainAxisSize.max : MainAxisSize.min,
-          children: <Widget>[
-            if (title != null || subtitle != null || (actions?.isNotEmpty ?? false))
-              _Header(title: title, subtitle: subtitle, actions: actions),
-            if (title != null || subtitle != null || (actions?.isNotEmpty ?? false))
-              const SizedBox(height: YataSpacingTokens.md),
-            if (expandChild) Expanded(child: child) else child,
-          ],
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            // * SingleChildScrollView 等の高さが非拘束な環境では、
+            //   Column 配下に Expanded/Flexible を置くと例外になる。
+            //   そのため、bounded なときのみ Expanded を使用する。
+            final bool canExpand = expandChild && constraints.hasBoundedHeight;
+
+            final bool hasTitle = title != null;
+            final bool hasActions = actions?.isNotEmpty ?? false;
+            final bool hasSubtitle = subtitle != null;
+            final bool hasHeader = hasTitle || hasActions;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: canExpand ? MainAxisSize.max : MainAxisSize.min,
+              children: <Widget>[
+                if (hasHeader) _Header(title: title, actions: actions),
+                if (hasSubtitle)
+                  Padding(
+                    padding: EdgeInsets.only(top: hasHeader ? YataSpacingTokens.xs : 0),
+                    child: Text(
+                      subtitle!,
+                      style:
+                          Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
+                    ),
+                  ),
+                if (hasHeader || hasSubtitle) const SizedBox(height: YataSpacingTokens.md),
+                if (canExpand) Expanded(child: child) else child,
+              ],
+            );
+          },
         ),
       ),
     );
@@ -75,10 +100,9 @@ class YataSectionCard extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({this.title, this.subtitle, this.actions});
+  const _Header({this.title, this.actions});
 
   final String? title;
-  final String? subtitle;
   final List<Widget>? actions;
 
   @override
@@ -86,7 +110,6 @@ class _Header extends StatelessWidget {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Row(
-      crossAxisAlignment: subtitle != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: <Widget>[
         Expanded(
           child: Column(
@@ -95,14 +118,6 @@ class _Header extends StatelessWidget {
             children: <Widget>[
               if (title != null)
                 Text(title!, style: textTheme.titleLarge ?? YataTypographyTokens.titleLarge),
-              if (subtitle != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: YataSpacingTokens.xs),
-                  child: Text(
-                    subtitle!,
-                    style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
-                  ),
-                ),
             ],
           ),
         ),

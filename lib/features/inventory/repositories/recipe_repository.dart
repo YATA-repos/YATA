@@ -44,6 +44,80 @@ class RecipeRepository implements RecipeRepositoryContract<Recipe> {
     return _delegate.find(filters: filters);
   }
 
+  /// メニューIDと材料IDで単一レシピを取得
+  @override
+  Future<Recipe?> findByMenuItemAndMaterial(String menuItemId, String materialId) =>
+      _delegate.getByPrimaryKey(<String, dynamic>{
+        "menu_item_id": menuItemId,
+        "material_id": materialId,
+      });
+
+  /// メニューIDと材料IDをキーにレシピを作成または更新
+  @override
+  Future<Recipe?> upsertByMenuItemAndMaterial(Recipe entity) async {
+    final Recipe? existing = await findByMenuItemAndMaterial(
+      entity.menuItemId,
+      entity.materialId,
+    );
+
+    final Map<String, dynamic> updates = <String, dynamic>{
+      "required_amount": entity.requiredAmount,
+      "is_optional": entity.isOptional,
+      "notes": entity.notes,
+      "user_id": entity.userId,
+      if (entity.updatedAt != null) "updated_at": entity.updatedAt!.toIso8601String(),
+    };
+
+    if (existing == null) {
+      return _delegate.create(entity);
+    }
+
+    if (existing.id != null) {
+      return _delegate.updateById(existing.id!, updates);
+    }
+
+    return _delegate.updateByPrimaryKey(
+      <String, dynamic>{
+        "menu_item_id": entity.menuItemId,
+        "material_id": entity.materialId,
+      },
+      updates,
+    );
+  }
+
+  /// メニューIDに紐づくレシピを一括削除
+  @override
+  Future<void> deleteByMenuItemId(String menuItemId) async {
+    final List<Recipe> recipes = await findByMenuItemId(menuItemId);
+    if (recipes.isEmpty) {
+      return;
+    }
+
+    final List<String> ids = <String>[];
+    final List<Future<void>> pending = <Future<void>>[];
+
+    for (final Recipe recipe in recipes) {
+      if (recipe.id != null) {
+        ids.add(recipe.id!);
+      } else {
+        pending.add(
+          _delegate.deleteByPrimaryKey(<String, dynamic>{
+            "menu_item_id": recipe.menuItemId,
+            "material_id": recipe.materialId,
+          }),
+        );
+      }
+    }
+
+    if (ids.isNotEmpty) {
+      await _delegate.bulkDelete(ids);
+    }
+
+    if (pending.isNotEmpty) {
+      await Future.wait(pending);
+    }
+  }
+
   // ==== CrudRepository delegation (explicit implementations) ====
   @override
   Future<Recipe?> create(Recipe entity) => _delegate.create(entity);

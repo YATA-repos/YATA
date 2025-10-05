@@ -6,7 +6,7 @@ import "../../../core/constants/enums.dart";
 part "inventory_model.g.dart";
 
 /// 材料マスタ
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Material extends BaseModel {
   Material({
     required this.name,
@@ -72,7 +72,7 @@ class Material extends BaseModel {
 }
 
 /// 材料カテゴリ
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake, includeIfNull: false)
 class MaterialCategory extends BaseModel {
   MaterialCategory({
     required this.name,
@@ -91,7 +91,6 @@ class MaterialCategory extends BaseModel {
 
   /// 表示順序
   int displayOrder;
-
   /// 作成日時
   DateTime? createdAt;
 
@@ -107,7 +106,7 @@ class MaterialCategory extends BaseModel {
 }
 
 /// レシピ（メニューと材料の関係）
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Recipe extends BaseModel {
   Recipe({
     required this.menuItemId,

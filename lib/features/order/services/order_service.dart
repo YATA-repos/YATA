@@ -1,7 +1,8 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../core/constants/enums.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
-import "../../../core/logging/compat.dart" as log;
 import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../auth/presentation/providers/auth_providers.dart";
 import "../dto/order_dto.dart";
@@ -12,12 +13,17 @@ import "order_management_service.dart";
 /// OrderManagementServiceを使用
 class OrderService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   OrderService({
+    required log_contract.LoggerContract logger,
     required Ref ref,
     required r_contract.RealtimeManagerContract realtimeManager,
     required OrderManagementService orderManagementService,
-  }) : _ref = ref,
+  }) : _logger = logger,
+    _ref = ref,
        _realtimeManager = realtimeManager,
        _orderManagementService = orderManagementService;
+
+  final log_contract.LoggerContract _logger;
+  log_contract.LoggerContract get log => _logger;
 
   final Ref _ref;
   final OrderManagementService _orderManagementService;
@@ -86,6 +92,16 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
     final String eventType = data["event_type"] as String? ?? "unknown";
     final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
     final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
+    final bool isCartEvent =
+        ((newRecord?["is_cart"] as bool?) ?? false) || ((oldRecord?["is_cart"] as bool?) ?? false);
+    if (isCartEvent) {
+      log.d(
+        "Ignoring cart order event",
+        tag: loggerComponent,
+        fields: <String, dynamic>{"eventType": eventType},
+      );
+      return;
+    }
     log.d(
       "Order event: $eventType",
       tag: loggerComponent,
@@ -106,8 +122,8 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
 
   // ===== 注文管理関連メソッド =====
 
-  /// カートを確定して正式注文に変換（戻り値: (Order, 成功フラグ)）
-  Future<(Order?, bool)> checkoutCart(
+  /// カートを確定して正式注文に変換する。
+  Future<OrderCheckoutResult> checkoutCart(
     String cartId,
     OrderCheckoutRequest request,
     String userId,
@@ -128,4 +144,15 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
   /// 注文と注文明細を一括取得
   Future<Map<String, dynamic>?> getOrderWithItems(String orderId, String userId) async =>
       _orderManagementService.getOrderWithItems(orderId, userId);
+
+  /// ステータスに応じた注文一覧を取得
+  Future<Map<OrderStatus, List<Order>>> getOrdersByStatuses(
+    List<OrderStatus> statuses,
+    String userId, {
+    int limit = 50,
+  }) async => _orderManagementService.getOrdersByStatuses(statuses, userId, limit: limit);
+
+  /// 注文ステータスを更新
+  Future<Order?> updateOrderStatus(String orderId, OrderStatus newStatus, String userId) async =>
+      _orderManagementService.updateOrderStatus(orderId, newStatus, userId);
 }

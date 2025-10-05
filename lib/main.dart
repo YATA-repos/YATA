@@ -1,10 +1,12 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app/app.dart";
 import "core/validation/env_validator.dart";
+import "features/order/presentation/performance/order_management_tracing.dart";
+import "infra/logging/fatal_notifier.dart";
+import "infra/logging/log_runtime_config.dart";
 import "infra/logging/logger.dart";
 import "infra/supabase/supabase_client.dart";
 
@@ -14,17 +16,21 @@ void main() async {
 
   // ロガー初期化（クラッシュキャプチャ等）
   installCrashCapture();
+  registerFatalNotifier(const StdoutFatalNotifier());
 
   try {
     // 統合環境変数管理システムで初期化
     await EnvValidator.initialize();
-    i("環境変数をロードしました: ${dotenv.env.keys.join(", ")}", tag: "main");
+    applyLogRuntimeConfig();
+    OrderManagementTracer.configureFromEnvironment();
+
+    i("環境変数をロードしました: ${EnvValidator.env.keys.join(", ")}", tag: "main");
 
     final EnvValidationResult validationResult = EnvValidator.validate();
     EnvValidator.printValidationResult(validationResult);
 
     if (!validationResult.isValid) {
-      // 本番環境では起動を停止することも検討
+      // ! 本番環境では起動を停止することも検討
       w("環境変数の検証に失敗しました。", tag: "main");
     } else {
       i("環境変数の検証に成功しました。", tag: "main");
@@ -35,11 +41,27 @@ void main() async {
       try {
         await SupabaseClientService.initialize();
       } catch (error, stackTrace) {
-        e("Supabaseの初期化に失敗しました: $error", error: error, st: stackTrace, tag: "main");
-        rethrow;
+        w(
+          "Supabase初期化に失敗したため安全モードで継続します: $error",
+          tag: "main",
+          fields: <String, dynamic>{
+            "safe_mode": SupabaseClientService.isInSafeMode,
+            "reason": SupabaseClientService.safeModeReason,
+            "stack": stackTrace.toString(),
+          },
+        );
+        // すでに SupabaseClientService.initialize 内で fatal ログおよび safe mode 切替を実施済み。
       }
     } else {
       w("Supabaseの初期化はスキップされました。環境変数が設定されていないか、無効です。", tag: "main");
+    }
+
+    if (SupabaseClientService.isInSafeMode) {
+      w(
+        "Supabase safe mode active: ${SupabaseClientService.safeModeReason ?? 'unknown'}",
+        tag: "main",
+        fields: <String, dynamic>{"safe_mode": true},
+      );
     }
   } catch (error, stackTrace) {
     if (kDebugMode) {
@@ -53,10 +75,10 @@ void main() async {
 }
 
 bool _shouldInitializeSupabase() {
-  final String? url = dotenv.env["SUPABASE_URL"];
-  final String? key = dotenv.env["SUPABASE_ANON_KEY"];
+  final String url = EnvValidator.supabaseUrl;
+  final String key = EnvValidator.supabaseAnonKey;
 
-  return url != null && key != null && url.isNotEmpty && key.isNotEmpty;
+  return url.isNotEmpty && key.isNotEmpty;
 }
 
 void _setupErrorHandling() {

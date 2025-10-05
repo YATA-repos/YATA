@@ -48,7 +48,8 @@ class YataSegmentedFilter extends StatelessWidget {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Wrap(
-      spacing: YataSpacingTokens.sm,
+      spacing: compact ? YataSpacingTokens.xs : YataSpacingTokens.sm,
+      runSpacing: compact ? YataSpacingTokens.xs : YataSpacingTokens.sm,
       children: <Widget>[
         for (int index = 0; index < segments.length; index++)
           _SegmentChip(
@@ -87,24 +88,27 @@ class _SegmentChip extends StatelessWidget {
         ? YataColorTokens.primary
         : YataColorTokens.textSecondary;
     final Color backgroundColor = selected ? YataColorTokens.primarySoft : YataColorTokens.neutral0;
+    final BorderRadius borderRadius = const BorderRadius.all(
+      Radius.circular(YataRadiusTokens.pill),
+    );
     final BoxBorder border = Border.all(
       color: selected ? YataColorTokens.primary : YataColorTokens.border,
       width: selected ? 1.4 : 1,
     );
 
     return InkWell(
-      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
+      borderRadius: borderRadius,
       onTap: onPressed,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
         padding: EdgeInsets.symmetric(
           horizontal: compact ? YataSpacingTokens.sm : YataSpacingTokens.md,
-          vertical: compact ? YataSpacingTokens.xs : YataSpacingTokens.sm,
+          vertical: compact ? YataSpacingTokens.xxs : YataSpacingTokens.xs,
         ),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
+          borderRadius: borderRadius,
           border: border,
         ),
         child: Row(
@@ -119,10 +123,13 @@ class _SegmentChip extends StatelessWidget {
             if (badge != null)
               Container(
                 margin: const EdgeInsets.only(left: YataSpacingTokens.xs),
-                padding: const EdgeInsets.symmetric(horizontal: YataSpacingTokens.xs, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: YataSpacingTokens.xs,
+                  vertical: YataSpacingTokens.xxs,
+                ),
                 decoration: BoxDecoration(
-                  color: selected ? YataColorTokens.primary : YataColorTokens.neutral200,
-                  borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.small)),
+                  color: selected ? YataColorTokens.primary : YataColorTokens.neutral100,
+                  borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.pill)),
                 ),
                 child: Text(
                   badge!,

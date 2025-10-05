@@ -42,15 +42,22 @@ class EnvValidator {
 
   /// 内部ログ出力（循環インポート回避のため、直接printを使用）
   static void _log(String message, [Object? error, StackTrace? stackTrace]) {
-    if (kDebugMode) {
-      print("[EnvValidator] $message");
-      if (error != null) {
-        print("[EnvValidator] Error: $error");
-      }
-      if (stackTrace != null) {
-        print("[EnvValidator] StackTrace: $stackTrace");
-      }
+    if (!kDebugMode) {
+      return;
     }
+
+    debugPrint("[EnvValidator] $message");
+    if (error != null) {
+      debugPrint("[EnvValidator] Error: $error");
+    }
+    if (stackTrace != null) {
+      debugPrint("[EnvValidator] StackTrace: $stackTrace");
+    }
+  }
+
+  /// コンソール出力用ユーティリティ。
+  static void _emitConsole(String message) {
+    debugPrintSynchronously(message);
   }
 
   /// 必須の環境変数リスト
@@ -61,6 +68,7 @@ class EnvValidator {
     "SUPABASE_OAUTH_CALLBACK_URL_DEV",
     "SUPABASE_OAUTH_CALLBACK_URL_PROD",
     "SUPABASE_OAUTH_CALLBACK_URL_MOBILE",
+    "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP",
     "DEBUG_MODE",
     "LOG_LEVEL",
     "LOG_DIR",
@@ -70,7 +78,14 @@ class EnvValidator {
     "LOG_MAX_DISK_MB",
     "LOG_RETENTION_DAYS",
     "LOG_BACKPRESSURE",
+    "ORDER_MANAGEMENT_PERF_TRACING",
   ];
+
+  static Map<String, String> _cachedEnv = _initializeCachedEnv();
+  static bool _fileFallbackAttempted = false;
+
+  /// 現在利用可能な環境変数のスナップショット
+  static Map<String, String> get env => Map<String, String>.unmodifiable(_cachedEnv);
 
   /// 環境変数を検証
   static EnvValidationResult validate() {
@@ -81,7 +96,7 @@ class EnvValidator {
 
     // 必須環境変数のチェック
     for (final String varName in _requiredVars) {
-      final String? value = dotenv.env[varName];
+      final String? value = _cachedEnv[varName];
 
       if (value == null || value.isEmpty) {
         errors.add("必須環境変数 '$varName' が設定されていません");
@@ -96,7 +111,7 @@ class EnvValidator {
 
     // オプション環境変数のチェック
     for (final String varName in _optionalVars) {
-      final String? value = dotenv.env[varName];
+      final String? value = _cachedEnv[varName];
 
       if (value == null || value.isEmpty) {
         warnings.add("オプション環境変数 '$varName' が設定されていません");
@@ -158,6 +173,19 @@ class EnvValidator {
         }
         break;
 
+      case "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP":
+        final Uri? desktopUri = Uri.tryParse(value);
+        if (desktopUri == null || desktopUri.host.isEmpty) {
+          warnings.add("デスクトップ用コールバックURLの形式が不正です: $value");
+        } else if (desktopUri.scheme != "http") {
+          warnings.add("デスクトップ用コールバックURLは http スキームを推奨します: $value");
+        } else if (desktopUri.host != "localhost" && desktopUri.host != "127.0.0.1") {
+          warnings.add("デスクトップ用コールバックURLは localhost へのループバックを推奨します: $value");
+        } else if (!desktopUri.hasPort) {
+          warnings.add("デスクトップ用コールバックURLにポート番号を指定してください");
+        }
+        break;
+
       case "DEBUG_MODE":
         if (value != "true" && value != "false") {
           warnings.add("DEBUG_MODEは 'true' または 'false' である必要があります: $value");
@@ -195,6 +223,15 @@ class EnvValidator {
           warnings.add("LOG_BACKPRESSUREは ${validPolicies.join(', ')} のいずれかである必要があります: $value");
         }
         break;
+
+      case "ORDER_MANAGEMENT_PERF_TRACING":
+        if (value.toLowerCase() != "true" &&
+            value.toLowerCase() != "false" &&
+            value != "1" &&
+            value != "0") {
+          warnings.add("ORDER_MANAGEMENT_PERF_TRACING は true/false (または 1/0) で指定してください: $value");
+        }
+        break;
     }
   }
 
@@ -212,7 +249,7 @@ class EnvValidator {
     if (kIsWeb) {
       info.add("🌐 プラットフォーム: Web");
       // Web特有のチェック
-      final String? devUrl = dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_DEV"];
+      final String? devUrl = _cachedEnv["SUPABASE_OAUTH_CALLBACK_URL_DEV"];
       if (devUrl != null && !devUrl.startsWith("http://localhost:")) {
         warnings.add("Web開発環境では localhost のコールバックURLが推奨されます");
       }
@@ -224,7 +261,7 @@ class EnvValidator {
     }
 
     // 本番環境の準備状況
-    final String? prodUrl = dotenv.env["SUPABASE_OAUTH_CALLBACK_URL_PROD"];
+    final String? prodUrl = _cachedEnv["SUPABASE_OAUTH_CALLBACK_URL_PROD"];
     if (prodUrl == null || prodUrl == "https://yourdomain.com") {
       warnings.add("本番環境の準備が完了していません（コールバックURL未設定）");
     } else {
@@ -234,38 +271,38 @@ class EnvValidator {
 
   /// 検証結果をコンソールに出力
   static void printValidationResult(EnvValidationResult result) {
-    print("========================================");
-    print("🔍 環境変数検証結果");
-    print("========================================");
+    _emitConsole("========================================");
+    _emitConsole("🔍 環境変数検証結果");
+    _emitConsole("========================================");
 
     if (result.hasErrors) {
-      print("❌ エラー:");
+      _emitConsole("❌ エラー:");
       for (final String error in result.errors) {
-        print("   $error");
+        _emitConsole("   $error");
       }
     }
 
     if (result.hasWarnings) {
-      print("⚠️  警告:");
+      _emitConsole("⚠️  警告:");
       for (final String warning in result.warnings) {
-        print("   $warning");
+        _emitConsole("   $warning");
       }
     }
 
     if (result.hasInfo) {
-      print("ℹ️  情報:");
+      _emitConsole("ℹ️  情報:");
       for (final String info in result.info) {
-        print("   $info");
+        _emitConsole("   $info");
       }
     }
 
-    print("========================================");
+    _emitConsole("========================================");
     if (result.isValid) {
-      print("✅ 環境変数検証: 成功");
+      _emitConsole("✅ 環境変数検証: 成功");
     } else {
-      print("❌ 環境変数検証: 失敗");
+      _emitConsole("❌ 環境変数検証: 失敗");
     }
-    print("========================================");
+    _emitConsole("========================================");
   }
 
   /// .env.example ファイルと比較して不足している変数をチェック
@@ -274,7 +311,7 @@ class EnvValidator {
     final List<String> missing = <String>[];
 
     for (final String varName in _requiredVars) {
-      if (dotenv.env[varName] == null) {
+      if (_cachedEnv[varName] == null) {
         missing.add(varName);
       }
     }
@@ -290,9 +327,29 @@ class EnvValidator {
   ///
   /// アプリケーション起動時に一度呼び出してください
   static Future<void> initialize() async {
-    await dotenv.load();
-    _log("環境変数を初期化しました");
+    final Map<String, String> systemEnv = _readSystemEnvironment();
+    Map<String, String> fileEnv = <String, String>{};
+
+    try {
+      await dotenv.load();
+      fileEnv = Map<String, String>.from(dotenv.env);
+      _log(".envファイルから${fileEnv.length}個の環境変数を読み込みました");
+    } on FlutterError catch (error, stackTrace) {
+      _log(".envファイルの読み込みに失敗しました", error, stackTrace);
+      // Flutterアセットとしての読み込みに失敗した場合は、直接ファイルからの読み込みを試みる
+      fileEnv = loadFromFile();
+    }
+
+    final Map<String, String> mergedEnv = mergeEnvironments(fileEnv, systemEnv: systemEnv);
+
+    _cachedEnv = Map<String, String>.from(mergedEnv);
+    _fileFallbackAttempted = true;
+    _log(
+      "環境変数を初期化しました (system=${systemEnv.length}, file=${fileEnv.length}, merged=${mergedEnv.length})",
+    );
   }
+
+  static Map<String, String> _initializeCachedEnv() => _readSystemEnvironment();
 
   /// 汎用環境変数取得
   ///
@@ -300,14 +357,27 @@ class EnvValidator {
   /// [defaultValue] デフォルト値（オプション）
   /// 戻り値: 環境変数の値またはデフォルト値
   static String getEnv(String key, {String defaultValue = ""}) {
-    final String? value = dotenv.env[key];
-    if (value == null || value.isEmpty) {
+    final String? value = _cachedEnv[key];
+    if ((value == null || value.isEmpty) && !_fileFallbackAttempted) {
+      final Map<String, String> fileEnv = loadFromFile();
+      if (fileEnv.isNotEmpty) {
+        final Map<String, String> merged = mergeEnvironments(
+          fileEnv,
+          systemEnv: _readSystemEnvironment(),
+        );
+        _cachedEnv = Map<String, String>.from(merged);
+      }
+      _fileFallbackAttempted = true;
+    }
+
+    final String? resolvedValue = _cachedEnv[key];
+    if (resolvedValue == null || resolvedValue.isEmpty) {
       if (defaultValue.isNotEmpty) {
         _log("環境変数 '$key' が未設定のため、デフォルト値を使用: $defaultValue");
       }
       return defaultValue;
     }
-    return value;
+    return resolvedValue;
   }
 
   /// boolean型環境変数の取得
@@ -317,7 +387,9 @@ class EnvValidator {
   /// 戻り値: boolean値
   static bool getBoolEnv(String key, {bool defaultValue = false}) {
     final String value = getEnv(key).toLowerCase();
-    if (value.isEmpty) return defaultValue;
+    if (value.isEmpty) {
+      return defaultValue;
+    }
     return value == "true" || value == "1" || value == "yes" || value == "on";
   }
 
@@ -381,6 +453,10 @@ class EnvValidator {
   /// ログバックプレッシャーポリシー
   static String get logBackpressure => getEnv("LOG_BACKPRESSURE", defaultValue: "drop-oldest");
 
+  /// 注文管理トレーシングの有効状態
+  static bool get orderManagementPerfTracing =>
+      getBoolEnv("ORDER_MANAGEMENT_PERF_TRACING");
+
   // =================================================================
   // 代替環境ローダー機能（DotEnvLoader統合）
   // =================================================================
@@ -403,11 +479,15 @@ class EnvValidator {
         final String line = raw.trim();
 
         // 空行またはコメント行をスキップ
-        if (line.isEmpty || line.startsWith("#")) continue;
+        if (line.isEmpty || line.startsWith("#")) {
+          continue;
+        }
 
         // KEY=VALUE 形式の解析
         final int idx = line.indexOf("=");
-        if (idx <= 0) continue;
+        if (idx <= 0) {
+          continue;
+        }
 
         final String key = line.substring(0, idx).trim();
         String value = line.substring(idx + 1).trim();
@@ -436,22 +516,30 @@ class EnvValidator {
   static Map<String, String> mergeEnvironments(
     Map<String, String> fileEnv, {
     bool overrideSystem = false,
+    Map<String, String>? systemEnv,
   }) {
     final Map<String, String> merged = <String, String>{};
+    final Map<String, String> baseEnv = systemEnv ?? _readSystemEnvironment();
 
-    // システム環境変数を追加
     if (!overrideSystem) {
-      merged.addAll(Platform.environment);
+      merged.addAll(baseEnv);
     }
 
-    // ファイル環境変数を追加/上書き
     merged.addAll(fileEnv);
 
-    // システム環境変数で上書き（overrideSystem = false の場合）
     if (!overrideSystem) {
-      merged.addAll(Platform.environment);
+      merged.addAll(baseEnv);
     }
 
     return merged;
+  }
+
+  static Map<String, String> _readSystemEnvironment() {
+    try {
+      return Map<String, String>.from(Platform.environment);
+    } on UnsupportedError catch (error, stackTrace) {
+      _log("システム環境変数へのアクセスがサポートされていないプラットフォームです", error, stackTrace);
+      return <String, String>{};
+    }
   }
 }

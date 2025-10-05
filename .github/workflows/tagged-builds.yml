@@ -1,0 +1,120 @@
+name: Build Desktop Bundles (Tagged)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-desktop:
+    name: Build ${{ matrix.build-target }} bundle
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build-target: linux
+            artifact-path: build/linux/x64/release/bundle
+            artifact-name: yata-linux-bundle
+          - os: windows-latest
+            build-target: windows
+            artifact-path: build/windows/runner/Release
+            artifact-name: yata-windows-runner
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Generate environment file
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_OAUTH_CALLBACK_URL_DEV: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_DEV }}
+          SUPABASE_OAUTH_CALLBACK_URL_PROD: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_PROD }}
+          SUPABASE_OAUTH_CALLBACK_URL_MOBILE: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_MOBILE }}
+          SUPABASE_OAUTH_CALLBACK_URL_DESKTOP: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_DESKTOP }}
+          DEBUG_MODE: ${{ secrets.DEBUG_MODE }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          LOG_DIR: ${{ secrets.LOG_DIR }}
+          LOG_FLUSH_INTERVAL_MS: ${{ secrets.LOG_FLUSH_INTERVAL_MS }}
+          LOG_MAX_QUEUE: ${{ secrets.LOG_MAX_QUEUE }}
+          LOG_MAX_FILE_SIZE_MB: ${{ secrets.LOG_MAX_FILE_SIZE_MB }}
+          LOG_MAX_DISK_MB: ${{ secrets.LOG_MAX_DISK_MB }}
+          LOG_RETENTION_DAYS: ${{ secrets.LOG_RETENTION_DAYS }}
+          LOG_BACKPRESSURE: ${{ secrets.LOG_BACKPRESSURE }}
+          ORDER_MANAGEMENT_PERF_TRACING: ${{ secrets.ORDER_MANAGEMENT_PERF_TRACING }}
+        run: |
+          set -euo pipefail
+
+          required=(SUPABASE_URL SUPABASE_ANON_KEY)
+          for key in "${required[@]}"; do
+            value="${!key:-}"
+            if [ -z "$value" ]; then
+              echo "::error::Missing required secret: $key"
+              exit 1
+            fi
+          done
+
+          {
+            printf "SUPABASE_URL=%s\n" "$SUPABASE_URL"
+            printf "SUPABASE_ANON_KEY=%s\n" "$SUPABASE_ANON_KEY"
+          } > .env
+
+          optional=(
+            SUPABASE_OAUTH_CALLBACK_URL_DEV
+            SUPABASE_OAUTH_CALLBACK_URL_PROD
+            SUPABASE_OAUTH_CALLBACK_URL_MOBILE
+            SUPABASE_OAUTH_CALLBACK_URL_DESKTOP
+            DEBUG_MODE
+            LOG_LEVEL
+            LOG_DIR
+            LOG_FLUSH_INTERVAL_MS
+            LOG_MAX_QUEUE
+            LOG_MAX_FILE_SIZE_MB
+            LOG_MAX_DISK_MB
+            LOG_RETENTION_DAYS
+            LOG_BACKPRESSURE
+            ORDER_MANAGEMENT_PERF_TRACING
+          )
+
+          for key in "${optional[@]}"; do
+            value="${!key:-}"
+            if [ -n "$value" ]; then
+              printf "%s=%s\n" "$key" "$value" >> .env
+            fi
+          done
+
+      - name: Enable desktop target
+        if: matrix.build-target == 'linux'
+        run: flutter config --enable-linux-desktop
+
+      - name: Enable desktop target
+        if: matrix.build-target == 'windows'
+        run: flutter config --enable-windows-desktop
+
+      - name: Install Linux build dependencies
+        if: matrix.build-target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+
+      - name: Build release bundle
+        run: flutter build ${{ matrix.build-target }} --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-path }}
+          if-no-files-found: error

@@ -6,7 +6,7 @@ import "../../../core/constants/enums.dart";
 part "transaction_model.g.dart";
 
 /// 在庫取引記録
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class StockTransaction extends BaseModel {
   StockTransaction({
     required this.materialId,
@@ -57,7 +57,7 @@ class StockTransaction extends BaseModel {
 }
 
 /// 仕入れ記録
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class Purchase extends BaseModel {
   Purchase({
     required this.purchaseDate,
@@ -92,7 +92,7 @@ class Purchase extends BaseModel {
 }
 
 /// 仕入れ明細
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class PurchaseItem extends BaseModel {
   PurchaseItem({
     required this.purchaseId,
@@ -127,7 +127,7 @@ class PurchaseItem extends BaseModel {
 }
 
 /// 在庫調整
-@JsonSerializable()
+@JsonSerializable(fieldRename: FieldRename.snake)
 class StockAdjustment extends BaseModel {
   StockAdjustment({
     required this.materialId,

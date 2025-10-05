@@ -1,13 +1,19 @@
 import "dart:async";
+import "dart:collection";
 import "dart:io";
 import "dart:math";
+
 // PlatformDispatcher is available via flutter foundation exports
 import "package:flutter/foundation.dart";
 
+import "../../core/contracts/logging/logger.dart" as contract;
+import "../../core/logging/levels.dart" as core_level;
 import "context.dart";
+import "fatal_notifier.dart";
 import "formatters.dart";
 import "log_config.dart";
 import "log_event.dart";
+import "log_fields_builder.dart";
 import "log_level.dart";
 import "pii_masker.dart";
 import "sinks.dart";
@@ -56,6 +62,17 @@ class Logger {
   void installCrashCapture({bool? rethrowOnError}) =>
       _core.installCrashCapture(rethrowOnError: rethrowOnError);
 
+  void registerFatalHandler(contract.FatalHandler handler) =>
+    _core.registerFatalHandler(handler);
+  void removeFatalHandler(contract.FatalHandler handler) =>
+    _core.removeFatalHandler(handler);
+  void clearFatalHandlers() => _core.clearFatalHandlers();
+  contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) {
+    FutureOr<void> handler(contract.FatalLogContext ctx) => notifier.notify(ctx);
+    registerFatalHandler(handler);
+    return handler;
+  }
+
   // Dynamic config exposure (Fix Plan 02)
   LogConfig get config => _core.config;
   void setGlobalLevel(LogLevel level) =>
@@ -67,6 +84,9 @@ class Logger {
     final Map<String, LogLevel> m = <String, LogLevel>{...c.tagLevels}..remove(tag);
     return c.copyWith(tagLevels: m);
   });
+
+  /// ロガーの構成全体を更新するユーティリティ。
+  void updateConfig(LogConfig Function(LogConfig) mutate) => _core.updateConfig(mutate);
   T withTempConfig<T>(T Function() body, LogConfig Function(LogConfig) mutate) {
     final LogConfig prev = _core.config;
     _core.updateConfig((_) => mutate(prev));
@@ -115,11 +135,22 @@ LoggerStats get stats => _globalLogger.stats;
 void installCrashCapture({bool? rethrowOnError}) =>
     _globalLogger.installCrashCapture(rethrowOnError: rethrowOnError);
 
+void registerFatalHandler(contract.FatalHandler handler) =>
+  _globalLogger.registerFatalHandler(handler);
+void removeFatalHandler(contract.FatalHandler handler) =>
+  _globalLogger.removeFatalHandler(handler);
+void clearFatalHandlers() => _globalLogger.clearFatalHandlers();
+contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) =>
+  _globalLogger.registerFatalNotifier(notifier);
+
 // Dynamic config exposure (top-level)
 LogConfig get config => _globalLogger.config;
 void setGlobalLevel(LogLevel level) => _globalLogger.setGlobalLevel(level);
 void setTagLevel(String tag, LogLevel level) => _globalLogger.setTagLevel(tag, level);
 void clearTagLevel(String tag) => _globalLogger.clearTagLevel(tag);
+
+/// ロガー設定をアトミックに更新する。
+void updateLoggerConfig(LogConfig Function(LogConfig) mutate) => _globalLogger.updateConfig(mutate);
 
 // ------------------
 // Core implementation
@@ -161,6 +192,8 @@ class _LoggerCore {
   // Ring buffer queue
   final List<_Pending> _queue = <_Pending>[];
   bool _draining = false;
+  final Set<contract.FatalHandler> _fatalHandlers = LinkedHashSet<contract.FatalHandler>.identity();
+  bool _handlingFatal = false;
 
   // Phase 3: stats and lifecycle
   final StreamController<LoggerStats> _statsCtrl = StreamController<LoggerStats>.broadcast();
@@ -187,21 +220,47 @@ class _LoggerCore {
   }
 
   void updateConfig(LogConfig Function(LogConfig) updater) {
+    final LogConfig previous = _configHub.value;
     _configHub.update(updater);
+    final LogConfig current = _configHub.value;
     // Recreate formatters/sinks if required
     _consoleFormatter = ConsolePrettyFormatter(
-      useColor: _configHub.value.consoleUseColor,
-      useEmojiFallback: _configHub.value.consoleUseEmojiFallback,
+      useColor: current.consoleUseColor,
+      useEmojiFallback: current.consoleUseEmojiFallback,
     );
     _pii = PiiMasker(
-      enabled: _configHub.value.piiMaskingEnabled,
-      mode: _configHub.value.maskMode,
-      customPatterns: _configHub.value.customPatterns,
-      allowListKeys: _configHub.value.allowListKeys,
+      enabled: current.piiMaskingEnabled,
+      mode: current.maskMode,
+      customPatterns: current.customPatterns,
+      allowListKeys: current.allowListKeys,
     );
-    _rateConfig = _configHub.value.rate;
-    // Note: File sink keeps file handle. Rotation/retention are configured at construction.
-    // If rotation settings change at runtime, recreate sink in future if needed.
+    _rateConfig = current.rate;
+
+    final bool fileConfigChanged =
+        previous.fileDirPath != current.fileDirPath ||
+        previous.fileBaseName != current.fileBaseName ||
+        previous.rotation.runtimeType != current.rotation.runtimeType ||
+        previous.retention.runtimeType != current.retention.runtimeType ||
+        previous.flushEveryLines != current.flushEveryLines ||
+        previous.flushEveryMs != current.flushEveryMs;
+
+    if (fileConfigChanged) {
+      final FileSink oldSink = _fileSink;
+      _fileSink = FileSink(current);
+      unawaited(oldSink.close());
+    }
+  }
+
+  void registerFatalHandler(contract.FatalHandler handler) {
+    _fatalHandlers.add(handler);
+  }
+
+  void removeFatalHandler(contract.FatalHandler handler) {
+    _fatalHandlers.remove(handler);
+  }
+
+  void clearFatalHandlers() {
+    _fatalHandlers.clear();
   }
 
   void log(
@@ -337,6 +396,143 @@ class _LoggerCore {
       _activeLogFile = _fileSink.activeFilePath;
       _lastFileError = _fileSink.lastError;
     }
+
+    if (enriched.lvl == LogLevel.fatal) {
+      await _handleFatal(enriched, p);
+    }
+  }
+
+  Future<void> _handleFatal(LogEvent event, _Pending pending) async {
+    final FatalConfig fatalConfig = _configHub.value.fatal;
+    if (_handlingFatal) {
+      return;
+    }
+    _handlingFatal = true;
+    try {
+      if (fatalConfig.flushBeforeHandlers) {
+        await _flushSinksWithTimeout(fatalConfig.flushTimeout);
+      }
+
+      final contract.LogRecord record = contract.LogRecord(
+        timestamp: event.ts,
+        level: _toContractLevel(event.lvl),
+        message: event.msg,
+        tag: event.tag,
+        fields: event.fields,
+        error: pending.error,
+        stackTrace: pending.st,
+      );
+
+      Future<void> flushFn({Duration? timeout}) =>
+          _flushSinksWithTimeout(timeout ?? fatalConfig.flushTimeout);
+      Future<void> shutdownFn({Duration? timeout}) => _shutdownLogger(
+        timeout: timeout ?? fatalConfig.flushTimeout,
+        exitProcess: fatalConfig.exitProcess,
+        exitCode: fatalConfig.exitCode,
+        delay: fatalConfig.shutdownDelay,
+      );
+
+      final contract.FatalLogContext context = contract.FatalLogContext(
+        record: record,
+        error: pending.error,
+        stackTrace: pending.st,
+        defaultFlushTimeout: fatalConfig.flushTimeout,
+        flush: flushFn,
+        shutdown: shutdownFn,
+        willShutdownAfterHandlers: fatalConfig.autoShutdown || fatalConfig.exitProcess,
+      );
+
+      if (_fatalHandlers.isNotEmpty) {
+        final Duration handlerTimeout = fatalConfig.handlerTimeout;
+        for (final contract.FatalHandler handler in
+            List<contract.FatalHandler>.from(_fatalHandlers)) {
+          try {
+            final Future<void> task = Future<void>.sync(() => handler(context));
+            if (handlerTimeout > Duration.zero) {
+              await task.timeout(handlerTimeout);
+            } else {
+              await task;
+            }
+          } on TimeoutException catch (_) {
+            stderr.writeln(
+              "Fatal handler timeout after ${handlerTimeout.inMilliseconds}ms",
+            );
+          } catch (err, st) {
+            stderr.writeln("Fatal handler error: $err\n$st");
+          }
+        }
+      }
+
+      if (fatalConfig.autoShutdown || fatalConfig.exitProcess) {
+        await shutdownFn(timeout: fatalConfig.flushTimeout);
+      }
+    } finally {
+      _handlingFatal = false;
+    }
+  }
+
+  Future<void> _flushSinks() async {
+    final List<Future<void>> futures = <Future<void>>[];
+    if (_configHub.value.consoleEnabled) {
+      futures.add(_consoleSink.flush());
+    }
+    if (_configHub.value.fileEnabled) {
+      futures.add(_fileSink.flush());
+    }
+    if (futures.isEmpty) {
+      return;
+    }
+    await Future.wait(futures);
+  }
+
+  Future<void> _flushSinksWithTimeout(Duration timeout) async {
+    try {
+      final Future<void> future = _flushSinks();
+      if (timeout <= Duration.zero) {
+        await future;
+        return;
+      }
+      await future.timeout(timeout);
+    } on TimeoutException catch (_) {
+      stderr.writeln(
+        "Logger flush timed out while handling fatal after ${timeout.inMilliseconds}ms",
+      );
+    } catch (err, st) {
+      stderr.writeln("Logger flush error while handling fatal: $err\n$st");
+    }
+  }
+
+  Future<void> _shutdownLogger({
+    required Duration timeout,
+    required bool exitProcess,
+    required int exitCode,
+    required Duration delay,
+  }) async {
+    await _flushSinksWithTimeout(timeout);
+    await flushAndClose(timeout: timeout);
+    if (exitProcess) {
+      if (delay > Duration.zero) {
+        await Future<void>.delayed(delay);
+      }
+      exit(exitCode);
+    }
+  }
+
+  core_level.Level _toContractLevel(LogLevel level) {
+    switch (level) {
+      case LogLevel.trace:
+        return core_level.Level.trace;
+      case LogLevel.debug:
+        return core_level.Level.debug;
+      case LogLevel.info:
+        return core_level.Level.info;
+      case LogLevel.warn:
+        return core_level.Level.warn;
+      case LogLevel.error:
+        return core_level.Level.error;
+      case LogLevel.fatal:
+        return core_level.Level.fatal;
+    }
   }
 
   static String _shortId() {
@@ -358,17 +554,25 @@ class _LoggerCore {
   }
 
   static String? _formatStack(StackTrace? st) {
-    if (st == null) return null;
+    if (st == null) {
+      return null;
+    }
     final List<String> lines = st.toString().split("\n");
-    if (lines.isEmpty) return null;
+    if (lines.isEmpty) {
+      return null;
+    }
     final List<String> picked = <String>[];
     int count = 0;
     for (final String raw in lines) {
       final String l = raw.trimRight();
-      if (l.isEmpty) continue;
+      if (l.isEmpty) {
+        continue;
+      }
       picked.add(l);
       count++;
-      if (count >= 20) break;
+      if (count >= 20) {
+        break;
+      }
     }
     if (lines.length > picked.length) {
       picked.add("...(truncated)");
@@ -377,9 +581,33 @@ class _LoggerCore {
   }
 
   static Map<String, dynamic>? _evalFields(Object? fieldsOrThunk) {
-    if (fieldsOrThunk == null) return null;
-    if (fieldsOrThunk is Map<String, dynamic>) return fieldsOrThunk;
-    if (fieldsOrThunk is FieldsThunk) return fieldsOrThunk();
+    if (fieldsOrThunk == null) {
+      return null;
+    }
+
+    Map<String, dynamic>? convert(Object? value) {
+      if (value == null) {
+        return null;
+      }
+      if (value is LogFieldsBuilder) {
+        final Map<String, dynamic> built = value.build();
+        return built.isEmpty ? null : built;
+      }
+      if (value is Map<String, dynamic>) {
+        return value.isEmpty ? null : value;
+      }
+      return null;
+    }
+
+    if (fieldsOrThunk is FieldsThunk) {
+      return convert(fieldsOrThunk());
+    }
+
+    final Map<String, dynamic>? direct = convert(fieldsOrThunk);
+    if (direct != null) {
+      return direct;
+    }
+
     return null;
   }
 
@@ -390,20 +618,28 @@ class _LoggerCore {
     final TagLevel key = (e.tag ?? "", e.lvl);
     final int? pct = _rateConfig.sampling[key];
     if (pct != null) {
-      if (pct <= 0) return false;
+      if (pct <= 0) {
+        return false;
+      }
       if (pct < 100) {
         final int r = Random().nextInt(100);
-        if (r >= pct) return false;
+        if (r >= pct) {
+          return false;
+        }
       }
     }
 
     final TokenBucket? tl = _rateConfig.perTagLevel[key];
-    if (tl != null && tl.tryConsume()) return true;
+    if (tl != null && tl.tryConsume()) {
+      return true;
+    }
 
     final String? tag = e.tag;
     if (tag != null) {
       final TokenBucket? t = _rateConfig.perTag[tag];
-      if (t != null && t.tryConsume()) return true;
+      if (t != null && t.tryConsume()) {
+        return true;
+      }
     }
 
     return _rateConfig.global.tryConsume();
@@ -444,11 +680,15 @@ class _LoggerCore {
   // ----------------------
   LogEvent _maybeAttachCallsite(LogEvent e) {
     final CallsiteConfig cfg = _configHub.value.callsite;
-    if (!cfg.enabled) return e;
+    if (!cfg.enabled) {
+      return e;
+    }
     try {
       final StackTrace st = StackTrace.current;
       final _Callsite? cs = _extractCallsite(st, cfg);
-      if (cs == null) return e;
+      if (cs == null) {
+        return e;
+      }
       final Map<String, dynamic> f = <String, dynamic>{...?(e.fields)};
       f["src"] = <String, dynamic>{"file": cs.file, "line": cs.line, "member": cs.member};
       return e.copyWith(fields: f);
@@ -465,8 +705,12 @@ class _LoggerCore {
     int skipped = 0;
     for (final String line in lines) {
       final String t = line.trim();
-      if (t.isEmpty) continue;
-      if (t.contains("logger.dart") || t.contains("dart:async") || t.contains("dart:ui")) continue;
+      if (t.isEmpty) {
+        continue;
+      }
+      if (t.contains("logger.dart") || t.contains("dart:async") || t.contains("dart:ui")) {
+        continue;
+      }
       if (cfg.skipFrames != null && skipped < (cfg.skipFrames ?? 0)) {
         skipped++;
         continue;
@@ -481,7 +725,9 @@ class _LoggerCore {
         String file = m.group(2) ?? "";
         if (cfg.basenameOnly) {
           final int idx = file.lastIndexOf("/");
-          if (idx >= 0) file = file.substring(idx + 1);
+          if (idx >= 0) {
+            file = file.substring(idx + 1);
+          }
         }
         final int lineNo = int.tryParse(m.group(3) ?? "") ?? 0;
         final String member = (m.group(1) ?? "").trim();
@@ -524,11 +770,15 @@ class _LoggerCore {
   // ----------------------
   final Map<int, _CrashBucket> _crashDedup = <int, _CrashBucket>{};
   void installCrashCapture({bool? rethrowOnError}) {
-    if (!_configHub.value.crashCaptureEnabled) return;
+    if (!_configHub.value.crashCaptureEnabled) {
+      return;
+    }
     final bool rethrowErrors = rethrowOnError ?? true;
     FlutterError.onError = (FlutterErrorDetails details) {
       _handleUnhandled(details.exception, details.stack, handledZone: true);
-      if (rethrowErrors) FlutterError.presentError(details);
+      if (rethrowErrors) {
+        FlutterError.presentError(details);
+      }
     };
     PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
       _handleUnhandled(error, stack, handledZone: false);
@@ -547,9 +797,10 @@ class _LoggerCore {
     final Duration window = _configHub.value.crashDedupWindow;
     final _CrashBucket bucket = _crashDedup.putIfAbsent(h, _CrashBucket.new);
     if (bucket.first == null || now.difference(bucket.first!) > window) {
-      bucket.first = now;
-      bucket.suppressed = 0;
-      bucket.lastSummaryAt = null;
+      bucket
+        ..first = now
+        ..suppressed = 0
+        ..lastSummaryAt = null;
       final LogLevel lvl = _inferUnhandledLevel(error);
       log(
         lvl,
