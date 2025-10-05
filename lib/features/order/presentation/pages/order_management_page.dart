@@ -675,6 +675,33 @@ class _CurrentOrderSectionState extends State<_CurrentOrderSection> {
               ],
             ),
             const SizedBox(height: YataSpacingTokens.lg),
+            TextField(
+              controller: _notesController,
+              onChanged: controller.updateOrderNotes,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: InputDecoration(
+                labelText: "注文メモ",
+                hintText: "例: アレルギー対応、調理指示など",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.sm),
+                  borderSide: const BorderSide(color: YataColorTokens.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(YataRadiusTokens.sm),
+                  borderSide: const BorderSide(color: YataColorTokens.primary, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: YataSpacingTokens.md,
+                  vertical: YataSpacingTokens.sm,
+                ),
+                counterStyle: (textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+              style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
             Row(
               children: <Widget>[
                 Expanded(
