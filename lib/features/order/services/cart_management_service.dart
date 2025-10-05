@@ -116,23 +116,27 @@ class CartManagementService {
       final Map<String, String> resolvedSelectedOptions =
           request.selectedOptions ?? <String, String>{};
 
-      final Order? cart = await _orderRepository.getById(cartId);
+      final Future<Order?> cartFuture = _orderRepository.getById(cartId);
+      final Future<MenuItem?> menuItemFuture = _menuItemRepository.getById(request.menuItemId);
+      final Future<bool> stockFuture = _orderStockService.checkMenuItemStock(
+        request.menuItemId,
+        request.quantity,
+      );
+
+      final Order? cart = await cartFuture;
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      final MenuItem? menuItem = await _menuItemRepository.getById(request.menuItemId);
+      final MenuItem? menuItem = await menuItemFuture;
       if (menuItem == null || menuItem.userId != userId) {
         log.e("Menu item access denied or menu item not found", tag: loggerComponent);
         throw Exception("Menu item ${request.menuItemId} not found");
       }
 
       log.d("Checking stock availability for menu item", tag: loggerComponent);
-      final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
-        request.menuItemId,
-        request.quantity,
-      );
+      final bool isStockSufficient = await stockFuture;
 
       if (!isStockSufficient) {
         log.w("Stock insufficient for requested quantity", tag: loggerComponent);
@@ -236,29 +240,36 @@ class CartManagementService {
         throw Exception("Quantity must be greater than 0");
       }
 
-      final Order? cart = await _orderRepository.getById(cartId);
+      final Future<Order?> cartFuture = _orderRepository.getById(cartId);
+      final Future<OrderItem?> orderItemFuture = _orderItemRepository.getById(orderItemId);
+
+      final Order? cart = await cartFuture;
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
+      final OrderItem? orderItem = await orderItemFuture;
       if (orderItem == null || orderItem.orderId != cartId) {
         log.e("Order item not found in cart", tag: loggerComponent);
         throw Exception("Order item $orderItemId not found in cart");
       }
 
-      final MenuItem? menuItem = await _menuItemRepository.getById(orderItem.menuItemId);
+      final Future<MenuItem?> menuItemFuture =
+          _menuItemRepository.getById(orderItem.menuItemId);
+      final Future<bool> stockFuture = _orderStockService.checkMenuItemStock(
+        orderItem.menuItemId,
+        newQuantity,
+      );
+
+      final MenuItem? menuItem = await menuItemFuture;
       if (menuItem == null) {
         log.e("Menu item not found for order item", tag: loggerComponent);
         throw Exception("Menu item ${orderItem.menuItemId} not found");
       }
 
       log.d("Checking stock availability for updated quantity", tag: loggerComponent);
-      final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
-        orderItem.menuItemId,
-        newQuantity,
-      );
+      final bool isStockSufficient = await stockFuture;
 
       if (!isStockSufficient) {
         log.w("Stock insufficient for updated quantity", tag: loggerComponent);
@@ -312,13 +323,16 @@ class CartManagementService {
     log.i("Started removing item from cart", tag: loggerComponent);
 
     try {
-      final Order? cart = await _orderRepository.getById(cartId);
+      final Future<Order?> cartFuture = _orderRepository.getById(cartId);
+      final Future<OrderItem?> orderItemFuture = _orderItemRepository.getById(orderItemId);
+
+      final Order? cart = await cartFuture;
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
+      final OrderItem? orderItem = await orderItemFuture;
       if (orderItem == null || orderItem.orderId != cartId) {
         log.e("Order item not found in cart", tag: loggerComponent);
         throw Exception("Order item $orderItemId not found in cart");

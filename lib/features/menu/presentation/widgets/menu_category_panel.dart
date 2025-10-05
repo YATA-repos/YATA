@@ -1,12 +1,11 @@
 import "package:flutter/material.dart";
 
-import "../../../../shared/components/components.dart";
+import "../../../../shared/components/category/category_panel.dart";
+import "../../../../shared/components/data_display/status_badge.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
-import "../../../../shared/foundations/tokens/radius_tokens.dart";
-import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../controllers/menu_management_state.dart";
 
-/// カテゴリ一覧を表示するパネル。
+/// メニューカテゴリ一覧を表示するパネル。
 class MenuCategoryPanel extends StatelessWidget {
   /// [MenuCategoryPanel]を生成する。
   const MenuCategoryPanel({
@@ -42,191 +41,44 @@ class MenuCategoryPanel extends StatelessWidget {
   final ValueChanged<MenuCategoryViewData>? onDeleteCategory;
 
   @override
-  Widget build(BuildContext context) => YataSectionCard(
-    title: "カテゴリ",
-    borderColor: Colors.transparent,
-    expandChild: true,
-    actions: <Widget>[
-      if (onAddCategory != null)
-        YataIconButton(icon: Icons.add, tooltip: "カテゴリを追加", onPressed: onAddCategory),
-    ],
-    child: isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : _CategoryList(
-            categories: categories,
-            selectedCategoryId: selectedCategoryId,
-            onCategorySelected: onCategorySelected,
-            onEditCategory: onEditCategory,
-            onDeleteCategory: onDeleteCategory,
-          ),
-  );
-}
+  Widget build(BuildContext context) => CategoryPanel<MenuCategoryViewData>(
+        title: "カテゴリ",
+        items: categories.map(_mapToItem).toList(growable: false),
+        selectedId: selectedCategoryId,
+        onSelect: onCategorySelected,
+        onAdd: onAddCategory,
+        onEdit: onEditCategory,
+        onDelete: onDeleteCategory,
+        isLoading: isLoading,
+        emptyMessage: "カテゴリが登録されていません",
+      );
 
-class _CategoryList extends StatelessWidget {
-  const _CategoryList({
-    required this.categories,
-    required this.selectedCategoryId,
-    required this.onCategorySelected,
-    this.onEditCategory,
-    this.onDeleteCategory,
-  });
+  CategoryPanelItem<MenuCategoryViewData> _mapToItem(MenuCategoryViewData category) {
+    final bool isAll = category.isAll;
+    final String availableLabel = "提供可能 ${category.availableItems}件";
+    final String attentionLabel = "要確認 ${category.attentionItems}件";
 
-  final List<MenuCategoryViewData> categories;
-  final String? selectedCategoryId;
-  final ValueChanged<String?> onCategorySelected;
-  final ValueChanged<MenuCategoryViewData>? onEditCategory;
-  final ValueChanged<MenuCategoryViewData>? onDeleteCategory;
-
-  @override
-  Widget build(BuildContext context) {
-    if (categories.isEmpty) {
-      return const Center(child: Text("カテゴリが登録されていません"));
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.only(top: YataSpacingTokens.xs, bottom: YataSpacingTokens.xs),
-      shrinkWrap: true,
-      itemCount: categories.length,
-      separatorBuilder: (_, __) => const SizedBox(height: YataSpacingTokens.sm),
-      itemBuilder: (BuildContext context, int index) {
-        final MenuCategoryViewData category = categories[index];
-        final bool selected = category.isAll
-            ? selectedCategoryId == null
-            : category.id == selectedCategoryId;
-        return _CategoryTile(
-          category: category,
-          selected: selected,
-          onTap: () => onCategorySelected(category.id),
-          onEdit: onEditCategory,
-          onDelete: onDeleteCategory,
-        );
-      },
-    );
-  }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-    this.onEdit,
-    this.onDelete,
-  });
-
-  final MenuCategoryViewData category;
-  final bool selected;
-  final VoidCallback onTap;
-  final ValueChanged<MenuCategoryViewData>? onEdit;
-  final ValueChanged<MenuCategoryViewData>? onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color foreground = selected ? YataColorTokens.primary : YataColorTokens.textPrimary;
-    final BoxDecoration decoration = BoxDecoration(
-      color: YataColorTokens.neutral0,
-      borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
-      border: Border.all(
-        color: selected ? YataColorTokens.primary : YataColorTokens.neutral200,
-        width: selected ? 1.4 : 1,
+    return CategoryPanelItem<MenuCategoryViewData>(
+      payload: category,
+      id: category.id,
+      name: category.name,
+      isAll: isAll,
+      headerBadge: CategoryPanelBadgeData(
+        label: "合計 ${category.totalItems}件",
+        type: YataStatusBadgeType.info,
       ),
-      boxShadow: selected
-          ? <BoxShadow>[
-              BoxShadow(
-                color: YataColorTokens.primary.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ]
-          : null,
-    );
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
-        child: Ink(
-          padding: const EdgeInsets.all(YataSpacingTokens.md),
-          decoration: decoration,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      category.name,
-                      style: (theme.textTheme.titleSmall ?? const TextStyle()).copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  YataStatusBadge(
-                    label: "${category.availableItems}/${category.totalItems}",
-                    type: YataStatusBadgeType.success,
-                  ),
-                  if (!category.isAll && (onEdit != null || onDelete != null))
-                    PopupMenuButton<_CategoryAction>(
-                      tooltip: "カテゴリ操作",
-                      onSelected: (_CategoryAction action) {
-                        switch (action) {
-                          case _CategoryAction.edit:
-                            onEdit?.call(category);
-                            break;
-                          case _CategoryAction.delete:
-                            onDelete?.call(category);
-                            break;
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => <PopupMenuEntry<_CategoryAction>>[
-                        if (onEdit != null)
-                          const PopupMenuItem<_CategoryAction>(
-                            value: _CategoryAction.edit,
-                            child: Text("名称を変更"),
-                          ),
-                        if (onDelete != null)
-                          const PopupMenuItem<_CategoryAction>(
-                            value: _CategoryAction.delete,
-                            child: Text("削除"),
-                          ),
-                      ],
-                    ),
-                ],
-              ),
-              const SizedBox(height: YataSpacingTokens.xs),
-              Row(
-                children: <Widget>[
-                  Icon(Icons.circle, size: 8, color: YataColorTokens.textSecondary),
-                  const SizedBox(width: YataSpacingTokens.xs),
-                  Text("提供可能 ${category.availableItems}件", style: theme.textTheme.bodySmall),
-                ],
-              ),
-              const SizedBox(height: YataSpacingTokens.xxs),
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.report_gmailerrorred_outlined,
-                    size: 12,
-                    color: YataColorTokens.warning,
-                  ),
-                  const SizedBox(width: YataSpacingTokens.xs),
-                  Text(
-                    "要確認 ${category.attentionItems}件",
-                    style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
-                      color: YataColorTokens.warning,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+      metrics: <CategoryPanelMetricData>[
+        CategoryPanelMetricData(
+          icon: Icons.check_circle_outline,
+          iconColor: YataColorTokens.success,
+          label: availableLabel,
         ),
-      ),
+        CategoryPanelMetricData(
+          icon: Icons.report_gmailerrorred_outlined,
+          iconColor: YataColorTokens.warning,
+          label: attentionLabel,
+        ),
+      ],
     );
   }
 }
-
-enum _CategoryAction { edit, delete }

@@ -345,6 +345,8 @@ class OrderManagementState {
 
 /// 注文管理画面の振る舞いを担うコントローラ。
 class OrderManagementController extends StateNotifier<OrderManagementState> {
+  static const String _loggerTag = "OrderManagementController";
+
   /// [OrderManagementController]を生成する。
   OrderManagementController({
     required Ref ref,
@@ -451,6 +453,60 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         state = OrderManagementState.initial();
       } else {
         state = state.copyWith(isLoading: true, clearErrorMessage: true);
+      }
+
+      final authService = _ref.read(authServiceProvider);
+
+      try {
+        await _traceAsyncSection<void>(
+          "loadInitialData.sessionWarmup",
+          () => authService.ensureSupabaseSessionReady(
+            timeout: const Duration(seconds: 5),
+          ),
+          finishArguments: () => <String, dynamic>{
+            "sessionReady": authService.isSupabaseSessionReady,
+          },
+          logThreshold: const Duration(milliseconds: 40),
+        );
+        logSession.addPersistentMetadata(<String, dynamic>{"session_ready": true});
+      } on TimeoutException catch (error, stackTrace) {
+        _logger.e(
+          "Supabase session warm-up timed out before initial load",
+          tag: _loggerTag,
+          error: error,
+          st: stackTrace,
+        );
+        _logPerf("loadInitialData.sessionWarmupTimeout");
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: "認証セッションの準備に時間がかかっています。再度お試しください。",
+        );
+        logSession.failed(
+          reason: "session_warmup_timeout",
+          message: "注文管理 初期データ読み込み前にセッションウォームアップがタイムアウト",
+          metadata: <String, dynamic>{"timeoutMs": 5000},
+        );
+        logSession.addPersistentMetadata(<String, dynamic>{"session_ready": false});
+        return;
+      } catch (error, stackTrace) {
+        _logger.e(
+          "Supabase session warm-up failed before initial load",
+          tag: _loggerTag,
+          error: error,
+          st: stackTrace,
+        );
+        _logPerf("loadInitialData.sessionWarmupFailed");
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: "認証セッションの準備に失敗しました。時間をおいて再試行してください。",
+        );
+        logSession.failed(
+          reason: "session_warmup_failed",
+          message: "注文管理 初期データ読み込み前にセッションウォームアップに失敗",
+          metadata: <String, dynamic>{"error": error.toString()},
+        );
+        logSession.addPersistentMetadata(<String, dynamic>{"session_ready": false});
+        return;
       }
 
       final String? userId = _ref.read(currentUserIdProvider);

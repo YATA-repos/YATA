@@ -1,6 +1,7 @@
 import "dart:async";
 import "dart:math" as math;
 
+import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -21,7 +22,6 @@ import "../../dto/menu_recipe_detail.dart";
 import "../controllers/menu_management_controller.dart";
 import "../controllers/menu_management_state.dart";
 import "../widgets/menu_category_panel.dart";
-import "../widgets/menu_detail_panel.dart";
 import "../widgets/menu_item_table.dart";
 import "../widgets/menu_management_header.dart";
 
@@ -66,6 +66,9 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
   Widget build(BuildContext context) {
     final MenuManagementState state = ref.watch(menuManagementControllerProvider);
     final bool isRefreshInProgress = state.isLoading || !(_refreshCompleter?.isCompleted ?? true);
+    final List<MenuItemViewData> attentionItems = state.menuItems
+        .where((MenuItemViewData item) => item.needsAttention)
+        .toList(growable: false);
 
     if (_searchController.text != state.searchQuery) {
       _searchController.value = TextEditingValue(
@@ -149,33 +152,59 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
               builder: (BuildContext context, BoxConstraints constraints) {
                 _openDetailDialogIfNeeded(context, state);
 
-                final Widget categoryPanel = SizedBox(
-                  width: 260,
-                  child: MenuCategoryPanel(
-                    categories: state.categories,
-                    selectedCategoryId: state.selectedCategoryId,
-                    onCategorySelected: _controller.selectCategory,
-                    onAddCategory: _handleAddCategory,
-                    onEditCategory: _handleEditCategory,
-                    onDeleteCategory: _handleDeleteCategory,
-                  ),
-                );
+                final bool isWideLayout = constraints.maxWidth >= 1100;
 
-                final Widget table = MenuItemTable(
-                  items: state.filteredMenuItems,
-                  onRowTap: (String id) => _controller.openDetail(id),
-                  isBusy: state.isSubmitting,
-                  busyMenuIds: state.pendingAvailabilityMenuIds,
-                  availabilityErrors: state.availabilityErrorMessages,
-                  onToggleAvailability: _controller.toggleMenuAvailability,
-                );
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                final Widget sidebar = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    categoryPanel,
-                    const SizedBox(width: YataSpacingTokens.lg),
-                    Expanded(child: table),
+                    MenuCategoryPanel(
+                      categories: state.categories,
+                      selectedCategoryId: state.selectedCategoryId,
+                      onCategorySelected: _controller.selectCategory,
+                      onAddCategory: _handleAddCategory,
+                      onEditCategory: _handleEditCategory,
+                      onDeleteCategory: _handleDeleteCategory,
+                    ),
+                  ],
+                );
+
+                final Widget tableSection = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _MenuAttentionSection(
+                      items: attentionItems,
+                      onShowAll: () => _controller.updateAvailabilityFilter(MenuAvailabilityFilter.attention),
+                      onOpenDetail: (String id) => _controller.openDetail(id),
+                    ),
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    MenuItemTable(
+                      items: state.filteredMenuItems,
+                      onRowTap: (String id) => _controller.openDetail(id),
+                      isBusy: state.isSubmitting,
+                      busyMenuIds: state.pendingAvailabilityMenuIds,
+                      availabilityErrors: state.availabilityErrorMessages,
+                      onToggleAvailability: _controller.toggleMenuAvailability,
+                    ),
+                  ],
+                );
+
+                if (isWideLayout) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(width: 260, child: sidebar),
+                      const SizedBox(width: YataSpacingTokens.lg),
+                      Expanded(child: tableSection),
+                    ],
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    sidebar,
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    tableSection,
                   ],
                 );
               },
@@ -270,14 +299,6 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
             ),
             child: _MenuDetailDialogContent(
               onClose: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
-              onEditMenu: (MenuItemViewData menu) {
-                Navigator.of(dialogContext, rootNavigator: true).pop();
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    _handleEditMenu(menu);
-                  }
-                });
-              },
               onEditRecipes: (String menuId) {
                 if (mounted) {
                   setState(() {
@@ -396,28 +417,6 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     await _controller.createMenu(result);
   }
 
-  Future<void> _handleEditMenu(MenuItemViewData item) async {
-    final MenuManagementState current = ref.read(menuManagementControllerProvider);
-    final List<MenuCategoryViewData> categories = current.categories
-        .where((MenuCategoryViewData c) => !c.isAll)
-        .toList(growable: false);
-    if (categories.isEmpty) {
-      return;
-    }
-    final List<MaterialOption> materialOptions = await _controller.loadMaterialOptions();
-    final List<MenuRecipeDetail> initialRecipes = await _controller.loadRecipesForMenu(item.id);
-    final MenuFormData? result = await _showMenuFormDialog(
-      categories: categories,
-      materialOptions: materialOptions,
-      initial: item,
-      initialRecipes: initialRecipes,
-    );
-    if (result == null) {
-      return;
-    }
-    await _controller.updateMenu(item.id, result);
-  }
-
   Future<void> _handleDeleteMenu(MenuItemViewData item) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
@@ -503,6 +502,146 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     );
 }
 
+class _MenuAttentionSection extends StatelessWidget {
+  const _MenuAttentionSection({
+    required this.items,
+    required this.onOpenDetail,
+    required this.onShowAll,
+  });
+
+  final List<MenuItemViewData> items;
+  final ValueChanged<String> onOpenDetail;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    if (items.isEmpty) {
+      return YataSectionCard(
+        title: "要確認メニュー",
+        subtitle: "対応が必要なメニューはありません",
+        child: Text(
+          "在庫・レシピの状態は良好です。",
+          style: theme.textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
+        ),
+      );
+    }
+
+    final List<MenuItemViewData> highlights = items.take(3).toList(growable: false);
+
+    return YataSectionCard(
+      title: "要確認メニュー",
+      subtitle: "優先して確認したいメニューをまとめました",
+      actions: <Widget>[
+        TextButton(onPressed: onShowAll, child: const Text("一覧で表示")),
+      ],
+      child: Column(
+        children: <Widget>[
+          for (int index = 0; index < highlights.length; index++) ...<Widget>[
+            _AttentionMenuTile(item: highlights[index], onOpenDetail: onOpenDetail),
+            if (index != highlights.length - 1) const SizedBox(height: YataSpacingTokens.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AttentionMenuTile extends StatelessWidget {
+  const _AttentionMenuTile({required this.item, required this.onOpenDetail});
+
+  final MenuItemViewData item;
+  final ValueChanged<String> onOpenDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final List<Widget> badges = <Widget>[
+      if (!item.isStockAvailable || item.missingMaterials.isNotEmpty)
+        const YataStatusBadge(label: "在庫不足", type: YataStatusBadgeType.warning),
+      if (!item.hasRecipe)
+        const YataStatusBadge(label: "レシピ未登録", type: YataStatusBadgeType.warning),
+    ];
+
+    final List<Widget> supplemental = <Widget>[
+      if (item.missingMaterials.isNotEmpty)
+        YataTag(
+          label: item.missingMaterials.length == 1
+              ? item.missingMaterials.first
+              : "${item.missingMaterials.first} ほか${item.missingMaterials.length - 1}件",
+          icon: Icons.inventory_2_outlined,
+          backgroundColor: YataColorTokens.warningSoft,
+          foregroundColor: YataColorTokens.warning,
+        ),
+      if (item.estimatedServings != null)
+        YataTag(
+          label: "提供可能目安 ${item.estimatedServings}",
+          icon: Icons.timelapse_outlined,
+        ),
+    ];
+
+    return Material(
+      color: YataColorTokens.neutral50,
+      borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
+      child: InkWell(
+        onTap: () => onOpenDetail(item.id),
+        borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
+        child: Padding(
+          padding: const EdgeInsets.all(YataSpacingTokens.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          item.name,
+                          style: (textTheme.titleMedium ?? const TextStyle()).copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: YataSpacingTokens.xs),
+                        Text(
+                          item.categoryName,
+                          style: (textTheme.bodySmall ?? const TextStyle()).copyWith(
+                            color: YataColorTokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Wrap(spacing: YataSpacingTokens.xs, runSpacing: YataSpacingTokens.xs, children: badges),
+                ],
+              ),
+              if (item.description != null && item.description!.isNotEmpty) ...<Widget>[
+                const SizedBox(height: YataSpacingTokens.sm),
+                Text(
+                  item.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: (textTheme.bodySmall ?? const TextStyle()).copyWith(
+                    color: YataColorTokens.textSecondary,
+                  ),
+                ),
+              ],
+              if (supplemental.isNotEmpty) ...<Widget>[
+                const SizedBox(height: YataSpacingTokens.sm),
+                Wrap(spacing: YataSpacingTokens.sm, runSpacing: YataSpacingTokens.xs, children: supplemental),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
+
 class _MenuFormDialog extends StatefulWidget {
   const _MenuFormDialog({
     required this.categories,
@@ -521,70 +660,6 @@ class _MenuFormDialog extends StatefulWidget {
 }
 
 class _MenuFormDialogState extends State<_MenuFormDialog> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _priceController;
-  late final TextEditingController _descriptionController;
-  late final List<MenuCategoryViewData> _availableCategories;
-  late final List<MaterialOption> _materialOptions;
-  late String _selectedCategoryId;
-  late bool _isAvailable;
-  final List<_RecipeFormFieldSet> _recipeForms = <_RecipeFormFieldSet>[];
-  final Set<String> _removedRecipeIds = <String>{};
-  String? _recipeValidationMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _availableCategories = widget.categories
-        .where((MenuCategoryViewData category) => category.id != null)
-        .toList();
-
-    assert(_availableCategories.isNotEmpty, "カテゴリが存在しない状態でメニュー追加ダイアログは開けません");
-
-    final String? initialCategoryId = widget.initial?.categoryId;
-    _selectedCategoryId =
-        initialCategoryId != null &&
-            _availableCategories.any(
-              (MenuCategoryViewData category) => category.id == initialCategoryId,
-            )
-        ? initialCategoryId
-        : _availableCategories.first.id!;
-
-    _isAvailable = widget.initial?.isAvailable ?? true;
-    _nameController = TextEditingController(text: widget.initial?.name ?? "");
-    _priceController = TextEditingController(
-      text: widget.initial != null ? widget.initial!.price.toString() : "",
-    );
-    _descriptionController = TextEditingController(text: widget.initial?.description ?? "");
-    _materialOptions = List<MaterialOption>.from(widget.materialOptions);
-
-    for (final MenuRecipeDetail detail in widget.initialRecipes) {
-      if (_findMaterialOption(detail.materialId) == null) {
-        _materialOptions.add(
-          MaterialOption(
-            id: detail.materialId,
-            name: "${detail.materialName} (未登録)",
-            unitType: detail.materialUnitType ?? UnitType.piece,
-            currentStock: detail.materialCurrentStock,
-          ),
-        );
-      }
-      _recipeForms.add(_RecipeFormFieldSet.fromDetail(detail));
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _priceController.dispose();
-    _descriptionController.dispose();
-    for (final _RecipeFormFieldSet form in _recipeForms) {
-      form.dispose();
-    }
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final MediaQueryData mediaQuery = MediaQuery.of(context);
@@ -599,81 +674,306 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth, minWidth: minWidth, maxHeight: maxHeight),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: YataSpacingTokens.lg,
-                  vertical: YataSpacingTokens.md,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        widget.initial == null ? "メニューを追加" : "メニューを編集",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: "閉じる",
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(YataSpacingTokens.lg),
-                  child: LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) {
-                      final bool useColumns = constraints.maxWidth >= 520;
-                      if (useColumns) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Expanded(child: _buildPrimaryFormFields()),
-                            const SizedBox(width: YataSpacingTokens.lg),
-                            Expanded(child: _buildSecondaryFormFields()),
-                          ],
-                        );
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          _buildPrimaryFormFields(),
-                          const SizedBox(height: YataSpacingTokens.lg),
-                          _buildSecondaryFormFields(),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.all(YataSpacingTokens.md),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text("キャンセル"),
-                    ),
-                    const SizedBox(width: YataSpacingTokens.sm),
-                    FilledButton(onPressed: _handleSubmit, child: const Text("保存")),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        child: _MenuFormEditor(
+          title: widget.initial == null ? "メニューを追加" : "メニューを編集",
+          categories: widget.categories,
+          materialOptions: widget.materialOptions,
+          initial: widget.initial,
+          initialRecipes: widget.initialRecipes,
+          onCancel: () => Navigator.of(context).pop(),
+          onSubmit: (MenuFormData data) => Navigator.of(context).pop(data),
+          headerActions: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: "閉じる",
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _MenuFormEditor extends StatefulWidget {
+  const _MenuFormEditor({
+    required this.title,
+    required this.categories,
+    required this.materialOptions,
+    required this.onSubmit,
+    required this.onCancel,
+    this.initial,
+    this.initialRecipes = const <MenuRecipeDetail>[],
+    this.headerActions = const <Widget>[],
+    this.footerLeading,
+  this.submitLabel = "保存",
+  this.cancelLabel = "キャンセル",
+  this.isBusy = false,
+  this.errorMessage,
+  });
+
+  final String title;
+  final List<MenuCategoryViewData> categories;
+  final List<MaterialOption> materialOptions;
+  final MenuItemViewData? initial;
+  final List<MenuRecipeDetail> initialRecipes;
+  final ValueChanged<MenuFormData> onSubmit;
+  final VoidCallback onCancel;
+  final List<Widget> headerActions;
+  final Widget? footerLeading;
+  final String submitLabel;
+  final String cancelLabel;
+  final bool isBusy;
+  final String? errorMessage;
+
+  @override
+  State<_MenuFormEditor> createState() => _MenuFormEditorState();
+}
+
+class _MenuFormEditorState extends State<_MenuFormEditor> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _descriptionController;
+  late List<MenuCategoryViewData> _availableCategories;
+  late List<MaterialOption> _materialOptions;
+  late String _selectedCategoryId;
+  late bool _isAvailable;
+  final List<_RecipeFormFieldSet> _recipeForms = <_RecipeFormFieldSet>[];
+  final Set<String> _removedRecipeIds = <String>{};
+  String? _recipeValidationMessage;
+
+  bool get _isBusy => widget.isBusy;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeForm();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MenuFormEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.categories, widget.categories)) {
+      _updateCategories(widget.categories);
+    }
+    if (!listEquals(oldWidget.materialOptions, widget.materialOptions)) {
+      _materialOptions = List<MaterialOption>.from(widget.materialOptions);
+      _ensureMaterialOptionsForRecipes();
+    }
+    if (oldWidget.initial != widget.initial && widget.initial != null) {
+      _applyInitialMenu(widget.initial!);
+    }
+    if (!listEquals(oldWidget.initialRecipes, widget.initialRecipes)) {
+      _resetRecipeForms(widget.initialRecipes);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    for (final _RecipeFormFieldSet form in _recipeForms) {
+      form.dispose();
+    }
+    super.dispose();
+  }
+
+  void _initializeForm() {
+    _availableCategories = widget.categories
+        .where((MenuCategoryViewData category) => category.id != null)
+        .toList();
+
+    assert(
+      _availableCategories.isNotEmpty,
+      "カテゴリが存在しない状態でメニューフォームは生成できません",
+    );
+
+    _materialOptions = List<MaterialOption>.from(widget.materialOptions);
+    _nameController = TextEditingController();
+    _priceController = TextEditingController();
+    _descriptionController = TextEditingController();
+    _applyInitialMenu(widget.initial);
+    _resetRecipeForms(widget.initialRecipes);
+  }
+
+  void _applyInitialMenu(MenuItemViewData? menu) {
+    final String? initialCategoryId = menu?.categoryId;
+    _selectedCategoryId =
+        initialCategoryId != null &&
+            _availableCategories.any((MenuCategoryViewData category) => category.id == initialCategoryId)
+        ? initialCategoryId
+        : _availableCategories.first.id!;
+
+    _isAvailable = menu?.isAvailable ?? true;
+  _nameController.text = menu?.name ?? "";
+  _priceController.text = menu != null ? menu.price.toString() : "";
+  _descriptionController.text = menu?.description ?? "";
+  }
+
+  void _resetRecipeForms(List<MenuRecipeDetail> recipes) {
+    _removedRecipeIds.clear();
+    for (final _RecipeFormFieldSet form in _recipeForms) {
+      form.dispose();
+    }
+    _recipeForms
+      ..clear()
+      ..addAll(recipes.map<_RecipeFormFieldSet>(_RecipeFormFieldSet.fromDetail));
+    _ensureMaterialOptionsForRecipes();
+  }
+
+  void _ensureMaterialOptionsForRecipes() {
+    for (final _RecipeFormFieldSet form in _recipeForms) {
+      final String? materialId = form.materialId;
+      if (materialId == null) {
+        continue;
+      }
+      if (_findMaterialOption(materialId) == null) {
+        _materialOptions.add(
+          MaterialOption(
+            id: materialId,
+            name: "${form.materialName ?? '不明な材料'} (未登録)",
+            unitType: form.materialUnitType ?? UnitType.piece,
+            currentStock: form.materialCurrentStock,
+          ),
+        );
+      }
+    }
+  }
+
+  void _updateCategories(List<MenuCategoryViewData> categories) {
+    final List<MenuCategoryViewData> filtered = categories
+        .where((MenuCategoryViewData category) => category.id != null)
+        .toList();
+    if (filtered.isEmpty) {
+      return;
+    }
+    setState(() {
+      _availableCategories = filtered;
+      if (_availableCategories.every((MenuCategoryViewData category) => category.id != _selectedCategoryId)) {
+        _selectedCategoryId = _availableCategories.first.id!;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Form(
+    key: _formKey,
+    child: Column(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: YataSpacingTokens.lg,
+            vertical: YataSpacingTokens.md,
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ...widget.headerActions,
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        if (_isBusy)
+          const Padding(
+            padding: EdgeInsets.only(top: YataSpacingTokens.xs),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
+        Expanded(
+          child: Scrollbar(
+            thumbVisibility: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(YataSpacingTokens.lg),
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final bool useColumns = constraints.maxWidth >= 520;
+                  final List<Widget> primary = <Widget>[_buildPrimaryFormFields()];
+                  final List<Widget> secondary = <Widget>[_buildSecondaryFormFields()];
+
+                  Widget bodyChild;
+                  if (useColumns) {
+                    bodyChild = Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(child: Column(children: primary)),
+                        const SizedBox(width: YataSpacingTokens.lg),
+                        Expanded(child: Column(children: secondary)),
+                      ],
+                    );
+                  } else {
+                    bodyChild = Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        ...primary,
+                        const SizedBox(height: YataSpacingTokens.lg),
+                        ...secondary,
+                      ],
+                    );
+                  }
+
+                  if (widget.errorMessage != null) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Container(
+                          decoration: BoxDecoration(
+                            color: YataColorTokens.dangerSoft,
+                            borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
+                            border: Border.all(color: YataColorTokens.danger),
+                          ),
+                          padding: const EdgeInsets.all(YataSpacingTokens.md),
+                          margin: const EdgeInsets.only(bottom: YataSpacingTokens.md),
+                          child: Text(
+                            widget.errorMessage!,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: YataColorTokens.danger),
+                          ),
+                        ),
+                        bodyChild,
+                      ],
+                    );
+                  }
+
+                  return bodyChild;
+                },
+              ),
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.all(YataSpacingTokens.md),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              if (widget.footerLeading != null) ...<Widget>[
+                widget.footerLeading!,
+                const Spacer(),
+              ] else
+                const Spacer(),
+              TextButton(
+                onPressed: _isBusy ? null : widget.onCancel,
+                child: Text(widget.cancelLabel),
+              ),
+              const SizedBox(width: YataSpacingTokens.sm),
+              FilledButton(
+                onPressed: _isBusy ? null : _handleSubmit,
+                child: Text(widget.submitLabel),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildPrimaryFormFields() => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -682,6 +982,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
           controller: _nameController,
           decoration: const InputDecoration(labelText: "メニュー名"),
           autofocus: true,
+          enabled: !_isBusy,
           validator: (String? value) {
             if (value == null || value.trim().isEmpty) {
               return "名称を入力してください";
@@ -691,7 +992,8 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
         ),
         const SizedBox(height: YataSpacingTokens.md),
         DropdownButtonFormField<String>(
-          initialValue: _selectedCategoryId,
+          // ignore: deprecated_member_use
+          value: _selectedCategoryId,
           decoration: const InputDecoration(labelText: "カテゴリ"),
           items: _availableCategories
               .map(
@@ -699,16 +1001,19 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                     DropdownMenuItem<String>(value: category.id, child: Text(category.name)),
               )
               .toList(growable: false),
-          onChanged: (String? value) {
-            if (value == null) {
-              return;
-            }
-            setState(() => _selectedCategoryId = value);
-          },
+          onChanged: _isBusy
+              ? null
+              : (String? value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() => _selectedCategoryId = value);
+                },
         ),
         const SizedBox(height: YataSpacingTokens.md),
         TextFormField(
           controller: _priceController,
+          enabled: !_isBusy,
           decoration: const InputDecoration(labelText: "価格"),
           keyboardType: TextInputType.number,
           validator: (String? value) {
@@ -725,7 +1030,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
         const SizedBox(height: YataSpacingTokens.md),
         SwitchListTile(
           value: _isAvailable,
-          onChanged: (bool value) => setState(() => _isAvailable = value),
+          onChanged: _isBusy ? null : (bool value) => setState(() => _isAvailable = value),
           title: const Text("販売可能にする"),
           contentPadding: EdgeInsets.zero,
         ),
@@ -737,6 +1042,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
       children: <Widget>[
         TextFormField(
           controller: _descriptionController,
+          enabled: !_isBusy,
           decoration: const InputDecoration(labelText: "説明", hintText: "任意"),
           maxLines: 4,
         ),
@@ -786,7 +1092,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
         Align(
           alignment: Alignment.centerLeft,
           child: OutlinedButton.icon(
-            onPressed: _materialOptions.isEmpty ? null : _addRecipeEntry,
+            onPressed: _isBusy || _materialOptions.isEmpty ? null : _addRecipeEntry,
             icon: const Icon(Icons.add),
             label: const Text("材料を追加"),
           ),
@@ -820,13 +1126,14 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                   icon: const Icon(Icons.delete_outline),
                   color: YataColorTokens.danger,
                   tooltip: "削除",
-                  onPressed: () => _removeRecipeAt(index),
+                  onPressed: _isBusy ? null : () => _removeRecipeAt(index),
                 ),
               ],
             ),
             const SizedBox(height: YataSpacingTokens.xs),
             DropdownButtonFormField<String>(
-              initialValue: form.materialId,
+              // ignore: deprecated_member_use
+              value: form.materialId,
               decoration: const InputDecoration(labelText: "材料"),
               isExpanded: true,
               items: _materialOptions
@@ -837,12 +1144,14 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
                     ),
                   )
                   .toList(growable: false),
-              onChanged: (String? value) {
-                setState(() {
-                  form.materialId = value;
-                  _recipeValidationMessage = null;
-                });
-              },
+              onChanged: _isBusy
+                  ? null
+                  : (String? value) {
+                      setState(() {
+                        form.materialId = value;
+                        _recipeValidationMessage = null;
+                      });
+                    },
               validator: (String? value) {
                 if (value == null || value.isEmpty) {
                   return "材料を選択してください";
@@ -853,6 +1162,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
             const SizedBox(height: YataSpacingTokens.xs),
             TextFormField(
               controller: form.amountController,
+              enabled: !_isBusy,
               decoration: InputDecoration(labelText: "必要量", suffixText: unitSymbol),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (String? value) {
@@ -874,7 +1184,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
               children: <Widget>[
                 Switch.adaptive(
                   value: form.isOptional,
-                  onChanged: (bool value) => setState(() => form.isOptional = value),
+                  onChanged: _isBusy ? null : (bool value) => setState(() => form.isOptional = value),
                 ),
                 const SizedBox(width: YataSpacingTokens.xs),
                 const Expanded(child: Text("任意材料")),
@@ -883,6 +1193,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
             const SizedBox(height: YataSpacingTokens.xs),
             TextFormField(
               controller: form.notesController,
+              enabled: !_isBusy,
               decoration: const InputDecoration(labelText: "備考", hintText: "任意"),
               maxLines: 2,
             ),
@@ -974,7 +1285,7 @@ class _MenuFormDialogState extends State<_MenuFormDialog> {
       );
     }
 
-    Navigator.of(context).pop(
+    widget.onSubmit(
       MenuFormData(
         name: _nameController.text.trim(),
         categoryId: _selectedCategoryId,
@@ -1018,6 +1329,9 @@ class _RecipeFormFieldSet {
     : existingRecipeId = null,
       originalMaterialId = null,
       materialId = null,
+      materialName = null,
+      materialUnitType = null,
+      materialCurrentStock = null,
       isOptional = false,
       amountController = TextEditingController(),
       notesController = TextEditingController();
@@ -1026,6 +1340,9 @@ class _RecipeFormFieldSet {
     : existingRecipeId = detail.recipeId,
       originalMaterialId = detail.materialId,
       materialId = detail.materialId,
+      materialName = detail.materialName,
+      materialUnitType = detail.materialUnitType,
+      materialCurrentStock = detail.materialCurrentStock,
       isOptional = detail.isOptional,
       amountController = TextEditingController(text: detail.requiredAmount.toString()),
       notesController = TextEditingController(text: detail.notes ?? "");
@@ -1033,6 +1350,9 @@ class _RecipeFormFieldSet {
   final String? existingRecipeId;
   final String? originalMaterialId;
   String? materialId;
+  final String? materialName;
+  final UnitType? materialUnitType;
+  final double? materialCurrentStock;
   bool isOptional;
   final TextEditingController amountController;
   final TextEditingController notesController;
@@ -1344,49 +1664,221 @@ class _ErrorBanner extends StatelessWidget {
   );
 }
 
-class _MenuDetailDialogContent extends ConsumerWidget {
+class _MenuDetailDialogContent extends ConsumerStatefulWidget {
   const _MenuDetailDialogContent({
     required this.onClose,
-    required this.onEditMenu,
-    required this.onEditRecipes,
     required this.onDeleteMenu,
+    this.onEditRecipes,
   });
 
   final VoidCallback onClose;
-  final ValueChanged<MenuItemViewData> onEditMenu;
-  final ValueChanged<String> onEditRecipes;
   final ValueChanged<MenuItemViewData> onDeleteMenu;
+  final ValueChanged<String>? onEditRecipes;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final MenuManagementState state = ref.watch(menuManagementControllerProvider);
-    final MenuDetailViewData? detail = state.detail;
-    final bool isDetailBusy =
-        state.isSubmitting ||
-        (detail != null && state.pendingAvailabilityMenuIds.contains(detail.menu.id));
+  ConsumerState<_MenuDetailDialogContent> createState() => _MenuDetailDialogContentState();
+}
 
+class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogContent> {
+  MenuDetailViewData? _detail;
+  List<MenuCategoryViewData> _categories = const <MenuCategoryViewData>[];
+  List<MaterialOption> _materialOptions = const <MaterialOption>[];
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  String? _loadErrorMessage;
+  String? _formErrorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    final MenuManagementState current = ref.read(menuManagementControllerProvider);
+    final MenuDetailViewData? detail = current.detail;
+    if (!mounted) {
+      return;
+    }
+
+    if (detail == null) {
+      setState(() {
+        _loadErrorMessage = "メニュー詳細が取得できませんでした";
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final List<MenuCategoryViewData> categories = current.categories
+        .where((MenuCategoryViewData category) => !category.isAll)
+        .toList(growable: false);
+
+    setState(() {
+      _detail = detail;
+      _categories = categories;
+      _loadErrorMessage = categories.isEmpty ? "カテゴリが存在しません。先にカテゴリを作成してください" : null;
+    });
+
+    try {
+      final List<MaterialOption> options = await ref
+          .read(menuManagementControllerProvider.notifier)
+          .loadMaterialOptions();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _materialOptions = options;
+        _isLoading = false;
+      });
+  } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isLoading = false;
+        _loadErrorMessage = "材料情報の取得に失敗しました。再試行してください";
+      });
+    }
+  }
+
+  Future<void> _handleSubmit(MenuFormData data) async {
+    final MenuDetailViewData? detail = _detail;
+    if (detail == null) {
+      return;
+    }
+    setState(() {
+      _isSubmitting = true;
+      _formErrorMessage = null;
+    });
+
+    await ref.read(menuManagementControllerProvider.notifier).updateMenu(detail.menu.id, data);
+
+    if (!mounted) {
+      return;
+    }
+
+    final MenuManagementState latest = ref.read(menuManagementControllerProvider);
+    if (latest.errorMessage != null && latest.errorMessage!.isNotEmpty) {
+      setState(() {
+        _isSubmitting = false;
+        _formErrorMessage = latest.errorMessage;
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("${data.name} を更新しました")),
+    );
+    widget.onClose();
+  }
+
+  void _handleEditRecipes() {
+    final MenuDetailViewData? detail = _detail;
+    if (detail == null || widget.onEditRecipes == null) {
+      return;
+    }
+    widget.onEditRecipes!(detail.menu.id);
+  }
+
+  void _handleDeleteMenu() {
+    final MenuDetailViewData? detail = _detail;
+    if (detail == null) {
+      return;
+    }
+    widget.onDeleteMenu(detail.menu);
+  }
+
+  Future<void> _handleRetry() async {
+    setState(() {
+      _isLoading = true;
+      _loadErrorMessage = null;
+    });
+    await _loadInitialData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: Semantics(
         container: true,
         explicitChildNodes: true,
         label: "メニュー詳細モーダル",
-        child: Scrollbar(
-          thumbVisibility: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(YataSpacingTokens.lg),
-            child: MenuDetailPanel(
-              detail: detail,
-              isBusy: isDetailBusy,
-              onClose: onClose,
-              onEditMenu: detail == null ? null : () => onEditMenu(detail.menu),
-              onEditRecipes: detail == null ? null : () => onEditRecipes(detail.menu.id),
-              onDeleteMenu: detail == null ? null : () => onDeleteMenu(detail.menu),
-              enableInternalScroll: false,
-            ),
-          ),
-        ),
+        child: _buildBody(context),
       ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: Padding(padding: EdgeInsets.all(YataSpacingTokens.lg), child: CircularProgressIndicator()));
+    }
+
+    if (_loadErrorMessage != null || _detail == null || _categories.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(YataSpacingTokens.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              _loadErrorMessage ?? "詳細データが利用できません。",
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: YataColorTokens.textSecondary),
+            ),
+            const SizedBox(height: YataSpacingTokens.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                if (_loadErrorMessage != null)
+                  TextButton(onPressed: _handleRetry, child: const Text("再試行")),
+                const SizedBox(width: YataSpacingTokens.sm),
+                FilledButton(onPressed: widget.onClose, child: const Text("閉じる")),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    final MenuDetailViewData detail = _detail!;
+    final List<Widget> headerActions = <Widget>[
+      if (widget.onEditRecipes != null)
+        TextButton.icon(
+          onPressed: _isSubmitting ? null : _handleEditRecipes,
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text("レシピエディター"),
+        ),
+      IconButton(
+        icon: const Icon(Icons.close),
+        tooltip: "閉じる",
+        onPressed: widget.onClose,
+      ),
+    ];
+
+    final Widget? footerLeading = TextButton.icon(
+      onPressed: _isSubmitting ? null : _handleDeleteMenu,
+      icon: const Icon(Icons.delete_outline),
+      style: TextButton.styleFrom(foregroundColor: YataColorTokens.danger),
+      label: const Text("削除"),
+    );
+
+    return _MenuFormEditor(
+      title: "${detail.menu.name} を編集",
+      categories: _categories,
+      materialOptions: _materialOptions,
+      initial: detail.menu,
+      initialRecipes: detail.recipes,
+      onSubmit: _handleSubmit,
+      onCancel: widget.onClose,
+      headerActions: headerActions,
+      footerLeading: footerLeading,
+      submitLabel: "保存",
+      cancelLabel: "閉じる",
+      isBusy: _isSubmitting,
+      errorMessage: _formErrorMessage,
     );
   }
 }

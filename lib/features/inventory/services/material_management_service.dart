@@ -3,6 +3,7 @@ import "../../../core/constants/exceptions/exceptions.dart";
 import "../../../core/contracts/repositories/inventory/material_category_repository_contract.dart";
 import "../../../core/contracts/repositories/inventory/material_repository_contract.dart";
 import "../../../core/contracts/logging/logger.dart" as log_contract;
+import "../../../core/constants/query_types.dart";
 import "../../../core/validation/input_validator.dart";
 import "../models/inventory_model.dart";
 
@@ -153,6 +154,174 @@ class MaterialManagementService {
       log.e(
         ServiceError.operationFailed.withParams(<String, String>{
           "operationType": "create_material_category",
+        }),
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// 材料カテゴリを更新
+  Future<MaterialCategory?> updateCategory(MaterialCategory category) async {
+    if (category.id == null || category.id!.isEmpty) {
+      throw ArgumentError("Category ID is required for update");
+    }
+
+    final String trimmedName = category.name.trim();
+    final List<ValidationResult> validationResults = <ValidationResult>[
+      InputValidator.validateCategoryName(trimmedName),
+      InputValidator.validateNumber(
+        category.displayOrder,
+        min: 0,
+        fieldName: "表示順序",
+      ),
+    ];
+
+    final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+    if (errors.isNotEmpty) {
+      final List<String> errorMessages = InputValidator.getErrorMessages(errors);
+      log.e(
+        "Validation failed for material category update: ${errorMessages.join(', ')}",
+        tag: loggerComponent,
+      );
+      throw ValidationException(errorMessages);
+    }
+
+    final MaterialCategory? existing = await _materialCategoryRepository.getById(category.id!);
+    if (existing == null) {
+      log.w(
+        ServiceWarning.entityNotFound.withParams(<String, String>{
+          "entityType": "material_category:${category.id}",
+        }),
+        tag: loggerComponent,
+      );
+      throw ServiceException.operationFailed(
+        "update_material_category",
+        "Category not found",
+      );
+    }
+
+    final List<QueryFilter> duplicateFilters = <QueryFilter>[
+      QueryConditionBuilder.eq("name", trimmedName),
+      if (existing.userId != null) QueryConditionBuilder.eq("user_id", existing.userId),
+      QueryConditionBuilder.neq("id", category.id!),
+    ];
+
+    final int duplicateCount = await _materialCategoryRepository.count(filters: duplicateFilters);
+    if (duplicateCount > 0) {
+      const String message = "同じ名前のカテゴリが既に存在します";
+      log.w(
+        "Duplicate category name detected during update: $trimmedName",
+        tag: loggerComponent,
+      );
+      throw ValidationException(<String>[message]);
+    }
+
+    log.i(
+      ServiceInfo.operationStarted.withParams(<String, String>{
+        "operationType": "update_material_category",
+      }),
+      tag: loggerComponent,
+    );
+
+    final Map<String, dynamic> updatePayload = <String, dynamic>{
+      "name": trimmedName,
+      "display_order": category.displayOrder,
+      "updated_at": DateTime.now().toIso8601String(),
+    };
+
+    try {
+      final MaterialCategory? updatedCategory = await _materialCategoryRepository.updateById(
+        category.id!,
+        updatePayload,
+      );
+
+      if (updatedCategory != null) {
+        log.i(
+          ServiceInfo.updateSuccessful.withParams(<String, String>{
+            "entityType": "material_category:${updatedCategory.id ?? category.id}",
+          }),
+          tag: loggerComponent,
+        );
+      } else {
+        log.w(
+          ServiceWarning.updateFailed.withParams(<String, String>{
+            "entityType": "material_category:${category.id}",
+          }),
+          tag: loggerComponent,
+        );
+      }
+
+      return updatedCategory;
+    } catch (e, stackTrace) {
+      log.e(
+        ServiceError.operationFailed.withParams(<String, String>{
+          "operationType": "update_material_category",
+        }),
+        tag: loggerComponent,
+        error: e,
+        st: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// 材料カテゴリを削除
+  Future<void> deleteCategory(String categoryId) async {
+    if (categoryId.isEmpty) {
+      throw ArgumentError("Category ID is required for deletion");
+    }
+
+    final MaterialCategory? existing = await _materialCategoryRepository.getById(categoryId);
+    if (existing == null) {
+      log.w(
+        ServiceWarning.entityNotFound.withParams(<String, String>{
+          "entityType": "material_category:$categoryId",
+        }),
+        tag: loggerComponent,
+      );
+      throw ServiceException.operationFailed(
+        "delete_material_category",
+        "Category not found",
+      );
+    }
+
+    final int linkedMaterialCount = await _materialRepository.count(
+      filters: <QueryFilter>[QueryConditionBuilder.eq("category_id", categoryId)],
+    );
+
+    if (linkedMaterialCount > 0) {
+      const String message = "このカテゴリに紐づく在庫アイテムが存在するため削除できません";
+      log.w(
+        ServiceWarning.operationFailed.withParams(<String, String>{
+          "operationType": "delete_material_category",
+        }),
+        tag: loggerComponent,
+      );
+      throw ValidationException(<String>[message]);
+    }
+
+    log.i(
+      ServiceInfo.operationStarted.withParams(<String, String>{
+        "operationType": "delete_material_category",
+      }),
+      tag: loggerComponent,
+    );
+
+    try {
+      await _materialCategoryRepository.deleteById(categoryId);
+      log.i(
+        ServiceInfo.deletionSuccessful.withParams(<String, String>{
+          "entityType": "material_category:${existing.name}",
+        }),
+        tag: loggerComponent,
+      );
+    } catch (e, stackTrace) {
+      log.e(
+        ServiceError.operationFailed.withParams(<String, String>{
+          "operationType": "delete_material_category",
         }),
         tag: loggerComponent,
         error: e,

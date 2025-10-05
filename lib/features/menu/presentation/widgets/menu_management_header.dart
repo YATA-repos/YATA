@@ -34,24 +34,24 @@ class MenuManagementHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> statCards = <Widget>[
-      YataStatCard(
-        title: "登録メニュー",
-        value: "${state.totalMenuCount}",
-        indicatorColor: YataColorTokens.info,
-        indicatorLabel: "登録メニューの状態",
-      ),
-      YataStatCard(
-        title: "提供可能",
-        value: "${state.availableMenuCount}",
-        indicatorColor: YataColorTokens.success,
-        indicatorLabel: "提供可能メニューの状態",
-      ),
-      YataStatCard(
+    final List<OverviewStatData> overviewStats = <OverviewStatData>[
+      OverviewStatData(
         title: "要確認",
         value: "${state.attentionMenuCount}",
         indicatorColor: YataColorTokens.warning,
-        indicatorLabel: "要確認メニューの状態",
+        indicatorLabel: "要対応メニューの数",
+      ),
+      OverviewStatData(
+        title: "提供可能",
+        value: "${state.availableMenuCount}",
+        indicatorColor: YataColorTokens.success,
+        indicatorLabel: "現在提供できるメニューの数",
+      ),
+      OverviewStatData(
+        title: "登録メニュー",
+        value: "${state.totalMenuCount}",
+        indicatorColor: YataColorTokens.info,
+        indicatorLabel: "登録済みメニューの総数",
       ),
     ];
 
@@ -67,63 +67,54 @@ class MenuManagementHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        OverviewStatCards(stats: overviewStats),
+        const SizedBox(height: YataSpacingTokens.lg),
         LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final bool stacked = constraints.maxWidth < 900;
-            if (stacked) {
-              return Column(
-                children: statCards
-                    .map(
-                      (Widget card) => Padding(
-                        padding: const EdgeInsets.only(bottom: YataSpacingTokens.sm),
-                        child: card,
-                      ),
-                    )
-                    .toList(growable: false),
-              );
-            }
-
-            final List<Widget> rowChildren = <Widget>[];
-            for (int index = 0; index < statCards.length; index++) {
-              rowChildren.add(
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index == statCards.length - 1 ? 0 : YataSpacingTokens.md,
-                    ),
-                    child: statCards[index],
-                  ),
-                ),
-              );
-            }
-
-            return Row(children: rowChildren);
-          },
-        ),
-        const SizedBox(height: YataSpacingTokens.lg),
-        Wrap(
-          spacing: YataSpacingTokens.md,
-          runSpacing: YataSpacingTokens.md,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: <Widget>[
-            SizedBox(
-              width: 320,
-              child: YataSearchField(
-                controller: searchController,
-                hintText: "メニュー名・説明で検索",
-                onChanged: onSearchChanged,
-              ),
-            ),
-            YataSegmentedFilter(
+            final bool stacked = constraints.maxWidth < 720;
+            final Widget searchField = YataSearchField(
+              controller: searchController,
+              hintText: "メニュー名・説明で検索",
+              onChanged: onSearchChanged,
+            );
+            final Widget filter = YataSegmentedFilter(
               segments: segments,
               selectedIndex: selectedIndex,
               onSegmentSelected: (int index) =>
                   onFilterChanged(MenuAvailabilityFilter.values[index]),
-              compact: true,
-            ),
-            if (onCreateMenu != null)
-              YataIconLabelButton(icon: Icons.add, label: "メニューを追加", onPressed: onCreateMenu),
-          ],
+              compact: !stacked,
+            );
+            final Widget? createButton = onCreateMenu == null
+                ? null
+                : YataIconLabelButton(icon: Icons.add, label: "メニューを追加", onPressed: onCreateMenu);
+
+            if (stacked) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  SizedBox(width: double.infinity, child: searchField),
+                  const SizedBox(height: YataSpacingTokens.sm),
+                  filter,
+                  if (createButton != null) ...<Widget>[
+                    const SizedBox(height: YataSpacingTokens.sm),
+                    createButton,
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              children: <Widget>[
+                Expanded(child: SizedBox(height: 48, child: searchField)),
+                const SizedBox(width: YataSpacingTokens.md),
+                filter,
+                if (createButton != null) ...<Widget>[
+                  const SizedBox(width: YataSpacingTokens.md),
+                  createButton,
+                ],
+              ],
+            );
+          },
         ),
       ],
     );

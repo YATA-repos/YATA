@@ -17,6 +17,7 @@ import "../../../order/presentation/pages/order_status_page.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../../models/inventory_model.dart" as inventory_models;
 import "../controllers/inventory_management_controller.dart";
+import "../widgets/inventory_category_panel.dart";
 
 /// 在庫管理画面。
 class InventoryManagementPage extends ConsumerStatefulWidget {
@@ -208,10 +209,14 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
 
                 final Widget sidebar = SizedBox(
                   width: showSidebar ? 320 : double.infinity,
-                  child: _CategorySidebar(
+                  child: InventoryCategoryPanel(
                     state: state,
-                    controller: controller,
+                    onCategorySelected: controller.selectCategory,
                     onCreateCategory: _handleCreateCategory,
+                    onEditCategory: (InventoryCategoryPanelData data) =>
+                        unawaited(_handleRenameCategory(data)),
+                    onDeleteCategory: (InventoryCategoryPanelData data) =>
+                        unawaited(_handleDeleteCategory(data)),
                   ),
                 );
 
@@ -334,6 +339,152 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
 
     nameController.dispose();
     return created;
+  }
+
+  Future<void> _handleRenameCategory(InventoryCategoryPanelData data) async {
+    if (data.categoryId == null) {
+      return;
+    }
+
+    final String? newName = await _showRenameCategoryDialog(initialName: data.name);
+    if (newName == null) {
+      return;
+    }
+
+    final InventoryManagementController controller = ref.read(
+      inventoryManagementControllerProvider.notifier,
+    );
+
+    final String? errorMessage = await controller.renameCategory(data.categoryId!, newName);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("カテゴリ名を「$newName」に変更しました")),
+    );
+  }
+
+  Future<void> _handleDeleteCategory(InventoryCategoryPanelData data) async {
+    if (data.categoryId == null) {
+      return;
+    }
+
+    if (data.total > 0) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("在庫アイテムが残っているカテゴリは削除できません")),
+      );
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text("カテゴリを削除"),
+        content: Text("「${data.name}」を削除しますか？この操作は取り消せません。"),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text("キャンセル"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: YataColorTokens.danger),
+            child: const Text("削除"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    final InventoryManagementController controller = ref.read(
+      inventoryManagementControllerProvider.notifier,
+    );
+
+    final String? errorMessage = await controller.deleteCategory(data.categoryId!);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("${data.name} を削除しました")),
+    );
+  }
+
+  Future<String?> _showRenameCategoryDialog({required String initialName}) async {
+    final TextEditingController nameController = TextEditingController(text: initialName);
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    bool isSaving = false;
+    String? result;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !isSaving,
+      builder: (BuildContext dialogContext) => StatefulBuilder(
+        builder: (BuildContext context, void Function(void Function()) setDialogState) =>
+            AlertDialog(
+              title: const Text("カテゴリ名を変更"),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: "新しいカテゴリ名"),
+                  enabled: !isSaving,
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "カテゴリ名を入力してください";
+                    }
+                    if (value.trim().length > 30) {
+                      return "カテゴリ名は30文字以下で入力してください";
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text("キャンセル"),
+                ),
+                FilledButton(
+                  onPressed: isSaving
+                      ? null
+                      : () {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+                          setDialogState(() => isSaving = true);
+                          result = nameController.text.trim();
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text("変更"),
+                ),
+              ],
+            ),
+      ),
+    );
+
+    nameController.dispose();
+    return result;
   }
 
   Future<void> _showInventoryItemDialog({InventoryItemViewData? initialItem}) async {
@@ -668,60 +819,38 @@ class _HeaderStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final int adequateCount = state.totalItems - state.lowCount - state.criticalCount;
-    final List<_OverviewStat> stats = <_OverviewStat>[
-      _OverviewStat(
+    final int adequateSafe = adequateCount < 0 ? 0 : adequateCount;
+    final List<OverviewStatData> overviewStats = <OverviewStatData>[
+      OverviewStatData(
         title: "総在庫アイテム",
-        value: state.totalItems,
-        icon: Icons.inventory_2_outlined,
-        accent: YataColorTokens.primary,
+        value: state.totalItems.toString(),
+        indicatorColor: YataColorTokens.primary,
+        indicatorLabel: "登録済み在庫アイテムの総数",
       ),
-      _OverviewStat(
+      OverviewStatData(
         title: "適正在庫",
-        value: adequateCount < 0 ? 0 : adequateCount,
-        icon: Icons.check_circle_outline,
-        accent: YataColorTokens.success,
+        value: adequateSafe.toString(),
+        indicatorColor: YataColorTokens.success,
+        indicatorLabel: "警告なしの在庫アイテム数",
       ),
-      _OverviewStat(
+      OverviewStatData(
         title: "要注意",
-        value: state.lowCount,
-        icon: Icons.error_outline,
-        accent: YataColorTokens.warning,
+        value: state.lowCount.toString(),
+        indicatorColor: YataColorTokens.warning,
+        indicatorLabel: "閾値警告に達した在庫アイテム数",
       ),
-      _OverviewStat(
+      OverviewStatData(
         title: "緊急補充",
-        value: state.criticalCount,
-        icon: Icons.warning_amber_outlined,
-        accent: YataColorTokens.danger,
+        value: state.criticalCount.toString(),
+        indicatorColor: YataColorTokens.danger,
+        indicatorLabel: "致命的閾値を下回る在庫アイテム数",
       ),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double gap = YataSpacingTokens.md;
-            final int perRow = constraints.maxWidth >= 1080
-                ? 4
-                : (constraints.maxWidth >= 720 ? 2 : 1);
-            final double itemWidth = perRow == 1
-                ? constraints.maxWidth
-                : (constraints.maxWidth - gap * (perRow - 1)) / perRow;
-
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: stats
-                  .map(
-                    (_OverviewStat stat) => SizedBox(
-                      width: itemWidth,
-                      child: _OverviewStatCard(stat: stat),
-                    ),
-                  )
-                  .toList(growable: false),
-            );
-          },
-        ),
+        OverviewStatCards(stats: overviewStats),
         const SizedBox(height: YataSpacingTokens.lg),
         YataSectionCard(
           title: "在庫ステータス",
@@ -734,7 +863,7 @@ class _HeaderStats extends StatelessWidget {
               _StatusPill(
                 color: YataColorTokens.success,
                 bg: YataColorTokens.successSoft,
-                label: "適正: ${adequateCount < 0 ? 0 : adequateCount}",
+                label: "適正: $adequateSafe",
                 isActive: state.selectedStatusFilter == StockStatus.sufficient,
                 onTap: () {
                   controller.toggleStatusFilter(StockStatus.sufficient);
@@ -770,68 +899,6 @@ class _HeaderStats extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _OverviewStat {
-  const _OverviewStat({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.accent,
-  });
-
-  final String title;
-  final int value;
-  final IconData icon;
-  final Color accent;
-}
-
-class _OverviewStatCard extends StatelessWidget {
-  const _OverviewStatCard({required this.stat});
-
-  final _OverviewStat stat;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final Color accent = stat.accent;
-
-    return Container(
-      padding: const EdgeInsets.all(YataSpacingTokens.lg),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
-        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
-        border: Border.all(color: accent.withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(stat.icon, color: accent, size: 28),
-          const SizedBox(height: YataSpacingTokens.xs),
-          Text(stat.title, style: textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium),
-          const SizedBox(height: YataSpacingTokens.xs),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              Text(
-                "${stat.value}",
-                style: (textTheme.headlineMedium ?? YataTypographyTokens.headlineMedium).copyWith(
-                  color: accent,
-                ),
-              ),
-              const SizedBox(width: YataSpacingTokens.xxs),
-              Text(
-                "件",
-                style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
-                  color: accent,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
@@ -889,226 +956,6 @@ class _StatusPill extends StatelessWidget {
 
     return Tooltip(message: tooltipMessage, child: interactive);
   }
-}
-
-/// カテゴリとステータス集計を表示するサイドバー領域。
-class _CategorySidebar extends StatelessWidget {
-  const _CategorySidebar({
-    required this.state,
-    required this.controller,
-    required this.onCreateCategory,
-  });
-
-  final InventoryManagementState state;
-  final InventoryManagementController controller;
-  final VoidCallback onCreateCategory;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<_CategorySummary> summaries = _buildCategorySummaries(state);
-    final bool isBusy = state.isLoading;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        YataSectionCard(
-          title: "カテゴリ",
-          subtitle: "在庫アイテムをカテゴリ別に管理",
-          actions: <Widget>[
-            FilledButton.icon(
-              onPressed: isBusy ? null : onCreateCategory,
-              icon: const Icon(Icons.add),
-              label: const Text("カテゴリ追加"),
-            ),
-          ],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              if (summaries.isEmpty)
-                Container(
-                  height: 160,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: YataColorTokens.neutral100,
-                    borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-                  ),
-                  child: Text(
-                    "カテゴリがまだ登録されていません",
-                    style:
-                        Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium,
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: summaries.length,
-                  separatorBuilder: (BuildContext context, int _) =>
-                      const SizedBox(height: YataSpacingTokens.sm),
-                  itemBuilder: (BuildContext context, int index) {
-                    final _CategorySummary summary = summaries[index];
-                    return _CategoryTile(
-                      summary: summary,
-                      isSelected: state.selectedCategoryIndex == summary.index,
-                      color: _categoryAccentForIndex(index),
-                      onTap: () => controller.selectCategory(summary.index),
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// カテゴリ単位の集計データを算出する。
-  List<_CategorySummary> _buildCategorySummaries(InventoryManagementState state) {
-    final List<_CategorySummary> summaries = <_CategorySummary>[
-      _CategorySummary(
-        name: "すべて",
-        index: 0,
-        total: state.totalItems,
-        low: state.lowCount,
-        critical: state.criticalCount,
-      ),
-    ];
-
-    final Map<String, List<InventoryItemViewData>> grouped =
-        <String, List<InventoryItemViewData>>{};
-    for (final InventoryItemViewData item in state.items) {
-      grouped[item.category] = (grouped[item.category] ?? <InventoryItemViewData>[])..add(item);
-    }
-
-    for (int i = 1; i < state.categories.length; i++) {
-      final String category = state.categories[i];
-      final List<InventoryItemViewData> items = grouped[category] ?? <InventoryItemViewData>[];
-      final int total = items.length;
-      final int low = items.where((InventoryItemViewData e) => e.status == StockStatus.low).length;
-      final int critical = items
-          .where((InventoryItemViewData e) => e.status == StockStatus.critical)
-          .length;
-
-      summaries.add(
-        _CategorySummary(name: category, index: i, total: total, low: low, critical: critical),
-      );
-    }
-
-    return summaries;
-  }
-}
-
-/// カテゴリ別集計値を保持するシンプルなモデル。
-class _CategorySummary {
-  const _CategorySummary({
-    required this.name,
-    required this.index,
-    required this.total,
-    required this.low,
-    required this.critical,
-  });
-
-  final String name;
-  final int index;
-  final int total;
-  final int low;
-  final int critical;
-
-  int get adequate {
-    final int value = total - low - critical;
-    return value < 0 ? 0 : value;
-  }
-}
-
-/// カテゴリの件数と在庫ステータスを表示するカード。
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.summary,
-    required this.isSelected,
-    required this.onTap,
-    required this.color,
-  });
-
-  final _CategorySummary summary;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final Color foreground = isSelected ? YataColorTokens.primary : YataColorTokens.textPrimary;
-    final Color background = isSelected ? YataColorTokens.primarySoft : YataColorTokens.surface;
-
-    return Material(
-      color: background,
-      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-        child: Padding(
-          padding: const EdgeInsets.all(YataSpacingTokens.sm),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: YataSpacingTokens.sm),
-                  Expanded(
-                    child: Text(
-                      summary.name,
-                      style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
-                        color: foreground,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    "${summary.total}",
-                    style: (textTheme.titleMedium ?? YataTypographyTokens.titleMedium).copyWith(
-                      color: foreground,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: YataSpacingTokens.xs),
-              Wrap(
-                spacing: YataSpacingTokens.xs,
-                runSpacing: YataSpacingTokens.xs,
-                children: <Widget>[
-                  YataStatusBadge(
-                    label: "適正 ${summary.adequate}",
-                    type: YataStatusBadgeType.success,
-                  ),
-                  YataStatusBadge(label: "要注意 ${summary.low}", type: YataStatusBadgeType.warning),
-                  YataStatusBadge(
-                    label: "危険 ${summary.critical}",
-                    type: YataStatusBadgeType.danger,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// カテゴリカードに使うアクセントカラーをインデックスから取得する。
-Color _categoryAccentForIndex(int index) {
-  const List<Color> palette = <Color>[
-    YataColorTokens.primary,
-    YataColorTokens.success,
-    YataColorTokens.info,
-    YataColorTokens.warning,
-    YataColorTokens.danger,
-  ];
-  return palette[index % palette.length];
 }
 
 /// 在庫一覧の検索欄と操作ボタンをまとめたコンポーネント。

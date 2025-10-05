@@ -271,9 +271,23 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         ? null
         : previousCategorySelectionRaw.trim());
 
+    String? previousCategoryId;
+    if (previousCategorySelection != null) {
+      for (final MaterialCategory category in state.categoryEntities) {
+        final String trimmed = category.name.trim();
+        if (trimmed.isEmpty) {
+          continue;
+        }
+        if (trimmed == previousCategorySelection) {
+          previousCategoryId = category.id;
+          break;
+        }
+      }
+    }
+
       final Map<String, String> categoryNameById = <String, String>{
         for (final MaterialCategory category in categoryModels)
-          if (category.id != null) category.id!: category.name,
+          if (category.id != null) category.id!: category.name.trim(),
       };
 
       final Set<String> validIds = <String>{};
@@ -329,7 +343,30 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         final List<String> categories = <String>["すべて", ...sortedCategoryNames];
 
         int resolvedCategoryIndex = 0;
-        if (previousCategorySelection != null) {
+
+        if (previousCategoryId != null) {
+          String? resolvedName;
+          for (final MaterialCategory category in categoryModels) {
+            if (category.id == previousCategoryId) {
+              final String trimmedName = category.name.trim();
+              if (trimmedName.isNotEmpty) {
+                resolvedName = trimmedName;
+              }
+              break;
+            }
+          }
+
+          if (resolvedName != null) {
+            for (int i = 0; i < categories.length; i++) {
+              if (categories[i].trim() == resolvedName) {
+                resolvedCategoryIndex = i;
+                break;
+              }
+            }
+          }
+        }
+
+        if (resolvedCategoryIndex == 0 && previousCategorySelection != null) {
           final int index = categories.indexOf(previousCategorySelection);
           if (index >= 0) {
             resolvedCategoryIndex = index;
@@ -392,6 +429,107 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
           displayOrder: nextDisplayOrder,
         ),
       );
+      await loadInventory();
+      return null;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(isLoading: false, errorMessage: message);
+      return message;
+    }
+  }
+
+  /// 材料カテゴリの名称を変更する。
+  Future<String?> renameCategory(String categoryId, String newName) async {
+    final String trimmedName = newName.trim();
+    if (trimmedName.isEmpty) {
+      const String message = "カテゴリ名を入力してください。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    MaterialCategory? targetCategory;
+    for (final MaterialCategory category in state.categoryEntities) {
+      if (category.id == categoryId) {
+        targetCategory = category;
+        break;
+      }
+    }
+
+    if (targetCategory == null || targetCategory.id == null) {
+      const String message = "対象のカテゴリが見つかりませんでした。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    final String currentName = targetCategory.name.trim();
+    if (currentName == trimmedName) {
+      return "カテゴリ名は変更されていません。";
+    }
+
+    final String normalizedName = trimmedName.toLowerCase();
+    final bool duplicateExists = state.categoryEntities.any(
+      (MaterialCategory category) =>
+          category.id != categoryId && category.name.trim().toLowerCase() == normalizedName,
+    );
+
+    if (duplicateExists) {
+      const String message = "同じ名前のカテゴリが既に存在します。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+
+    try {
+      await _inventoryService.updateMaterialCategory(
+        MaterialCategory(
+          id: targetCategory.id,
+          name: trimmedName,
+          displayOrder: targetCategory.displayOrder,
+          createdAt: targetCategory.createdAt,
+          updatedAt: DateTime.now(),
+          userId: targetCategory.userId,
+        ),
+      );
+
+      await loadInventory();
+      return null;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(isLoading: false, errorMessage: message);
+      return message;
+    }
+  }
+
+  /// 材料カテゴリを削除する。
+  Future<String?> deleteCategory(String categoryId) async {
+    MaterialCategory? targetCategory;
+    for (final MaterialCategory category in state.categoryEntities) {
+      if (category.id == categoryId) {
+        targetCategory = category;
+        break;
+      }
+    }
+
+    if (targetCategory == null || targetCategory.id == null) {
+      const String message = "削除対象のカテゴリが見つかりませんでした。";
+      state = state.copyWith(errorMessage: message);
+      return message;
+    }
+
+    final bool hasLinkedItems = state.items.any(
+      (InventoryItemViewData item) => item.categoryId == categoryId,
+    );
+
+    if (hasLinkedItems) {
+      const String message = "このカテゴリに紐づく在庫アイテムが存在するため削除できません。";
+      return message;
+    }
+
+    state = state.copyWith(isLoading: true, clearErrorMessage: true);
+
+    try {
+      await _inventoryService.deleteMaterialCategory(categoryId);
       await loadInventory();
       return null;
     } catch (error) {
