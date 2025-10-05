@@ -7,6 +7,7 @@ import "../../../core/logging/compat.dart" as log;
 import "../../menu/models/menu_model.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
+import "models/cart_snapshot.dart";
 import "order_calculation_service.dart";
 import "order_stock_service.dart";
 
@@ -99,8 +100,8 @@ class CartManagementService {
     }
   }
 
-  /// カートに商品を追加（戻り値: (OrderItem, 在庫充足フラグ)）
-  Future<(OrderItem?, bool)> addItemToCart(
+  /// カートに商品を追加し、最新のスナップショットを返却する。
+  Future<CartMutationResult> addItemToCart(
     String cartId,
     CartItemRequest request,
     String userId,
@@ -110,21 +111,19 @@ class CartManagementService {
     try {
       final Map<String, String> resolvedSelectedOptions =
           request.selectedOptions ?? <String, String>{};
-      // カートの存在確認
+
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      // メニューアイテムの取得
       final MenuItem? menuItem = await _menuItemRepository.getById(request.menuItemId);
       if (menuItem == null || menuItem.userId != userId) {
         log.e("Menu item access denied or menu item not found", tag: loggerComponent);
         throw Exception("Menu item ${request.menuItemId} not found");
       }
 
-      // 在庫確認
       log.d("Checking stock availability for menu item", tag: loggerComponent);
       final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
         request.menuItemId,
@@ -135,14 +134,15 @@ class CartManagementService {
         log.w("Stock insufficient for requested quantity", tag: loggerComponent);
       }
 
-      // 既存のアイテムがあるかチェック
       final OrderItem? existingItem = await _orderItemRepository.findExistingItem(
         cartId,
         request.menuItemId,
       );
 
+      OrderItem? mutationItem;
+      CartMutationKind mutationKind = CartMutationKind.add;
+
       if (existingItem != null) {
-        // 既存アイテムの数量を更新
         log.d("Updating existing cart item quantity", tag: loggerComponent);
         final int newQuantity = existingItem.quantity + request.quantity;
         final int newSubtotal = _orderCalculationService.calculateItemSubtotal(
@@ -159,18 +159,13 @@ class CartManagementService {
           updatePayload["selected_options"] = request.selectedOptions;
         }
 
-        final OrderItem? updatedItem = await _orderItemRepository.updateById(
-          existingItem.id!,
-          updatePayload,
-        );
-
-        // カート合計を更新
-        await _updateCartTotal(cartId);
-
-        log.i("Cart item quantity updated successfully", tag: loggerComponent);
-        return (updatedItem, isStockSufficient);
+        mutationItem =
+            await _orderItemRepository.updateById(existingItem.id!, updatePayload) ?? existingItem
+              ..quantity = newQuantity
+              ..subtotal = newSubtotal
+              ..specialRequest = request.specialRequest;
+        mutationKind = CartMutationKind.update;
       } else {
-        // 新しいアイテムを作成
         log.d("Creating new cart item", tag: loggerComponent);
         final int subtotal = _orderCalculationService.calculateItemSubtotal(
           menuItem.price,
@@ -189,22 +184,41 @@ class CartManagementService {
           userId: userId,
         );
 
-        final OrderItem? createdItem = await _orderItemRepository.create(orderItem);
-
-        // カート合計を更新
-        await _updateCartTotal(cartId);
-
-        log.i("New cart item created successfully", tag: loggerComponent);
-        return (createdItem, isStockSufficient);
+        mutationItem = await _orderItemRepository.create(orderItem);
+        mutationKind = CartMutationKind.add;
       }
+
+      final List<OrderItem> updatedItems = await _orderItemRepository.findByOrderId(cartId);
+      final Order? updatedCart = await _updateCartTotal(cartId, preloadedItems: updatedItems);
+
+      final CartSnapshotData? snapshot = await loadCartSnapshot(
+        cartId,
+        userId,
+        preloadOrder: updatedCart,
+        preloadItems: updatedItems,
+        preloadMenuItems: <MenuItem>[menuItem],
+      );
+
+      if (snapshot == null) {
+        throw Exception("Cart $cartId not found during snapshot assembly");
+      }
+
+      log.i("Cart item mutation completed", tag: loggerComponent);
+
+      return CartMutationResult(
+        kind: mutationKind,
+        snapshot: snapshot,
+        stockStatus: <String, bool>{request.menuItemId: isStockSufficient},
+        highlightMenuItemId: mutationItem?.menuItemId,
+      );
     } catch (e, stackTrace) {
       log.e("Failed to add item to cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
-  /// カート内商品の数量を更新
-  Future<(OrderItem?, bool)> updateCartItemQuantity(
+  /// カート内商品の数量を更新し、最新スナップショットを返却する。
+  Future<CartMutationResult> updateCartItemQuantity(
     String cartId,
     String orderItemId,
     int newQuantity,
@@ -218,7 +232,6 @@ class CartManagementService {
         throw Exception("Quantity must be greater than 0");
       }
 
-      // カートと注文アイテムの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
@@ -231,14 +244,12 @@ class CartManagementService {
         throw Exception("Order item $orderItemId not found in cart");
       }
 
-      // メニューアイテムの取得（価格情報のため）
       final MenuItem? menuItem = await _menuItemRepository.getById(orderItem.menuItemId);
       if (menuItem == null) {
         log.e("Menu item not found for order item", tag: loggerComponent);
         throw Exception("Menu item ${orderItem.menuItemId} not found");
       }
 
-      // 在庫確認
       log.d("Checking stock availability for updated quantity", tag: loggerComponent);
       final bool isStockSufficient = await _orderStockService.checkMenuItemStock(
         orderItem.menuItemId,
@@ -249,90 +260,138 @@ class CartManagementService {
         log.w("Stock insufficient for updated quantity", tag: loggerComponent);
       }
 
-      // 数量と小計を更新
       final int newSubtotal = _orderCalculationService.calculateItemSubtotal(
         menuItem.price,
         newQuantity,
       );
+
       final OrderItem? updatedItem = await _orderItemRepository.updateById(
         orderItemId,
         <String, dynamic>{"quantity": newQuantity, "subtotal": newSubtotal},
       );
 
-      // カート合計を更新
-      await _updateCartTotal(cartId);
+      final List<OrderItem> updatedItems = await _orderItemRepository.findByOrderId(cartId);
+      final Order? updatedCart = await _updateCartTotal(cartId, preloadedItems: updatedItems);
+
+      final CartSnapshotData? snapshot = await loadCartSnapshot(
+        cartId,
+        userId,
+        preloadOrder: updatedCart,
+        preloadItems: updatedItems,
+        preloadMenuItems: <MenuItem>[menuItem],
+      );
+
+      if (snapshot == null) {
+        throw Exception("Cart $cartId not found during snapshot assembly");
+      }
 
       log.i("Cart item quantity updated successfully", tag: loggerComponent);
-      return (updatedItem, isStockSufficient);
+
+      return CartMutationResult(
+        kind: CartMutationKind.update,
+        snapshot: snapshot,
+        stockStatus: <String, bool>{orderItem.menuItemId: isStockSufficient},
+        highlightMenuItemId: updatedItem?.menuItemId ?? orderItem.menuItemId,
+      );
     } catch (e, stackTrace) {
       log.e("Failed to update cart item quantity", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
 
-  /// カートから商品を削除
-  Future<bool> removeItemFromCart(String cartId, String orderItemId, String userId) async {
+  /// カートから商品を削除し、最新スナップショットを返却する。
+  Future<CartMutationResult> removeItemFromCart(
+    String cartId,
+    String orderItemId,
+    String userId,
+  ) async {
     log.i("Started removing item from cart", tag: loggerComponent);
 
     try {
-      // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      // 注文アイテムの存在確認
       final OrderItem? orderItem = await _orderItemRepository.getById(orderItemId);
       if (orderItem == null || orderItem.orderId != cartId) {
         log.e("Order item not found in cart", tag: loggerComponent);
         throw Exception("Order item $orderItemId not found in cart");
       }
 
-      // アイテムを削除
       await _orderItemRepository.deleteById(orderItemId);
 
-      // カート合計を更新
-      await _updateCartTotal(cartId);
+      final List<OrderItem> updatedItems = await _orderItemRepository.findByOrderId(cartId);
+      final Order? updatedCart = await _updateCartTotal(cartId, preloadedItems: updatedItems);
+
+      final CartSnapshotData? snapshot = await loadCartSnapshot(
+        cartId,
+        userId,
+        preloadOrder: updatedCart,
+        preloadItems: updatedItems,
+      );
+
+      if (snapshot == null) {
+        throw Exception("Cart $cartId not found during snapshot assembly");
+      }
 
       log.i("Cart item removed successfully", tag: loggerComponent);
-      return true;
+
+      return CartMutationResult(
+        kind: CartMutationKind.remove,
+        snapshot: snapshot,
+        highlightMenuItemId: null,
+      );
     } catch (e, stackTrace) {
       log.e("Failed to remove item from cart", tag: loggerComponent, error: e, st: stackTrace);
-      return false;
+      rethrow;
     }
   }
 
-  /// カートを空にする
-  Future<bool> clearCart(String cartId, String userId) async {
+  /// カートを空にし、最新スナップショットを返却する。
+  Future<CartMutationResult> clearCart(String cartId, String userId) async {
     log.i("Started clearing cart", tag: loggerComponent);
 
     try {
-      // カートの存在確認
       final Order? cart = await _orderRepository.getById(cartId);
       if (cart == null || cart.userId != userId) {
         log.e("Cart access denied or cart not found", tag: loggerComponent);
         throw Exception("Cart $cartId not found or access denied");
       }
 
-      // カート内の全アイテムを削除
-      final bool success = await _orderItemRepository.deleteByOrderId(cartId);
+      await _orderItemRepository.deleteByOrderId(cartId);
 
-      if (success) {
-        // カートの合計金額と備考をリセット
-        await _orderRepository.updateById(
-          cartId,
-          <String, dynamic>{
-            "total_amount": 0,
-            "notes": null,
-          },
-        );
-        log.i("Cart cleared successfully", tag: loggerComponent);
-      } else {
-        log.w("Failed to clear cart items", tag: loggerComponent);
+      final DateTime now = DateTime.now();
+      final Order? updated = await _orderRepository.updateById(cartId, <String, dynamic>{
+        "total_amount": 0,
+        "notes": null,
+        "updated_at": now.toIso8601String(),
+      });
+
+      final Order baseOrder = (updated ?? cart)!;
+      baseOrder
+        ..totalAmount = 0
+        ..notes = null;
+
+      final CartSnapshotData? snapshot = await loadCartSnapshot(
+        cartId,
+        userId,
+        preloadOrder: baseOrder,
+        preloadItems: const <OrderItem>[],
+      );
+
+      if (snapshot == null) {
+        throw Exception("Cart $cartId not found during snapshot assembly");
       }
 
-      return success;
+      log.i("Cart cleared successfully", tag: loggerComponent);
+
+      return CartMutationResult(
+        kind: CartMutationKind.clear,
+        snapshot: snapshot,
+        highlightMenuItemId: null,
+      );
     } catch (e, stackTrace) {
       log.e("Failed to clear cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
@@ -394,10 +453,70 @@ class CartManagementService {
     }
   }
 
-  /// カートの合計金額を更新
-  Future<void> _updateCartTotal(String cartId) async {
-    final int totalAmount = await _orderCalculationService.updateCartTotal(cartId);
-    await _orderRepository.updateById(cartId, <String, dynamic>{"total_amount": totalAmount});
+  /// カートのスナップショットを取得する。
+  Future<CartSnapshotData?> loadCartSnapshot(
+    String cartId,
+    String userId, {
+    Order? preloadOrder,
+    List<OrderItem>? preloadItems,
+    List<MenuItem>? preloadMenuItems,
+  }) async {
+    final Order? order = preloadOrder ?? await _orderRepository.getById(cartId);
+    if (order == null || order.userId != userId) {
+      log.w(
+        "Cart snapshot requested but cart not found or access denied",
+        tag: loggerComponent,
+        fields: <String, Object?>{"cartId": cartId, "userId": userId},
+      );
+      return null;
+    }
+
+    final List<OrderItem> orderItems =
+        preloadItems ?? await _orderItemRepository.findByOrderId(cartId);
+
+    final List<MenuItem> preloadMenus = preloadMenuItems ?? <MenuItem>[];
+    final Map<String, MenuItem> preloadIndex = <String, MenuItem>{
+      for (final MenuItem menu in preloadMenus)
+        if (menu.id != null) menu.id!: menu,
+    };
+
+    final Set<String> menuIds = <String>{for (final OrderItem item in orderItems) item.menuItemId};
+    final List<String> missingMenuIds = menuIds
+        .where((String id) => !preloadIndex.containsKey(id))
+        .toList();
+
+    final Map<String, MenuItem> menuIndex = <String, MenuItem>{...preloadIndex};
+
+    if (missingMenuIds.isNotEmpty) {
+      final List<MenuItem> fetchedMenus = await _menuItemRepository.findByIds(missingMenuIds);
+      for (final MenuItem menu in fetchedMenus) {
+        final String? id = menu.id;
+        if (id != null) {
+          menuIndex[id] = menu;
+        }
+      }
+    }
+
+    final List<MenuItem> menuItems = menuIndex.values.toList(growable: false);
+
+    return CartSnapshotData(order: order, orderItems: orderItems, menuItems: menuItems);
+  }
+
+  /// カートの合計金額を更新し、更新後のカートを返却する。
+  Future<Order?> _updateCartTotal(String cartId, {List<OrderItem>? preloadedItems}) async {
+    final int totalAmount = await _orderCalculationService.updateCartTotal(
+      cartId,
+      preloadedItems: preloadedItems,
+    );
+    final DateTime now = DateTime.now();
+    final Order? updated = await _orderRepository.updateById(cartId, <String, dynamic>{
+      "total_amount": totalAmount,
+      "updated_at": now.toIso8601String(),
+    });
+    if (updated != null) {
+      return updated;
+    }
+    return _orderRepository.getById(cartId);
   }
 
   Future<Order> _ensureCartHasDisplayCode(Order cart) async {

@@ -10,6 +10,7 @@ import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "../shared/order_status_mapper.dart";
 import "cart_management_service.dart";
+import "models/cart_snapshot.dart";
 import "order_calculation_service.dart";
 import "order_stock_service.dart";
 
@@ -26,8 +27,8 @@ class OrderManagementService {
        _orderItemRepository = orderItemRepository,
        _menuItemRepository = menuItemRepository,
        _orderCalculationService = orderCalculationService,
-    _orderStockService = orderStockService,
-    _cartManagementService = cartManagementService;
+       _orderStockService = orderStockService,
+       _cartManagementService = cartManagementService;
 
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
@@ -135,6 +136,7 @@ class OrderManagementService {
       final OrderCalculationResult calculation = await _orderCalculationService.calculateOrderTotal(
         cartId,
         discountAmount: request.discountAmount,
+        preloadedItems: cartItems,
       );
       final Order? recalculatedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
         "total_amount": calculation.totalAmount,
@@ -304,29 +306,40 @@ class OrderManagementService {
     log.d("Retrieving order with items", tag: loggerComponent);
 
     try {
-      final Order? order = await getOrderDetails(orderId, userId);
-      if (order == null) {
+      final CartSnapshotData? snapshot = await _cartManagementService.loadCartSnapshot(
+        orderId,
+        userId,
+      );
+
+      if (snapshot == null) {
         log.w("Order not found for order with items retrieval", tag: loggerComponent);
         return null;
       }
 
-      final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
+      final Map<String, MenuItem> menuIndex = <String, MenuItem>{
+        for (final MenuItem menu in snapshot.menuItems)
+          if (menu.id != null) menu.id!: menu,
+      };
 
-      log.d("Retrieved ${orderItems.length} order items", tag: loggerComponent);
+      final List<Map<String, dynamic>> itemsWithMenu = snapshot.orderItems
+          .map(
+            (OrderItem item) => <String, dynamic>{
+              "order_item": item,
+              "menu_item": menuIndex[item.menuItemId],
+            },
+          )
+          .toList(growable: false);
 
-      // メニューアイテム情報も含める
-      final List<Map<String, dynamic>> itemsWithMenu = <Map<String, dynamic>>[];
-      for (final OrderItem item in orderItems) {
-        final MenuItem? menuItem = await _menuItemRepository.getById(item.menuItemId);
-        itemsWithMenu.add(<String, dynamic>{"order_item": item, "menu_item": menuItem});
-      }
-
-      log.d("Order with items retrieval completed successfully", tag: loggerComponent);
+      log.d(
+        "Order with items retrieval completed successfully",
+        tag: loggerComponent,
+        fields: <String, Object?>{"items": snapshot.orderItems.length},
+      );
 
       return <String, dynamic>{
-        "order": order,
+        "order": snapshot.order,
         "items": itemsWithMenu,
-        "total_items": orderItems.length,
+        "total_items": snapshot.orderItems.length,
       };
     } catch (e, stackTrace) {
       log.e("Failed to retrieve order with items", tag: loggerComponent, error: e, st: stackTrace);
@@ -354,7 +367,7 @@ class OrderManagementService {
       final List<OrderStatus> normalizedStatuses = OrderStatusMapper.normalizeList(statuses);
       final List<Order> orders = await _orderRepository.findByStatusList(normalizedStatuses);
       final Map<OrderStatus, List<Order>> grouped = <OrderStatus, List<Order>>{
-        for (final OrderStatus status in normalizedStatuses) status: <Order>[]
+        for (final OrderStatus status in normalizedStatuses) status: <Order>[],
       };
 
       for (final Order order in orders) {
@@ -385,11 +398,7 @@ class OrderManagementService {
   }
 
   /// 注文ステータスを更新する。
-  Future<Order?> updateOrderStatus(
-    String orderId,
-    OrderStatus newStatus,
-    String userId,
-  ) async {
+  Future<Order?> updateOrderStatus(String orderId, OrderStatus newStatus, String userId) async {
     log.i(
       "Updating order status",
       tag: loggerComponent,

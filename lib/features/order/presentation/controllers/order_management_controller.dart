@@ -13,6 +13,7 @@ import "../../../menu/services/menu_service.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../services/cart_service.dart";
+import "../../services/models/cart_snapshot.dart";
 import "../../services/order_service.dart";
 import "../performance/order_management_tracing.dart";
 
@@ -620,7 +621,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
       try {
         state = state.copyWith(clearErrorMessage: true);
-        await _traceAsyncSection<void>(
+        final CartMutationResult result = await _traceAsyncSection<CartMutationResult>(
           "addMenuItem.addItemToCart",
           () => _cartService.addItemToCart(
             cartId,
@@ -630,8 +631,11 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           startArguments: () => <String, dynamic>{"cartId": cartId, "menuItemId": menuItemId},
           logThreshold: const Duration(milliseconds: 4),
         );
-        await _refreshCart(cartId, userId);
-        _triggerHighlight(menuItemId);
+        _applyCartMutationResult(result);
+        final String? highlightTarget = result.highlightMenuItemId ?? menuItemId;
+        if (highlightTarget != null) {
+          _triggerHighlight(highlightTarget);
+        }
       } catch (error) {
         final String message = ErrorHandler.instance.handleError(error);
         state = state.copyWith(errorMessage: message);
@@ -676,15 +680,16 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
         try {
           state = state.copyWith(clearErrorMessage: true);
+          late final CartMutationResult result;
           if (quantity <= 0) {
-            await _traceAsyncSection<void>(
+            result = await _traceAsyncSection<CartMutationResult>(
               "updateItemQuantity.removeItemFromCart",
               () => _cartService.removeItemFromCart(cartId, orderItemId, userId),
               startArguments: () => <String, dynamic>{"cartId": cartId, "orderItemId": orderItemId},
               logThreshold: const Duration(milliseconds: 4),
             );
           } else {
-            await _traceAsyncSection<void>(
+            result = await _traceAsyncSection<CartMutationResult>(
               "updateItemQuantity.updateCartItemQuantity",
               () => _cartService.updateCartItemQuantity(cartId, orderItemId, quantity, userId),
               startArguments: () => <String, dynamic>{
@@ -695,9 +700,15 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
               logThreshold: const Duration(milliseconds: 4),
             );
           }
-          await _refreshCart(cartId, userId);
+          _applyCartMutationResult(result);
+
           if (quantity > 0) {
-            _triggerHighlight(menuItemId);
+            final String? highlightTarget = result.highlightMenuItemId ?? menuItemId;
+            if (highlightTarget != null) {
+              _triggerHighlight(highlightTarget);
+            }
+          } else if (state.highlightedItemId == menuItemId) {
+            state = state.copyWith(clearHighlightedItemId: true);
           }
         } catch (error) {
           final String message = ErrorHandler.instance.handleError(error);
@@ -745,13 +756,13 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
       try {
         state = state.copyWith(clearErrorMessage: true);
-        await _traceAsyncSection<void>(
+        final CartMutationResult result = await _traceAsyncSection<CartMutationResult>(
           "removeItem.cartService",
           () => _cartService.removeItemFromCart(cartId, orderItemId, userId),
           startArguments: () => <String, dynamic>{"cartId": cartId, "orderItemId": orderItemId},
           logThreshold: const Duration(milliseconds: 4),
         );
-        await _refreshCart(cartId, userId);
+        _applyCartMutationResult(result);
         if (state.highlightedItemId == menuItemId) {
           state = state.copyWith(clearHighlightedItemId: true);
         }
@@ -892,8 +903,8 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
     try {
       state = state.copyWith(clearErrorMessage: true, orderNotes: "");
-      await _cartService.clearCart(cartId, userId);
-      await _refreshCart(cartId, userId);
+      final CartMutationResult result = await _cartService.clearCart(cartId, userId);
+      _applyCartMutationResult(result);
       state = state.copyWith(clearHighlightedItemId: true);
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
@@ -1011,6 +1022,103 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     );
   }
 
+  _CartSnapshot _buildCartSnapshotFromData(CartSnapshotData data) {
+    int missingMenuCount = 0;
+
+    return _traceSyncSection<_CartSnapshot>(
+      "cartMutation.buildSnapshot",
+      () {
+        for (final MenuItem menuItem in data.menuItems) {
+          final MenuItemViewData? mapped = _mapMenuItem(menuItem);
+          if (mapped != null) {
+            _menuItemCache[mapped.id] = mapped;
+          }
+        }
+
+        final List<CartItemViewData> items = <CartItemViewData>[];
+        for (final OrderItem orderItem in data.orderItems) {
+          MenuItemViewData? menuView = _menuItemCache[orderItem.menuItemId];
+          if (menuView == null) {
+            missingMenuCount++;
+            continue;
+          }
+          items.add(
+            CartItemViewData(
+              menuItem: menuView,
+              quantity: orderItem.quantity,
+              orderItemId: orderItem.id,
+              selectedOptions: orderItem.selectedOptions,
+              notes: orderItem.specialRequest,
+            ),
+          );
+        }
+
+        return _CartSnapshot(
+          items: items,
+          orderNumber: data.order.orderNumber,
+          discountAmount: data.order.discountAmount,
+          paymentMethod: data.order.paymentMethod,
+          cartId: data.order.id,
+          orderNotes: data.order.notes,
+        );
+      },
+      startArguments: () => <String, dynamic>{
+        "orderId": data.order.id,
+        "items": data.orderItems.length,
+      },
+      finishArguments: () => <String, dynamic>{
+        "mapped": data.orderItems.length - missingMenuCount,
+        "missing": missingMenuCount,
+      },
+      logThreshold: const Duration(milliseconds: 2),
+    );
+  }
+
+  void _applyCartSnapshot(_CartSnapshot snapshot) {
+    int menuCount = 0;
+    final List<MenuItemViewData> menuView = _traceSyncSection<List<MenuItemViewData>>(
+      "refreshCart.sortMenu",
+      () {
+        final List<MenuItemViewData> list = _menuItemCache.values.toList()
+          ..sort(
+            (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
+          );
+        menuCount = list.length;
+        return list;
+      },
+      startArguments: () => <String, dynamic>{"cacheSize": _menuItemCache.length},
+      finishArguments: () => <String, dynamic>{"menuCount": menuCount},
+      logThreshold: const Duration(milliseconds: 2),
+    );
+
+    state = state.copyWith(
+      cartItems: snapshot.items,
+      menuItems: menuView,
+      currentPaymentMethod: snapshot.paymentMethod ?? state.currentPaymentMethod,
+      orderNumber: snapshot.orderNumber ?? state.orderNumber,
+      discountAmount: snapshot.discountAmount ?? state.discountAmount,
+      cartId: snapshot.cartId ?? state.cartId,
+      orderNotes: snapshot.orderNotes ?? state.orderNotes,
+      clearErrorMessage: true,
+    );
+
+    _logPerfLazy(
+      () =>
+          "cartSnapshot.applied cartId=${snapshot.cartId ?? state.cartId} items=${snapshot.items.length} menu=$menuCount",
+    );
+  }
+
+  void _applyCartMutationResult(CartMutationResult result) {
+    final _CartSnapshot snapshot = _buildCartSnapshotFromData(result.snapshot);
+    _applyCartSnapshot(snapshot);
+
+    if (result.hasStockIssue) {
+      state = state.copyWith(
+        errorMessage: state.errorMessage ?? "在庫が不足している商品があります。数量を調整して再度お試しください。",
+      );
+    }
+  }
+
   Future<_CartSnapshot> _loadCartSnapshot(String cartId, String userId) async =>
       _traceAsyncSection<_CartSnapshot>("loadCartSnapshot", () async {
         try {
@@ -1084,47 +1192,15 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         }
       }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
 
-  Future<void> _refreshCart(
-    String cartId,
-    String userId,
-  ) async => _traceAsyncSection<void>("refreshCart", () async {
-    final _CartSnapshot snapshot = await _traceAsyncSection<_CartSnapshot>(
-      "refreshCart.loadCartSnapshot",
-      () => _loadCartSnapshot(cartId, userId),
-      startArguments: () => <String, dynamic>{"cartId": cartId},
-    );
-    int menuCount = 0;
-    final List<MenuItemViewData> menuView = _traceSyncSection<List<MenuItemViewData>>(
-      "refreshCart.sortMenu",
-      () {
-        final List<MenuItemViewData> list = _menuItemCache.values.toList()
-          ..sort(
-            (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
-          );
-        menuCount = list.length;
-        return list;
-      },
-      startArguments: () => <String, dynamic>{"cacheSize": _menuItemCache.length},
-      finishArguments: () => <String, dynamic>{"menuCount": menuCount},
-      logThreshold: const Duration(milliseconds: 2),
-    );
-
-    state = state.copyWith(
-      cartItems: snapshot.items,
-      menuItems: menuView,
-      currentPaymentMethod: snapshot.paymentMethod ?? state.currentPaymentMethod,
-      orderNumber: snapshot.orderNumber ?? state.orderNumber,
-      discountAmount: snapshot.discountAmount ?? state.discountAmount,
-      cartId: snapshot.cartId ?? state.cartId,
-      orderNotes: snapshot.orderNotes ?? state.orderNotes,
-      clearErrorMessage: true,
-    );
-
-    _logPerfLazy(
-      () =>
-          "refreshCart.completed cartId=${snapshot.cartId ?? cartId} items=${snapshot.items.length} menu=$menuCount",
-    );
-  }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
+  Future<void> _refreshCart(String cartId, String userId) async =>
+      _traceAsyncSection<void>("refreshCart", () async {
+        final _CartSnapshot snapshot = await _traceAsyncSection<_CartSnapshot>(
+          "refreshCart.loadCartSnapshot",
+          () => _loadCartSnapshot(cartId, userId),
+          startArguments: () => <String, dynamic>{"cartId": cartId},
+        );
+        _applyCartSnapshot(snapshot);
+      }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。
