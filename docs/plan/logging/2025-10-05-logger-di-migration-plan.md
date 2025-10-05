@@ -40,6 +40,12 @@
 5. `FakeLogger` とユニットテストサンプルを追加し、`README` やガイドにリンク。
 6. `compat.dart` に `@Deprecated('Use LoggerContract via DI')` を付与し、削除期限を TODO コメントで明記。
 
+## 実施状況メモ (2025-10-05)
+- Service / Repository 層からの `core/logging/compat.dart` 依存を全廃。
+- `loggerProvider` 経由の Riverpod DI に統一し、`OrderCalculationService` テストで override + ログ検証例を追加。
+- `FakeLogger` を `test/support/logging/fake_logger.dart` として整備。
+- `compat.dart` を `@Deprecated` 化し、11月以降での削除予定を TODO コメントで明示。
+
 ## 検証計画
 - `flutter analyze` で型エラー/未使用 import を確認。
 - 代表的なサービステスト（例: `menu_service_test.dart`）で `FakeLogger` を注入し、ログ検証が通ることを確認。
