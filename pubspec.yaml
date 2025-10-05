@@ -38,13 +38,13 @@ dev_dependencies:
   very_good_analysis: ^9.0.0
   custom_lint: ^0.7.5
   riverpod_generator: ^2.6.5
+  mocktail: ^1.0.3
   riverpod_lint: ^2.6.5
   json_serializable: ^6.8.0
   build_runner: ^2.5.4
   integration_test:
     sdk: flutter
 
-  mocktail: any
   test: any
 flutter:
   uses-material-design: true
