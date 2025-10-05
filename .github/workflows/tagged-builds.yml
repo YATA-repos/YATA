@@ -18,7 +18,7 @@ jobs:
             artifact-name: yata-linux-bundle
           - os: windows-latest
             build-target: windows
-            artifact-path: build/windows/runner/Release
+            artifact-path: build/windows/x64/runner/Release
             artifact-name: yata-windows-runner
     defaults:
       run:
