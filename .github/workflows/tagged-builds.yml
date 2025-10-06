@@ -1,17 +1,14 @@
 name: Build and Release (Tagged)
 
-# タグがpushされたときにトリガー（例: v1.0.0）
 on:
   push:
     tags:
       - 'v*.*.*'
 
-# GitHub Releaseの作成に必要な権限
 permissions:
   contents: write
 
 jobs:
-  # 各プラットフォーム向けにビルドを並行実行
   build-platforms:
     name: Build ${{ matrix.build-target }} bundle
     runs-on: ${{ matrix.os }}
@@ -24,7 +21,8 @@ jobs:
             artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
-            artifact-path: build/windows/x64/runner/**
+            # ⬇️ Windows のアップロードは Release 配下に限定
+            artifact-path: build/windows/x64/runner/Release/**
             artifact-name: yata-windows-runner
     defaults:
       run:
@@ -98,11 +96,11 @@ jobs:
             fi
           done
 
-      - name: Enable desktop target
+      - name: Enable desktop target (Linux)
         if: matrix.build-target == 'linux'
         run: flutter config --enable-linux-desktop
 
-      - name: Enable desktop target
+      - name: Enable desktop target (Windows)
         if: matrix.build-target == 'windows'
         run: flutter config --enable-windows-desktop
 
@@ -118,8 +116,9 @@ jobs:
       - name: Generate code with build_runner
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
+      # ⬇️ .env をコンパイル時注入
       - name: Build release bundle
-        run: flutter build ${{ matrix.build-target }} --release
+        run: flutter build ${{ matrix.build-target }} --release --dart-define-from-file=.env
 
       - name: Package Linux AppImage
         if: matrix.build-target == 'linux'
@@ -187,7 +186,6 @@ jobs:
           path: ${{ matrix.artifact-path }}
           if-no-files-found: error
 
-  # すべてのビルドが完了後、GitHub Releaseを作成
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
@@ -203,7 +201,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: yata-windows-runner
-          path: release-assets/windows/Release
+          # ⬇️ 末端に /Release を付けず、ここに展開
+          path: release-assets/windows
 
       - name: Prepare release assets
         run: |
@@ -213,24 +212,33 @@ jobs:
           DIST_DIR="release-assets/dist"
           mkdir -p "$DIST_DIR"
 
+          # Linux
           LINUX_SRC="release-assets/linux/YATA-${TAG_NAME}.AppImage"
           LINUX_DEST="$DIST_DIR/YATA-${TAG_NAME}-linux.AppImage"
+          if [ ! -f "$LINUX_SRC" ]; then
+            echo "::error::Missing Linux AppImage: $LINUX_SRC"
+            ls -R release-assets/linux || true
+            exit 1
+          fi
           cp "$LINUX_SRC" "$LINUX_DEST"
 
+          # Windows（Release配下のみをアップロードしている想定）
           WINDOWS_DIR="release-assets/windows"
-          WINDOWS_SRC_DIR="$WINDOWS_DIR/Release"
           WINDOWS_ZIP="$DIST_DIR/YATA-${TAG_NAME}-windows.zip"
-          if [ ! -d "$WINDOWS_SRC_DIR" ]; then
-            echo "::error::Expected directory not found: $WINDOWS_SRC_DIR"
-            ls -R "$WINDOWS_DIR"
+          if [ ! -d "$WINDOWS_DIR" ]; then
+            echo "::error::Expected directory not found: $WINDOWS_DIR"
             exit 1
           fi
 
-          (cd "$WINDOWS_DIR" && zip -r "$WINDOWS_ZIP" "Release")
-
-          ANDROID_SRC="release-assets/android/YATA-${TAG_NAME}.apk"
-          ANDROID_DEST="$DIST_DIR/YATA-${TAG_NAME}-android.apk"
-          cp "$ANDROID_SRC" "$ANDROID_DEST"
+          # もし中身が単一サブディレクトリのみなら、その直下をzip化して階層を浅くする
+          SUBDIR_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          FILE_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')
+          if [ "$SUBDIR_COUNT" = "1" ] && [ "$FILE_COUNT" = "0" ]; then
+            SUBDIR="$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1)"
+            (cd "$SUBDIR" && zip -r "$WINDOWS_ZIP" .)
+          else
+            (cd "$WINDOWS_DIR" && zip -r "$WINDOWS_ZIP" .)
+          fi
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -242,6 +250,5 @@ jobs:
           files: |
             release-assets/dist/YATA-${{ github.ref_name }}-linux.AppImage
             release-assets/dist/YATA-${{ github.ref_name }}-windows.zip
-            release-assets/dist/YATA-${{ github.ref_name }}-android.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
