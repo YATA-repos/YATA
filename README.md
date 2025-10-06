@@ -60,6 +60,26 @@ flutter run
 2. `.env` の各項目を Supabase プロジェクトや運用環境に合わせて編集します。
 3. 値を更新したらアプリを再起動し、起動ログに `EnvValidator` のエラーが出ないことを確認してください。
 
+## リリース
+
+アプリケーションのリリースは、GitHub Actionsを使用して自動化されています。
+
+### リリースプロセス
+
+1. バージョンタグ（`v*.*.*` 形式）をpushすると、自動的にビルドが開始されます
+2. 以下のプラットフォーム向けに並行してビルドされます：
+   - **Linux**: AppImage形式
+   - **Windows**: ZIP圧縮された実行ファイル
+   - **Android**: APKファイル
+3. すべてのビルドが完了すると、GitHub Releaseが自動的に作成され、成果物が公開されます
+
+### リリースファイル
+
+各リリースには以下のファイルが含まれます：
+- `YATA-{version}-linux.AppImage` - Linux用AppImage
+- `YATA-{version}-windows.zip` - Windows用実行ファイル
+- `YATA-{version}-android.apk` - Android用APK
+
 ## ライセンス
 
 [MIT License](LICENSE.txt)
