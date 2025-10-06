@@ -21,7 +21,7 @@ jobs:
             artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
-            # ⬇️ Windows のアップロードは Release 配下に限定
+            # Windows は Release/ 配下のみをアップロード
             artifact-path: build/windows/x64/runner/Release/**
             artifact-name: yata-windows-runner
     defaults:
@@ -88,7 +88,6 @@ jobs:
             LOG_BACKPRESSURE
             ORDER_MANAGEMENT_PERF_TRACING
           )
-
           for key in "${optional[@]}"; do
             value="${!key:-}"
             if [ -n "$value" ]; then
@@ -116,12 +115,13 @@ jobs:
       - name: Generate code with build_runner
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      # ⬇️ .env をコンパイル時注入
+      # .env をコンパイル時注入
       - name: Build release bundle
         run: flutter build ${{ matrix.build-target }} --release --dart-define-from-file=.env
 
       - name: Package Linux AppImage
         if: matrix.build-target == 'linux'
+        shell: bash
         run: |
           set -euo pipefail
 
@@ -161,7 +161,6 @@ jobs:
           chmod +x appimagetool
 
           mkdir -p "$APPIMAGE_DIR"
-
           rm -f ./*.AppImage
 
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run "$APPDIR"
@@ -174,9 +173,7 @@ jobs:
 
           VERSION="${GITHUB_REF_NAME:-linux}"
           TARGET_APPIMAGE="$APPIMAGE_DIR/YATA-$VERSION.AppImage"
-
           mv "$GENERATED_APPIMAGE" "$TARGET_APPIMAGE"
-
           echo "AppImage created at $TARGET_APPIMAGE"
 
       - name: Upload artifact
@@ -201,18 +198,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: yata-windows-runner
-          # ⬇️ 末端に /Release を付けず、ここに展開
           path: release-assets/windows
 
       - name: Prepare release assets
+        shell: bash
         run: |
           set -euo pipefail
 
           TAG_NAME="${GITHUB_REF_NAME}"
           DIST_DIR="release-assets/dist"
           mkdir -p "$DIST_DIR"
+          ABS_DIST_DIR="$(pwd)/$DIST_DIR"
 
-          # Linux
+          # --- Linux ---
           LINUX_SRC="release-assets/linux/YATA-${TAG_NAME}.AppImage"
           LINUX_DEST="$DIST_DIR/YATA-${TAG_NAME}-linux.AppImage"
           if [ ! -f "$LINUX_SRC" ]; then
@@ -222,22 +220,24 @@ jobs:
           fi
           cp "$LINUX_SRC" "$LINUX_DEST"
 
-          # Windows（Release配下のみをアップロードしている想定）
+          # --- Windows ---
           WINDOWS_DIR="release-assets/windows"
-          WINDOWS_ZIP="$DIST_DIR/YATA-${TAG_NAME}-windows.zip"
           if [ ! -d "$WINDOWS_DIR" ]; then
             echo "::error::Expected directory not found: $WINDOWS_DIR"
             exit 1
           fi
 
-          # もし中身が単一サブディレクトリのみなら、その直下をzip化して階層を浅くする
+          ABS_WINDOWS_ZIP="$ABS_DIST_DIR/YATA-${TAG_NAME}-windows.zip"
+
+          # 中身が単一サブディレクトリのみかどうかで処理分岐
           SUBDIR_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
           FILE_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')
+
           if [ "$SUBDIR_COUNT" = "1" ] && [ "$FILE_COUNT" = "0" ]; then
             SUBDIR="$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1)"
-            (cd "$SUBDIR" && zip -r "$WINDOWS_ZIP" .)
+            (cd "$SUBDIR" && zip -r "$ABS_WINDOWS_ZIP" .)
           else
-            (cd "$WINDOWS_DIR" && zip -r "$WINDOWS_ZIP" .)
+            (cd "$WINDOWS_DIR" && zip -r "$ABS_WINDOWS_ZIP" .)
           fi
 
       - name: Publish release
