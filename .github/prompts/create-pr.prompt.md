@@ -1,58 +1,198 @@
 ---
 mode: agent
 ---
-# 最後のマージから現在までのコミットを分析してPull Requestを作成するコマンド
+# 最後のマージ以降のコミットを安全に分析し、要点を整理して Pull Request を作成する
 
-あなたは明晰な判断力を持つ熟練開発者です。現在、最後のマージ（バージョン）から複数のコミットが蓄積されています。
+あなたは明晰な判断力を持つ熟練開発者です。  
+`.github/instructions/general.instructions.md` が存在する場合は**最優先**でそれに従い、存在しない場合は本書の既定ポリシーにフォールバックして、**最後のマージ（= ベースブランチへの未取り込み差分）以降のコミット**を分析し、英語で分かりやすい Pull Request（以下 PR）を作成します。
 
-`.github/instructions/general.instructions.md` のガイドラインに従い、以下のタスクを遂行してください。
+> **範囲の定義（重要）**  
+> 以後「最後のマージから現在まで」とは、**ベースブランチ `<base>` に対する `<base>..HEAD` の到達可能コミット**を指します。  
+> ベースブランチはガイドラインが指定するものを優先し、無ければリモート既定ブランチ（`gh repo view` 等で取得）を `<base>` とします。
 
-**think hard:タスク: 最後のマージから現在までのコミットメッセージを分析し、適切なPull Requestを作成する。**
+---
 
-**実行手順:**
+## 0) ハードチェック（満たせない場合は即時中断して報告）
 
-1. **前提条件の確認**:
-    以下のツールが使用可能であることを確認してください。使用不可能な場合は操作を中止し、ユーザーに対応を求めてください。
-    * `git --version` でGitの動作確認
-    * `gh --version` でGitHub CLIの動作確認
-    * MCP Discord機能の動作確認
+1. **ツール存在**
+   - 必須: `git --version`
+   - 推奨: `gh --version`（PR 作成に使用）
+   - 任意: `jq --version`（JSON 取得に便利）
 
-2. **コミット履歴の分析**:
-    まず `git log` を実行し、最後のマージコミットから現在までのコミット履歴を取得してください。
-    * `git log --oneline --since="last merge"` や `git log --oneline main..HEAD` などを使用してコミット範囲を特定します。
-    * 各コミットメッセージを詳細に分析し、変更内容の全体像を把握してください。
+2. **認証・個人情報（Git/GitHub）**
+   - `git config --get user.name` / `git config --get user.email` が設定済み。
+   - `gh` がある場合は `gh auth status` が通ること（未認証なら**作成を行わず中断**し、対応を促す）。
 
-3. **変更内容の分類と要約**:
-    取得したコミットメッセージを `.github/instructions/general.instructions.md` に記載のコミットタイプ (`feat`, `fix`, `refactor` など) に基づいて分類し、以下の観点で整理してください:
-    * **新機能 (feat)**: 追加された機能とその概要
-    * **バグ修正 (fix)**: 修正された問題とその内容
-    * **リファクタリング (refactor)**: 改善されたコードの構造や品質
-    * **ドキュメント (docs)**: 更新された文書やコメント
-    * **その他**: スタイル、テスト、CI/CDなどの変更
+3. **リポジトリ状態**
+   - Git 管理配下: `git rev-parse --is-inside-work-tree`
+   - 進行中の危険状態が**ない**こと（見つけたら**中断**）:
+     - merge（`.git/MERGE_HEAD` 等）、rebase（`.git/rebase-apply/` 等）、cherry-pick、bisect
 
-4. **PR内容の構成**:
-    分析した内容を基に、以下の構造で**英語**のPull Requestの内容を作成してください:
-    * **タイトル**: 変更の主要な内容を簡潔に表現（英語）
-    * **概要**: 今回の変更の目的と背景（英語）
-    * **変更内容**: 分類した変更を箇条書きで詳細に記述（英語）
-    * **影響範囲**: 変更が及ぼす可能性のある影響（英語）
-    * **テスト**: 実施したテストや確認事項（英語）
-    * **備考**: 追加で考慮すべき事項やレビュー観点（英語）
+4. **MCP Discord 機能**
+   - 要求がある場合のみ確認。未利用/未設定であれば**続行に必須ではない**（通知が必要なら後述のポスト手順をスキップ）。
 
-5. **Pull Requestの作成**:
-    GitHub CLI (`gh`) を使用してPull Requestを作成してください:
-    * `gh pr create --title "タイトル" --body "本文"`
-    * または、適切なテンプレートがある場合はそれを使用してください
+---
 
-**今回限定の特記事項**:
+## 1) ガイドライン読み込みと既定ポリシー
+
+- `.github/instructions/general.instructions.md` が存在する場合:
+  - **コミットタイプ、PR テンプレート、タイトル規約、ラベル運用、レビュー方針**等を読み取って反映。
+- ガイドライン不在時の既定:
+  - **コミット規約（解析用）**: Conventional Commits 1.0.0  
+    `type(scope)!?: subject`
+  - **分類**: `feat / fix / refactor / perf / docs / test / build / ci / style / chore / revert / others`
+  - **PR タイトル**: `"[<type-summary>] <concise summary of changes>"`（72 文字以内、英語）
+  - **PR 本文セクション**: Summary / Changes / Impact / Testing / Notes / Links
+
+> 既定ポリシー下では、`main`/`master` 直 PR は避け、ガイドラインのベースに合わせます。
+
+---
+
+## 2) ベースブランチと差分範囲の決定
+
+1. **ベースブランチ `<base>` の決定**
+   - ガイドラインが指定: それを採用  
+   - それ以外: `gh repo view --json defaultBranchRef --jq .defaultBranchRef.name` が得られればそれを採用  
+   - 取得不能時: `main` → `master` の順で存在確認し採用
+
+2. **差分範囲**
+   - 解析対象: `<base>..HEAD`（**no-merges は指定しない**。マージコミットも説明対象）
+   - 最新を取得: `git fetch --prune`（安全な場合のみ）
+
+3. **前提の健全性**
+   - 変更ゼロ: `git log --oneline <base>..HEAD` が空なら、「差分なし」と出力して終了
+   - 未追跡のローカルコミットのみでリモート追跡がない場合、PR 作成の前に**現在ブランチを `git push -u origin <branch>`**（失敗時は中断）
+
+---
+
+## 3) コミット履歴の解析と分類
+
+1. **取得**
+   - `git log --pretty=format:"%H|%s" <base>..HEAD` で `hash|subject` を一覧化
+   - 必要に応じて本文: `git log --pretty=format:"%H%n%B%n---" <base>..HEAD`
+
+2. **分類規則（ヒューリスティクス）**
+   - Conventional header を優先: 先頭 `type(scope)!?:` から `type` を抽出
+   - 該当なし・曖昧: ファイルパスや語彙で補助判定（例: docs→docs、test→test、ci→.github/workflows、build→依存/設定 等）
+   - `BREAKING CHANGE:` または `type!:` を **Breaking** として別途フラグ
+   - `Closes|Fixes #\d+` をリンクとして抽出
+
+3. **要約構築**
+   - 各 `type` ごとに箇条書き（`scope` と `subject` を短縮、72 文字以内）
+   - 代表的な変更/広範囲変更は先頭に
+   - コミット数が多い場合（例: > 30）は、重複/微小変更は「その他」の合算項目に集約
+
+---
+
+## 4) PR 内容の構成（英語）
+
+- **Title**（72 chars within; imperative, neutral）
+  - 例: `[feat|fix|refactor] Consolidated changes since last merge`
+- **Body**（Markdown）
+```
+
+## Summary
+
+Concise overview of what changed since the last merge into <base>.
+
+## Changes by Type
+
+### Features
+
+* <scope>: <subject>
+* ...
+
+### Fixes
+
+* ...
+
+### Refactors
+
+* ...
+
+### Docs / Tests / CI / Build / Others
+
+* ...
+
+## Impact
+
+* <user-visible effects, risk level, migration needs>
+* <BREAKING if any>
+
+## Testing
+
+* <test suites executed, manual checks, environments>
+* <links to CI runs if available>
+
+## Notes
+
+* <known limitations, follow-ups, rollout plan>
+
+## Links
+
+* Related issues: #123, #456
+* Related PRs: <links if any>
+
+```
+- ガイドラインに PR テンプレートがあれば `--template` 優先。本文はテンプレに沿って再配置。
+
+---
+
+## 5) ラベル・レビュアー・メタ情報
+
+- **ラベル**（ガイドライン優先、無ければ代表タイプ/リスクに合わせて付与）
+- 例: `feature`, `fix`, `refactor`, `breaking-change`, `needs-review`, `chore`
+- **レビュアー**
+- `.github/CODEOWNERS` があれば該当パスの所有者を優先（自動指定できない場合は本文末尾に明記）
+- **マイルストーン/プロジェクト**
+- 既存設定が明示されている場合のみ設定（勝手に新規作成しない）
+
+---
+
+## 6) 既存 PR の重複/更新判定（強制）
+
+1. **同一ブランチの PR 有無**
+ - `gh pr list --state open --head "$(git rev-parse --abbrev-ref HEAD)" --limit 50`
+ - 既存があれば **新規作成しない**。本文とタイトルを更新（`gh pr edit`）し、コメントで追記。
+2. **近似重複**
+ - タイトル/ラベル/ベースが近い PR が複数ある場合は本文に関連 PR を列挙して重複を回避。
+
+---
+
+## 7) PR の作成（または更新）
+
+1. **タイトル/本文の生成**（英語・中立・自己宣伝禁止）
+2. **作成**
+ - 新規: `gh pr create --base "<base>" --title "<TITLE>" --body "<BODY or --body-file>"`  
+   テンプレあり: `--template "<name>"` を使用
+3. **サイズ・安定性ガード**
+ - 変更行数が非常に多い/テスト未実行・失敗時は **Draft PR** として作成（`--draft`）
+4. **更新**
+ - 既存 PR の場合は `gh pr edit --title ... --body ...` で上書きし、差分要約をコメントに追記
+
+---
+
+## 8) 出力・レポート（常に実施）
+
+- 使用ポリシー（ガイドライン or 既定）、`<base>`、対象ブランチ、対象コミット数
+- 分類結果（type 別件数）、Breaking フラグ、リンク抽出（Closes/Fixes）
+- 作成/更新した PR の URL、付与ラベル、Draft かどうか
+- スキップ/中断理由（ツール欠如、認証失敗、差分なし、危険状態 等）
+
+---
+
+## 今回限定の特記事項
 
 ```markdown
 $ARGUMENTS
 ```
 
-**厳守しなさい**:
+---
 
-* 自己宣伝を含むPR内容を使用しないこと。(例: 「私の素晴らしい実装」、「このPRはClaudeによって生成されました」など)
-* 非感情的で、事実に基づいた中立的な表現を使用すること。
-* 変更内容は具体的かつ簡潔に記述すること。
-* レビュアーが理解しやすい構造と内容にすること。
+## 厳守事項（全体に優先）
+
+* **PR タイトル/本文/コメントはすべて英語**で記述すること。
+* **非感情的で事実に基づく中立的な表現**を用いること。
+* **自己宣伝の文言を含めない**こと（例: “generated by …” は不可）。
+* 変更内容は**具体的かつ簡潔**に記述し、レビュアーが追える構造にすること。
+* 既存 PR/Issue と競合・重複する場合、**統合・関連付け**を優先し、新規作成を乱立させないこと。
