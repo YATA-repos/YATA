@@ -144,6 +144,7 @@
 ## 11. 次のアクション
 1. Phase 0のデータ辞書作成と現行スキーマ棚卸 (オーナー: Data担当)
 2. ExportService API設計レビュー (オーナー: Backendリード)
+   - API契約まとめ: `docs/reference/export/export_service_api.md`
 3. Flutter UIモック作成 & デザインレビュー (オーナー: モバイル担当)
 4. Supabase RPCプロトタイプで売上明細CSVを試作 (オーナー: Backendリード)
 5. セキュリティ・権限レビューをSecurity WGに依頼
