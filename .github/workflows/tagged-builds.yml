@@ -1,14 +1,17 @@
 name: Build and Release (Tagged)
 
+# タグがpushされたときにトリガー（例: v1.0.0）
 on:
   push:
     tags:
       - 'v*.*.*'
 
+# GitHub Releaseの作成に必要な権限
 permissions:
   contents: write
 
 jobs:
+  # 各プラットフォーム向けにビルドを並行実行
   build-platforms:
     name: Build ${{ matrix.build-target }} bundle
     runs-on: ${{ matrix.os }}
@@ -205,6 +208,7 @@ jobs:
           path: ${{ matrix.artifact-path }}
           if-no-files-found: error
 
+  # すべてのビルドが完了後、GitHub Releaseを作成
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
