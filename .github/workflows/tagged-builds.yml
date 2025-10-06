@@ -21,7 +21,7 @@ jobs:
             artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
-            # Windows は Release/ 配下のみをアップロード
+            # Windows は Release/ 配下のみアップロード
             artifact-path: build/windows/x64/runner/Release/**
             artifact-name: yata-windows-runner
     defaults:
@@ -88,6 +88,7 @@ jobs:
             LOG_BACKPRESSURE
             ORDER_MANAGEMENT_PERF_TRACING
           )
+
           for key in "${optional[@]}"; do
             value="${!key:-}"
             if [ -n "$value" ]; then
@@ -115,7 +116,7 @@ jobs:
       - name: Generate code with build_runner
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      # .env をコンパイル時注入
+      # .env をビルド時に注入
       - name: Build release bundle
         run: flutter build ${{ matrix.build-target }} --release --dart-define-from-file=.env
 
@@ -183,10 +184,85 @@ jobs:
           path: ${{ matrix.artifact-path }}
           if-no-files-found: error
 
+  # 🧩 追加：Windows インストーラー生成（Inno Setup）
+  windows-installer:
+    name: Build Windows Installer (Inno Setup)
+    runs-on: windows-latest
+    needs: build-platforms
+    steps:
+      - name: Download Windows runner artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: yata-windows-runner
+          path: installer/workdir
+
+      - name: Show downloaded tree
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse installer | ForEach-Object FullName
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y
+          $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+            throw "ISCC (Inno Setup) not found in PATH after installation."
+          }
+
+      - name: Write Inno Setup script
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path installer\out | Out-Null
+          @"
+#define AppVersion GetStringDef("AppVersion", "0.0.0")
+[Setup]
+AppId={{1B9A9E73-4C46-4E3A-9D9E-3A7F8EACB001}
+AppName=YATA
+AppVersion={#AppVersion}
+DefaultDirName={pf}\YATA
+DefaultGroupName=YATA
+DisableProgramGroupPage=yes
+OutputDir=installer\out
+OutputBaseFilename=YATA-{#AppVersion}-setup
+Compression=lzma
+SolidCompression=yes
+ArchitecturesInstallIn64BitMode=x64
+WizardStyle=modern
+
+[Files]
+Source: "installer\workdir\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+[Tasks]
+Name: "desktopicon"; Description: "デスクトップにショートカットを作成"; GroupDescription: "追加のアイコン:"; Flags: checkedonce
+
+[Icons]
+Name: "{autoprograms}\YATA"; Filename: "{app}\yata.exe"
+Name: "{autodesktop}\YATA"; Filename: "{app}\yata.exe"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\yata.exe"; Description: "YATA を起動"; Flags: nowait postinstall skipifsilent
+"@ | Set-Content -Path installer\YATA.iss -Encoding UTF8
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = (Get-Command iscc).Source
+          & $iscc /Qp /DAppVersion="$env:GITHUB_REF_NAME" installer\YATA.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed." }
+          Get-ChildItem installer\out\*.exe | ForEach-Object FullName
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yata-windows-installer
+          path: installer\out\YATA-${{ github.ref_name }}-setup.exe
+          if-no-files-found: error
+
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: build-platforms
+    needs: [build-platforms, windows-installer]
     steps:
       - name: Download Linux artifact
         uses: actions/download-artifact@v4
@@ -194,11 +270,17 @@ jobs:
           name: yata-linux-appimage
           path: release-assets/linux
 
-      - name: Download Windows artifact
+      - name: Download Windows zip source
         uses: actions/download-artifact@v4
         with:
           name: yata-windows-runner
           path: release-assets/windows
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: yata-windows-installer
+          path: release-assets/windows-installer
 
       - name: Prepare release assets
         shell: bash
@@ -210,35 +292,30 @@ jobs:
           mkdir -p "$DIST_DIR"
           ABS_DIST_DIR="$(pwd)/$DIST_DIR"
 
-          # --- Linux ---
+          # --- Linux AppImage ---
           LINUX_SRC="release-assets/linux/YATA-${TAG_NAME}.AppImage"
           LINUX_DEST="$DIST_DIR/YATA-${TAG_NAME}-linux.AppImage"
-          if [ ! -f "$LINUX_SRC" ]; then
-            echo "::error::Missing Linux AppImage: $LINUX_SRC"
-            ls -R release-assets/linux || true
-            exit 1
-          fi
+          [ -f "$LINUX_SRC" ] || { echo "::error::Missing Linux AppImage: $LINUX_SRC"; ls -R release-assets/linux || true; exit 1; }
           cp "$LINUX_SRC" "$LINUX_DEST"
 
-          # --- Windows ---
+          # --- Windows ZIP（ポータブル）---
           WINDOWS_DIR="release-assets/windows"
-          if [ ! -d "$WINDOWS_DIR" ]; then
-            echo "::error::Expected directory not found: $WINDOWS_DIR"
-            exit 1
-          fi
-
+          [ -d "$WINDOWS_DIR" ] || { echo "::error::Missing Windows dir: $WINDOWS_DIR"; exit 1; }
           ABS_WINDOWS_ZIP="$ABS_DIST_DIR/YATA-${TAG_NAME}-windows.zip"
-
-          # 中身が単一サブディレクトリのみかどうかで処理分岐
           SUBDIR_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
           FILE_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')
-
           if [ "$SUBDIR_COUNT" = "1" ] && [ "$FILE_COUNT" = "0" ]; then
             SUBDIR="$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1)"
             (cd "$SUBDIR" && zip -r "$ABS_WINDOWS_ZIP" .)
           else
             (cd "$WINDOWS_DIR" && zip -r "$ABS_WINDOWS_ZIP" .)
           fi
+
+          # --- Windows Installer（Setup.exe）---
+          INSTALLER_SRC="release-assets/windows-installer/YATA-${TAG_NAME}-setup.exe"
+          INSTALLER_DEST="$DIST_DIR/YATA-${TAG_NAME}-windows-setup.exe"
+          [ -f "$INSTALLER_SRC" ] || { echo "::error::Missing Installer: $INSTALLER_SRC"; ls -R release-assets/windows-installer || true; exit 1; }
+          cp "$INSTALLER_SRC" "$INSTALLER_DEST"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -250,5 +327,6 @@ jobs:
           files: |
             release-assets/dist/YATA-${{ github.ref_name }}-linux.AppImage
             release-assets/dist/YATA-${{ github.ref_name }}-windows.zip
+            release-assets/dist/YATA-${{ github.ref_name }}-windows-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
