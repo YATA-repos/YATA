@@ -17,7 +17,7 @@ jobs:
         include:
           - os: ubuntu-latest
             build-target: linux
-            artifact-path: build/linux/x64/release/appimage/YATA-${{ github.ref_name }}.AppImage
+            artifact-path: build/linux/x64/release/appimage/*.AppImage
             artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
@@ -326,7 +326,7 @@ jobs:
             '[Run]'
             'Filename: "{app}\yata.exe"; Description: "YATA を起動"; Flags: nowait postinstall skipifsilent'
           )
-          $lines | Set-Content -Path installer\YATA.iss -Encoding UTF8
+          $lines | Set-Content -Path installer\YATA.iss -Encoding UTF8BOM
 
       - name: Compile installer
         shell: pwsh
@@ -344,7 +344,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: yata-windows-installer
-          path: installer\out\YATA-${{ github.ref_name }}-setup.exe
+          path: installer\out\*.exe
           if-no-files-found: error
 
   publish-release:
@@ -381,10 +381,14 @@ jobs:
           ABS_DIST_DIR="$(pwd)/$DIST_DIR"
 
           # --- Linux AppImage ---
-          LINUX_SRC="release-assets/linux/YATA-${TAG_NAME}.AppImage"
+          LINUX_APPIMAGE="$(find release-assets/linux -name '*.AppImage' -type f | head -n 1)"
+          if [ -z "$LINUX_APPIMAGE" ]; then
+            echo "::error::No AppImage found in release-assets/linux"
+            ls -R release-assets/linux || true
+            exit 1
+          fi
           LINUX_DEST="$DIST_DIR/YATA-${TAG_NAME}-linux.AppImage"
-          [ -f "$LINUX_SRC" ] || { echo "::error::Missing Linux AppImage: $LINUX_SRC"; ls -R release-assets/linux || true; exit 1; }
-          cp "$LINUX_SRC" "$LINUX_DEST"
+          cp "$LINUX_APPIMAGE" "$LINUX_DEST"
 
           # --- Windows ZIP（ポータブル）---
           WINDOWS_DIR="release-assets/windows"
@@ -400,10 +404,14 @@ jobs:
           fi
 
           # --- Windows Installer（Setup.exe）---
-          INSTALLER_SRC="release-assets/windows-installer/YATA-${TAG_NAME}-setup.exe"
+          INSTALLER_EXE="$(find release-assets/windows-installer -name '*.exe' -type f | head -n 1)"
+          if [ -z "$INSTALLER_EXE" ]; then
+            echo "::error::No installer exe found in release-assets/windows-installer"
+            ls -R release-assets/windows-installer || true
+            exit 1
+          fi
           INSTALLER_DEST="$DIST_DIR/YATA-${TAG_NAME}-windows-setup.exe"
-          [ -f "$INSTALLER_SRC" ] || { echo "::error::Missing Installer: $INSTALLER_SRC"; ls -R release-assets/windows-installer || true; exit 1; }
-          cp "$INSTALLER_SRC" "$INSTALLER_DEST"
+          cp "$INSTALLER_EXE" "$INSTALLER_DEST"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
