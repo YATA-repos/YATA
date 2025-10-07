@@ -44,12 +44,10 @@ class InfraLoggerAdapter implements contract.LoggerContract {
       impl.flushAndClose(timeout: timeout);
 
   @override
-  void registerFatalHandler(contract.FatalHandler handler) =>
-    impl.registerFatalHandler(handler);
+  void registerFatalHandler(contract.FatalHandler handler) => impl.registerFatalHandler(handler);
 
   @override
-  void removeFatalHandler(contract.FatalHandler handler) =>
-    impl.removeFatalHandler(handler);
+  void removeFatalHandler(contract.FatalHandler handler) => impl.removeFatalHandler(handler);
 
   @override
   void clearFatalHandlers() => impl.clearFatalHandlers();

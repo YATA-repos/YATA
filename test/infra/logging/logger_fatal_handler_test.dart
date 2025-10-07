@@ -32,20 +32,23 @@ void main() {
 
       f("fatal handler test", tag: "test");
 
-    final contract.FatalLogContext context =
-      await completer.future.timeout(const Duration(seconds: 2));
-    expect(context.record.level, Level.fatal);
+      final contract.FatalLogContext context = await completer.future.timeout(
+        const Duration(seconds: 2),
+      );
+      expect(context.record.level, Level.fatal);
       expect(context.record.message, "fatal handler test");
       await context.flush();
     });
 
     test("registerFatalNotifier wraps notifier", () async {
       final Completer<void> notifierCalled = Completer<void>();
-      registerFatalNotifier(ClosureFatalNotifier((contract.FatalLogContext _) {
-        if (!notifierCalled.isCompleted) {
-          notifierCalled.complete();
-        }
-      }));
+      registerFatalNotifier(
+        ClosureFatalNotifier((contract.FatalLogContext _) {
+          if (!notifierCalled.isCompleted) {
+            notifierCalled.complete();
+          }
+        }),
+      );
 
       f("fatal notifier test");
 
@@ -57,6 +60,7 @@ void main() {
       FutureOr<void> handler(contract.FatalLogContext _) {
         counter++;
       }
+
       registerFatalHandler(handler);
       removeFatalHandler(handler);
 

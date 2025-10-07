@@ -11,11 +11,9 @@ void main() {
   group("LogRuntimeConfigLoader", () {
     test("LOG_LEVEL=warn を正しく解析する", () {
       final List<String> warnings = <String>[];
-      final LogRuntimeConfigLoader loader =
-          LogRuntimeConfigLoader(warn: warnings.add);
+      final LogRuntimeConfigLoader loader = LogRuntimeConfigLoader(warn: warnings.add);
 
-      final LogRuntimeConfig config =
-          loader.load(<String, String>{"LOG_LEVEL": "warn"});
+      final LogRuntimeConfig config = loader.load(<String, String>{"LOG_LEVEL": "warn"});
 
       expect(config.level, equals(LogLevel.warn));
       expect(warnings, isEmpty);
@@ -23,11 +21,9 @@ void main() {
 
     test("不正な LOG_LEVEL は info にフォールバックする", () {
       final List<String> warnings = <String>[];
-      final LogRuntimeConfigLoader loader =
-          LogRuntimeConfigLoader(warn: warnings.add);
+      final LogRuntimeConfigLoader loader = LogRuntimeConfigLoader(warn: warnings.add);
 
-      final LogRuntimeConfig config =
-          loader.load(<String, String>{"LOG_LEVEL": "loud"});
+      final LogRuntimeConfig config = loader.load(<String, String>{"LOG_LEVEL": "loud"});
 
       expect(config.level, equals(LogLevel.info));
       expect(warnings.single, contains("LOG_LEVEL"));
@@ -35,8 +31,7 @@ void main() {
 
     test("LOG_LEVEL 未指定の場合はオーバーライドしない", () {
       final List<String> warnings = <String>[];
-      final LogRuntimeConfigLoader loader =
-          LogRuntimeConfigLoader(warn: warnings.add);
+      final LogRuntimeConfigLoader loader = LogRuntimeConfigLoader(warn: warnings.add);
 
       final LogRuntimeConfig config = loader.load(<String, String>{});
 
@@ -53,9 +48,7 @@ void main() {
       });
 
       final LogRuntimeConfigLoader loader = LogRuntimeConfigLoader();
-      final LogRuntimeConfig config = loader.load(<String, String>{
-        "LOG_DIR": tmp.path,
-      });
+      final LogRuntimeConfig config = loader.load(<String, String>{"LOG_DIR": tmp.path});
 
       expect(config.directory, equals(tmp.path));
     });
@@ -124,13 +117,7 @@ void main() {
         }
       });
 
-      applyLogRuntimeConfig(
-        env: <String, String>{
-          "LOG_DIR": tmp.path,
-        },
-        warn: (_) {},
-        info: (_) {},
-      );
+      applyLogRuntimeConfig(env: <String, String>{"LOG_DIR": tmp.path}, warn: (_) {}, info: (_) {});
 
       expect(config.fileDirPath, equals(tmp.path));
     });

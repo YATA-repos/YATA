@@ -55,15 +55,16 @@ class FatalConfig {
     int? exitCode,
     Duration? shutdownDelay,
   }) => FatalConfig(
-      flushBeforeHandlers: flushBeforeHandlers ?? this.flushBeforeHandlers,
-      flushTimeout: flushTimeout ?? this.flushTimeout,
-      handlerTimeout: handlerTimeout ?? this.handlerTimeout,
-      autoShutdown: autoShutdown ?? this.autoShutdown,
-      exitProcess: exitProcess ?? this.exitProcess,
-      exitCode: exitCode ?? this.exitCode,
-      shutdownDelay: shutdownDelay ?? this.shutdownDelay,
-    );
+    flushBeforeHandlers: flushBeforeHandlers ?? this.flushBeforeHandlers,
+    flushTimeout: flushTimeout ?? this.flushTimeout,
+    handlerTimeout: handlerTimeout ?? this.handlerTimeout,
+    autoShutdown: autoShutdown ?? this.autoShutdown,
+    exitProcess: exitProcess ?? this.exitProcess,
+    exitCode: exitCode ?? this.exitCode,
+    shutdownDelay: shutdownDelay ?? this.shutdownDelay,
+  );
 }
+
 class LogConfig {
   LogConfig({
     required this.globalLevel,

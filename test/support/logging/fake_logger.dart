@@ -29,7 +29,7 @@ class CapturedLog {
 
   /// ログの簡易サマリ（タイムアウト時のエラーメッセージなどで利用）。
   String summary() =>
-    "[lvl=${level.name}, tag=${tag ?? '-'}, msg=$message, error=${error?.runtimeType}]";
+      "[lvl=${level.name}, tag=${tag ?? '-'}, msg=$message, error=${error?.runtimeType}]";
 }
 
 /// ログ取得ユーティリティの共通インターフェース。
@@ -38,10 +38,7 @@ abstract class LogProbe {
 
   Stream<CapturedLog> get stream;
 
-  Future<CapturedLog> waitFor({
-    Duration? timeout,
-    bool Function(CapturedLog log)? where,
-  });
+  Future<CapturedLog> waitFor({Duration? timeout, bool Function(CapturedLog log)? where});
 }
 
 /// `LoggerContract` を実装したテスト用ロガー。
@@ -50,7 +47,7 @@ abstract class LogProbe {
 /// - `waitFor` で非同期に発生するログを待ち受けられる。
 class FakeLogger implements contract.LoggerContract, LogProbe {
   FakeLogger({this.defaultTimeout = const Duration(milliseconds: 200)})
-      : _controller = StreamController<CapturedLog>.broadcast(sync: true);
+    : _controller = StreamController<CapturedLog>.broadcast(sync: true);
 
   final Duration defaultTimeout;
   final StreamController<CapturedLog> _controller;
@@ -73,10 +70,7 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
 
   /// 条件に一致するログが到着するまで待つ。
   @override
-  Future<CapturedLog> waitFor({
-    Duration? timeout,
-    bool Function(CapturedLog log)? where,
-  }) async {
+  Future<CapturedLog> waitFor({Duration? timeout, bool Function(CapturedLog log)? where}) async {
     final bool Function(CapturedLog log) predicate = where ?? (_) => true;
 
     for (final CapturedLog log in _entries) {
@@ -96,12 +90,15 @@ class FakeLogger implements contract.LoggerContract, LogProbe {
 
     final Duration effectiveTimeout = timeout ?? defaultTimeout;
     try {
-      return await completer.future.timeout(effectiveTimeout, onTimeout: () {
-        throw TimeoutException(
-          "No log matched predicate within ${effectiveTimeout.inMilliseconds}ms. "
-          "Captured logs: ${_entries.map((CapturedLog e) => e.summary()).join(', ')}",
-        );
-      });
+      return await completer.future.timeout(
+        effectiveTimeout,
+        onTimeout: () {
+          throw TimeoutException(
+            "No log matched predicate within ${effectiveTimeout.inMilliseconds}ms. "
+            "Captured logs: ${_entries.map((CapturedLog e) => e.summary()).join(', ')}",
+          );
+        },
+      );
     } finally {
       if (!completer.isCompleted) {
         await sub.cancel();
@@ -224,16 +221,15 @@ CapturedLog createCapturedLog(
   Object? fields,
   Object? error,
   StackTrace? st,
-}) =>
-    CapturedLog(
-      timestamp: DateTime.now().toUtc(),
-      level: level,
-      message: resolveLogMessage(msgOrThunk),
-      tag: tag,
-      fields: resolveLogFields(fields),
-      error: error,
-      stackTrace: st,
-    );
+}) => CapturedLog(
+  timestamp: DateTime.now().toUtc(),
+  level: level,
+  message: resolveLogMessage(msgOrThunk),
+  tag: tag,
+  fields: resolveLogFields(fields),
+  error: error,
+  stackTrace: st,
+);
 
 String resolveLogMessage(Object msgOrThunk) {
   if (msgOrThunk is String) {

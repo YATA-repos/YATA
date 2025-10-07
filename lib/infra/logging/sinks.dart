@@ -115,7 +115,7 @@ class FileSink implements LogSink<String> {
 
   static Future<int> _nextIndex(Directory dir, String base, String ymd) async {
     int maxIdx = 0;
-  final RegExp re = RegExp("^${RegExp.escape(base)}-$ymd-(\\d{2})\\.log\$");
+    final RegExp re = RegExp("^${RegExp.escape(base)}-$ymd-(\\d{2})\\.log\$");
     if (await dir.exists()) {
       await for (final FileSystemEntity e in dir.list()) {
         if (e is! File) {

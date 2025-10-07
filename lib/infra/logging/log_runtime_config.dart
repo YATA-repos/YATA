@@ -161,18 +161,25 @@ class LogRuntimeConfigLoader {
     final int? queueCapacity = _parsePositiveInt("LOG_MAX_QUEUE", rawQueue);
     final OverflowPolicy? overflowPolicy = _parseOverflowPolicy(rawBackpressure);
     final String? directory = _normalizeDirectory(rawDir, env);
-    final bool? fatalFlushBeforeHandlers =
-        _parseBool("LOG_FATAL_FLUSH_BEFORE_HANDLERS", rawFatalFlushBeforeHandlers);
-    final int? fatalFlushTimeoutMs =
-        _parseNonNegativeInt("LOG_FATAL_FLUSH_TIMEOUT_MS", rawFatalFlushTimeout);
-    final int? fatalHandlerTimeoutMs =
-        _parseNonNegativeInt("LOG_FATAL_HANDLER_TIMEOUT_MS", rawFatalHandlerTimeout);
-    final bool? fatalAutoShutdown =
-        _parseBool("LOG_FATAL_AUTO_SHUTDOWN", rawFatalAutoShutdown);
+    final bool? fatalFlushBeforeHandlers = _parseBool(
+      "LOG_FATAL_FLUSH_BEFORE_HANDLERS",
+      rawFatalFlushBeforeHandlers,
+    );
+    final int? fatalFlushTimeoutMs = _parseNonNegativeInt(
+      "LOG_FATAL_FLUSH_TIMEOUT_MS",
+      rawFatalFlushTimeout,
+    );
+    final int? fatalHandlerTimeoutMs = _parseNonNegativeInt(
+      "LOG_FATAL_HANDLER_TIMEOUT_MS",
+      rawFatalHandlerTimeout,
+    );
+    final bool? fatalAutoShutdown = _parseBool("LOG_FATAL_AUTO_SHUTDOWN", rawFatalAutoShutdown);
     final bool? fatalExitProcess = _parseBool("LOG_FATAL_EXIT_PROCESS", rawFatalExitProcess);
     final int? fatalExitCode = _parseNonNegativeInt("LOG_FATAL_EXIT_CODE", rawFatalExitCode);
-    final int? fatalShutdownDelayMs =
-        _parseNonNegativeInt("LOG_FATAL_SHUTDOWN_DELAY_MS", rawFatalShutdownDelay);
+    final int? fatalShutdownDelayMs = _parseNonNegativeInt(
+      "LOG_FATAL_SHUTDOWN_DELAY_MS",
+      rawFatalShutdownDelay,
+    );
 
     return LogRuntimeConfig(
       level: level,
@@ -240,7 +247,10 @@ class LogRuntimeConfigLoader {
     String value = raw.trim();
     if (value.startsWith("~")) {
       final String? home =
-          env["HOME"] ?? env["USERPROFILE"] ?? Platform.environment["HOME"] ?? Platform.environment["USERPROFILE"];
+          env["HOME"] ??
+          env["USERPROFILE"] ??
+          Platform.environment["HOME"] ??
+          Platform.environment["USERPROFILE"];
       if (home != null) {
         if (value == "~") {
           value = home;
@@ -283,10 +293,8 @@ class LogRuntimeConfigLoader {
 /// 環境変数からロガー設定を読み取り適用するヘルパー。
 void applyLogRuntimeConfig({Map<String, String>? env, WarnEmitter? warn, InfoEmitter? info}) {
   final Map<String, String> source = env ?? EnvValidator.env;
-  final WarnEmitter warnEmitter =
-      warn ?? (String message) => w(message, tag: "logger");
-  final InfoEmitter infoEmitter =
-      info ?? (String message) => i(message, tag: "logger");
+  final WarnEmitter warnEmitter = warn ?? (String message) => w(message, tag: "logger");
+  final InfoEmitter infoEmitter = info ?? (String message) => i(message, tag: "logger");
 
   final LogRuntimeConfig config = LogRuntimeConfigLoader(warn: warnEmitter).load(source);
   if (!config.hasOverrides) {
@@ -295,9 +303,7 @@ void applyLogRuntimeConfig({Map<String, String>? env, WarnEmitter? warn, InfoEmi
 
   final List<String> description = config.describe();
   if (description.isNotEmpty) {
-    infoEmitter(
-      "環境変数からロガー設定を適用します: ${description.join(", ")}",
-    );
+    infoEmitter("環境変数からロガー設定を適用します: ${description.join(", ")}");
   }
 
   if (config.level != null) {

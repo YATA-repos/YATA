@@ -149,13 +149,17 @@ Future<T> traceAsync<T>(
   overlay[LogContextKeys.spanName] = overlay[LogContextKeys.spanName] ?? spanName;
 
   final String? parentFlowId = parent != null ? parent[LogContextKeys.flowId] as String? : null;
-  final String flowId = overlay[LogContextKeys.flowId] is String && (overlay[LogContextKeys.flowId] as String).isNotEmpty
-    ? overlay[LogContextKeys.flowId] as String
+  final String flowId =
+      overlay[LogContextKeys.flowId] is String &&
+          (overlay[LogContextKeys.flowId] as String).isNotEmpty
+      ? overlay[LogContextKeys.flowId] as String
       : (startNewFlow ? newFlowId() : parentFlowId ?? newFlowId());
   overlay[LogContextKeys.flowId] = flowId;
 
-  final String spanId = overlay[LogContextKeys.spanId] is String && (overlay[LogContextKeys.spanId] as String).isNotEmpty
-    ? overlay[LogContextKeys.spanId] as String
+  final String spanId =
+      overlay[LogContextKeys.spanId] is String &&
+          (overlay[LogContextKeys.spanId] as String).isNotEmpty
+      ? overlay[LogContextKeys.spanId] as String
       : newSpanId();
   overlay[LogContextKeys.spanId] = spanId;
 
@@ -182,12 +186,8 @@ Future<T> traceAsync<T>(
     context: Map<String, Object?>.unmodifiable(resolved),
   );
 
-    Future<T> body() => action(trace);
-  return runWithContext<Future<T>>(
-    overlay,
-    body,
-    merge: inheritParent,
-  );
+  Future<T> body() => action(trace);
+  return runWithContext<Future<T>>(overlay, body, merge: inheritParent);
 }
 
 /// 同期処理を LogContext 付きで実行する。
@@ -206,13 +206,17 @@ T traceSync<T>(
   overlay[LogContextKeys.spanName] = overlay[LogContextKeys.spanName] ?? spanName;
 
   final String? parentFlowId = parent != null ? parent[LogContextKeys.flowId] as String? : null;
-  final String flowId = overlay[LogContextKeys.flowId] is String && (overlay[LogContextKeys.flowId] as String).isNotEmpty
-    ? overlay[LogContextKeys.flowId] as String
+  final String flowId =
+      overlay[LogContextKeys.flowId] is String &&
+          (overlay[LogContextKeys.flowId] as String).isNotEmpty
+      ? overlay[LogContextKeys.flowId] as String
       : (startNewFlow ? newFlowId() : parentFlowId ?? newFlowId());
   overlay[LogContextKeys.flowId] = flowId;
 
-  final String spanId = overlay[LogContextKeys.spanId] is String && (overlay[LogContextKeys.spanId] as String).isNotEmpty
-    ? overlay[LogContextKeys.spanId] as String
+  final String spanId =
+      overlay[LogContextKeys.spanId] is String &&
+          (overlay[LogContextKeys.spanId] as String).isNotEmpty
+      ? overlay[LogContextKeys.spanId] as String
       : newSpanId();
   overlay[LogContextKeys.spanId] = spanId;
 
@@ -240,9 +244,5 @@ T traceSync<T>(
   );
 
   T body() => action(trace);
-  return runWithContext<T>(
-    overlay,
-    body,
-    merge: inheritParent,
-  );
+  return runWithContext<T>(overlay, body, merge: inheritParent);
 }

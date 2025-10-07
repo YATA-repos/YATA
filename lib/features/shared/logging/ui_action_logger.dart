@@ -13,12 +13,12 @@ class UiActionLogSession {
     required this.action,
     required this.flowId,
     required this.tag,
-  required Map<String, dynamic> baseMetadata,
+    required Map<String, dynamic> baseMetadata,
     this.userId,
     this.requestId,
-  })  : _logger = logger,
-    _metadata = Map<String, dynamic>.from(baseMetadata),
-        _startedAt = DateTime.now();
+  }) : _logger = logger,
+       _metadata = Map<String, dynamic>.from(baseMetadata),
+       _startedAt = DateTime.now();
 
   /// 操作を開始し、`started` ログを即時送出する。
   factory UiActionLogSession.begin({
@@ -32,8 +32,9 @@ class UiActionLogSession {
     String? tag,
     String? message,
   }) {
-    final String resolvedFlowId =
-        flowId != null && flowId.isNotEmpty ? flowId : log_ctx.newFlowId();
+    final String resolvedFlowId = flowId != null && flowId.isNotEmpty
+        ? flowId
+        : log_ctx.newFlowId();
 
     final UiActionLogSession session = UiActionLogSession._(
       logger: logger,
@@ -85,11 +86,7 @@ class UiActionLogSession {
       metadata: metadata,
       durationMs: _elapsedMs(),
     );
-    _logger.i(
-      message ?? _defaultMessage(_UiActionStage.succeeded),
-      tag: tag,
-      fields: fields,
-    );
+    _logger.i(message ?? _defaultMessage(_UiActionStage.succeeded), tag: tag, fields: fields);
   }
 
   /// 操作がキャンセルされた場合の記録。
@@ -104,11 +101,7 @@ class UiActionLogSession {
       reason: reason,
       durationMs: _elapsedMs(),
     );
-    _logger.w(
-      message ?? _defaultMessage(_UiActionStage.cancelled),
-      tag: tag,
-      fields: fields,
-    );
+    _logger.w(message ?? _defaultMessage(_UiActionStage.cancelled), tag: tag, fields: fields);
   }
 
   /// 操作が失敗した場合の記録。
@@ -141,13 +134,8 @@ class UiActionLogSession {
   }
 
   void _started({String? message}) {
-    final Map<String, dynamic> fields =
-        _composeFields(_UiActionStage.started, durationMs: 0);
-    _logger.i(
-      message ?? _defaultMessage(_UiActionStage.started),
-      tag: tag,
-      fields: fields,
-    );
+    final Map<String, dynamic> fields = _composeFields(_UiActionStage.started, durationMs: 0);
+    _logger.i(message ?? _defaultMessage(_UiActionStage.started), tag: tag, fields: fields);
   }
 
   Map<String, dynamic> _composeFields(
