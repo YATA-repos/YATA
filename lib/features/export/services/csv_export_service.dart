@@ -209,9 +209,7 @@ class CsvExportService {
   }
 
   /// 汎用CSVエクスポート
-  Future<CsvExportResult> export(CsvExportRequest request) {
-    return _executeExport(request, operation: _ExportOperation.fresh);
-  }
+  Future<CsvExportResult> export(CsvExportRequest request) => _executeExport(request, operation: _ExportOperation.fresh);
 
   /// 既存エクスポートジョブの再ダウンロード
   Future<CsvExportResult> redownload(String exportJobId) async {
@@ -501,7 +499,7 @@ class CsvExportService {
           break;
       }
 
-      throw error;
+      rethrow;
     } on Object catch (error, stackTrace) {
       if (stopwatch.isRunning) {
         stopwatch.stop();
@@ -824,7 +822,6 @@ class CsvExportService {
       filters: filters,
       timeZone: timeZone,
       requestedBy: job.requestedBy,
-      timeout: null,
     );
   }
 
@@ -899,7 +896,7 @@ class CsvExportService {
     final String prefix = request.dataset.filePrefix;
     final String from = _fileNameFormatter.format(request.dateFrom);
     final String to = _fileNameFormatter.format(request.dateTo);
-    return "${prefix}_${from}_${to}.csv";
+    return "${prefix}_${from}_$to.csv";
   }
 
   List<int> _encodeWithBom(String csv) {

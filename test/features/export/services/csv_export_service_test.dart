@@ -255,9 +255,7 @@ void main() {
     });
 
     test("retries job logging up to three times", () async {
-      when(() => repository.export(any())).thenAnswer((_) async {
-        return const CsvExportRawResult(csvContent: "id\n1\n", rowCount: 1);
-      });
+      when(() => repository.export(any())).thenAnswer((_) async => const CsvExportRawResult(csvContent: "id\n1\n", rowCount: 1));
 
       int attempts = 0;
       when(() => jobsRepository.insertJob(any())).thenAnswer((Invocation invocation) async {
@@ -278,8 +276,7 @@ void main() {
     });
 
     test("encrypts result when metadata requires it", () async {
-      when(() => repository.export(any())).thenAnswer((_) async {
-        return const CsvExportRawResult(
+      when(() => repository.export(any())).thenAnswer((_) async => const CsvExportRawResult(
           csvContent: "order_id,line_id\n1,10\n",
           rowCount: 1,
           metadata: <String, dynamic>{
@@ -288,8 +285,7 @@ void main() {
               <String, dynamic>{"rule": "pii_email"},
             ],
           },
-        );
-      });
+        ));
 
       final CsvExportResult result = await service.exportSalesLineItems(
         dateFrom: DateTime(2025, 10, 5),
@@ -321,12 +317,10 @@ void main() {
     });
 
     test("skips export_jobs insert when RPC metadata includes export_job_id", () async {
-      when(() => repository.export(any())).thenAnswer((_) async {
-        return const CsvExportRawResult(
+      when(() => repository.export(any())).thenAnswer((_) async => const CsvExportRawResult(
           csvContent: "id\n1\n",
           metadata: <String, dynamic>{"export_job_id": "job-123"},
-        );
-      });
+        ));
 
       await service.exportSalesLineItems(
         dateFrom: DateTime(2025, 10, 5),
@@ -346,7 +340,7 @@ void main() {
         dataset: CsvExportDataset.salesLineItems,
         status: CsvExportJobStatus.completed,
         requestedAt: fixedNow.subtract(const Duration(days: 2)),
-        periodFrom: DateTime(2025, 10, 1),
+        periodFrom: DateTime(2025, 10),
         periodTo: DateTime(2025, 10, 3),
         organizationId: "org-1",
         locationId: "loc-1",

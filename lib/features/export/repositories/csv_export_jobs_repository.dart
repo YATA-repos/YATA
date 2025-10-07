@@ -118,7 +118,7 @@ class CsvExportJobsRepository implements CsvExportJobsRepositoryContract {
     try {
       final Future<dynamic> future = _client
           .from(_tableName)
-          .select("*")
+          .select()
           .eq("id", jobId)
           .limit(1)
           .maybeSingle();

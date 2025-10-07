@@ -54,8 +54,8 @@ class CsvExportEncryptionService {
       ..addFile(ArchiveFile(fileName, csvBytes.length, csvBytes));
 
     final ZipEncoder encoder = ZipEncoder(password: password);
-    final List<int>? compressed =
-        encoder.encode(archive, level: DeflateLevel.bestSpeed);
+    final List<int> compressed =
+        encoder.encode(archive);
     if (compressed == null) {
       throw StateError("Failed to encode encrypted ZIP for $fileName");
     }
@@ -129,7 +129,7 @@ class CsvExportEncryptionService {
   String _buildEncryptedFileName(String original) {
     const String suffix = ".csv";
     if (original.toLowerCase().endsWith(suffix)) {
-      return original.substring(0, original.length - suffix.length) + ".csv.enc.zip";
+      return "${original.substring(0, original.length - suffix.length)}.csv.enc.zip";
     }
     return "$original.enc.zip";
   }

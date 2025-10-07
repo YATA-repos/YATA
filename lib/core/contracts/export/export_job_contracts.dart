@@ -48,8 +48,7 @@ class CsvExportJobLogEntry {
   final Map<String, dynamic>? metadata;
 
   /// Supabaseへ送信するためのJSON表現
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
+  Map<String, dynamic> toJson() => <String, dynamic>{
       "status": status.value,
       "dataset_id": dataset.id,
       "period_from": periodFrom.toIso8601String(),
@@ -63,11 +62,34 @@ class CsvExportJobLogEntry {
       if (errorDetails != null && errorDetails!.isNotEmpty) "error_details": errorDetails,
       if (metadata != null && metadata!.isNotEmpty) "metadata": metadata,
     };
-  }
 }
 
 /// `export_jobs` テーブルに格納された既存ジョブのスナップショット
 class CsvExportJobRecord {
+
+  factory CsvExportJobRecord.fromJson(Map<String, dynamic> json) {
+    return CsvExportJobRecord(
+      id: json["id"]?.toString() ?? "",
+      dataset: _datasetFromString(json["dataset_id"]?.toString() ?? ""),
+      status: _statusFromString(json["status"]?.toString() ?? "completed"),
+      requestedAt: DateTime.parse(json["requested_at"] as String),
+      periodFrom: DateTime.parse(json["period_from"] as String),
+      periodTo: DateTime.parse(json["period_to"] as String),
+      organizationId: json["org_id"]?.toString(),
+      locationId: json["location_id"]?.toString(),
+      requestedBy: json["requested_by"]?.toString(),
+      rowCount: json["row_count"] is int ? json["row_count"] as int : int.tryParse(json["row_count"]?.toString() ?? ""),
+      durationMs: json["duration_ms"] is int
+          ? json["duration_ms"] as int
+          : int.tryParse(json["duration_ms"]?.toString() ?? ""),
+      metadata: json["metadata"] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json["metadata"] as Map<String, dynamic>)
+          : null,
+      fileName: json["file_name"]?.toString(),
+      sourceViewVersion: json["source_view_version"]?.toString(),
+      generatedByAppVersion: json["generated_by_app_version"]?.toString(),
+    );
+  }
   const CsvExportJobRecord({
     required this.id,
     required this.dataset,
@@ -106,46 +128,17 @@ class CsvExportJobRecord {
 
   bool isWithinRetention(DateTime now) => !now.isAfter(expiresAt);
 
-  static CsvExportJobStatus _statusFromString(String value) {
-    return CsvExportJobStatus.values.firstWhere(
+  static CsvExportJobStatus _statusFromString(String value) => CsvExportJobStatus.values.firstWhere(
       (CsvExportJobStatus status) => status.value == value,
       orElse: () => CsvExportJobStatus.completed,
     );
-  }
 
-  static CsvExportDataset _datasetFromString(String value) {
-    return CsvExportDataset.values.firstWhere(
+  static CsvExportDataset _datasetFromString(String value) => CsvExportDataset.values.firstWhere(
       (CsvExportDataset dataset) => dataset.id == value,
       orElse: () => CsvExportDataset.salesLineItems,
     );
-  }
 
-  factory CsvExportJobRecord.fromJson(Map<String, dynamic> json) {
-    return CsvExportJobRecord(
-      id: json["id"]?.toString() ?? "",
-      dataset: _datasetFromString(json["dataset_id"]?.toString() ?? ""),
-      status: _statusFromString(json["status"]?.toString() ?? "completed"),
-      requestedAt: DateTime.parse(json["requested_at"] as String),
-      periodFrom: DateTime.parse(json["period_from"] as String),
-      periodTo: DateTime.parse(json["period_to"] as String),
-      organizationId: json["org_id"]?.toString(),
-      locationId: json["location_id"]?.toString(),
-      requestedBy: json["requested_by"]?.toString(),
-      rowCount: json["row_count"] is int ? json["row_count"] as int : int.tryParse(json["row_count"]?.toString() ?? ""),
-      durationMs: json["duration_ms"] is int
-          ? json["duration_ms"] as int
-          : int.tryParse(json["duration_ms"]?.toString() ?? ""),
-      metadata: json["metadata"] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(json["metadata"] as Map<String, dynamic>)
-          : null,
-      fileName: json["file_name"]?.toString(),
-      sourceViewVersion: json["source_view_version"]?.toString(),
-      generatedByAppVersion: json["generated_by_app_version"]?.toString(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
+  Map<String, dynamic> toJson() => <String, dynamic>{
       "id": id,
       "dataset_id": dataset.id,
       "status": status.value,
@@ -162,11 +155,24 @@ class CsvExportJobRecord {
       "source_view_version": sourceViewVersion,
       "generated_by_app_version": generatedByAppVersion,
     };
-  }
 }
 
 /// 日次レートリミットの状態スナップショット
 class CsvExportRateLimitSnapshot {
+
+  factory CsvExportRateLimitSnapshot.fromJson(Map<String, dynamic> json) {
+    return CsvExportRateLimitSnapshot(
+      organizationId: json["organization_id"]?.toString() ?? "",
+      dateKey: json["date_key"]?.toString() ?? "",
+      count: json["count"] is int
+          ? json["count"] as int
+          : int.tryParse(json["count"]?.toString() ?? "") ?? 0,
+      limit: json["limit"] is int
+          ? json["limit"] as int
+          : int.tryParse(json["limit"]?.toString() ?? "") ?? 0,
+      resetAt: DateTime.parse(json["reset_at"] as String),
+    );
+  }
   const CsvExportRateLimitSnapshot({
     required this.organizationId,
     required this.dateKey,
@@ -190,18 +196,4 @@ class CsvExportRateLimitSnapshot {
         "limit": limit,
         "reset_at": resetAt.toIso8601String(),
       };
-
-  factory CsvExportRateLimitSnapshot.fromJson(Map<String, dynamic> json) {
-    return CsvExportRateLimitSnapshot(
-      organizationId: json["organization_id"]?.toString() ?? "",
-      dateKey: json["date_key"]?.toString() ?? "",
-      count: json["count"] is int
-          ? json["count"] as int
-          : int.tryParse(json["count"]?.toString() ?? "") ?? 0,
-      limit: json["limit"] is int
-          ? json["limit"] as int
-          : int.tryParse(json["limit"]?.toString() ?? "") ?? 0,
-      resetAt: DateTime.parse(json["reset_at"] as String),
-    );
-  }
 }
