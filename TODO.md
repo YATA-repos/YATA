@@ -1,6 +1,6 @@
 # TODO
 
-Next ID No: 23
+Next ID No: 29
 
 --- 
 
@@ -9,42 +9,40 @@ Definitions to suppress Markdown warnings
 [Bugfix]: #
 [Feature]: #
 [Enhancement]: #
+[Refactor]: #
 [Performance]: #
 [Documentation]: #
 [Chore]: #
 
 ## あとでタスク定義
-- 注文状況ページにおいて、注文カードクリック時に詳細モーダルを開く（履歴に移動するのか、ページ維持でモーダルだけ開くのか要検討）
-- app_router.dartで、pathをハードコードするのか、Page側で定義するのか、統一する
-- メニュー管理画面の刷新が終了したら、メニュー管理画面を踏襲する形式で在庫管理ページも刷新する
 
 ## Backlog
 
-### [Documentation] CSVデータ辞書を整備する
-- **ID**: Documentation-Documentation-18
+### [Refactor] features/shared/logging をアーキテクチャ整合に再配置する
+- **ID**: Core-Refactor-27
 - **Priority**: P1
 - **Size**: M
-- **Area**: Documentation
+- **Area**: Core
 - **Dependencies**: None
-- **Goal**: `docs/reference/dataset_dictionary.md` に主要CSVのカラム定義とキー方針が整理され、チームが参照できる状態になる。
+- **Goal**: `lib/features/shared/logging/ui_action_logger.dart` が適切なレイヤーへ移動され、UI 層から `infra/logging` への直接依存が解消されている。
 - **Steps**:
-  1. 既存スキーマと草案CSVを突き合わせて必要なカラム・キー情報を洗い出す。
-  2. データセットごとの定義・データ型・計算式をドキュメントに記載する。
-  3. レビューを経て`docs/reference/`配下に公開し、TODOのNext Stepsへ反映する。
-- **Description**: CSVエクスポート実装の前提としてデータ辞書を整備し、Phase 0の基盤準備を完了させる。
+  1. `UiActionLogSession` と `LogFieldsBuilder`／`context_utils` の依存関係を整理し、`docs/standards/logging-structured-fields.md` などに沿って境界設計（core で扱う抽象と infra 実装の切り分け）をまとめる。
+  2. 設計に基づき UI ログ用ヘルパーを `core` もしくは `app` 配下へ再配置し、必要に応じて `LogFieldsBuilder` の配置変更やラッパー導入で features → infra 直結を解消する。
+  3. `lib/features/order/presentation/controllers/order_management_controller.dart` など既存利用箇所のインポートと実装を更新し、旧 `features/shared/logging` を撤去した上で動作確認とテストを実施する。
+- **Description**: 現状は `features/shared/logging/ui_action_logger.dart` が infra 層のユーティリティへ直接アクセスしており、`docs/standards/architecture.md` のレイヤー制約に反している。UI 向けログ集約の責務を適切なレイヤーへ移し、将来の機能追加時に同様の逸脱が発生しないよう整理する。
 
-### [Enhancement] ExportService API設計レビューを完了する
-- **ID**: Core-Enhancement-19
-- **Priority**: P1
+### [Refactor] PaymentMethod ラベルヘルパーを列挙型へ統合する
+- **ID**: Core-Refactor-28
+- **Priority**: P2
 - **Size**: S
 - **Area**: Core
-- **Dependencies**: Documentation-Documentation-18
-- **Goal**: ExportServiceのAPI仕様がレビュー承認され、実装に必要なインターフェースとエラーハンドリング方針が固まる。
+- **Dependencies**: None
+- **Goal**: `PaymentMethod` 列挙体が日本語表示ラベルを提供し、`features/shared/utils/payment_method_label.dart` への依存が解消されている。
 - **Steps**:
-  1. 提案中のAPI仕様を整理し、入出力・エラーケース・認可要件を明文化する。
-  2. Backendリードとのレビューを実施し、指摘事項を反映する。
-  3. 承認済み仕様を`docs/plan/`または`docs/reference/`に更新し、実装チケットへリンクする。
-- **Description**: CSVエクスポートのサービス層実装を開始するために、API契約とレビューを完了させる。
+  1. `lib/core/constants/enums.dart` の既存 `displayName` 実装パターンに合わせ、`PaymentMethod` 向けの表示ロジック追加案と影響範囲を整理する。
+  2. 列挙体または拡張に表示ラベルを実装し、`lib/features/order/presentation/widgets/order_payment_method_selector.dart` や `lib/features/order/presentation/pages/order_history_page.dart` などの呼び出し箇所を新 API へ置き換える。
+  3. 旧ヘルパーの削除とユニットテスト追加を行い、ラベル表示が期待通りであることを確認する。
+- **Description**: `features/shared/utils/payment_method_label.dart` は `core/constants/enums.dart` に既にある `displayName` パターンと重複しており、shared ディレクトリの責務とも整合しない。列挙型へ表示責務を統合し、`features/shared` 配下のユーティリティを整理することでレイヤー設計を明確化する。
 
 ### [Enhancement] CSVエクスポート画面のUIモックを作成する
 - **ID**: UI/UX-Enhancement-20
@@ -98,6 +96,19 @@ Definitions to suppress Markdown warnings
   3. 再設計方針と必要タスクをドキュメントにまとめる。
 - **Description**: モックの方が完成度が高い現状を解消するため、再設計の方針を決定し後続開発を進められる状態にする。
 
+### [Enhancement] 在庫管理ページのUIを新フォーマットへ刷新
+- **ID**: Inventory-Enhancement-25
+- **Priority**: P2
+- **Size**: L
+- **Area**: Inventory
+- **Dependencies**: Menu-Enhancement-4
+- **Goal**: メニュー管理画面の刷新方針を踏襲したUIが在庫管理ページに実装され、主要フローで新デザインが機能する。
+- **Steps**:
+  1. メニュー管理画面刷新後のコンポーネント構成とスタイルガイドを分析し、在庫管理ページへの適用方針を策定する。
+  2. 在庫管理ページのUI構造を再設計し、必要なコンポーネントやサービス連携の改修範囲を確定する。
+  3. 再設計内容を実装し、在庫検索・編集など主要操作でUI/UXが改善されていることを確認する。
+- **Description**: メニュー管理画面で整備した新UI/UXを在庫管理にも適用し、全体の体験を統一する。
+
 ### [Enhancement] メニュー管理画面のUI整理方針を検討する
 - **ID**: Menu-Enhancement-4
 - **Priority**: P2
@@ -123,6 +134,19 @@ Definitions to suppress Markdown warnings
   2. モーダルUIにレシピ選択・追加インターフェースを実装し、材料・数量の編集を可能にする。
   3. 保存処理とテストを更新し、登録・編集フローでレシピ依存情報が正しく扱われることを確認する。
 - **Description**: 現在のモーダルでは材料依存を設定できず、メニューと在庫の紐付けが管理できない課題を解消する。
+
+### [Feature] 注文状況カードから詳細を開くフロー整備
+- **ID**: UI/UX-Feature-23
+- **Priority**: P2
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: 注文状況ページで注文カードをクリックすると定義した挙動（ページ内モーダルまたは履歴遷移）で詳細が確認できる。
+- **Steps**:
+  1. 現行のカードタップ時挙動とユーザーフィードバックを調査し、期待値を整理する。
+  2. モーダル表示と履歴ページ遷移の選択肢を比較検討し、関係者合意のもと仕様を確定させる。
+  3. 決定した仕様に沿ってUIロジックを実装し、PC・モバイル双方で表示・操作を確認する。
+- **Description**: 注文状況ページで詳細にアクセスする導線が不明確なため、カード操作で即座に詳細情報を確認できるフローを整備する。
 
 ### [Enhancement] PC表示時にレイアウト幅を最適化する
 - **ID**: UI/UX-Enhancement-5
@@ -150,19 +174,6 @@ Definitions to suppress Markdown warnings
   3. 対象ページでの UI 反映と回帰テスト、運用ドキュメントの更新を行う。
 - **Description**: 端末間でデータが乖離しないよう Realtime を段階的に導入し、周期更新と組み合わせて鮮度を高める。
 
-### [Bugfix] ログのファイル書き込みが失敗する問題を修正
-- **ID**: Core-Bugfix-11
-- **Priority**: P1
-- **Size**: M
-- **Area**: Core
-- **Dependencies**: None
-- **Goal**: ログが想定通りファイルへ書き込まれ、運用で追跡できるようになる。
-- **Steps**:
-  1. 現在のログ設定とエラー内容を調査する。
-  2. ファイル出力先や権限など原因を特定し修正する。
-  3. ログ出力が正常に行われることをテストで確認する。
-- **Description**: ログがファイルに残らず、運用でのトラブルシュートが困難。設定や実装を修正し、安定したログ出力を実現する。
-
 ### [Enhancement] 注文状態ボードの左→右導線を強化する
 - **ID**: UI/UX-Enhancement-12
 - **Priority**: P3
@@ -176,9 +187,35 @@ Definitions to suppress Markdown warnings
   3. デザインを実装し、ユーザビリティを確認する。
 - **Description**: 注文状態画面の進行方向が分かりづらい。視覚的な導線を強化し操作性を高める。
 
+### [Bugfix] 注文履歴モーダルの挙動を他画面と統一
+- **ID**: UI/UX-Bugfix-26
+- **Priority**: P2
+- **Size**: S
+- **Area**: UI/UX
+- **Dependencies**: UI/UX-Enhancement-14
+- **Goal**: 注文履歴ページの詳細モーダルが背景クリックで閉じられ、表示中は上部ナビゲーションが他ページ同様にグレーアウトする。
+- **Steps**:
+  1. 現行の注文履歴モーダル実装を確認し、他ページとの挙動差分を特定する。
+  2. オーバーレイクリックのハンドリングとナビゲーションの非活性化を適用し、スタイル差異を吸収する。
+  3. PC・モバイルでモーダル表示とクローズ挙動が他ページと一致することを確認する。
+- **Description**: 注文履歴ページだけモーダル挙動が異なり操作性が低下しているため、既存の標準挙動に合わせて修正する。
+
 ---
 
 ## Ready
+
+### [Refactor] app_routerのパス定義を統一する
+- **ID**: UI/UX-Refactor-24
+- **Priority**: P2
+- **Size**: S
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: `app_router.dart`の各パス定義が統一ポリシーに従い、重複・ハードコードの揺らぎが解消されている。
+- **Steps**:
+  1. 現在のパス定義箇所と命名規則を洗い出し、問題点を整理する。
+  2. Page側・Router側いずれに定義を寄せるか方針を決定し、共通化手段を設計する。
+  3. 既存コードを方針に沿ってリファクタリングし、画面遷移が従来通り動作することを検証する。
+- **Description**: ルーティング定義が分散・重複しているため、保守性を高めるべくパス定義の統一と命名整理を行う。
 
 ### [Enhancement] 注文詳細モーダルをオーバーレイクリックで閉じる
 - **ID**: UI/UX-Enhancement-14

@@ -4,6 +4,8 @@
 
 本ドキュメントは Phase 0 で実施する CSV エクスポート基盤整備の一環として、YATA が提供予定の主要データセットのカラム仕様とキー方針を整理したものです。実装計画の全体像は [`docs/plan/2025-10-02-csv-export-implementation-plan.md`](../plan/2025-10-02-csv-export-implementation-plan.md)、詳細な背景と追加ユースケースは [`docs/draft/analysis/csv_export_design_draft.md`](../draft/analysis/csv_export_design_draft.md) を参照してください。
 
+> 実装状況メモ: `analytics` スキーマのビュー定義および `analytics.fn_export_csv` は `supabase/migrations/20251006_csv_export_phase1.sql` に収録済み。適用後は本データ辞書のカラム順序と完全一致する CSV を返却します。
+
 ## 共通仕様
 
 | 項目 | 内容 |
