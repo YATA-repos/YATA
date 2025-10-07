@@ -358,12 +358,6 @@ jobs:
           name: yata-linux-appimage
           path: release-assets/linux
 
-      - name: Download Windows zip source
-        uses: actions/download-artifact@v4
-        with:
-          name: yata-windows-runner
-          path: release-assets/windows
-
       - name: Download Windows installer
         uses: actions/download-artifact@v4
         with:
@@ -378,7 +372,6 @@ jobs:
           TAG_NAME="${GITHUB_REF_NAME}"
           DIST_DIR="release-assets/dist"
           mkdir -p "$DIST_DIR"
-          ABS_DIST_DIR="$(pwd)/$DIST_DIR"
 
           # --- Linux AppImage ---
           LINUX_APPIMAGE="$(find release-assets/linux -name '*.AppImage' -type f | head -n 1)"
@@ -389,19 +382,6 @@ jobs:
           fi
           LINUX_DEST="$DIST_DIR/YATA-${TAG_NAME}-linux.AppImage"
           cp "$LINUX_APPIMAGE" "$LINUX_DEST"
-
-          # --- Windows ZIP（ポータブル）---
-          WINDOWS_DIR="release-assets/windows"
-          [ -d "$WINDOWS_DIR" ] || { echo "::error::Missing Windows dir: $WINDOWS_DIR"; exit 1; }
-          ABS_WINDOWS_ZIP="$ABS_DIST_DIR/YATA-${TAG_NAME}-windows.zip"
-          SUBDIR_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          FILE_COUNT=$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')
-          if [ "$SUBDIR_COUNT" = "1" ] && [ "$FILE_COUNT" = "0" ]; then
-            SUBDIR="$(find "$WINDOWS_DIR" -mindepth 1 -maxdepth 1 -type d | head -n1)"
-            (cd "$SUBDIR" && zip -r "$ABS_WINDOWS_ZIP" .)
-          else
-            (cd "$WINDOWS_DIR" && zip -r "$ABS_WINDOWS_ZIP" .)
-          fi
 
           # --- Windows Installer（Setup.exe）---
           INSTALLER_EXE="$(find release-assets/windows-installer -name '*.exe' -type f | head -n 1)"
@@ -422,7 +402,6 @@ jobs:
           prerelease: false
           files: |
             release-assets/dist/YATA-${{ github.ref_name }}-linux.AppImage
-            release-assets/dist/YATA-${{ github.ref_name }}-windows.zip
             release-assets/dist/YATA-${{ github.ref_name }}-windows-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
