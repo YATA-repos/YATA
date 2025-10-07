@@ -446,15 +446,39 @@ jobs:
           set -euo pipefail
 
           # GitHub API でリリース情報を取得
-          RELEASE_JSON=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" \
+          RELEASE_JSON=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
             "https://api.github.com/repos/$REPO/releases/tags/$TAG")
 
-          RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.html_url')
-          RELEASE_NAME=$(echo "$RELEASE_JSON" | jq -r '.name // .tag_name')
-          RELEASE_AUTHOR=$(echo "$RELEASE_JSON" | jq -r '.author.login')
+          # デバッグ: レスポンスを確認
+          echo "=== GitHub API Response ==="
+          echo "$RELEASE_JSON" | jq '.'
+          echo "=========================="
+
+          RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.html_url // ""')
+          RELEASE_NAME=$(echo "$RELEASE_JSON" | jq -r '.name // .tag_name // ""')
+          RELEASE_AUTHOR=$(echo "$RELEASE_JSON" | jq -r '.author.login // ""')
+
+          # デバッグ: 抽出した値を確認
+          echo "RELEASE_URL: $RELEASE_URL"
+          echo "RELEASE_NAME: $RELEASE_NAME"
+          echo "RELEASE_AUTHOR: $RELEASE_AUTHOR"
+
+          # 値が空の場合は代替値を設定
+          if [ -z "$RELEASE_URL" ]; then
+            RELEASE_URL="https://github.com/$REPO/releases/tag/$TAG"
+            echo "Warning: Using fallback URL"
+          fi
+          if [ -z "$RELEASE_AUTHOR" ]; then
+            RELEASE_AUTHOR="${{ github.actor }}"
+            echo "Warning: Using github.actor as author: $RELEASE_AUTHOR"
+          fi
+          if [ -z "$RELEASE_NAME" ]; then
+            RELEASE_NAME="$TAG"
+            echo "Warning: Using tag as name"
+          fi
 
           # アセット情報を取得
-          ASSETS_JSON=$(echo "$RELEASE_JSON" | jq -c '.assets')
+          ASSETS_JSON=$(echo "$RELEASE_JSON" | jq -c '.assets // []')
 
           # Python スクリプトで Discord payload を生成して送信
           python3 - <<'PY' | curl -sS -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"
