@@ -215,7 +215,8 @@ jobs:
       - name: Flatten Windows runner directory
         shell: pwsh
         run: |
-          $root = Join-Path (Get-Location) 'installer\workdir'
+          $root = (Resolve-Path (Join-Path (Get-Location) 'installer\workdir')).Path
+          Write-Host "Root directory: $root"
           
           # yata.exe を探す
           $exeFiles = Get-ChildItem -Path $root -Recurse -Filter 'yata.exe' -File
@@ -229,18 +230,23 @@ jobs:
             throw "yata.exe が ${root} 以下で見つかりませんでした。"
           }
           
-          $releasePath = $exeFiles[0] | Split-Path
+          # パスを正規化（FileSystemプレフィックスを除去）
+          $releasePath = (Resolve-Path ($exeFiles[0] | Split-Path)).Path
           Write-Host "yata.exe found at: $releasePath"
 
-          # $releasePath と $root を正規化して比較
+          # パスを正規化して比較（末尾のバックスラッシュを除去）
           $normalizedReleasePath = $releasePath.TrimEnd('\')
           $normalizedRoot = $root.TrimEnd('\')
+          
+          Write-Host "Comparing paths:"
+          Write-Host "  Release: '$normalizedReleasePath'"
+          Write-Host "  Root:    '$normalizedRoot'"
           
           if ($normalizedReleasePath -ieq $normalizedRoot) {
             Write-Host 'Runner contents are already flattened.'
           }
           else {
-            Write-Host "Moving files from $releasePath to $root"
+            Write-Host "Moving files from subdirectory to root"
             Get-ChildItem -Path $releasePath -Force | ForEach-Object {
               $targetPath = Join-Path $root $_.Name
               Write-Host "  Moving $($_.Name) to $targetPath"
@@ -265,7 +271,7 @@ jobs:
           
           Write-Host "=== Final workdir structure ==="
           Get-ChildItem -Path $root | ForEach-Object {
-            Write-Host $_.FullName
+            Write-Host $_.Name
           }
 
       - name: Install Inno Setup
