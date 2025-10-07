@@ -21,8 +21,8 @@ jobs:
             artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
-            # Windows は Release/ 配下のみアップロード
-            artifact-path: build/windows/x64/runner/Release
+            # Windows は Release/ 配下のみアップロード (/* で中身のみをアップロード)
+            artifact-path: build/windows/x64/runner/Release/*
             artifact-name: yata-windows-runner
     defaults:
       run:
@@ -203,28 +203,57 @@ jobs:
           name: yata-windows-runner
           path: installer/workdir
 
+      - name: Debug - Show downloaded structure
+        shell: pwsh
+        run: |
+          Write-Host "=== Downloaded artifact structure ==="
+          Get-ChildItem -Path installer\workdir -Recurse | ForEach-Object {
+            Write-Host $_.FullName
+          }
+          Write-Host "=== End of structure ==="
+
       - name: Flatten Windows runner directory
         shell: pwsh
         run: |
           $root = Join-Path (Get-Location) 'installer\workdir'
-          $releasePath = Get-ChildItem -Path $root -Recurse -Filter 'yata.exe' -File | Select-Object -First 1 | Split-Path
-          if (-not $releasePath) {
+          
+          # yata.exe を探す
+          $exeFiles = Get-ChildItem -Path $root -Recurse -Filter 'yata.exe' -File
+          Write-Host "Found $($exeFiles.Count) yata.exe file(s)"
+          
+          if ($exeFiles.Count -eq 0) {
+            Write-Host "=== Available files in workdir ==="
+            Get-ChildItem -Path $root -Recurse -File | ForEach-Object {
+              Write-Host $_.FullName
+            }
             throw "yata.exe が ${root} 以下で見つかりませんでした。"
           }
+          
+          $releasePath = $exeFiles[0] | Split-Path
+          Write-Host "yata.exe found at: $releasePath"
 
-          if ($releasePath -ieq $root) {
+          # $releasePath と $root を正規化して比較
+          $normalizedReleasePath = $releasePath.TrimEnd('\')
+          $normalizedRoot = $root.TrimEnd('\')
+          
+          if ($normalizedReleasePath -ieq $normalizedRoot) {
             Write-Host 'Runner contents are already flattened.'
           }
           else {
+            Write-Host "Moving files from $releasePath to $root"
             Get-ChildItem -Path $releasePath -Force | ForEach-Object {
-              Move-Item -Path $_.FullName -Destination $root -Force
+              $targetPath = Join-Path $root $_.Name
+              Write-Host "  Moving $($_.Name) to $targetPath"
+              Move-Item -Path $_.FullName -Destination $targetPath -Force
             }
 
+            Write-Host "Cleaning up empty directories"
             Remove-Item -Path $releasePath -Recurse -Force -ErrorAction SilentlyContinue
 
             $parent = Split-Path $releasePath
-            while ($parent -and (Test-Path $parent) -and ($parent -like "$root*")) {
+            while ($parent -and (Test-Path $parent) -and ($parent -like "$root*") -and ($parent -ine $root)) {
               if (-not (Get-ChildItem -Path $parent -Force -ErrorAction SilentlyContinue)) {
+                Write-Host "  Removing empty directory: $parent"
                 Remove-Item -Path $parent -Force
                 $parent = Split-Path $parent
               }
@@ -233,11 +262,11 @@ jobs:
               }
             }
           }
-
-      - name: Show downloaded tree
-        shell: pwsh
-        run: |
-          Get-ChildItem -Recurse installer | ForEach-Object FullName
+          
+          Write-Host "=== Final workdir structure ==="
+          Get-ChildItem -Path $root | ForEach-Object {
+            Write-Host $_.FullName
+          }
 
       - name: Install Inno Setup
         shell: pwsh
