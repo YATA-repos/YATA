@@ -33,9 +33,7 @@ class TypeValidator {
       _trace("ID型検証成功: 型=${id.runtimeType}, 値=$id");
       return id as T;
     } catch (e) {
-      _error(
-        "ID型キャストエラー: $T型へのキャストに失敗。sourceType: ${id.runtimeType}, targetType: $T, value: $id",
-      );
+      _error("ID型キャストエラー: $T型へのキャストに失敗。sourceType: ${id.runtimeType}, targetType: $T, value: $id");
       rethrow;
     }
   }

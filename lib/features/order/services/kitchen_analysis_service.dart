@@ -101,9 +101,9 @@ class KitchenAnalysisService {
     log.d("Retrieving kitchen workload", tag: loggerComponent);
 
     try {
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(
-        const <OrderStatus>[OrderStatus.inProgress],
-      );
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(const <OrderStatus>[
+        OrderStatus.inProgress,
+      ]);
 
       final int notStartedCount = activeOrders
           .where((Order o) => o.startedPreparingAt == null)
@@ -111,12 +111,11 @@ class KitchenAnalysisService {
       final int inProgressCount = activeOrders
           .where((Order o) => o.startedPreparingAt != null && o.readyAt == null)
           .length;
-    final int readyCount = activeOrders
-      .where(
-      (Order o) =>
-        o.readyAt != null &&
-        OrderStatusMapper.normalize(o.status) != OrderStatus.completed,
-      )
+      final int readyCount = activeOrders
+          .where(
+            (Order o) =>
+                o.readyAt != null && OrderStatusMapper.normalize(o.status) != OrderStatus.completed,
+          )
           .length;
 
       // 推定総調理時間を計算
@@ -252,9 +251,9 @@ class KitchenAnalysisService {
     log.d("Predicting completion times for all active orders", tag: loggerComponent);
 
     try {
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(
-        const <OrderStatus>[OrderStatus.inProgress],
-      );
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(const <OrderStatus>[
+        OrderStatus.inProgress,
+      ]);
       final Map<String, DateTime> completionTimes = <String, DateTime>{};
 
       for (final Order order in activeOrders) {

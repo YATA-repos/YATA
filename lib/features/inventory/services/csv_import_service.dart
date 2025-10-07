@@ -63,8 +63,8 @@ class CSVImportService {
   CSVImportService({
     required log_contract.LoggerContract logger,
     required MaterialManagementService materialManagementService,
-  })  : _logger = logger,
-        _materialManagementService = materialManagementService;
+  }) : _logger = logger,
+       _materialManagementService = materialManagementService;
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;

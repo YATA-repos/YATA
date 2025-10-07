@@ -89,17 +89,14 @@ class SupabaseClientService {
     try {
       log.i("Starting Supabase client initialization", tag: "SupabaseClientService");
 
-      await Supabase.initialize(
-        url: _supabaseUrl,
-        anonKey: _supabaseAnonKey,
-      );
+      await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
       _client = Supabase.instance.client;
       log.i(AuthInfo.clientInitialized.message, tag: "SupabaseClientService");
     } catch (e) {
-      final String message = AuthError.initializationFailed.withParams(
-        <String, String>{"error": e.toString()},
-      );
+      final String message = AuthError.initializationFailed.withParams(<String, String>{
+        "error": e.toString(),
+      });
       log.f(
         message,
         error: e,

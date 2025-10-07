@@ -32,9 +32,9 @@ class AppTheme {
       shadowColor: colorScheme.shadow,
       dividerColor: colorScheme.outlineVariant,
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
-  hoverColor: colorScheme.primary.withValues(alpha: 0.08),
-  highlightColor: colorScheme.primary.withValues(alpha: 0.12),
-  splashColor: colorScheme.primary.withValues(alpha: 0.14),
+      hoverColor: colorScheme.primary.withValues(alpha: 0.08),
+      highlightColor: colorScheme.primary.withValues(alpha: 0.12),
+      splashColor: colorScheme.primary.withValues(alpha: 0.14),
       appBarTheme: _buildAppBarTheme(colorScheme),
       cardTheme: _buildCardTheme(colorScheme),
       filledButtonTheme: _buildFilledButtonTheme(colorScheme),
@@ -216,10 +216,10 @@ class AppTheme {
 
   static TextButtonThemeData _buildTextButtonTheme(ColorScheme colorScheme) => TextButtonThemeData(
     style: ButtonStyle(
-  foregroundColor: WidgetStateProperty.resolveWith(
-    (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-    ? colorScheme.onSurface.withValues(alpha: 0.4)
-    : colorScheme.primary,
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+            ? colorScheme.onSurface.withValues(alpha: 0.4)
+            : colorScheme.primary,
       ),
       textStyle: WidgetStateProperty.all(
         YataTypographyTokens.labelLarge.copyWith(color: colorScheme.primary),
@@ -277,9 +277,9 @@ class AppTheme {
   static ChipThemeData _buildChipTheme(ColorScheme colorScheme, TextTheme textTheme) =>
       ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHighest,
-  disabledColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-  selectedColor: colorScheme.primary.withValues(alpha: 0.12),
-  secondarySelectedColor: colorScheme.primary.withValues(alpha: 0.18),
+        disabledColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        selectedColor: colorScheme.primary.withValues(alpha: 0.12),
+        secondarySelectedColor: colorScheme.primary.withValues(alpha: 0.18),
         padding: const EdgeInsets.symmetric(
           horizontal: YataSpacingTokens.sm,
           vertical: YataSpacingTokens.xs,
@@ -334,9 +334,9 @@ class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(YataRadiusTokens.large)),
         ),
-  focusColor: colorScheme.primary.withValues(alpha: 0.18),
-  splashColor: colorScheme.primary.withValues(alpha: 0.2),
-  hoverColor: colorScheme.primary.withValues(alpha: 0.12),
+        focusColor: colorScheme.primary.withValues(alpha: 0.18),
+        splashColor: colorScheme.primary.withValues(alpha: 0.2),
+        hoverColor: colorScheme.primary.withValues(alpha: 0.12),
         iconSize: 24,
       );
 

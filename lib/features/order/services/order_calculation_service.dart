@@ -9,8 +9,8 @@ class OrderCalculationService {
   OrderCalculationService({
     required log_contract.LoggerContract logger,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
-  })  : _logger = logger,
-        _orderItemRepository = orderItemRepository;
+  }) : _logger = logger,
+       _orderItemRepository = orderItemRepository;
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;

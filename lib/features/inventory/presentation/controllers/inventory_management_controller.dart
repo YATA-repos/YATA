@@ -261,29 +261,29 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         userId,
       );
 
-    final String? previousCategorySelectionRaw =
+      final String? previousCategorySelectionRaw =
           state.selectedCategoryIndex <= 0 || state.selectedCategoryIndex >= state.categories.length
-              ? null
-              : state.categories[state.selectedCategoryIndex];
-    final String? previousCategorySelection = previousCategorySelectionRaw == null
-      ? null
-      : (previousCategorySelectionRaw.trim().isEmpty
-        ? null
-        : previousCategorySelectionRaw.trim());
+          ? null
+          : state.categories[state.selectedCategoryIndex];
+      final String? previousCategorySelection = previousCategorySelectionRaw == null
+          ? null
+          : (previousCategorySelectionRaw.trim().isEmpty
+                ? null
+                : previousCategorySelectionRaw.trim());
 
-    String? previousCategoryId;
-    if (previousCategorySelection != null) {
-      for (final MaterialCategory category in state.categoryEntities) {
-        final String trimmed = category.name.trim();
-        if (trimmed.isEmpty) {
-          continue;
-        }
-        if (trimmed == previousCategorySelection) {
-          previousCategoryId = category.id;
-          break;
+      String? previousCategoryId;
+      if (previousCategorySelection != null) {
+        for (final MaterialCategory category in state.categoryEntities) {
+          final String trimmed = category.name.trim();
+          if (trimmed.isEmpty) {
+            continue;
+          }
+          if (trimmed == previousCategorySelection) {
+            previousCategoryId = category.id;
+            break;
+          }
         }
       }
-    }
 
       final Map<String, String> categoryNameById = <String, String>{
         for (final MaterialCategory category in categoryModels)
@@ -300,10 +300,10 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
             final String id = material.id!;
             validIds.add(id);
             materialMap[id] = material;
-      final String rawCategoryName = categoryNameById[material.categoryId] ?? "未分類";
-      final String categoryName = rawCategoryName.trim().isEmpty
-        ? "未分類"
-        : rawCategoryName.trim();
+            final String rawCategoryName = categoryNameById[material.categoryId] ?? "未分類";
+            final String categoryName = rawCategoryName.trim().isEmpty
+                ? "未分類"
+                : rawCategoryName.trim();
 
             final DateTime updatedAt = material.updatedAt ?? material.createdAt ?? DateTime.now();
 
@@ -324,54 +324,54 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
           })
           .toList(growable: false);
 
-        final Set<String> categoryNames = <String>{};
+      final Set<String> categoryNames = <String>{};
+      for (final MaterialCategory category in categoryModels) {
+        final String name = category.name.trim();
+        if (name.isNotEmpty) {
+          categoryNames.add(name);
+        }
+      }
+      for (final InventoryItemViewData item in items) {
+        final String name = item.category.trim();
+        if (name.isNotEmpty) {
+          categoryNames.add(name);
+        }
+      }
+
+      final List<String> sortedCategoryNames = categoryNames.toList(growable: false)
+        ..sort(_compareCategoryName);
+      final List<String> categories = <String>["すべて", ...sortedCategoryNames];
+
+      int resolvedCategoryIndex = 0;
+
+      if (previousCategoryId != null) {
+        String? resolvedName;
         for (final MaterialCategory category in categoryModels) {
-          final String name = category.name.trim();
-          if (name.isNotEmpty) {
-            categoryNames.add(name);
-          }
-        }
-        for (final InventoryItemViewData item in items) {
-          final String name = item.category.trim();
-          if (name.isNotEmpty) {
-            categoryNames.add(name);
+          if (category.id == previousCategoryId) {
+            final String trimmedName = category.name.trim();
+            if (trimmedName.isNotEmpty) {
+              resolvedName = trimmedName;
+            }
+            break;
           }
         }
 
-        final List<String> sortedCategoryNames = categoryNames.toList(growable: false)
-          ..sort(_compareCategoryName);
-        final List<String> categories = <String>["すべて", ...sortedCategoryNames];
-
-        int resolvedCategoryIndex = 0;
-
-        if (previousCategoryId != null) {
-          String? resolvedName;
-          for (final MaterialCategory category in categoryModels) {
-            if (category.id == previousCategoryId) {
-              final String trimmedName = category.name.trim();
-              if (trimmedName.isNotEmpty) {
-                resolvedName = trimmedName;
-              }
+        if (resolvedName != null) {
+          for (int i = 0; i < categories.length; i++) {
+            if (categories[i].trim() == resolvedName) {
+              resolvedCategoryIndex = i;
               break;
             }
           }
-
-          if (resolvedName != null) {
-            for (int i = 0; i < categories.length; i++) {
-              if (categories[i].trim() == resolvedName) {
-                resolvedCategoryIndex = i;
-                break;
-              }
-            }
-          }
         }
+      }
 
-        if (resolvedCategoryIndex == 0 && previousCategorySelection != null) {
-          final int index = categories.indexOf(previousCategorySelection);
-          if (index >= 0) {
-            resolvedCategoryIndex = index;
-          }
+      if (resolvedCategoryIndex == 0 && previousCategorySelection != null) {
+        final int index = categories.indexOf(previousCategorySelection);
+        if (index >= 0) {
+          resolvedCategoryIndex = index;
         }
+      }
 
       final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
         ..removeWhere((String key, _) => !validIds.contains(key));
@@ -383,7 +383,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         categories: categories,
         categoryEntities: List<MaterialCategory>.unmodifiable(categoryModels),
         materialById: Map<String, Material>.unmodifiable(materialMap),
-          selectedCategoryIndex: resolvedCategoryIndex,
+        selectedCategoryIndex: resolvedCategoryIndex,
         pendingAdjustments: pending,
         selectedIds: selectedIds,
         isLoading: false,
@@ -424,10 +424,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
 
     try {
       await _inventoryService.createMaterialCategory(
-        MaterialCategory(
-          name: trimmedName,
-          displayOrder: nextDisplayOrder,
-        ),
+        MaterialCategory(name: trimmedName, displayOrder: nextDisplayOrder),
       );
       await loadInventory();
       return null;

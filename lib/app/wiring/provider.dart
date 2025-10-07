@@ -7,6 +7,7 @@ import "../../core/contracts/auth/auth_repository_contract.dart" as auth_contrac
 // Batch
 import "../../core/contracts/batch/batch_processing_service.dart" as batch_contract;
 import "../../core/contracts/cache/cache.dart" as cache_contract;
+import "../../core/contracts/logging/analytics_logger.dart" as analytics_contract;
 import "../../core/contracts/logging/logger.dart" as contract;
 import "../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 // Repository contracts
@@ -15,10 +16,17 @@ import "../../core/contracts/repositories/inventory/inventory_repository_contrac
     as inv_contract;
 import "../../core/contracts/repositories/menu/menu_repository_contracts.dart" as menu_contract;
 import "../../core/contracts/repositories/order/order_repository_contracts.dart" as order_contract;
+import "../../core/contracts/repositories/export/csv_export_jobs_repository_contract.dart"
+  as export_job_contract;
+import "../../core/contracts/repositories/export/csv_export_repository_contract.dart"
+  as export_contract;
 import "../../core/logging/logger_binding.dart";
 import "../../features/analytics/models/analytics_model.dart" show DailySummary;
 import "../../features/analytics/repositories/daily_summary_repository.dart";
 import "../../features/analytics/services/analytics_service.dart";
+import "../../features/export/repositories/csv_export_jobs_repository.dart";
+import "../../features/export/repositories/csv_export_repository.dart";
+import "../../features/export/services/csv_export_service.dart";
 import "../../features/auth/dto/auth_response.dart" as auth_local;
 import "../../features/auth/models/user_profile.dart";
 import "../../features/auth/repositories/auth_repository.dart";
@@ -62,20 +70,28 @@ import "../../infra/batch/batch_processing_service.dart" as batch_impl;
 import "../../infra/local/cache/memory_cache_adapter.dart";
 import "../../infra/local/cache/ttl_cache_adapter.dart";
 // Infra adapters and concrete repos
+import "../../infra/logging/analytics_logger_adapter.dart";
 import "../../infra/logging/logger_adapter.dart";
 import "../../infra/realtime/realtime_manager_adapter.dart";
 import "../../infra/repositories/generic_crud_repository.dart";
 import "../../shared/utils/order_identifier_generator.dart";
 
 /// グローバルロガー（契約）
-final Provider<contract.LoggerContract> loggerProvider = Provider<contract.LoggerContract>(
-  (Ref ref) {
-    final contract.LoggerContract logger = const InfraLoggerAdapter();
-    LoggerBinding.register(logger);
-    ref.onDispose(LoggerBinding.clear);
-    return logger;
-  },
-);
+final Provider<contract.LoggerContract> loggerProvider = Provider<contract.LoggerContract>((
+  Ref ref,
+) {
+  final contract.LoggerContract logger = const InfraLoggerAdapter();
+  LoggerBinding.register(logger);
+  ref.onDispose(LoggerBinding.clear);
+  return logger;
+});
+
+/// Analytics Logger
+final Provider<analytics_contract.AnalyticsLoggerContract> analyticsLoggerProvider =
+    Provider<analytics_contract.AnalyticsLoggerContract>((Ref ref) {
+      final contract.LoggerContract baseLogger = ref.read(loggerProvider);
+      return InfraAnalyticsLoggerAdapter(baseLogger);
+    });
 
 /// リアルタイムマネージャー（契約）
 final Provider<r_contract.RealtimeManagerContract> realtimeManagerProvider =
@@ -236,6 +252,27 @@ final Provider<DailySummaryRepository> dailySummaryRepositoryProvider =
       (Ref ref) => DailySummaryRepository(delegate: ref.read(dailySummaryRawRepositoryProvider)),
     );
 
+/// Export: CSV エクスポートリポジトリ
+final Provider<export_contract.CsvExportRepositoryContract> csvExportRepositoryProvider =
+    Provider<export_contract.CsvExportRepositoryContract>((Ref ref) => CsvExportRepository());
+
+/// Export: CSV エクスポートジョブリポジトリ
+final Provider<export_job_contract.CsvExportJobsRepositoryContract>
+    csvExportJobsRepositoryProvider = Provider<export_job_contract.CsvExportJobsRepositoryContract>(
+      (Ref ref) => CsvExportJobsRepository(),
+    );
+
+/// Export: CSV エクスポートサービス
+final Provider<CsvExportService> csvExportServiceProvider = Provider<CsvExportService>(
+  (Ref ref) => CsvExportService(
+    logger: ref.read(loggerProvider),
+    repository: ref.read(csvExportRepositoryProvider),
+    jobsRepository: ref.read(csvExportJobsRepositoryProvider),
+    analyticsLogger: ref.read(analyticsLoggerProvider),
+    rateLimitCache: ref.read(ttlCacheProvider),
+  ),
+);
+
 /// Cache: Memory / TTL を契約経由で公開
 final Provider<cache_contract.Cache<String, dynamic>> memoryCacheProvider =
     Provider<cache_contract.Cache<String, dynamic>>((Ref ref) => MemoryCacheAdapter<dynamic>());
@@ -357,10 +394,12 @@ final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref 
 });
 
 /// CartService（注文カート管理）
-final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref) => CartService(
+final Provider<CartService> cartServiceProvider = Provider<CartService>(
+  (Ref ref) => CartService(
     cartManagementService: ref.read(cartManagementServiceProvider),
     orderCalculationService: ref.read(orderCalculationServiceProvider),
-  ));
+  ),
+);
 
 /// MenuService（契約Realtime注入）
 final Provider<MenuService> menuServiceProvider = Provider<MenuService>((Ref ref) {

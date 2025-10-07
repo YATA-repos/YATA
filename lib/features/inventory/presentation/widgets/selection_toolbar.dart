@@ -55,9 +55,7 @@ class _InventorySelectionToolbarState extends ConsumerState<InventorySelectionTo
         ),
         decoration: BoxDecoration(
           color: YataColorTokens.surface,
-          border: Border(
-            top: BorderSide(color: YataColorTokens.neutral200),
-          ),
+          border: Border(top: BorderSide(color: YataColorTokens.neutral200)),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -92,11 +90,7 @@ class _InventorySelectionToolbarState extends ConsumerState<InventorySelectionTo
                 child: TextField(
                   controller: _amountCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    labelText: "増減量",
-                    hintText: "1",
-                  ),
+                  decoration: const InputDecoration(isDense: true, labelText: "増減量", hintText: "1"),
                 ),
               ),
               const SizedBox(width: YataSpacingTokens.sm),

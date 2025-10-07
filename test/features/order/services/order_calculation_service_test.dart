@@ -12,8 +12,7 @@ import "package:yata/features/order/services/order_calculation_service.dart";
 import "../../../support/logging/fake_logger.dart";
 import "../../../support/logging/log_expectations.dart";
 
-class _MockOrderItemRepository extends Mock
-    implements OrderItemRepositoryContract<OrderItem> {}
+class _MockOrderItemRepository extends Mock implements OrderItemRepositoryContract<OrderItem> {}
 
 void main() {
   late FakeLogger logger;
@@ -34,13 +33,7 @@ void main() {
         unitPrice: 1200,
         subtotal: 2400,
       ),
-      OrderItem(
-        orderId: orderId,
-        menuItemId: "menu-2",
-        quantity: 1,
-        unitPrice: 800,
-        subtotal: 800,
-      ),
+      OrderItem(orderId: orderId, menuItemId: "menu-2", quantity: 1, unitPrice: 800, subtotal: 800),
     ];
 
     when(() => repository.findByOrderId(orderId)).thenAnswer((Invocation _) async => items);
@@ -74,10 +67,7 @@ void main() {
 
     expect(summaryLog.message, contains("subtotal=3200"));
 
-    await expectNoLog(
-      logger,
-      where: (CapturedLog entry) => entry.level == Level.error,
-    );
+    await expectNoLog(logger, where: (CapturedLog entry) => entry.level == Level.error);
   });
 
   test("calculateOrderTotal logs error when repository throws", () async {
@@ -99,10 +89,7 @@ void main() {
 
     final OrderCalculationService service = container.read(orderCalculationServiceProvider);
 
-    await expectLater(
-      service.calculateOrderTotal(orderId),
-      throwsA(isA<Exception>()),
-    );
+    await expectLater(service.calculateOrderTotal(orderId), throwsA(isA<Exception>()));
 
     final CapturedLog errorLog = await expectLog(
       logger,

@@ -247,23 +247,20 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     final Stopwatch sw = Stopwatch()..start();
     final String? userId = currentUserId;
     LogFieldsBuilder fields({String? itemId}) => _buildMenuItemFields(
-          operation: "menu.item.create",
-          userId: userId,
-          itemId: itemId,
-          categoryId: categoryId,
-        );
+      operation: "menu.item.create",
+      userId: userId,
+      itemId: itemId,
+      categoryId: categoryId,
+    );
 
     log.i(
       "Creating menu item",
       tag: loggerComponent,
-      fields: fields()
-          .started()
-          .addMetadata(<String, dynamic>{
-            "name": name,
-            "price": price,
-            "is_available": isAvailable,
-          })
-          .build(),
+      fields: fields().started().addMetadata(<String, dynamic>{
+        "name": name,
+        "price": price,
+        "is_available": isAvailable,
+      }).build(),
     );
     try {
       final MenuItem? created = await _menuItemRepository.create(item);
@@ -339,19 +336,16 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     final Stopwatch sw = Stopwatch()..start();
     final String? userId = currentUserId;
     LogFieldsBuilder fields() => _buildMenuItemFields(
-          operation: "menu.item.update",
-          userId: userId,
-          itemId: id,
-          categoryId: categoryId,
-        );
+      operation: "menu.item.update",
+      userId: userId,
+      itemId: id,
+      categoryId: categoryId,
+    );
 
     log.i(
       "Updating menu item",
       tag: loggerComponent,
-      fields: fields()
-          .started()
-          .addMetadataEntry("changes", updates.keys.toList())
-          .build(),
+      fields: fields().started().addMetadataEntry("changes", updates.keys.toList()).build(),
     );
     try {
       final MenuItem? updated = await _menuItemRepository.updateById(id, updates);
@@ -362,13 +356,9 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
         log.i(
           "Updated menu item: ${updated.name}",
           tag: loggerComponent,
-          fields: fields()
-              .succeeded(durationMs: sw.elapsedMilliseconds)
-              .addMetadata(<String, dynamic>{
-                "price": updated.price,
-                "is_available": updated.isAvailable,
-              })
-              .build(),
+          fields: fields().succeeded(durationMs: sw.elapsedMilliseconds).addMetadata(
+            <String, dynamic>{"price": updated.price, "is_available": updated.isAvailable},
+          ).build(),
         );
       }
       return updated;
@@ -394,17 +384,10 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
   Future<void> deleteMenuItem(String id) async {
     final Stopwatch sw = Stopwatch()..start();
     final String? userId = currentUserId;
-    LogFieldsBuilder fields() => _buildMenuItemFields(
-          operation: "menu.item.delete",
-          userId: userId,
-          itemId: id,
-        );
+    LogFieldsBuilder fields() =>
+        _buildMenuItemFields(operation: "menu.item.delete", userId: userId, itemId: id);
 
-    log.i(
-      "Deleting menu item",
-      tag: loggerComponent,
-      fields: fields().started().build(),
-    );
+    log.i("Deleting menu item", tag: loggerComponent, fields: fields().started().build());
     try {
       await _recipeRepository.deleteByMenuItemId(id);
       await _menuItemRepository.deleteById(id);
@@ -440,12 +423,12 @@ class MenuService with RealtimeServiceContractMixin implements RealtimeServiceCo
     String? itemId,
     String? categoryId,
   }) => LogFieldsBuilder.operation(operation)
-        .withActor(userId: userId)
-        .withResource(type: "menu_item", id: itemId)
-        .addMetadata(<String, dynamic>{
-          if (itemId != null) "menu_item_id": itemId,
-          if (categoryId != null) "category_id": categoryId,
-        });
+      .withActor(userId: userId)
+      .withResource(type: "menu_item", id: itemId)
+      .addMetadata(<String, dynamic>{
+        if (itemId != null) "menu_item_id": itemId,
+        if (categoryId != null) "category_id": categoryId,
+      });
 
   /// リアルタイム更新をUI層へ通知する。
   void _notifyRealtimeUpdate(String featureName) {

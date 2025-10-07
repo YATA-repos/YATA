@@ -346,7 +346,6 @@ class OrderManagementState {
 
 /// 注文管理画面の振る舞いを担うコントローラ。
 class OrderManagementController extends StateNotifier<OrderManagementState> {
-
   /// [OrderManagementController]を生成する。
   OrderManagementController({
     required Ref ref,
@@ -437,9 +436,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
   }
 
   /// 初期データを読み込む。
-  Future<void> loadInitialData({
-    bool reset = false,
-  }) async {
+  Future<void> loadInitialData({bool reset = false}) async {
     final UiActionLogSession logSession = UiActionLogSession.begin(
       logger: _logger,
       flow: "order",
@@ -461,9 +458,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       try {
         await _traceAsyncSection<void>(
           "loadInitialData.sessionWarmup",
-          () => authService.ensureSupabaseSessionReady(
-            timeout: const Duration(seconds: 5),
-          ),
+          () => authService.ensureSupabaseSessionReady(timeout: const Duration(seconds: 5)),
           finishArguments: () => <String, dynamic>{
             "sessionReady": authService.isSupabaseSessionReady,
           },
@@ -478,10 +473,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           st: stackTrace,
         );
         _logPerf("loadInitialData.sessionWarmupTimeout");
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: "認証セッションの準備に時間がかかっています。再度お試しください。",
-        );
+        state = state.copyWith(isLoading: false, errorMessage: "認証セッションの準備に時間がかかっています。再度お試しください。");
         logSession.failed(
           reason: "session_warmup_timeout",
           message: "注文管理 初期データ読み込み前にセッションウォームアップがタイムアウト",
@@ -512,10 +504,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
       final String? userId = _ref.read(currentUserIdProvider);
       if (userId == null) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。",
-        );
+        state = state.copyWith(isLoading: false, errorMessage: "ユーザー情報を取得できませんでした。再度ログインしてください。");
         _logPerf("loadInitialData.userMissing");
         logSession.failed(
           reason: "missing_user",
@@ -544,12 +533,13 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           logThreshold: const Duration(milliseconds: 2),
         );
 
-        final List<MenuCategoryViewData> categoryView = _traceSyncSection<List<MenuCategoryViewData>>(
-          "loadInitialData.buildCategoryView",
-          () => _buildCategoryView(categoryModels),
-          startArguments: () => <String, dynamic>{"categories": categoryModels.length},
-          logThreshold: const Duration(milliseconds: 2),
-        );
+        final List<MenuCategoryViewData> categoryView =
+            _traceSyncSection<List<MenuCategoryViewData>>(
+              "loadInitialData.buildCategoryView",
+              () => _buildCategoryView(categoryModels),
+              startArguments: () => <String, dynamic>{"categories": categoryModels.length},
+              logThreshold: const Duration(milliseconds: 2),
+            );
 
         final Order? cart = await _traceAsyncSection<Order?>(
           "loadInitialData.getActiveCart",
@@ -575,7 +565,8 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           () {
             final List<MenuItemViewData> list = _menuItemCache.values.toList()
               ..sort(
-                (MenuItemViewData a, MenuItemViewData b) => a.displayOrder.compareTo(b.displayOrder),
+                (MenuItemViewData a, MenuItemViewData b) =>
+                    a.displayOrder.compareTo(b.displayOrder),
               );
             menuCount = list.length;
             return list;
@@ -708,37 +699,25 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     await _traceAsyncSection<void>("addMenuItem", () async {
       if (state.isCheckoutInProgress) {
         _logPerfLazy(() => "addMenuItem.skip checkoutInProgress item=$menuItemId");
-        logSession.cancelled(
-          message: "会計処理中のためカート追加を中断",
-          reason: "checkout_in_progress",
-        );
+        logSession.cancelled(message: "会計処理中のためカート追加を中断", reason: "checkout_in_progress");
         return;
       }
       final String? userId = _ensureUserId();
       if (userId == null) {
-        logSession.failed(
-          message: "カート追加に失敗（ユーザー未認証）",
-          reason: "missing_user",
-        );
+        logSession.failed(message: "カート追加に失敗（ユーザー未認証）", reason: "missing_user");
         return;
       }
 
       final MenuItemViewData? menuItem = _menuItemCache[menuItemId] ?? _findMenuItem(menuItemId);
       if (menuItem == null) {
         state = state.copyWith(errorMessage: "選択したメニューが見つかりませんでした。");
-        logSession.failed(
-          message: "カート追加に失敗（メニュー未検出）",
-          reason: "menu_item_not_found",
-        );
+        logSession.failed(message: "カート追加に失敗（メニュー未検出）", reason: "menu_item_not_found");
         return;
       }
 
       final String? cartId = await _ensureCart(userId);
       if (cartId == null) {
-        logSession.failed(
-          message: "カート追加に失敗（カート未取得）",
-          reason: "cart_unavailable",
-        );
+        logSession.failed(message: "カート追加に失敗（カート未取得）", reason: "cart_unavailable");
         return;
       }
       logSession.addPersistentMetadata(<String, dynamic>{"cart_id": cartId});
@@ -792,10 +771,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       flow: "order",
       action: "update_item_quantity",
       userId: _ref.read(currentUserIdProvider),
-      metadata: <String, dynamic>{
-        "menu_item_id": menuItemId,
-        "requested_quantity": quantity,
-      },
+      metadata: <String, dynamic>{"menu_item_id": menuItemId, "requested_quantity": quantity},
       message: "注文管理 カート数量更新を開始",
     );
 
@@ -806,27 +782,18 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           _logPerfLazy(
             () => "updateItemQuantity.skip checkoutInProgress item=$menuItemId quantity=$quantity",
           );
-          logSession.cancelled(
-            message: "会計処理中のため数量更新を中断",
-            reason: "checkout_in_progress",
-          );
+          logSession.cancelled(message: "会計処理中のため数量更新を中断", reason: "checkout_in_progress");
           return;
         }
         final String? userId = _ensureUserId();
         if (userId == null) {
-          logSession.failed(
-            message: "数量更新に失敗（ユーザー未認証）",
-            reason: "missing_user",
-          );
+          logSession.failed(message: "数量更新に失敗（ユーザー未認証）", reason: "missing_user");
           return;
         }
 
         final String? cartId = state.cartId ?? await _ensureCart(userId);
         if (cartId == null) {
-          logSession.failed(
-            message: "数量更新に失敗（カート未取得）",
-            reason: "cart_unavailable",
-          );
+          logSession.failed(message: "数量更新に失敗（カート未取得）", reason: "cart_unavailable");
           return;
         }
         logSession.addPersistentMetadata(<String, dynamic>{"cart_id": cartId});
@@ -836,16 +803,10 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
 
         if (target == null || orderItemId == null) {
           if (quantity > 0) {
-            logSession.cancelled(
-              message: "数量更新対象が見つからないため追加処理へフォールバック",
-              reason: "fallback_to_add",
-            );
+            logSession.cancelled(message: "数量更新対象が見つからないため追加処理へフォールバック", reason: "fallback_to_add");
             await _addMenuItem(menuItemId);
           } else {
-            logSession.cancelled(
-              message: "削除対象が見つからないためスキップ",
-              reason: "missing_target",
-            );
+            logSession.cancelled(message: "削除対象が見つからないためスキップ", reason: "missing_target");
           }
           return;
         }
@@ -925,27 +886,18 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     await _traceAsyncSection<void>("removeItem", () async {
       if (state.isCheckoutInProgress) {
         _logPerfLazy(() => "removeItem.skip checkoutInProgress item=$menuItemId");
-        logSession.cancelled(
-          message: "会計処理中のため削除を中断",
-          reason: "checkout_in_progress",
-        );
+        logSession.cancelled(message: "会計処理中のため削除を中断", reason: "checkout_in_progress");
         return;
       }
       final String? userId = _ensureUserId();
       if (userId == null) {
-        logSession.failed(
-          message: "カート削除に失敗（ユーザー未認証）",
-          reason: "missing_user",
-        );
+        logSession.failed(message: "カート削除に失敗（ユーザー未認証）", reason: "missing_user");
         return;
       }
 
       final String? cartId = state.cartId;
       if (cartId == null) {
-        logSession.failed(
-          message: "カート削除に失敗（カート未取得）",
-          reason: "cart_unavailable",
-        );
+        logSession.failed(message: "カート削除に失敗（カート未取得）", reason: "cart_unavailable");
         return;
       }
       logSession.addPersistentMetadata(<String, dynamic>{"cart_id": cartId});
@@ -1020,26 +972,17 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     );
 
     if (state.isCheckoutInProgress || state.isLoading) {
-      logSession.cancelled(
-        message: "処理実行中のため支払い方法を更新できません",
-        reason: "busy_state",
-      );
+      logSession.cancelled(message: "処理実行中のため支払い方法を更新できません", reason: "busy_state");
       return;
     }
     if (method == state.currentPaymentMethod) {
-      logSession.cancelled(
-        message: "支払い方法が既に選択済みのため変更なし",
-        reason: "no_change",
-      );
+      logSession.cancelled(message: "支払い方法が既に選択済みのため変更なし", reason: "no_change");
       return;
     }
 
     final String? userId = _ensureUserId();
     if (userId == null) {
-      logSession.failed(
-        message: "支払い方法の更新に失敗（ユーザー未認証）",
-        reason: "missing_user",
-      );
+      logSession.failed(message: "支払い方法の更新に失敗（ユーザー未認証）", reason: "missing_user");
       return;
     }
 
@@ -1052,10 +995,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         currentPaymentMethod: previous,
         errorMessage: "カート情報を取得できませんでした。再度お試しください。",
       );
-      logSession.failed(
-        message: "支払い方法の更新に失敗（カート未取得）",
-        reason: "cart_unavailable",
-      );
+      logSession.failed(message: "支払い方法の更新に失敗（カート未取得）", reason: "cart_unavailable");
       return;
     }
     logSession.addPersistentMetadata(<String, dynamic>{"cart_id": cartId});
@@ -1097,27 +1037,18 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     );
 
     if (state.isCheckoutInProgress) {
-      logSession.cancelled(
-        message: "会計処理がすでに進行中のため新たな処理を開始しません",
-        reason: "checkout_in_progress",
-      );
+      logSession.cancelled(message: "会計処理がすでに進行中のため新たな処理を開始しません", reason: "checkout_in_progress");
       return CheckoutActionResult.failure(message: "会計処理中です。");
     }
 
     if (state.cartItems.isEmpty) {
-      logSession.cancelled(
-        message: "カートが空のため会計処理を実行しません",
-        reason: "empty_cart",
-      );
+      logSession.cancelled(message: "カートが空のため会計処理を実行しません", reason: "empty_cart");
       return CheckoutActionResult.emptyCart(message: "カートに商品がありません。");
     }
 
     final String? userId = _ensureUserId();
     if (userId == null) {
-      logSession.failed(
-        message: "会計処理に失敗（ユーザー未認証）",
-        reason: "missing_user",
-      );
+      logSession.failed(message: "会計処理に失敗（ユーザー未認証）", reason: "missing_user");
       return CheckoutActionResult.authenticationFailed(message: "ユーザー情報を取得できませんでした。再度ログインしてください。");
     }
 
@@ -1128,10 +1059,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
       cartId ??= await _ensureCart(userId);
       if (cartId == null) {
         state = state.copyWith(isCheckoutInProgress: false);
-        logSession.failed(
-          message: "会計処理に失敗（カート未取得）",
-          reason: "cart_unavailable",
-        );
+        logSession.failed(message: "会計処理に失敗（カート未取得）", reason: "cart_unavailable");
         return CheckoutActionResult.missingCart(message: "カート情報の取得に失敗しました。");
       }
       logSession.addPersistentMetadata(<String, dynamic>{"cart_id": cartId});
@@ -1150,10 +1078,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
         logSession.failed(
           message: "会計処理に失敗（在庫不足）",
           reason: "stock_insufficient",
-          metadata: <String, dynamic>{
-            "order_id": result.order.id,
-            "insufficient": true,
-          },
+          metadata: <String, dynamic>{"order_id": result.order.id, "insufficient": true},
         );
         return CheckoutActionResult.stockInsufficient(result.order, message: message);
       }
@@ -1222,26 +1147,17 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
     );
 
     if (state.isCheckoutInProgress) {
-      logSession.cancelled(
-        message: "会計処理中のためカートをクリアできません",
-        reason: "checkout_in_progress",
-      );
+      logSession.cancelled(message: "会計処理中のためカートをクリアできません", reason: "checkout_in_progress");
       return;
     }
     if (state.cartItems.isEmpty) {
-      logSession.cancelled(
-        message: "カートが空のためクリア処理を実行しません",
-        reason: "empty_cart",
-      );
+      logSession.cancelled(message: "カートが空のためクリア処理を実行しません", reason: "empty_cart");
       return;
     }
 
     final String? userId = _ensureUserId();
     if (userId == null) {
-      logSession.failed(
-        message: "カートクリアに失敗（ユーザー未認証）",
-        reason: "missing_user",
-      );
+      logSession.failed(message: "カートクリアに失敗（ユーザー未認証）", reason: "missing_user");
       return;
     }
 
@@ -1563,7 +1479,7 @@ class OrderManagementController extends StateNotifier<OrderManagementState> {
           _logPerfLazy(() => "loadCartSnapshot.error cartId=$cartId message=$message");
           return _CartSnapshot(items: const <CartItemViewData>[], cartId: cartId);
         }
-  }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
+      }, startArguments: () => <String, dynamic>{"cartId": cartId, "userId": userId});
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。

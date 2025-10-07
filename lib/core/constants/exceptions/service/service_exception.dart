@@ -53,6 +53,42 @@ class ServiceException extends BaseContextException<ServiceError> {
         params: <String, String>{"orderId": orderId, "error": error},
       );
 
+  /// CSVエクスポートの同時実行制限に抵触した場合
+  factory ServiceException.concurrentExportInProgress(String organizationId) => ServiceException(
+    ServiceError.concurrentExportInProgress,
+    params: <String, String>{"organizationId": organizationId},
+  );
+
+  /// CSVエクスポートのレートリミットに到達した場合
+  factory ServiceException.rateLimitExceeded({
+    required String organizationId,
+    required int dailyLimit,
+    required DateTime resetAt,
+  }) => ServiceException(
+    ServiceError.exportRateLimitExceeded,
+    params: <String, String>{
+      "organizationId": organizationId,
+      "dailyLimit": dailyLimit.toString(),
+      "resetAt": resetAt.toIso8601String(),
+    },
+  );
+
+  /// 指定されたエクスポートジョブが存在しない場合
+  factory ServiceException.exportJobNotFound(String exportJobId) => ServiceException(
+    ServiceError.exportJobNotFound,
+    params: <String, String>{"exportJobId": exportJobId},
+  );
+
+  /// エクスポートジョブの再ダウンロード期限が切れている場合
+  factory ServiceException.redownloadExpired(String exportJobId, DateTime expiresAt) =>
+      ServiceException(
+        ServiceError.exportRedownloadExpired,
+        params: <String, String>{
+          "exportJobId": exportJobId,
+          "expiresAt": expiresAt.toIso8601String(),
+        },
+      );
+
   /// 在庫更新失敗（数量指定）例外の作成
   factory ServiceException.stockUpdateFailedWithQuantity(
     String materialName,
@@ -89,16 +125,16 @@ class ServiceException extends BaseContextException<ServiceError> {
   ExceptionType get type => ExceptionType.service;
 
   /// エラーの重要度を取得
-  ExceptionSeverity get severity {
-    switch (error) {
-      case ServiceError.operationFailed:
-      case ServiceError.materialCreationFailed:
-      case ServiceError.stockUpdateFailed:
-      case ServiceError.purchaseRecordingFailed:
-        return ExceptionSeverity.critical;
-      case ServiceError.materialConsumptionFailed:
-      case ServiceError.materialRestorationFailed:
-        return ExceptionSeverity.high;
-    }
-  }
+  ExceptionSeverity get severity => switch (error) {
+        ServiceError.operationFailed ||
+        ServiceError.materialCreationFailed ||
+        ServiceError.stockUpdateFailed ||
+        ServiceError.purchaseRecordingFailed => ExceptionSeverity.critical,
+        ServiceError.materialConsumptionFailed ||
+        ServiceError.materialRestorationFailed => ExceptionSeverity.high,
+        ServiceError.concurrentExportInProgress ||
+        ServiceError.exportRateLimitExceeded => ExceptionSeverity.medium,
+        ServiceError.exportJobNotFound ||
+        ServiceError.exportRedownloadExpired => ExceptionSeverity.low,
+      };
 }

@@ -78,13 +78,11 @@ class QueryUtils {
   ) {
     // 演算子の確認
     if (!_operatorMethodMap.containsKey(condition.operator)) {
-  _error("Unsupported operator: ${condition.operator}");
+      _error("Unsupported operator: ${condition.operator}");
       throw ArgumentError("サポートされていない演算子: ${condition.operator}");
     }
 
-    _debug(
-      "Applying filter: ${condition.column} ${condition.operator} ${condition.value}",
-    );
+    _debug("Applying filter: ${condition.column} ${condition.operator} ${condition.value}");
 
     // NULL判定
     if (condition.operator == FilterOperator.isNull) {
@@ -98,7 +96,7 @@ class QueryUtils {
     if (condition.operator == FilterOperator.inList ||
         condition.operator == FilterOperator.notInList) {
       if (condition.value is! List) {
-  _error("List type value required for ${condition.operator} operator");
+        _error("List type value required for ${condition.operator} operator");
         throw ArgumentError("${condition.operator}演算子にはList型の値が必要です");
       }
       final List<dynamic> values = condition.value as List<dynamic>;
@@ -148,9 +146,7 @@ class QueryUtils {
       case FilterOperator.notInList:
         // これらは上記で処理済み
 
-        _error(
-          "This operator should be handled in preprocessing: ${condition.operator}",
-        );
+        _error("This operator should be handled in preprocessing: ${condition.operator}");
         throw ArgumentError("この演算子は事前処理で処理される必要があります: ${condition.operator}");
     }
   }
@@ -174,9 +170,7 @@ class QueryUtils {
         orParts.add("${condition.column}.not.is.null");
       } else if (condition.operator == FilterOperator.inList) {
         if (condition.value is! List) {
-          _error(
-            "List type value required for inList operator | inList演算子にはList型の値が必要です",
-          );
+          _error("List type value required for inList operator | inList演算子にはList型の値が必要です");
           throw ArgumentError("inList演算子にはList型の値が必要です");
         }
         final List<dynamic> values = condition.value as List<dynamic>;
@@ -184,9 +178,7 @@ class QueryUtils {
         orParts.add("${condition.column}.in.($valueStr)");
       } else if (condition.operator == FilterOperator.notInList) {
         if (condition.value is! List) {
-          _error(
-            "List type value required for notInList operator | notInList演算子にはList型の値が必要です",
-          );
+          _error("List type value required for notInList operator | notInList演算子にはList型の値が必要です");
           throw ArgumentError("notInList演算子にはList型の値が必要です");
         }
         final List<dynamic> values = condition.value as List<dynamic>;
@@ -423,7 +415,7 @@ class QueryUtils {
     PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
     List<OrderByCondition> orderBys,
   ) {
-  _debug("Applying ${orderBys.length} order by conditions");
+    _debug("Applying ${orderBys.length} order by conditions");
     PostgrestTransformBuilder<List<Map<String, dynamic>>> result = query;
     for (final OrderByCondition orderBy in orderBys) {
       result = applyOrderBy(result, orderBy);

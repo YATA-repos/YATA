@@ -18,12 +18,9 @@ List<Override> buildDevOverrides({
   Iterable<Override> extra = const <Override>[],
 }) {
   final List<Override> overrides = <Override>[
-    if (logger != null)
-      loggerProvider.overrideWithValue(logger),
-    if (authRepository != null)
-      authRepositoryProvider.overrideWithValue(authRepository),
-    if (orderRepository != null)
-      orderRepositoryProvider.overrideWithValue(orderRepository),
+    if (logger != null) loggerProvider.overrideWithValue(logger),
+    if (authRepository != null) authRepositoryProvider.overrideWithValue(authRepository),
+    if (orderRepository != null) orderRepositoryProvider.overrideWithValue(orderRepository),
   ];
 
   // * `extra` に Storybook やテスト専用のオーバーライドを渡して柔軟に拡張できる。

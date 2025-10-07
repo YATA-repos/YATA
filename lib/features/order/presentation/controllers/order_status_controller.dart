@@ -59,18 +59,18 @@ class OrderStatusState {
     this.isLoading = false,
     this.errorMessage,
     Set<String>? updatingOrderIds,
-  })  : inProgressOrders = List<OrderStatusOrderViewData>.unmodifiable(inProgressOrders),
-        completedOrders = List<OrderStatusOrderViewData>.unmodifiable(completedOrders),
-        cancelledOrders = List<OrderStatusOrderViewData>.unmodifiable(cancelledOrders),
-        updatingOrderIds = Set<String>.unmodifiable(updatingOrderIds ?? <String>{});
+  }) : inProgressOrders = List<OrderStatusOrderViewData>.unmodifiable(inProgressOrders),
+       completedOrders = List<OrderStatusOrderViewData>.unmodifiable(completedOrders),
+       cancelledOrders = List<OrderStatusOrderViewData>.unmodifiable(cancelledOrders),
+       updatingOrderIds = Set<String>.unmodifiable(updatingOrderIds ?? <String>{});
 
   /// 初期状態を生成する。
   factory OrderStatusState.initial() => OrderStatusState(
-        inProgressOrders: const <OrderStatusOrderViewData>[],
-        completedOrders: const <OrderStatusOrderViewData>[],
-        cancelledOrders: const <OrderStatusOrderViewData>[],
-        isLoading: true,
-      );
+    inProgressOrders: const <OrderStatusOrderViewData>[],
+    completedOrders: const <OrderStatusOrderViewData>[],
+    cancelledOrders: const <OrderStatusOrderViewData>[],
+    isLoading: true,
+  );
 
   /// 準備中の注文一覧。
   final List<OrderStatusOrderViewData> inProgressOrders;
@@ -100,24 +100,22 @@ class OrderStatusState {
     Set<String>? updatingOrderIds,
     bool clearErrorMessage = false,
   }) => OrderStatusState(
-        inProgressOrders: inProgressOrders ?? this.inProgressOrders,
-        completedOrders: completedOrders ?? this.completedOrders,
-        cancelledOrders: cancelledOrders ?? this.cancelledOrders,
-        isLoading: isLoading ?? this.isLoading,
-        errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
-        updatingOrderIds: updatingOrderIds ?? this.updatingOrderIds,
-      );
+    inProgressOrders: inProgressOrders ?? this.inProgressOrders,
+    completedOrders: completedOrders ?? this.completedOrders,
+    cancelledOrders: cancelledOrders ?? this.cancelledOrders,
+    isLoading: isLoading ?? this.isLoading,
+    errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+    updatingOrderIds: updatingOrderIds ?? this.updatingOrderIds,
+  );
 }
 
 /// 注文状況ページのロジックを担うコントローラ。
 class OrderStatusController extends StateNotifier<OrderStatusState> {
   /// [OrderStatusController]を生成する。
-  OrderStatusController({
-    required Ref ref,
-    required OrderService orderService,
-  })  : _ref = ref,
-        _orderService = orderService,
-        super(OrderStatusState.initial()) {
+  OrderStatusController({required Ref ref, required OrderService orderService})
+    : _ref = ref,
+      _orderService = orderService,
+      super(OrderStatusState.initial()) {
     unawaited(loadOrders());
   }
 
@@ -150,10 +148,7 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
       );
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: message);
     }
   }
 
@@ -240,8 +235,7 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
 }
 
 /// 注文状況ページ用のStateNotifierプロバイダー。
-final StateNotifierProvider<OrderStatusController, OrderStatusState>
-    orderStatusControllerProvider =
+final StateNotifierProvider<OrderStatusController, OrderStatusState> orderStatusControllerProvider =
     StateNotifierProvider<OrderStatusController, OrderStatusState>(
-  (Ref ref) => OrderStatusController(ref: ref, orderService: ref.read(orderServiceProvider)),
-);
+      (Ref ref) => OrderStatusController(ref: ref, orderService: ref.read(orderServiceProvider)),
+    );

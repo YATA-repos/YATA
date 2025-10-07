@@ -142,12 +142,12 @@ class InputValidator {
     try {
       final Uri uri = Uri.parse(value);
       if (!uri.hasScheme || (!uri.scheme.startsWith("http"))) {
-          _warn("URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value");
+        _warn("URL検証エラー: 無効なスキームまたはHTTP/HTTPS以外: $value");
         return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
       }
       return ValidationResult.success();
     } catch (e) {
-        _warn("URL検証中にURIパースエラーが発生: ${e.toString()}");
+      _warn("URL検証中にURIパースエラーが発生: ${e.toString()}");
       return ValidationResult.error(AppStrings.validationUrlInvalidFormat);
     }
   }
@@ -455,13 +455,13 @@ class InputValidator {
       // 個別の値が有効かチェック
       final ValidationResult priceValidation = validatePrice(price, required: true);
       if (!priceValidation.isValid) {
-          _debug("価格バリデーションエラー: ${priceValidation.errorMessage}");
+        _debug("価格バリデーションエラー: ${priceValidation.errorMessage}");
         return priceValidation;
       }
 
       final ValidationResult quantityValidation = validateQuantity(quantity, required: true);
       if (!quantityValidation.isValid) {
-          _debug("数量バリデーションエラー: ${quantityValidation.errorMessage}");
+        _debug("数量バリデーションエラー: ${quantityValidation.errorMessage}");
         return quantityValidation;
       }
 
@@ -474,18 +474,16 @@ class InputValidator {
         final num totalAmount = priceValue * quantityValue;
 
         if (totalAmount > maxTotalAmount) {
-            _warn("合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円");
+          _warn("合計金額が上限を超過: 合計=$totalAmount円, 上限=$maxTotalAmount円");
           return ValidationResult.error("合計金額が上限（$maxTotalAmount円）を超えています");
         }
 
-          _trace(
-          "価格数量一貫性チェック成功: 価格=$priceValue, 数量=$quantityValue, 合計=$totalAmount",
-        );
+        _trace("価格数量一貫性チェック成功: 価格=$priceValue, 数量=$quantityValue, 合計=$totalAmount");
       }
 
       return ValidationResult.success();
     } catch (e) {
-        _error("価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}");
+      _error("価格数量一貫性バリデーション中に予期しないエラーが発生: ${e.toString()}");
       return ValidationResult.error("バリデーション中にエラーが発生しました");
     }
   }

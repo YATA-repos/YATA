@@ -17,11 +17,9 @@ import "desktop_oauth_redirect_server.dart";
 /// Supabase Authとの通信を管理します。
 /// OAuth認証、セッション管理、ユーザー情報取得を提供します。
 class AuthRepository implements contract.AuthRepositoryContract<UserProfile, local.AuthResponse> {
-  AuthRepository({
-    required log_contract.LoggerContract logger,
-    AuthConfig? config,
-  })  : _logger = logger,
-        _config = config ?? AuthConfig.forCurrentPlatform();
+  AuthRepository({required log_contract.LoggerContract logger, AuthConfig? config})
+    : _logger = logger,
+      _config = config ?? AuthConfig.forCurrentPlatform();
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;

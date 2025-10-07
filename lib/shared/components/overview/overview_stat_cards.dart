@@ -5,11 +5,7 @@ import "../data_display/stat_card.dart";
 
 /// 画面上部に配置する統一スタイルの概要カード群。
 class OverviewStatCards extends StatelessWidget {
-  const OverviewStatCards({
-    required this.stats,
-    super.key,
-    this.stackBreakpoint = 900,
-  });
+  const OverviewStatCards({required this.stats, super.key, this.stackBreakpoint = 900});
 
   /// 表示する統計カードの一覧。
   final List<OverviewStatData> stats;
@@ -62,11 +58,11 @@ class OverviewStatCards extends StatelessWidget {
   }
 
   Widget _buildCard(OverviewStatData stat) => YataStatCard(
-        title: stat.title,
-        value: stat.value,
-        indicatorColor: stat.indicatorColor,
-        indicatorLabel: stat.indicatorLabel,
-      );
+    title: stat.title,
+    value: stat.value,
+    indicatorColor: stat.indicatorColor,
+    indicatorLabel: stat.indicatorLabel,
+  );
 }
 
 /// [OverviewStatCards] に渡す表示データ。

@@ -18,7 +18,7 @@ class OrderService with RealtimeServiceContractMixin implements RealtimeServiceC
     required r_contract.RealtimeManagerContract realtimeManager,
     required OrderManagementService orderManagementService,
   }) : _logger = logger,
-    _ref = ref,
+       _ref = ref,
        _realtimeManager = realtimeManager,
        _orderManagementService = orderManagementService;
 

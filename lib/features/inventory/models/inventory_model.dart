@@ -91,6 +91,7 @@ class MaterialCategory extends BaseModel {
 
   /// 表示順序
   int displayOrder;
+
   /// 作成日時
   DateTime? createdAt;
 

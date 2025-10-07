@@ -71,7 +71,8 @@ void main() {
   });
 }
 
-class _FakeAuthRepository implements auth_contract.AuthRepositoryContract<UserProfile, AuthResponse> {
+class _FakeAuthRepository
+    implements auth_contract.AuthRepositoryContract<UserProfile, AuthResponse> {
   UserProfile? currentUserProfile;
   bool sessionValid = false;
   int remainingSeconds = 0;
@@ -112,8 +113,7 @@ class _FakeAuthRepository implements auth_contract.AuthRepositoryContract<UserPr
   }
 
   @override
-  Future<AuthResponse> signInWithGoogle() async =>
-      AuthResponse.failure(error: "not_supported");
+  Future<AuthResponse> signInWithGoogle() async => AuthResponse.failure(error: "not_supported");
 
   @override
   Future<void> signOut({bool allDevices = false}) async {}
@@ -132,27 +132,27 @@ class _TestLogger implements log_contract.LoggerContract {
 
   @override
   void t(Object msgOrThunk, {String? tag, Object? fields}) =>
-    log(Level.trace, msgOrThunk, tag: tag, fields: fields);
+      log(Level.trace, msgOrThunk, tag: tag, fields: fields);
 
   @override
   void d(Object msgOrThunk, {String? tag, Object? fields}) =>
-    log(Level.debug, msgOrThunk, tag: tag, fields: fields);
+      log(Level.debug, msgOrThunk, tag: tag, fields: fields);
 
   @override
   void i(Object msgOrThunk, {String? tag, Object? fields}) =>
-    log(Level.info, msgOrThunk, tag: tag, fields: fields);
+      log(Level.info, msgOrThunk, tag: tag, fields: fields);
 
   @override
   void w(Object msgOrThunk, {String? tag, Object? fields}) =>
-    log(Level.warn, msgOrThunk, tag: tag, fields: fields);
+      log(Level.warn, msgOrThunk, tag: tag, fields: fields);
 
   @override
   void e(Object msgOrThunk, {Object? error, StackTrace? st, String? tag, Object? fields}) =>
-    log(Level.error, msgOrThunk, tag: tag, fields: fields, error: error, st: st);
+      log(Level.error, msgOrThunk, tag: tag, fields: fields, error: error, st: st);
 
   @override
   void f(Object msgOrThunk, {Object? error, StackTrace? st, String? tag, Object? fields}) =>
-    log(Level.fatal, msgOrThunk, tag: tag, fields: fields, error: error, st: st);
+      log(Level.fatal, msgOrThunk, tag: tag, fields: fields, error: error, st: st);
 
   @override
   void clearFatalHandlers() {}
@@ -178,9 +178,5 @@ AuthResponse _successResponse() => AuthResponse.success(
   ),
 );
 
-UserProfile _testUser() => UserProfile(
-  email: "tester@yata.dev",
-  id: "user-1",
-  userId: "user-1",
-  displayName: "Tester",
-);
+UserProfile _testUser() =>
+    UserProfile(email: "tester@yata.dev", id: "user-1", userId: "user-1", displayName: "Tester");

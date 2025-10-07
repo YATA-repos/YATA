@@ -203,13 +203,11 @@ class OrderManagementTracer {
     return combined.isEmpty ? null : combined;
   }
 
-  static Map<String, dynamic> _traceIdentifiers(log_ctx.LogTrace trace) =>
-      <String, dynamic>{
-        log_ctx.LogContextKeys.flowId: trace.flowId,
-        log_ctx.LogContextKeys.spanId: trace.spanId,
-        if (trace.parentSpanId != null)
-          log_ctx.LogContextKeys.parentSpanId: trace.parentSpanId,
-      };
+  static Map<String, dynamic> _traceIdentifiers(log_ctx.LogTrace trace) => <String, dynamic>{
+    log_ctx.LogContextKeys.flowId: trace.flowId,
+    log_ctx.LogContextKeys.spanId: trace.spanId,
+    if (trace.parentSpanId != null) log_ctx.LogContextKeys.parentSpanId: trace.parentSpanId,
+  };
 
   static double _elapsedMs(Duration duration) => duration.inMicroseconds / 1000;
 

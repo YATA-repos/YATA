@@ -48,8 +48,6 @@ class OrderStatusPresentation {
 
   /// セグメントコントロール用の値一覧（「全て」を除く）。
   static List<(String label, OrderStatus status)> segmentOptions() => displayOrder
-      .map<(String, OrderStatus)>(
-        (OrderStatus status) => (label(status), status),
-      )
+      .map<(String, OrderStatus)>((OrderStatus status) => (label(status), status))
       .toList(growable: false);
 }

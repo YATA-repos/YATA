@@ -255,8 +255,7 @@ class CartManagementService {
         throw Exception("Order item $orderItemId not found in cart");
       }
 
-      final Future<MenuItem?> menuItemFuture =
-          _menuItemRepository.getById(orderItem.menuItemId);
+      final Future<MenuItem?> menuItemFuture = _menuItemRepository.getById(orderItem.menuItemId);
       final Future<bool> stockFuture = _orderStockService.checkMenuItemStock(
         orderItem.menuItemId,
         newQuantity,
@@ -356,10 +355,7 @@ class CartManagementService {
 
       log.i("Cart item removed successfully", tag: loggerComponent);
 
-      return CartMutationResult(
-        kind: CartMutationKind.remove,
-        snapshot: snapshot,
-      );
+      return CartMutationResult(kind: CartMutationKind.remove, snapshot: snapshot);
     } catch (e, stackTrace) {
       log.e("Failed to remove item from cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
@@ -404,10 +400,7 @@ class CartManagementService {
 
       log.i("Cart cleared successfully", tag: loggerComponent);
 
-      return CartMutationResult(
-        kind: CartMutationKind.clear,
-        snapshot: snapshot,
-      );
+      return CartMutationResult(kind: CartMutationKind.clear, snapshot: snapshot);
     } catch (e, stackTrace) {
       log.e("Failed to clear cart", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;

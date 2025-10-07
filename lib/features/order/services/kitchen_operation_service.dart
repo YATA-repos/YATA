@@ -10,8 +10,8 @@ class KitchenOperationService {
   KitchenOperationService({
     required log_contract.LoggerContract logger,
     required OrderRepositoryContract<Order> orderRepository,
-  })  : _logger = logger,
-        _orderRepository = orderRepository;
+  }) : _logger = logger,
+       _orderRepository = orderRepository;
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;
@@ -25,7 +25,7 @@ class KitchenOperationService {
     log.d("Retrieving active orders by status", tag: loggerComponent);
 
     try {
-  final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.inProgress];
+      final List<OrderStatus> activeStatuses = <OrderStatus>[OrderStatus.inProgress];
       final List<Order> activeOrders = await _orderRepository.findByStatusList(activeStatuses);
 
       // ステータス別に分類
@@ -53,9 +53,9 @@ class KitchenOperationService {
     log.d("Retrieving order queue", tag: loggerComponent);
 
     try {
-      final List<Order> activeOrders = await _orderRepository.findByStatusList(
-        const <OrderStatus>[OrderStatus.inProgress],
-      );
+      final List<Order> activeOrders = await _orderRepository.findByStatusList(const <OrderStatus>[
+        OrderStatus.inProgress,
+      ]);
 
       // 調理開始前の注文を優先順位順に並べる
       final List<Order> notStarted = activeOrders

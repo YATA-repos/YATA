@@ -14,10 +14,8 @@ class MenuRecipeDetail {
   });
 
   /// レシピ情報からDTOを生成する。
-  factory MenuRecipeDetail.fromRecipe({
-    required Recipe recipe,
-    Material? material,
-  }) => MenuRecipeDetail(
+  factory MenuRecipeDetail.fromRecipe({required Recipe recipe, Material? material}) =>
+      MenuRecipeDetail(
         recipeId: recipe.id,
         menuItemId: recipe.menuItemId,
         materialId: recipe.materialId,

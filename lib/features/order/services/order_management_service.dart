@@ -51,218 +51,213 @@ class OrderManagementService {
     OrderCheckoutRequest request,
     String userId,
   ) => log_ctx.traceAsync<OrderCheckoutResult>(
-      "order.checkout",
-      (log_ctx.LogTrace trace) async {
-        final Stopwatch sw = Stopwatch()..start();
-        final String? requestId = trace.context[log_ctx.LogContextKeys.requestId] as String?;
-        LogFieldsBuilder buildCheckoutFields({String? orderId}) => _buildCheckoutFields(
-              cartId: cartId,
-              userId: userId,
-              orderId: orderId,
-            ).withFlow(flowId: trace.flowId, requestId: requestId);
+    "order.checkout",
+    (log_ctx.LogTrace trace) async {
+      final Stopwatch sw = Stopwatch()..start();
+      final String? requestId = trace.context[log_ctx.LogContextKeys.requestId] as String?;
+      LogFieldsBuilder buildCheckoutFields({String? orderId}) => _buildCheckoutFields(
+        cartId: cartId,
+        userId: userId,
+        orderId: orderId,
+      ).withFlow(flowId: trace.flowId, requestId: requestId);
 
+      log.i(
+        "Started cart checkout process",
+        tag: loggerComponent,
+        fields: buildCheckoutFields().started().addMetadata(<String, dynamic>{
+          "payment_method": request.paymentMethod.value,
+          "discount_amount": request.discountAmount,
+        }).build(),
+      );
+
+      try {
+        // 入力検証
+        final List<ValidationResult> validationResults = <ValidationResult>[
+          InputValidator.validateString(cartId, required: true, fieldName: "カートID"),
+          InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
+          InputValidator.validateString(request.customerName, maxLength: 100, fieldName: "顧客名"),
+          InputValidator.validateNumber(request.discountAmount, min: 0, fieldName: "割引金額"),
+        ];
+
+        final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
+        if (errors.isNotEmpty) {
+          final List<String> errorMessages = InputValidator.getErrorMessages(errors);
+          log.e(
+            "Validation failed for checkout: ${errorMessages.join(', ')}",
+            tag: loggerComponent,
+            fields: buildCheckoutFields()
+                .failed(reason: "validation_error", durationMs: sw.elapsedMilliseconds)
+                .addMetadataEntry("validation_errors", errorMessages)
+                .build(),
+          );
+          throw ValidationException(errorMessages);
+        }
+
+        // カートの存在確認
+        final Order? cart = await _orderRepository.getById(cartId);
+        if (cart == null || cart.userId != userId) {
+          log.e(
+            "Cart access denied or cart not found",
+            tag: loggerComponent,
+            fields: buildCheckoutFields()
+                .failed(reason: "cart_not_found", durationMs: sw.elapsedMilliseconds)
+                .build(),
+          );
+          throw Exception("Cart $cartId not found or access denied");
+        }
+
+        if (OrderStatusMapper.normalize(cart.status) != OrderStatus.inProgress) {
+          log.e(
+            "Cart is not in preparing status",
+            tag: loggerComponent,
+            fields: buildCheckoutFields(orderId: cart.id)
+                .failed(reason: "invalid_status", durationMs: sw.elapsedMilliseconds)
+                .addMetadataEntry("current_status", cart.status.name)
+                .build(),
+          );
+          throw Exception("Cart is not in preparing status");
+        }
+
+        // カート内アイテムの取得
+        final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
+        if (cartItems.isEmpty) {
+          log.e(
+            "Cannot checkout empty cart",
+            tag: loggerComponent,
+            fields: buildCheckoutFields(
+              orderId: cart.id,
+            ).failed(reason: "empty_cart", durationMs: sw.elapsedMilliseconds).build(),
+          );
+          throw Exception("Cart is empty");
+        }
+
+        log.d("Cart contains ${cartItems.length} items for checkout", tag: loggerComponent);
+
+        // 在庫確認
+        log.d("Starting stock validation for checkout", tag: loggerComponent);
+        final Map<String, bool> stockValidation = await _orderStockService.validateCartStock(
+          cartItems,
+        );
+
+        final bool allSufficient = stockValidation.values.every((bool sufficient) => sufficient);
+
+        if (!allSufficient) {
+          if (sw.isRunning) {
+            sw.stop();
+          }
+          final List<String> insufficientItems = stockValidation.entries
+              .where((MapEntry<String, bool> e) => !e.value)
+              .map((MapEntry<String, bool> e) => e.key)
+              .toList();
+          log.w(
+            "Checkout failed: insufficient stock for some items",
+            tag: loggerComponent,
+            fields: buildCheckoutFields(orderId: cart.id)
+                .failed(reason: "stock_insufficient", durationMs: sw.elapsedMilliseconds)
+                .addMetadataEntry("insufficient_items", insufficientItems)
+                .build(),
+          );
+          return OrderCheckoutResult.stockInsufficient(order: cart);
+        }
+
+        log.d("Stock validation passed for all items", tag: loggerComponent);
+
+        // 材料消費の実行
+        log.d("Consuming materials for order", tag: loggerComponent);
+        await _orderStockService.consumeMaterialsForOrder(cartItems);
+
+        // 注文番号はカート生成時のコードを原則維持し、未設定時のみ生成する
+        String orderNumber = cart.orderNumber ?? "";
+        if (orderNumber.trim().isEmpty) {
+          orderNumber = await _orderRepository.generateNextOrderNumber();
+          log.w(
+            "Cart had no display code during checkout; generated fallback",
+            tag: loggerComponent,
+            fields: buildCheckoutFields(
+              orderId: cart.id,
+            ).addMetadata(<String, dynamic>{"order_number": orderNumber}).build(),
+          );
+        }
+        final DateTime now = DateTime.now();
+
+        final Order? confirmedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
+          "payment_method": request.paymentMethod.value,
+          "customer_name": request.customerName,
+          "discount_amount": request.discountAmount,
+          "notes": request.notes,
+          "ordered_at": now.toIso8601String(),
+          "status": OrderStatus.inProgress.value,
+          "order_number": orderNumber,
+          "updated_at": now.toIso8601String(),
+          "is_cart": false,
+        });
+
+        if (confirmedOrder == null) {
+          log.e(
+            "Failed to update order during checkout",
+            tag: loggerComponent,
+            fields: buildCheckoutFields(
+              orderId: cart.id,
+            ).failed(reason: "update_failed", durationMs: sw.elapsedMilliseconds).build(),
+          );
+          throw Exception("Failed to confirm order during checkout");
+        }
+
+        // 最終金額を計算して更新
+        final OrderCalculationResult calculation = await _orderCalculationService
+            .calculateOrderTotal(
+              cartId,
+              discountAmount: request.discountAmount,
+              preloadedItems: cartItems,
+            );
+        final Order? recalculatedOrder = await _orderRepository.updateById(
+          cartId,
+          <String, dynamic>{"total_amount": calculation.totalAmount},
+        );
+
+        final Order finalizedOrder = recalculatedOrder ?? confirmedOrder;
+
+        final Order? nextCart = await _cartManagementService.getOrCreateActiveCart(userId);
+
+        if (sw.isRunning) {
+          sw.stop();
+        }
         log.i(
-          "Started cart checkout process",
+          "Cart checkout completed successfully: totalAmount=${calculation.totalAmount}",
           tag: loggerComponent,
-          fields: buildCheckoutFields()
-              .started()
+          fields: buildCheckoutFields(orderId: finalizedOrder.id)
+              .succeeded(durationMs: sw.elapsedMilliseconds)
               .addMetadata(<String, dynamic>{
-                "payment_method": request.paymentMethod.value,
+                "total_amount": calculation.totalAmount,
                 "discount_amount": request.discountAmount,
+                "order_number": finalizedOrder.orderNumber,
               })
               .build(),
         );
-
-        try {
-          // 入力検証
-          final List<ValidationResult> validationResults = <ValidationResult>[
-            InputValidator.validateString(cartId, required: true, fieldName: "カートID"),
-            InputValidator.validateString(userId, required: true, fieldName: "ユーザーID"),
-            InputValidator.validateString(request.customerName, maxLength: 100, fieldName: "顧客名"),
-            InputValidator.validateNumber(request.discountAmount, min: 0, fieldName: "割引金額"),
-          ];
-
-          final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
-          if (errors.isNotEmpty) {
-            final List<String> errorMessages = InputValidator.getErrorMessages(errors);
-            log.e(
-              "Validation failed for checkout: ${errorMessages.join(', ')}",
-              tag: loggerComponent,
-              fields: buildCheckoutFields()
-                  .failed(reason: "validation_error", durationMs: sw.elapsedMilliseconds)
-                  .addMetadataEntry("validation_errors", errorMessages)
-                  .build(),
-            );
-            throw ValidationException(errorMessages);
-          }
-
-          // カートの存在確認
-          final Order? cart = await _orderRepository.getById(cartId);
-          if (cart == null || cart.userId != userId) {
-            log.e(
-              "Cart access denied or cart not found",
-              tag: loggerComponent,
-              fields: buildCheckoutFields()
-                  .failed(reason: "cart_not_found", durationMs: sw.elapsedMilliseconds)
-                  .build(),
-            );
-            throw Exception("Cart $cartId not found or access denied");
-          }
-
-          if (OrderStatusMapper.normalize(cart.status) != OrderStatus.inProgress) {
-            log.e(
-              "Cart is not in preparing status",
-              tag: loggerComponent,
-              fields: buildCheckoutFields(orderId: cart.id)
-                  .failed(reason: "invalid_status", durationMs: sw.elapsedMilliseconds)
-                  .addMetadataEntry("current_status", cart.status.name)
-                  .build(),
-            );
-            throw Exception("Cart is not in preparing status");
-          }
-
-          // カート内アイテムの取得
-          final List<OrderItem> cartItems = await _orderItemRepository.findByOrderId(cartId);
-          if (cartItems.isEmpty) {
-            log.e(
-              "Cannot checkout empty cart",
-              tag: loggerComponent,
-              fields: buildCheckoutFields(orderId: cart.id)
-                  .failed(reason: "empty_cart", durationMs: sw.elapsedMilliseconds)
-                  .build(),
-            );
-            throw Exception("Cart is empty");
-          }
-
-          log.d("Cart contains ${cartItems.length} items for checkout", tag: loggerComponent);
-
-          // 在庫確認
-          log.d("Starting stock validation for checkout", tag: loggerComponent);
-          final Map<String, bool> stockValidation = await _orderStockService.validateCartStock(
-            cartItems,
-          );
-
-          final bool allSufficient = stockValidation.values.every((bool sufficient) => sufficient);
-
-          if (!allSufficient) {
-            if (sw.isRunning) {
-              sw.stop();
-            }
-            final List<String> insufficientItems = stockValidation.entries
-                .where((MapEntry<String, bool> e) => !e.value)
-                .map((MapEntry<String, bool> e) => e.key)
-                .toList();
-            log.w(
-              "Checkout failed: insufficient stock for some items",
-              tag: loggerComponent,
-              fields: buildCheckoutFields(orderId: cart.id)
-                  .failed(reason: "stock_insufficient", durationMs: sw.elapsedMilliseconds)
-                  .addMetadataEntry("insufficient_items", insufficientItems)
-                  .build(),
-            );
-            return OrderCheckoutResult.stockInsufficient(order: cart);
-          }
-
-          log.d("Stock validation passed for all items", tag: loggerComponent);
-
-          // 材料消費の実行
-          log.d("Consuming materials for order", tag: loggerComponent);
-          await _orderStockService.consumeMaterialsForOrder(cartItems);
-
-          // 注文番号はカート生成時のコードを原則維持し、未設定時のみ生成する
-          String orderNumber = cart.orderNumber ?? "";
-          if (orderNumber.trim().isEmpty) {
-            orderNumber = await _orderRepository.generateNextOrderNumber();
-            log.w(
-              "Cart had no display code during checkout; generated fallback",
-              tag: loggerComponent,
-              fields: buildCheckoutFields(orderId: cart.id)
-                  .addMetadata(<String, dynamic>{"order_number": orderNumber})
-                  .build(),
-            );
-          }
-          final DateTime now = DateTime.now();
-
-          final Order? confirmedOrder = await _orderRepository.updateById(cartId, <String, dynamic>{
-            "payment_method": request.paymentMethod.value,
-            "customer_name": request.customerName,
-            "discount_amount": request.discountAmount,
-            "notes": request.notes,
-            "ordered_at": now.toIso8601String(),
-            "status": OrderStatus.inProgress.value,
-            "order_number": orderNumber,
-            "updated_at": now.toIso8601String(),
-            "is_cart": false,
-          });
-
-          if (confirmedOrder == null) {
-            log.e(
-              "Failed to update order during checkout",
-              tag: loggerComponent,
-              fields: buildCheckoutFields(orderId: cart.id)
-                  .failed(reason: "update_failed", durationMs: sw.elapsedMilliseconds)
-                  .build(),
-            );
-            throw Exception("Failed to confirm order during checkout");
-          }
-
-          // 最終金額を計算して更新
-          final OrderCalculationResult calculation =
-              await _orderCalculationService.calculateOrderTotal(
-            cartId,
-            discountAmount: request.discountAmount,
-            preloadedItems: cartItems,
-          );
-          final Order? recalculatedOrder = await _orderRepository.updateById(
-            cartId,
-            <String, dynamic>{
-              "total_amount": calculation.totalAmount,
-            },
-          );
-
-          final Order finalizedOrder = recalculatedOrder ?? confirmedOrder;
-
-          final Order? nextCart = await _cartManagementService.getOrCreateActiveCart(userId);
-
-          if (sw.isRunning) {
-            sw.stop();
-          }
-          log.i(
-            "Cart checkout completed successfully: totalAmount=${calculation.totalAmount}",
-            tag: loggerComponent,
-            fields: buildCheckoutFields(orderId: finalizedOrder.id)
-                .succeeded(durationMs: sw.elapsedMilliseconds)
-                .addMetadata(<String, dynamic>{
-                  "total_amount": calculation.totalAmount,
-                  "discount_amount": request.discountAmount,
-                  "order_number": finalizedOrder.orderNumber,
-                })
-                .build(),
-          );
-          return OrderCheckoutResult.success(order: finalizedOrder, newCart: nextCart);
-        } catch (e, stackTrace) {
-          if (sw.isRunning) {
-            sw.stop();
-          }
-          log.e(
-            "Cart checkout failed",
-            tag: loggerComponent,
-            error: e,
-            st: stackTrace,
-            fields: buildCheckoutFields()
-                .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
-                .addMetadataEntry("message", e.toString())
-                .build(),
-          );
-          rethrow;
+        return OrderCheckoutResult.success(order: finalizedOrder, newCart: nextCart);
+      } catch (e, stackTrace) {
+        if (sw.isRunning) {
+          sw.stop();
         }
-      },
-      attributes: <String, Object?>{
-        log_ctx.LogContextKeys.source: loggerComponent,
-        log_ctx.LogContextKeys.operation: "order.checkout",
-        log_ctx.LogContextKeys.userId: userId,
-      },
-    );
+        log.e(
+          "Cart checkout failed",
+          tag: loggerComponent,
+          error: e,
+          st: stackTrace,
+          fields: buildCheckoutFields()
+              .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+              .addMetadataEntry("message", e.toString())
+              .build(),
+        );
+        rethrow;
+      }
+    },
+    attributes: <String, Object?>{
+      log_ctx.LogContextKeys.source: loggerComponent,
+      log_ctx.LogContextKeys.operation: "order.checkout",
+      log_ctx.LogContextKeys.userId: userId,
+    },
+  );
 
   /// 注文をキャンセル（在庫復元含む）
   Future<(Order?, bool)> cancelOrder(String orderId, String reason, String userId) async {
@@ -366,20 +361,15 @@ class OrderManagementService {
     required String userId,
     String? orderId,
   }) => LogFieldsBuilder.operation("order.checkout")
-        .withActor(userId: userId)
-        .withResource(type: orderId == null ? "cart" : "order", id: orderId ?? cartId)
-        .addMetadata(<String, dynamic>{
-          "cart_id": cartId,
-          if (orderId != null) "order_id": orderId,
-        });
+      .withActor(userId: userId)
+      .withResource(type: orderId == null ? "cart" : "order", id: orderId ?? cartId)
+      .addMetadata(<String, dynamic>{"cart_id": cartId, if (orderId != null) "order_id": orderId});
 
-  LogFieldsBuilder _buildCancellationFields({
-    required String orderId,
-    required String userId,
-  }) => LogFieldsBuilder.operation("order.cancel")
-        .withActor(userId: userId)
-        .withResource(type: "order", id: orderId)
-        .addMetadata(<String, dynamic>{"order_id": orderId});
+  LogFieldsBuilder _buildCancellationFields({required String orderId, required String userId}) =>
+      LogFieldsBuilder.operation("order.cancel")
+          .withActor(userId: userId)
+          .withResource(type: "order", id: orderId)
+          .addMetadata(<String, dynamic>{"order_id": orderId});
 
   /// 注文履歴を取得（ページネーション付き）
   Future<Map<String, dynamic>> getOrderHistory(OrderSearchRequest request, String userId) async {

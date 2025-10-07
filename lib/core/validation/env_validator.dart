@@ -454,8 +454,7 @@ class EnvValidator {
   static String get logBackpressure => getEnv("LOG_BACKPRESSURE", defaultValue: "drop-oldest");
 
   /// 注文管理トレーシングの有効状態
-  static bool get orderManagementPerfTracing =>
-      getBoolEnv("ORDER_MANAGEMENT_PERF_TRACING");
+  static bool get orderManagementPerfTracing => getBoolEnv("ORDER_MANAGEMENT_PERF_TRACING");
 
   // =================================================================
   // 代替環境ローダー機能（DotEnvLoader統合）
