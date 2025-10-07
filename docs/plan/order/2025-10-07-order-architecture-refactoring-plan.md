@@ -16,7 +16,6 @@
 | 平均ファイルサイズ (Order) | 386 行 | 280 行 以下 |
 | `order_management_controller.dart` 行数 | 1,680 行 | 400 行 以下 |
 | Facade サービス数 | 3 | 0 |
-| Order フロー E2E テストカバレッジ | 未整備 | 主要フロー 90% ケース網羅 |
 | クリティカルバグ再発率 (3 ヶ月移動平均) | 2 件/四半期 | 0 件 |
 
 ## 4. 現状の主要課題
@@ -24,18 +23,8 @@
 2. **巨大コントローラ/ページ**: `order_management_controller.dart` (1,680 行)、`order_management_page.dart` (1,031 行)、`order_history_page.dart` (926 行)。
 3. **依存関係の重複**: `OrderCalculationService` と `OrderStockService` への注入が 3 箇所以上で重複。
 4. **在庫連携ロジックの重複**: `order/services/order_stock_service.dart` と `inventory/services/order_stock_service.dart` で名称・責務が曖昧。
-5. **テスト不足**: チェックアウト/カート/履歴フローの自動テストが不足し、既知不具合の再発リスクが高い。
 
 ## 5. 改善イニシアチブ
-
-### Phase 0 (Week 0-1): ガードレール整備
-- **目的**: リファクタリングの安全網とベースライン指標を確立。
-- **タスク**:
-  - Order フローの現状テストカバレッジ計測 (`flutter test --coverage`)、不足領域の洗い出し。
-  - 最低限の E2E テスト (チェックアウト成功/失敗、注文履歴表示) を `test/features/order/` に追加。
-  - 重要ファイルのメトリクス (行数、依存数) を `docs/reference/order/metrics-2025-10.csv` として記録。
-- **成果物**: ベースラインレポート + 新規テスト 3 本以上。
-- **依存関係**: なし。
 
 ### Phase 1 (Week 1): Facade 層の削除
 - **目的**: 冗長な Facade を排除し、DI/責務を明瞭化。
@@ -59,9 +48,8 @@
 - **目的**: 巨大ページの解体と UI コンポーネントの再利用促進。
 - **タスク**:
   - `presentation/pages/order_management/widgets/` 配下に主要ウィジェットを分離。
-  - ゴールデンテスト/ウィジェットテストを追加し UI 退行を検知。
   - `_images/mocks/order_management_page.png` を参照し UI 差異レビュー。
-- **成果物**: メインページ <300 行、ウィジェットごとのテストが存在。
+- **成果物**: メインページ <600 行、ウィジェットごとのテストが存在。
 - **リスク/対応**: デザイン破綻 → デザイナー/PO による UI チェックリストで検証。
 
 ### Phase 4 (Week 5-8): サービス統合と命名整理
@@ -90,7 +78,6 @@
 ## 6. 実行ロードマップ (概算)
 | 週 | 主要マイルストーン | オーナー | チェックポイント |
 |----|----------------------|----------|------------------|
-| Week 0 | テスト整備・メトリクス採取 (Phase 0) | Backend/QA | ベースライン報告書 |
 | Week 1 | Facade 削除完了 (Phase 1) | Backend | PR レビュー + 動作確認 |
 | Week 2 | コントローラ分割着手 | Backend | 新コントローラ骨子レビュー |
 | Week 3 | コントローラ分割完了・テスト緑 (Phase 2) | Backend/QA | Regression テストレポート |
@@ -115,7 +102,6 @@
 | 学習コスト増大 | 中 | 設計レビュー記録、Tech Talk、Slack Q&A チャンネル |
 
 ## 9. コミュニケーション・承認フロー
-- キックオフ: Week 0 月曜、開発/QA/PO/デザイナー参加。
 - 週次ステータス: 金曜 15:00、進捗 + リスク共有。
 - レビュー: 各 Phase 終了時に PO/QA/Tech Lead の承認必須。
 - ドキュメント更新: `docs/reference/order/` の更新が必要な場合は PR に含める。
