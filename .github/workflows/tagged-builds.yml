@@ -22,7 +22,7 @@ jobs:
           - os: windows-latest
             build-target: windows
             # Windows は Release/ 配下のみアップロード
-            artifact-path: build/windows/x64/runner/Release/**
+            artifact-path: build/windows/x64/runner/Release
             artifact-name: yata-windows-runner
     defaults:
       run:
@@ -242,7 +242,14 @@ jobs:
       - name: Install Inno Setup
         shell: pwsh
         run: |
-          choco install innosetup -y
+          choco install innosetup --version=6.2.2 -y
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install Inno Setup via Chocolatey."
+          }
+          
+          # PATH を再読み込み
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+          
           $iscc = Get-Command iscc -ErrorAction SilentlyContinue
           if (-not $iscc) {
             throw "ISCC (Inno Setup) not found in PATH after installation."
@@ -289,8 +296,12 @@ jobs:
       - name: Compile installer
         shell: pwsh
         run: |
+          # タグ名から v プレフィックスを除去してバージョン番号を抽出
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          Write-Host "Using version: $version"
+          
           $iscc = (Get-Command iscc).Source
-          & $iscc /Qp /DAppVersion="$env:GITHUB_REF_NAME" installer\YATA.iss
+          & $iscc /Qp /DAppVersion="$version" installer\YATA.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed." }
           Get-ChildItem installer\out\*.exe | ForEach-Object FullName
 
