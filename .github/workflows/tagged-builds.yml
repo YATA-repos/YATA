@@ -253,7 +253,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path installer\out | Out-Null
           $lines = @(
-            '#define AppVersion GetStringDef("AppVersion", "0.0.0")'
+            '#ifndef AppVersion'
+            '#define AppVersion "0.0.0"'
+            '#endif'
+            ''
             '[Setup]'
             'AppId={{1B9A9E73-4C46-4E3A-9D9E-3A7F8EACB001}}'
             'AppName=YATA'
