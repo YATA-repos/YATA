@@ -215,7 +215,7 @@ jobs:
       - name: Flatten Windows runner directory
         shell: pwsh
         run: |
-          $root = (Resolve-Path (Join-Path (Get-Location) 'installer\workdir')).Path
+          $root = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) 'installer\workdir'))
           Write-Host "Root directory: $root"
           
           # yata.exe を探す
@@ -230,8 +230,8 @@ jobs:
             throw "yata.exe が ${root} 以下で見つかりませんでした。"
           }
           
-          # パスを正規化（FileSystemプレフィックスを除去）
-          $releasePath = (Resolve-Path ($exeFiles[0] | Split-Path)).Path
+          # DirectoryNameプロパティを使用してパスを取得（プレフィックスなし）
+          $releasePath = [System.IO.Path]::GetFullPath($exeFiles[0].DirectoryName)
           Write-Host "yata.exe found at: $releasePath"
 
           # パスを正規化して比較（末尾のバックスラッシュを除去）
