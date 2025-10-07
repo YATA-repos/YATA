@@ -2,6 +2,7 @@ part of "order_management_controller.dart";
 
 mixin CheckoutController on _OrderManagementControllerBase {
   /// 支払い方法を更新する。
+  @override
   Future<void> updatePaymentMethod(PaymentMethod method) async {
     final UiActionLogSession logSession = UiActionLogSession.begin(
       logger: _logger,
@@ -66,6 +67,7 @@ mixin CheckoutController on _OrderManagementControllerBase {
   }
 
   /// カートを会計処理する。
+  @override
   Future<CheckoutActionResult> checkout() async {
     final UiActionLogSession logSession = UiActionLogSession.begin(
       logger: _logger,
@@ -178,6 +180,7 @@ mixin CheckoutController on _OrderManagementControllerBase {
   }
 
   /// 注文メモを更新する。
+  @override
   void updateOrderNotes(String notes) {
     final String previous = state.orderNotes;
     _traceSyncSection<void>(

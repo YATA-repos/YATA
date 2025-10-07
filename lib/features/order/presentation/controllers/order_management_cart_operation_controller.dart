@@ -2,6 +2,7 @@ part of "order_management_controller.dart";
 
 mixin CartOperationController on _OrderManagementControllerBase {
   /// メニューをカートへ追加する。
+  @override
   void addMenuItem(String menuItemId) => unawaited(_addMenuItem(menuItemId));
 
   Future<void> _addMenuItem(String menuItemId) async {
@@ -80,6 +81,7 @@ mixin CartOperationController on _OrderManagementControllerBase {
   }
 
   /// カート内アイテムの数量を更新する。
+  @override
   void updateItemQuantity(String menuItemId, int quantity) =>
       unawaited(_updateItemQuantity(menuItemId, quantity));
 
@@ -194,6 +196,7 @@ mixin CartOperationController on _OrderManagementControllerBase {
   }
 
   /// アイテムをカートから削除する。
+  @override
   void removeItem(String menuItemId) => unawaited(_removeItem(menuItemId));
 
   Future<void> _removeItem(String menuItemId) async {
@@ -281,6 +284,7 @@ mixin CartOperationController on _OrderManagementControllerBase {
   }
 
   /// カートをクリアする。
+  @override
   void clearCart() => unawaited(_clearCart());
 
   Future<void> _clearCart() async {

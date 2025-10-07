@@ -56,9 +56,6 @@ class CsvExportEncryptionService {
     final ZipEncoder encoder = ZipEncoder(password: password);
     final List<int> compressed =
         encoder.encode(archive);
-    if (compressed == null) {
-      throw StateError("Failed to encode encrypted ZIP for $fileName");
-    }
 
     final CsvExportEncryptionInfo info = CsvExportEncryptionInfo(
       required: true,

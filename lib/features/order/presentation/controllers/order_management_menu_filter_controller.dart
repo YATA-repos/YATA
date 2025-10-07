@@ -2,6 +2,7 @@ part of "order_management_controller.dart";
 
 mixin MenuFilterController on _OrderManagementControllerBase {
   /// 初期データを読み込む。
+  @override
   Future<void> loadInitialData({bool reset = false}) async {
     final UiActionLogSession logSession = UiActionLogSession.begin(
       logger: _logger,
@@ -191,6 +192,7 @@ mixin MenuFilterController on _OrderManagementControllerBase {
   }
 
   /// データを再読み込みする。
+  @override
   void refresh() {
     if (state.isCheckoutInProgress) {
       return;
@@ -199,6 +201,7 @@ mixin MenuFilterController on _OrderManagementControllerBase {
   }
 
   /// カテゴリを選択する。
+  @override
   void selectCategory(int index) {
     final int previousIndex = state.selectedCategoryIndex;
     _traceSyncSection<void>(
@@ -219,6 +222,7 @@ mixin MenuFilterController on _OrderManagementControllerBase {
   }
 
   /// 検索キーワードを更新する。
+  @override
   void updateSearchQuery(String query) {
     final String previous = state.searchQuery;
     _traceSyncSection<void>(

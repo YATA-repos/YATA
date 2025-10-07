@@ -409,18 +409,12 @@ abstract class _OrderManagementControllerBase extends StateNotifier<OrderManagem
 class OrderManagementController extends _OrderManagementControllerBase
     with MenuFilterController, CartOperationController, CheckoutController {
   OrderManagementController({
-    required Ref ref,
-    required MenuService menuService,
-    required CartManagementService cartManagementService,
-    required OrderService orderService,
-    required log_contract.LoggerContract logger,
-  }) : super(
-          ref: ref,
-          menuService: menuService,
-          cartManagementService: cartManagementService,
-          orderService: orderService,
-          logger: logger,
-        );
+    required super.ref,
+    required super.menuService,
+    required super.cartManagementService,
+    required super.orderService,
+    required super.logger,
+  });
 }
 
 /// 注文管理画面のStateNotifierプロバイダー。

@@ -66,9 +66,25 @@ class CsvExportJobLogEntry {
 
 /// `export_jobs` テーブルに格納された既存ジョブのスナップショット
 class CsvExportJobRecord {
+  const CsvExportJobRecord({
+    required this.id,
+    required this.dataset,
+    required this.status,
+    required this.requestedAt,
+    required this.periodFrom,
+    required this.periodTo,
+    this.organizationId,
+    this.locationId,
+    this.requestedBy,
+    this.rowCount,
+    this.durationMs,
+    this.metadata,
+    this.fileName,
+    this.sourceViewVersion,
+    this.generatedByAppVersion,
+  });
 
-  factory CsvExportJobRecord.fromJson(Map<String, dynamic> json) {
-    return CsvExportJobRecord(
+  factory CsvExportJobRecord.fromJson(Map<String, dynamic> json) => CsvExportJobRecord(
       id: json["id"]?.toString() ?? "",
       dataset: _datasetFromString(json["dataset_id"]?.toString() ?? ""),
       status: _statusFromString(json["status"]?.toString() ?? "completed"),
@@ -89,24 +105,6 @@ class CsvExportJobRecord {
       sourceViewVersion: json["source_view_version"]?.toString(),
       generatedByAppVersion: json["generated_by_app_version"]?.toString(),
     );
-  }
-  const CsvExportJobRecord({
-    required this.id,
-    required this.dataset,
-    required this.status,
-    required this.requestedAt,
-    required this.periodFrom,
-    required this.periodTo,
-    this.organizationId,
-    this.locationId,
-    this.requestedBy,
-    this.rowCount,
-    this.durationMs,
-    this.metadata,
-    this.fileName,
-    this.sourceViewVersion,
-    this.generatedByAppVersion,
-  });
 
   final String id;
   final CsvExportDataset dataset;
@@ -159,9 +157,15 @@ class CsvExportJobRecord {
 
 /// 日次レートリミットの状態スナップショット
 class CsvExportRateLimitSnapshot {
+  const CsvExportRateLimitSnapshot({
+    required this.organizationId,
+    required this.dateKey,
+    required this.count,
+    required this.limit,
+    required this.resetAt,
+  });
 
-  factory CsvExportRateLimitSnapshot.fromJson(Map<String, dynamic> json) {
-    return CsvExportRateLimitSnapshot(
+  factory CsvExportRateLimitSnapshot.fromJson(Map<String, dynamic> json) => CsvExportRateLimitSnapshot(
       organizationId: json["organization_id"]?.toString() ?? "",
       dateKey: json["date_key"]?.toString() ?? "",
       count: json["count"] is int
@@ -172,14 +176,6 @@ class CsvExportRateLimitSnapshot {
           : int.tryParse(json["limit"]?.toString() ?? "") ?? 0,
       resetAt: DateTime.parse(json["reset_at"] as String),
     );
-  }
-  const CsvExportRateLimitSnapshot({
-    required this.organizationId,
-    required this.dateKey,
-    required this.count,
-    required this.limit,
-    required this.resetAt,
-  });
 
   final String organizationId;
   final String dateKey;
