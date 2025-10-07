@@ -1,0 +1,53 @@
+name: Announce release to Discord
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    # 安定版のみ通知
+    if: ${{ github.event.release.draft == false && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post release to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          TAG: ${{ github.event.release.tag_name }}
+          NAME: ${{ github.event.release.name }}
+          URL: ${{ github.event.release.html_url }}
+          REPO: ${{ github.repository }}
+          AUTHOR: ${{ github.event.release.author.login }}
+        run: |
+          python - <<'PY' | curl -sS -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"
+          import json, os, datetime, sys
+          # GITHUB_EVENT_PATH からアセット一覧も拾う
+          event = json.load(open(os.environ['GITHUB_EVENT_PATH'], 'r'))
+          assets = event.get('release', {}).get('assets', [])
+          assets_lines = []
+          for a in assets:
+            name = a.get('name', 'asset')
+            url = a.get('browser_download_url', '')
+            size = a.get('size', 0)
+            # KB表示（簡易）
+            assets_lines.append(f"- [{name}]({url}) ({size//1024} KB)")
+          assets_text = "\n".join(assets_lines)[:1000] if assets_lines else "（なし）"
+
+          payload = {
+            "content": f":tada: 新しいリリース **{os.environ['TAG']}** を公開しました！\n{os.environ['REPO']} by {os.environ['AUTHOR']}\n{os.environ['URL']}",
+            "embeds": [{
+              "title": os.environ.get("NAME") or os.environ['TAG'],
+              "url": os.environ['URL'],
+              "description": "リリースノートは上記URLをご確認ください。",
+              "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+              "fields": [
+                {"name": "タグ", "value": os.environ['TAG'], "inline": True},
+                {"name": "リポジトリ", "value": os.environ['REPO'], "inline": True},
+                {"name": "アセット", "value": assets_text, "inline": False}
+              ],
+              "footer": {"text": "GitHub Releases"}
+            }],
+            "allowed_mentions": {"parse": []}  # 誤メンション防止
+          }
+          print(json.dumps(payload, ensure_ascii=False))
+          PY
