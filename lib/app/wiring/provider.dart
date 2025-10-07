@@ -61,7 +61,6 @@ import "../../features/order/models/order_model.dart" show Order, OrderItem;
 import "../../features/order/repositories/order_item_repository.dart";
 import "../../features/order/repositories/order_repository.dart";
 import "../../features/order/services/cart_management_service.dart";
-import "../../features/order/services/cart_service.dart";
 import "../../features/order/services/order_calculation_service.dart";
 import "../../features/order/services/order_management_service.dart";
 import "../../features/order/services/order_service.dart";
@@ -392,14 +391,6 @@ final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref 
     orderManagementService: orderMgmt,
   );
 });
-
-/// CartService（注文カート管理）
-final Provider<CartService> cartServiceProvider = Provider<CartService>(
-  (Ref ref) => CartService(
-    cartManagementService: ref.read(cartManagementServiceProvider),
-    orderCalculationService: ref.read(orderCalculationServiceProvider),
-  ),
-);
 
 /// MenuService（契約Realtime注入）
 final Provider<MenuService> menuServiceProvider = Provider<MenuService>((Ref ref) {
