@@ -391,7 +391,7 @@ jobs:
           if ($environmentLines.Count -gt 0) {
             $lines += ''
             $lines += '[Environment]'
-            $lines.AddRange($environmentLines)
+            $lines += $environmentLines.ToArray()
           }
 
           $lines += @(
