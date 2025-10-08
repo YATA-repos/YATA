@@ -27,17 +27,6 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
   /// 認証設定
   final AuthConfig _config;
 
-  /// Supabaseクライアントを取得（未初期化時は例外を投げる）
-  SupabaseClient _requireClient({required String operation}) {
-    if (!SupabaseClientService.isInitialized) {
-      final String message =
-          "Supabase client is not initialized; cannot execute $operation";
-      log.w(message, tag: "AuthRepository");
-      throw AuthException.initializationFailed(message);
-    }
-    return SupabaseClientService.client;
-  }
-
   SupabaseClient? get _clientOrNull =>
       SupabaseClientService.isInitialized ? SupabaseClientService.client : null;
 
@@ -50,6 +39,44 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
   /// 認証状態の変更を監視
   Stream<AuthState> get authStateChanges =>
       _clientOrNull?.auth.onAuthStateChange ?? Stream<AuthState>.empty();
+
+  Future<SupabaseClient> _obtainClient({required String operation}) async {
+    if (SupabaseClientService.isInSafeMode) {
+      final String reason = SupabaseClientService.safeModeReason ?? "unknown";
+      final String message =
+          "Supabase safe mode is active ($reason); cannot execute $operation";
+      log.e(message, tag: "AuthRepository");
+      throw AuthException.initializationFailed(message);
+    }
+
+    if (!SupabaseClientService.isInitialized) {
+      log.w(
+        "Supabase client is not initialized; attempting auto-initialization for $operation",
+        tag: "AuthRepository",
+      );
+      try {
+        await SupabaseClientService.initialize();
+      } on AuthException catch (error, stackTrace) {
+        log.e(
+          "Supabase initialization failed during $operation: ${error.message}",
+          tag: "AuthRepository",
+          error: error,
+          st: stackTrace,
+        );
+        rethrow;
+      } catch (error, stackTrace) {
+        log.e(
+          "Unexpected error during Supabase initialization for $operation: $error",
+          tag: "AuthRepository",
+          error: error,
+          st: stackTrace,
+        );
+        throw AuthException.initializationFailed(error.toString());
+      }
+    }
+
+    return SupabaseClientService.client;
+  }
 
   // =================================================================
   // OAuth認証
@@ -72,7 +99,8 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
         return await _signInWithGoogleDesktop(request);
       }
 
-      final SupabaseClient client = _requireClient(operation: "signInWithGoogle");
+  final SupabaseClient client =
+      await _obtainClient(operation: "signInWithGoogle");
 
       final bool success = await client.auth.signInWithOAuth(
         OAuthProvider.google,
@@ -109,7 +137,7 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
 
     try {
       final SupabaseClient client =
-          _requireClient(operation: "_signInWithGoogleDesktop");
+          await _obtainClient(operation: "_signInWithGoogleDesktop");
 
       final bool success = await client.auth.signInWithOAuth(
         OAuthProvider.google,
@@ -189,7 +217,7 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
     }
 
     final SupabaseClient client =
-        _requireClient(operation: "_handleOAuthRedirectUri");
+      await _obtainClient(operation: "_handleOAuthRedirectUri");
 
     final AuthSessionUrlResponse response = await client.auth.getSessionFromUrl(uri);
     final Session session = response.session;
@@ -276,7 +304,8 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
     try {
       log.d("Refreshing authentication session", tag: "AuthRepository");
 
-      final SupabaseClient client = _requireClient(operation: "refreshSession");
+      final SupabaseClient client =
+          await _obtainClient(operation: "refreshSession");
 
       final AuthResponse response = await client.auth.refreshSession();
 
@@ -318,12 +347,13 @@ class AuthRepository implements contract.AuthRepositoryContract<UserProfile, loc
     try {
       final String? userEmail = currentUser?.email;
 
-      log.d("Signing out user: ${userEmail ?? 'unknown'}", tag: "AuthRepository");
+    log.d("Signing out user: ${userEmail ?? 'unknown'}", tag: "AuthRepository");
 
-      final SupabaseClient client = _requireClient(operation: "signOut");
+    final SupabaseClient client =
+      await _obtainClient(operation: "signOut");
 
-      await client.auth
-          .signOut(scope: allDevices ? SignOutScope.global : SignOutScope.local);
+    await client.auth
+      .signOut(scope: allDevices ? SignOutScope.global : SignOutScope.local);
 
       log.i("User signed out successfully: ${userEmail ?? 'unknown'}", tag: "AuthRepository");
     } catch (e) {
