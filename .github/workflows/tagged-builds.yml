@@ -456,8 +456,13 @@ jobs:
             echo "Warning: Using tag as name"
           fi
 
+          export RELEASE_URL
+          export RELEASE_NAME
+          export RELEASE_AUTHOR
+
           # アセット情報を取得
           ASSETS_JSON=$(echo "$RELEASE_JSON" | jq -c '.assets // []')
+          export ASSETS_JSON
 
           # Python スクリプトで Discord payload を生成して送信
           python3 - <<'PY' | curl -sS -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"
