@@ -319,7 +319,7 @@ jobs:
             )
 
             $escaped = $Value -replace '"', '""'
-            return "Name: \"$Name\"; Value: \"$escaped\"; Flags: machine"
+            return ('Name: "{0}"; Value: "{1}"; Flags: machine' -f $Name, $escaped)
           }
 
           $requiredEnvKeys = @('SUPABASE_URL', 'SUPABASE_ANON_KEY')
