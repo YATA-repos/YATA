@@ -4,7 +4,7 @@
 
 - 対象タスク: Order-Bugfix-3
 - 関連タスク: Order-Bugfix-1（注文番号採番）※ステータス更新時に副作用があるため連携必須
-- 対象コード: `lib/features/order/presentation/pages/order_management_page.dart` / `controllers/order_management_controller.dart` / `services/order_service.dart` / `services/order_management_service.dart` / `services/cart_management_service.dart` / `repositories/order_repository.dart`
+- 対象コード: `lib/features/order/presentation/pages/order_management_page.dart` / `controllers/order_management_controller.dart` / `services/order/order_management_service.dart` / `services/cart/cart_management_service.dart` / `repositories/order_repository.dart`
 
 ## 目的
 

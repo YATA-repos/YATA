@@ -18,14 +18,14 @@
 - コントローラはコンストラクタで `loadInitialData()` を一度だけ実行し、アクティブなカートを読み込む。ページ離脱後もプロバイダが破棄されないため、メモリ上の `state` が維持される。
 
 ### 2.2 サービス層
-- `OrderManagementService.checkoutCart` (`lib/features/order/services/order_management_service.dart`) は
+- `OrderManagementService.checkoutCart` (`lib/features/order/services/order/order_management_service.dart`) は
   - バリデーション / 在庫確認後に `_orderRepository.generateNextOrderNumber()` を呼ぶが、戻り値を利用せず注文へ割り当てもしていない。
   - 注文の `status` を `OrderStatus.preparing` のまま更新しており、カートと正式注文の区別が付かない。
   - チェックアウト完了後に新しいカートを生成する処理は存在しない。
 - ※ 2025-10-08 時点では UI 層は `OrderManagementService` を直接注入し、旧 `OrderService` ラッパは削除済み。
 
 ### 2.3 カート管理
-- `CartManagementService.getActiveCart` (`lib/features/order/services/cart_management_service.dart`) は `OrderRepository.findActiveDraftByUser()` を呼び出し、`status = preparing` の注文を「アクティブなカート」として再利用する。
+- `CartManagementService.getActiveCart` (`lib/features/order/services/cart/cart_management_service.dart`) は `OrderRepository.findActiveDraftByUser()` を呼び出し、`status = preparing` の注文を「アクティブなカート」として再利用する。
 - `OrderRepository.findActiveDraftByUser()` (`lib/features/order/repositories/order_repository.dart`) も `status = preparing` の最新注文を返すだけで、会計完了後に `completed` 等へステータスを変えない限り同じ注文が返る。
 - `CartService.clearCart` は注文明細を削除し合計金額を 0 に戻すが、注文レコード自体や `CartManagementService` のキャッシュは更新しない。
 

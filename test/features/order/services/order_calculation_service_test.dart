@@ -7,7 +7,7 @@ import "package:yata/core/logging/levels.dart";
 import "package:yata/core/logging/logger_binding.dart";
 import "package:yata/features/order/dto/order_dto.dart";
 import "package:yata/features/order/models/order_model.dart";
-import "package:yata/features/order/services/order_calculation_service.dart";
+import "package:yata/features/order/services/order/order_calculation_service.dart";
 
 import "../../../support/logging/fake_logger.dart";
 import "../../../support/logging/log_expectations.dart";

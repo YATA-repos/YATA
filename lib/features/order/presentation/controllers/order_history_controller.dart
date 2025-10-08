@@ -11,7 +11,7 @@ import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../menu/models/menu_model.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
-import "../../services/order_management_service.dart";
+import "../../services/order/order_management_service.dart";
 import "../../shared/order_status_mapper.dart";
 
 /// 注文履歴画面で表示する注文の表示用データ。

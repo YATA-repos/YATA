@@ -39,7 +39,7 @@
 - **完了条件**: 計測ログが 30 分以上無警告で記録され、`state.filteredMenuItems` の計測で再描画時間が算出できること。
 
 ## Phase 1: 初期ロード高速化
-- **対象**: `lib/features/order/domain/services/order_management_service.dart`, `lib/features/order/data/queries/*`, Supabase テーブル (`menu_categories`, `menu_items`)
+- **対象**: `lib/features/order/services/order/order_management_service.dart`, `lib/features/order/data/queries/*`, Supabase テーブル (`menu_categories`, `menu_items`)
 - **タスク**
   1. クエリビルダーの条件重複を整理 (`user_id`, `display_order` の二重適用を解消)。共通クエリをユーティリティ化しキャッシュキーを導入。
   2. Supabase/Postgres 側で `menu_categories(user_id, display_order)` など必要な複合インデックスを追加し、不要列の取得を削減。
@@ -49,7 +49,7 @@
 - **完了条件**: 3 回連続の計測で P95 ≤ 200ms、平均 120ms 以下。リグレッションテスト (`flutter drive` シナリオ) 合格。
 
 ## Phase 2: カート操作パイプライン最適化
-- **対象**: `lib/features/order/domain/services/order_inventory_integration_service.dart`, `order_calculation_service.dart`, `order_management_service.dart`, `order_management_controller.dart`
+- **対象**: `lib/features/order/services/order/order_inventory_integration_service.dart`, `lib/features/order/services/order/order_calculation_service.dart`, `lib/features/order/services/order/order_management_service.dart`, `lib/features/order/presentation/controllers/order_management_controller.dart`
 - **タスク**
   1. 在庫確認→明細更新→合計再計算の処理を Supabase RPC (Postgres 関数) に統合し、ネットワーク往復を 1 回に削減。RPC 追加が困難な場合は `batch` API を使用。
   2. サービス層で取得した `OrderWithItems` を使い回すキャッシュ (`OrderContext`) を追加し、同一 `cartId` の再取得を避ける。キャッシュ失効はトランザクション完了時に限定。

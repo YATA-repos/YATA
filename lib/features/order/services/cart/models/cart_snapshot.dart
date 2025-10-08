@@ -1,5 +1,5 @@
-import "../../../menu/models/menu_model.dart";
-import "../../models/order_model.dart";
+import "../../../../menu/models/menu_model.dart";
+import "../../../models/order_model.dart";
 
 /// カートの最新状態を表現するサービス層スナップショット。
 class CartSnapshotData {

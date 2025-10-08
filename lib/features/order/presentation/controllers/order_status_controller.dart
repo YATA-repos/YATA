@@ -7,7 +7,7 @@ import "../../../../core/constants/enums.dart";
 import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
-import "../../services/order_management_service.dart";
+import "../../services/order/order_management_service.dart";
 import "../../shared/order_status_presentation.dart";
 
 /// 注文状況ページで表示する注文のビューモデル。

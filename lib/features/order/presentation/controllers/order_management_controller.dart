@@ -12,9 +12,9 @@ import "../../../menu/services/menu_service.dart";
 import "../../../shared/logging/ui_action_logger.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
-import "../../services/cart_management_service.dart";
-import "../../services/models/cart_snapshot.dart";
-import "../../services/order_management_service.dart";
+import "../../services/cart/cart_management_service.dart";
+import "../../services/cart/models/cart_snapshot.dart";
+import "../../services/order/order_management_service.dart";
 import "../performance/order_management_tracing.dart";
 import "order_management_state.dart";
 

@@ -161,7 +161,7 @@
 ## 参考資料
 - TODO.md の Order-Feature-2 タスク定義
 - `docs/plan/2025-09-28-order-payment-method-plan.md`: 支払い方法選択の実装計画（類似機能）
-- `lib/features/order/services/kitchen_operation_service.dart`: `notes` への追記実装例
+- `lib/features/order/services/kitchen/kitchen_operation_service.dart`: `notes` への追記実装例
 
 ## 次のアクション
 1. Supabase スキーマ確認タスクを割り当て、必要に応じて制約の確認・調整を行う。

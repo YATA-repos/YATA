@@ -6,7 +6,7 @@
 ## 調査範囲
 - メニュー機能: `lib/features/menu/models/menu_model.dart`、`lib/features/menu/services/menu_service.dart`
 - 在庫機能: `lib/features/inventory/models/inventory_model.dart`、`lib/features/inventory/repositories/recipe_repository.dart`
-- 注文機能: `lib/features/order/services/order_management_service.dart`、`lib/features/order/services/order_inventory_integration_service.dart`
+- 注文機能: `lib/features/order/services/order/order_management_service.dart`、`lib/features/order/services/order/order_inventory_integration_service.dart`
 - 既存計画ドキュメント: `docs/plan/2025-09-27-menu-material-dependency-plan.md`
 
 ## 主な所見
@@ -21,9 +21,9 @@
 - 同メソッドは本来、レシピ情報から不足材料を抽出し、`missingMaterials` や `estimatedServings` を算出して UI に伝えるが、レシピ欠如により常に空となる。
 
 ### 3. 注文時の在庫増減もレシピ空振りでスキップ
-- 注文確定フロー（`OrderManagementService.checkoutCart` → `OrderInventoryIntegrationService.consumeMaterialsForOrder`）では、注文アイテムのレシピを `RecipeRepository.findByMenuItemId` で取得し、必要材料の消費量を計算する（`lib/features/order/services/order_management_service.dart:64-120` → `lib/features/order/services/order_inventory_integration_service.dart:54-90`）。
+- 注文確定フロー（`OrderManagementService.checkoutCart` → `OrderInventoryIntegrationService.consumeMaterialsForOrder`）では、注文アイテムのレシピを `RecipeRepository.findByMenuItemId` で取得し、必要材料の消費量を計算する（`lib/features/order/services/order/order_management_service.dart:64-120` → `lib/features/order/services/order/order_inventory_integration_service.dart:54-90`）。
 - しかしレシピが空のため、材料消費は発生せず、在庫は減らない。
-- キャンセル時復元（`restoreMaterialsFromOrder`）でも同様にレシピが無いため何も戻されない（`lib/features/order/services/order_inventory_integration_service.dart:92-134`）。
+- キャンセル時復元（`restoreMaterialsFromOrder`）でも同様にレシピが無いため何も戻されない（`lib/features/order/services/order/order_inventory_integration_service.dart:92-134`）。
 
 ### 4. 実装ギャップの背景
 - 2025-09-27 付の計画ドキュメントでは、レシピ管理 UI/サービスの追加方針がまとめられているが、ソースコードには未反映。

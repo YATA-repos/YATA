@@ -13,9 +13,9 @@ import "package:yata/features/menu/services/menu_service.dart";
 import "package:yata/features/order/models/order_model.dart";
 import "package:yata/features/order/presentation/controllers/order_management_controller.dart";
 import "package:yata/features/order/presentation/controllers/order_management_state.dart";
-import "package:yata/features/order/services/cart_management_service.dart";
-import "package:yata/features/order/services/models/cart_snapshot.dart";
-import "package:yata/features/order/services/order_management_service.dart";
+import "package:yata/features/order/services/cart/cart_management_service.dart";
+import "package:yata/features/order/services/cart/models/cart_snapshot.dart";
+import "package:yata/features/order/services/order/order_management_service.dart";
 
 final DateTime _testDate = DateTime.parse("2025-01-01T00:00:00Z");
 

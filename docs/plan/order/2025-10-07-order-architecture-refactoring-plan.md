@@ -71,9 +71,8 @@
 - **タスク**:
   - `services/cart/`, `services/order/`, `services/kitchen/`, `services/shared/` 構造へ移行。
   - 共通ユーティリティ (`order_validation_utils.dart`) を shared へ集約。
-  - DX 観点のドキュメント更新と社内 Tech Talk 実施。
 - **成果物**: 新ディレクトリ構造 + ガイドライン + 90 分のナレッジ共有セッション。
-- **リスク/対応**: 大規模変更 → feature flag / release branch 運用、並行開発チームと週次シンク。
+- **リスク/対応**: 大規模変更 → feature flag
 
 ### 継続的アクティビティ
 - 毎 Phase 完了時に `docs/plan/order/` にフォローアップレポートを追加。

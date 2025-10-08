@@ -212,7 +212,7 @@ presentation/
 ### 3.3 在庫処理の重複解消
 
 **現状:**
-- `lib/features/order/services/order_inventory_integration_service.dart` (203行)
+- `lib/features/order/services/order/order_inventory_integration_service.dart` (203行)
 - `lib/features/inventory/services/order_stock_service.dart` (12KB)
 
 **問題:**
