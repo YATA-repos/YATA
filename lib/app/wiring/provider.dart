@@ -62,9 +62,8 @@ import "../../features/order/repositories/order_item_repository.dart";
 import "../../features/order/repositories/order_repository.dart";
 import "../../features/order/services/cart_management_service.dart";
 import "../../features/order/services/order_calculation_service.dart";
+import "../../features/order/services/order_inventory_integration_service.dart";
 import "../../features/order/services/order_management_service.dart";
-import "../../features/order/services/order_service.dart";
-import "../../features/order/services/order_stock_service.dart" as order_svc;
 import "../../infra/batch/batch_processing_service.dart" as batch_impl;
 import "../../infra/local/cache/memory_cache_adapter.dart";
 import "../../infra/local/cache/ttl_cache_adapter.dart";
@@ -349,10 +348,10 @@ final Provider<OrderCalculationService> orderCalculationServiceProvider =
       );
     });
 
-final Provider<order_svc.OrderStockService> orderStockServiceProvider =
-    Provider<order_svc.OrderStockService>((Ref ref) {
+final Provider<OrderInventoryIntegrationService> orderInventoryIntegrationServiceProvider =
+    Provider<OrderInventoryIntegrationService>((Ref ref) {
       final contract.LoggerContract logger = ref.read(loggerProvider);
-      return order_svc.OrderStockService(
+      return OrderInventoryIntegrationService(
         logger: logger,
         materialRepository: ref.read(materialRepositoryProvider),
         recipeRepository: ref.read(recipeRepositoryProvider),
@@ -368,29 +367,26 @@ final Provider<CartManagementService> cartManagementServiceProvider =
         orderItemRepository: ref.read(orderItemRepositoryProvider),
         menuItemRepository: ref.read(menuItemRepositoryProvider),
         orderCalculationService: ref.read(orderCalculationServiceProvider),
-        orderStockService: ref.read(orderStockServiceProvider),
+        orderInventoryIntegrationService: ref.read(orderInventoryIntegrationServiceProvider),
       );
     });
 
-/// OrderService（契約Realtime注入）
-final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref ref) {
-  final contract.LoggerContract logger = ref.read(loggerProvider);
-  final OrderManagementService orderMgmt = OrderManagementService(
-    logger: logger,
-    orderRepository: ref.read(orderRepositoryProvider),
-    orderItemRepository: ref.read(orderItemRepositoryProvider),
-    menuItemRepository: ref.read(menuItemRepositoryProvider),
-    orderCalculationService: ref.read(orderCalculationServiceProvider),
-    orderStockService: ref.read(orderStockServiceProvider),
-    cartManagementService: ref.read(cartManagementServiceProvider),
-  );
-  return OrderService(
-    logger: logger,
-    ref: ref,
-    realtimeManager: ref.read(realtimeManagerProvider),
-    orderManagementService: orderMgmt,
-  );
-});
+/// OrderManagementService（リアルタイム統合済み）
+final Provider<OrderManagementService> orderManagementServiceProvider =
+    Provider<OrderManagementService>((Ref ref) {
+      final contract.LoggerContract logger = ref.read(loggerProvider);
+      return OrderManagementService(
+        logger: logger,
+        ref: ref,
+        realtimeManager: ref.read(realtimeManagerProvider),
+        orderRepository: ref.read(orderRepositoryProvider),
+        orderItemRepository: ref.read(orderItemRepositoryProvider),
+        menuItemRepository: ref.read(menuItemRepositoryProvider),
+        orderCalculationService: ref.read(orderCalculationServiceProvider),
+        orderInventoryIntegrationService: ref.read(orderInventoryIntegrationServiceProvider),
+        cartManagementService: ref.read(cartManagementServiceProvider),
+      );
+    });
 
 /// MenuService（契約Realtime注入）
 final Provider<MenuService> menuServiceProvider = Provider<MenuService>((Ref ref) {

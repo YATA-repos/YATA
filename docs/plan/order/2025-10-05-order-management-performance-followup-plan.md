@@ -29,7 +29,7 @@
 
 ### 2. カート操作パイプラインの RPC 化
 - Postgres 関数 `rpc_cart_mutation(cart_id, menu_item_id, qty_delta, user_id)` を設計し、在庫確認→材料更新→金額再計算→差分レスポンスを一括処理。
-- `order_stock_service.dart` と `order_calculation_service.dart` から個別クエリ呼び出しを除外し、RPC 呼び出しに置き換え。
+- `order_inventory_integration_service.dart` と `order_calculation_service.dart` から個別クエリ呼び出しを除外し、RPC 呼び出しに置き換え。
 - 既存のローカルキャッシュ (`OrderContext`) を拡張し、RPC から返る差分を UI へ伝搬する。
 
 ### 3. `QueryUtils` 改修

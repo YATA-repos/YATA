@@ -14,7 +14,7 @@ import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../services/cart_management_service.dart";
 import "../../services/models/cart_snapshot.dart";
-import "../../services/order_service.dart";
+import "../../services/order_management_service.dart";
 import "../performance/order_management_tracing.dart";
 import "order_management_state.dart";
 
@@ -28,12 +28,12 @@ abstract class _OrderManagementControllerBase extends StateNotifier<OrderManagem
     required Ref ref,
     required MenuService menuService,
     required CartManagementService cartManagementService,
-    required OrderService orderService,
+   required OrderManagementService orderManagementService,
     required log_contract.LoggerContract logger,
   }) : _ref = ref,
        _menuService = menuService,
        _cartManagementService = cartManagementService,
-       _orderService = orderService,
+     _orderManagementService = orderManagementService,
        _logger = logger,
        super(OrderManagementState.initial()) {
     _authSubscription = _ref.listen<String?>(
@@ -50,7 +50,7 @@ abstract class _OrderManagementControllerBase extends StateNotifier<OrderManagem
   final Ref _ref;
   final MenuService _menuService;
   final CartManagementService _cartManagementService;
-  final OrderService _orderService;
+  final OrderManagementService _orderManagementService;
   final log_contract.LoggerContract _logger;
   late final ProviderSubscription<String?> _authSubscription;
 
@@ -337,7 +337,7 @@ abstract class _OrderManagementControllerBase extends StateNotifier<OrderManagem
         try {
           final Map<String, dynamic>? data = await _traceAsyncSection<Map<String, dynamic>?>(
             "loadCartSnapshot.getOrderWithItems",
-            () => _orderService.getOrderWithItems(cartId, userId),
+            () => _orderManagementService.getOrderWithItems(cartId, userId),
             startArguments: () => <String, dynamic>{"cartId": cartId},
           );
           if (data == null) {
@@ -412,7 +412,7 @@ class OrderManagementController extends _OrderManagementControllerBase
     required super.ref,
     required super.menuService,
     required super.cartManagementService,
-    required super.orderService,
+    required super.orderManagementService,
     required super.logger,
   });
 }
@@ -425,7 +425,7 @@ orderManagementControllerProvider =
         ref: ref,
         menuService: ref.read(menuServiceProvider),
         cartManagementService: ref.read(cartManagementServiceProvider),
-        orderService: ref.read(orderServiceProvider),
+        orderManagementService: ref.read(orderManagementServiceProvider),
         logger: ref.read(loggerProvider),
       ),
     );

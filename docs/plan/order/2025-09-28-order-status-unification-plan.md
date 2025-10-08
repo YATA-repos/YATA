@@ -45,7 +45,7 @@
 - `OrderModel.fromJson` で旧値を受け取った際に新値へフォールバックする互換コードを追加。
 
 ### Phase 2: サービスレイヤーの更新
-- `OrderManagementService` / `OrderService` / `KitchenOperationService` のステータス更新ロジックを 3 状態のみ許容するよう修正。
+- `OrderManagementService` / （旧）`OrderService` / `KitchenOperationService` のステータス更新ロジックを 3 状態のみ許容するよう修正。
 - Checkout 完了時に `inProgress` を設定。提供完了・キャンセル操作も新値を利用。
 - API 呼び出し前後で `OrderStatusMapper` を必ず通すように共通化。
 
@@ -76,7 +76,7 @@
 ## 進捗メモ（2025-09-30）
 
 - `OrderStatusMapper` と `OrderStatusPresentation` を導入し、旧値を安全に 3 状態へ正規化する実装を完了。
-- `OrderManagementService`／`OrderService` 系列および注文履歴・状況 UI がすべて `inProgress / completed / cancelled` のみを使用するよう更新済み。
+- `OrderManagementService` 系列および注文履歴・状況 UI がすべて `inProgress / completed / cancelled` のみを使用するよう更新済み。
 - テストコードを新仕様に合わせて修正し、`flutter test test/features/order/...` で正常動作を確認。
 
 ## リスクと緩和策

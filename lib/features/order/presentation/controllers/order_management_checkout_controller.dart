@@ -116,7 +116,8 @@ mixin CheckoutController on _OrderManagementControllerBase {
         notes: state.orderNotes.isEmpty ? null : state.orderNotes,
       );
 
-      final OrderCheckoutResult result = await _orderService.checkoutCart(cartId, request, userId);
+    final OrderCheckoutResult result =
+      await _orderManagementService.checkoutCart(cartId, request, userId);
 
       if (!result.isSuccess || result.isStockInsufficient) {
         const String message = "在庫が不足している商品があります。数量を調整して再度お試しください。";

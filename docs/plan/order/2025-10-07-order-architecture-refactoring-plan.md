@@ -23,24 +23,25 @@
 2. **巨大コントローラ/ページ**: `order_management_controller.dart` (1,680 行)、`order_management_page.dart` (1,031 行)、`order_history_page.dart` (926 行)。
 3. **依存関係の重複**: `OrderCalculationService` と `OrderStockService` への注入が 3 箇所以上で重複。
 4. **在庫連携ロジックの重複**: `order/services/order_stock_service.dart` と `inventory/services/order_stock_service.dart` で名称・責務が曖昧。
+  - 2025-10-08 時点: Order 側サービスは `order_inventory_integration_service.dart` へ改名済み。
 
 ## 5. 改善イニシアチブ
 
 ### Phase 1 (Week 1): Facade 層の削除
 - **目的**: 冗長な Facade を排除し、DI/責務を明瞭化。
 - **タスク**:
-  - `cart_service.dart` と `kitchen_service.dart` の削除、呼び出し元を Management Service に差し替え。
-  - `order_management_controller.dart` などでのプロバイダ参照更新。
-  - 影響範囲のユニットテスト更新。
+  - ✅ `cart_service.dart` と `kitchen_service.dart` の削除、呼び出し元を Management Service に差し替え。
+  - ✅ `order_management_controller.dart` などでのプロバイダ参照更新。
+  - ✅ 影響範囲のユニットテスト更新。
 - **成果物**: Facade サービスが存在しない状態、テスト緑。
 - **リスク/対応**: 呼び出し差し替え漏れ → `grep` による確認 + テスト。
 
 ### Phase 2 (Week 1-3): コントローラ分割
 - **目的**: 責務単位でロジックを分離し可読性とテスト容易性を改善。
 - **タスク**:
-  - `order_management_state.dart` (State/Model) を新設。
-  - `MenuFilterController`、`CartOperationController`、`CheckoutController` 等へロジック分割。
-  - 既存テストの再配置と不足シナリオ追加 (カート更新、バリデーション)。
+  - ✅ `order_management_state.dart` (State/Model) を新設。
+  - ✅ `MenuFilterController`、`CartOperationController`、`CheckoutController` 等へロジック分割。
+  - ✅ 既存テストの再配置と不足シナリオ追加 (カート更新、バリデーション)。
 - **成果物**: 400 行以下のコントローラ複数 + 更新済みテスト。
 - **リスク/対応**: 状態共有の破綻 → Riverpod Provider 設計レビュー、スモークテスト実施。
 

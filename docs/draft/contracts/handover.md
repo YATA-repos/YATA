@@ -41,7 +41,7 @@
 - Realtime 横展開（契約Mixin）
   - 共通 Mixin: `lib/core/realtime/realtime_service_mixin.dart:1`
   - Inventory: `lib/features/inventory/services/inventory_service.dart:1`（契約注入 + 監視）
-  - Order: `lib/features/order/services/order_service.dart:1`（契約注入 + 監視）
+  - Order: `lib/features/order/services/order_management_service.dart:1`（契約注入 + 監視）
   - Menu: `lib/features/menu/services/menu_service.dart:1`（契約注入 + 監視）
 - Repository の契約適合
   - `lib/infra/repositories/base_repository.dart:1` を `CrudRepository` implements 化
@@ -59,7 +59,7 @@
 - 目的: features 内の各サービスが repository 具象を `new` せず、契約 Provider から注入する
 - 対象候補（例）: 
   - Inventory: `material_management_service.dart`, `stock_level_service.dart`, `usage_analysis_service.dart`, `stock_operation_service.dart`
-  - Order: `order_management_service.dart`, `order_stock_service.dart`
+  - Order: `order_management_service.dart`, `order_inventory_integration_service.dart`
   - Menu: `menu_service.dart`
 - 対応方針:
   - `app/wiring/provider.dart:1` に契約型 Provider（例: `Provider<MaterialRepositoryContract>`）を追加

@@ -63,7 +63,7 @@ Core Services (1層目)
 
 3. **責務の分散**
    - カート操作が`CartManagementService`と`OrderManagementService`に分散
-   - 在庫処理が`OrderStockService`と`inventory/services/order_stock_service.dart`に重複
+  - 在庫処理が `OrderInventoryIntegrationService` と `inventory/services/order_stock_service.dart` に重複
 
 ### 2.2 ファイルサイズの不均衡
 
@@ -212,7 +212,7 @@ presentation/
 ### 3.3 在庫処理の重複解消
 
 **現状:**
-- `lib/features/order/services/order_stock_service.dart` (203行)
+- `lib/features/order/services/order_inventory_integration_service.dart` (203行)
 - `lib/features/inventory/services/order_stock_service.dart` (12KB)
 
 **問題:**
@@ -220,7 +220,7 @@ presentation/
 - 責務の境界が不明瞭
 
 **提案:**
-1. `order/services/order_stock_service.dart` → `order_inventory_integration_service.dart`に改名
+1. `order/services/order_stock_service.dart` → `order_inventory_integration_service.dart`に改名（完了）
 2. 在庫の**消費・復元**ロジックは`inventory`側に集約
 3. `order`側は在庫確認とinventoryサービスへの呼び出しのみ
 

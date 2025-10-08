@@ -18,11 +18,11 @@
 - コントローラはコンストラクタで `loadInitialData()` を一度だけ実行し、アクティブなカートを読み込む。ページ離脱後もプロバイダが破棄されないため、メモリ上の `state` が維持される。
 
 ### 2.2 サービス層
-- `OrderService.checkoutCart` (`lib/features/order/services/order_service.dart`) は `OrderManagementService.checkoutCart` を委譲呼び出しするためのラッパに留まり、UI から直接呼ばれていない。
 - `OrderManagementService.checkoutCart` (`lib/features/order/services/order_management_service.dart`) は
   - バリデーション / 在庫確認後に `_orderRepository.generateNextOrderNumber()` を呼ぶが、戻り値を利用せず注文へ割り当てもしていない。
   - 注文の `status` を `OrderStatus.preparing` のまま更新しており、カートと正式注文の区別が付かない。
   - チェックアウト完了後に新しいカートを生成する処理は存在しない。
+- ※ 2025-10-08 時点では UI 層は `OrderManagementService` を直接注入し、旧 `OrderService` ラッパは削除済み。
 
 ### 2.3 カート管理
 - `CartManagementService.getActiveCart` (`lib/features/order/services/cart_management_service.dart`) は `OrderRepository.findActiveDraftByUser()` を呼び出し、`status = preparing` の注文を「アクティブなカート」として再利用する。
@@ -35,7 +35,7 @@
 
 ## 3. 根本原因の整理
 
-1. **会計ボタンがチェックアウト処理を呼び出していない**: UI が `OrderService.checkoutCart` を実行していないため、カートは正式注文へ変換されず、初期化ロジックも動かない。
+1. **会計ボタンがチェックアウト処理を呼び出していない**: UI が `OrderManagementService.checkoutCart` を実行していないため、カートは正式注文へ変換されず、初期化ロジックも動かない。
 2. **会計完了後のステート遷移が未設計**: サービス層でも `status` を `preparing` のまま保っているため、「下書きカート」と「会計済み注文」の区別が付かず、次回起動時も同じ注文が「アクティブカート」として再利用される。
 3. **UI 状態のリセット機構がない**: Provider が `autoDispose` でない + 会計成功時に `state` を初期値へ戻す処理がないため、フロントエンドの表示が自然にリセットされない。
 
@@ -48,7 +48,7 @@
 ## 5. 改善に向けた提案 (概要)
 
 1. **UI からのチェックアウト導線整備**
-   - `OrderManagementController` に「会計処理」を追加し、`OrderService.checkoutCart` を呼び出す。
+   - `OrderManagementController` に「会計処理」を追加し、`OrderManagementService.checkoutCart` を呼び出す。
    - 成功時に `CartService.clearCart` もしくは新規カート生成処理を呼んで `state` を初期化する。
 
 2. **会計済み注文のステータス設計**
@@ -65,7 +65,7 @@
 
 - `_orderRepository.generateNextOrderNumber()` の戻り値利用方法 / 永続化タイミングの確認。
 - `OrderManagementService.checkoutCart` が期待する「カートと正式注文の境界」をどう設計するか (別テーブルに分けるか、ステータス管理で切り替えるか)。
-- 会計後にリアルタイムチャンネル (`OrderService` の realtime 機能) を用いて他画面へ通知する必要性の有無。
+- 会計後にリアルタイムチャンネル (`OrderManagementService` の realtime 機能) を用いて他画面へ通知する必要性の有無。
 
 ---
 

@@ -15,7 +15,7 @@ import "package:yata/features/order/presentation/controllers/order_management_co
 import "package:yata/features/order/presentation/controllers/order_management_state.dart";
 import "package:yata/features/order/services/cart_management_service.dart";
 import "package:yata/features/order/services/models/cart_snapshot.dart";
-import "package:yata/features/order/services/order_service.dart";
+import "package:yata/features/order/services/order_management_service.dart";
 
 final DateTime _testDate = DateTime.parse("2025-01-01T00:00:00Z");
 
@@ -23,7 +23,7 @@ class _MockMenuService extends Mock implements MenuService {}
 
 class _MockCartManagementService extends Mock implements CartManagementService {}
 
-class _MockOrderService extends Mock implements OrderService {}
+class _MockOrderManagementService extends Mock implements OrderManagementService {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -102,7 +102,7 @@ void main() {
   late OrderManagementController controller;
   late _MockMenuService menuService;
   late _MockCartManagementService cartService;
-  late _MockOrderService orderService;
+  late _MockOrderManagementService orderManagementService;
   late _MockAuthService authService;
 
   setUpAll(() {
@@ -112,7 +112,7 @@ void main() {
   setUp(() async {
     menuService = _MockMenuService();
     cartService = _MockCartManagementService();
-    orderService = _MockOrderService();
+  orderManagementService = _MockOrderManagementService();
     authService = _MockAuthService();
 
     when(() => menuService.getMenuCategories()).thenAnswer((Invocation _) async => <MenuCategory>[]);
@@ -128,7 +128,7 @@ void main() {
       currentUserIdProvider.overrideWith((Ref _) => "user-123"),
       menuServiceProvider.overrideWithValue(menuService),
       cartManagementServiceProvider.overrideWithValue(cartService),
-      orderServiceProvider.overrideWithValue(orderService),
+  orderManagementServiceProvider.overrideWithValue(orderManagementService),
       authServiceProvider.overrideWithValue(authService),
       loggerProvider.overrideWithValue(_NoopLogger()),
     ]);

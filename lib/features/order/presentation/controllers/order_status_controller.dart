@@ -7,7 +7,7 @@ import "../../../../core/constants/enums.dart";
 import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
-import "../../services/order_service.dart";
+import "../../services/order_management_service.dart";
 import "../../shared/order_status_presentation.dart";
 
 /// 注文状況ページで表示する注文のビューモデル。
@@ -112,15 +112,15 @@ class OrderStatusState {
 /// 注文状況ページのロジックを担うコントローラ。
 class OrderStatusController extends StateNotifier<OrderStatusState> {
   /// [OrderStatusController]を生成する。
-  OrderStatusController({required Ref ref, required OrderService orderService})
+  OrderStatusController({required Ref ref, required OrderManagementService orderManagementService})
     : _ref = ref,
-      _orderService = orderService,
+      _orderManagementService = orderManagementService,
       super(OrderStatusState.initial()) {
     unawaited(loadOrders());
   }
 
   final Ref _ref;
-  final OrderService _orderService;
+  final OrderManagementService _orderManagementService;
 
   /// 注文一覧を読み込む。
   Future<void> loadOrders({bool showLoadingIndicator = true}) async {
@@ -134,7 +134,8 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     }
 
     try {
-      final Map<OrderStatus, List<Order>> grouped = await _orderService.getOrdersByStatuses(
+    final Map<OrderStatus, List<Order>> grouped =
+      await _orderManagementService.getOrdersByStatuses(
         OrderStatusPresentation.displayOrder,
         userId,
       );
@@ -165,7 +166,7 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
 
     try {
-      await _orderService.updateOrderStatus(orderId, OrderStatus.completed, userId);
+  await _orderManagementService.updateOrderStatus(orderId, OrderStatus.completed, userId);
       final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
       await loadOrders(showLoadingIndicator: false);
       state = state.copyWith(updatingOrderIds: updatedSet);
@@ -191,7 +192,8 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
 
     try {
-      final (_, bool didUpdate) = await _orderService.cancelOrder(orderId, reason, userId);
+    final (_, bool didUpdate) =
+      await _orderManagementService.cancelOrder(orderId, reason, userId);
       final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
       await loadOrders(showLoadingIndicator: false);
       state = state.copyWith(updatingOrderIds: updatedSet);
@@ -237,5 +239,8 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
 /// 注文状況ページ用のStateNotifierプロバイダー。
 final StateNotifierProvider<OrderStatusController, OrderStatusState> orderStatusControllerProvider =
     StateNotifierProvider<OrderStatusController, OrderStatusState>(
-      (Ref ref) => OrderStatusController(ref: ref, orderService: ref.read(orderServiceProvider)),
+      (Ref ref) => OrderStatusController(
+        ref: ref,
+        orderManagementService: ref.read(orderManagementServiceProvider),
+      ),
     );

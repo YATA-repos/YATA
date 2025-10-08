@@ -1,11 +1,16 @@
+import "package:flutter_riverpod/flutter_riverpod.dart";
+
 import "../../../core/constants/enums.dart";
 import "../../../core/constants/exceptions/exceptions.dart";
 import "../../../core/contracts/logging/logger.dart" as log_contract;
+import "../../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 import "../../../core/contracts/repositories/menu/menu_repository_contracts.dart";
 import "../../../core/contracts/repositories/order/order_repository_contracts.dart";
+import "../../../core/realtime/realtime_service_mixin.dart";
 import "../../../core/validation/input_validator.dart";
 import "../../../infra/logging/context_utils.dart" as log_ctx;
 import "../../../infra/logging/logging.dart" show LogFieldsBuilder;
+import "../../auth/presentation/providers/auth_providers.dart";
 import "../../menu/models/menu_model.dart";
 import "../dto/order_dto.dart";
 import "../models/order_model.dart";
@@ -13,37 +18,129 @@ import "../shared/order_status_mapper.dart";
 import "cart_management_service.dart";
 import "models/cart_snapshot.dart";
 import "order_calculation_service.dart";
-import "order_stock_service.dart";
+import "order_inventory_integration_service.dart";
 
 /// 注文管理サービス（基本CRUD・チェックアウト・キャンセル・履歴）
-class OrderManagementService {
+class OrderManagementService with RealtimeServiceContractMixin implements RealtimeServiceControl {
   OrderManagementService({
     required log_contract.LoggerContract logger,
+    required Ref ref,
+    required r_contract.RealtimeManagerContract realtimeManager,
     required OrderRepositoryContract<Order> orderRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
     required MenuItemRepositoryContract<MenuItem> menuItemRepository,
-    required OrderCalculationService orderCalculationService,
-    required OrderStockService orderStockService,
+   required OrderCalculationService orderCalculationService,
+   required OrderInventoryIntegrationService orderInventoryIntegrationService,
     required CartManagementService cartManagementService,
   }) : _logger = logger,
+       _ref = ref,
+       _realtimeManager = realtimeManager,
        _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
        _menuItemRepository = menuItemRepository,
        _orderCalculationService = orderCalculationService,
-       _orderStockService = orderStockService,
+     _orderInventoryIntegrationService = orderInventoryIntegrationService,
        _cartManagementService = cartManagementService;
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;
 
+  final Ref _ref;
   final OrderRepositoryContract<Order> _orderRepository;
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
   final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
   final OrderCalculationService _orderCalculationService;
-  final OrderStockService _orderStockService;
+  final OrderInventoryIntegrationService _orderInventoryIntegrationService;
   final CartManagementService _cartManagementService;
+  final r_contract.RealtimeManagerContract _realtimeManager;
 
   String get loggerComponent => "OrderManagementService";
+
+  @override
+  r_contract.RealtimeManagerContract get realtimeManager => _realtimeManager;
+
+  @override
+  String? get currentUserId => _ref.read(currentUserIdProvider);
+
+  @override
+  Future<void> enableRealtimeFeatures() async => startRealtimeMonitoring();
+
+  @override
+  Future<void> disableRealtimeFeatures() async => stopRealtimeMonitoring();
+
+  @override
+  bool isFeatureRealtimeEnabled(String featureName) => isMonitoringFeature(featureName);
+
+  @override
+  bool isRealtimeConnected() => isRealtimeHealthy();
+
+  @override
+  Map<String, dynamic> getRealtimeInfo() => getRealtimeStats();
+
+  Future<void> startRealtimeMonitoring() async {
+    try {
+      log.i("Starting order realtime monitoring", tag: loggerComponent);
+      await startFeatureMonitoring(
+        "orders",
+        "orders",
+        _handleOrderUpdate,
+        eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
+      );
+      await startFeatureMonitoring(
+        "orders",
+        "order_items",
+        _handleOrderItemUpdate,
+        eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
+      );
+      log.i("Order realtime monitoring started", tag: loggerComponent);
+    } catch (e) {
+      log.e("Failed to start order realtime monitoring", tag: loggerComponent, error: e);
+      rethrow;
+    }
+  }
+
+  Future<void> stopRealtimeMonitoring() async {
+    try {
+      log.i("Stopping order realtime monitoring", tag: loggerComponent);
+      await stopFeatureMonitoring("orders");
+      log.i("Order realtime monitoring stopped", tag: loggerComponent);
+    } catch (e) {
+      log.e("Failed to stop order realtime monitoring", tag: loggerComponent, error: e);
+      rethrow;
+    }
+  }
+
+  void _handleOrderUpdate(Map<String, dynamic> data) {
+    final String eventType = data["event_type"] as String? ?? "unknown";
+    final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
+    final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
+    final bool isCartEvent =
+        ((newRecord?["is_cart"] as bool?) ?? false) || ((oldRecord?["is_cart"] as bool?) ?? false);
+    if (isCartEvent) {
+      log.d(
+        "Ignoring cart order event",
+        tag: loggerComponent,
+        fields: <String, dynamic>{"eventType": eventType},
+      );
+      return;
+    }
+    log.d(
+      "Order event: $eventType",
+      tag: loggerComponent,
+      fields: <String, dynamic>{"order": newRecord ?? oldRecord},
+    );
+  }
+
+  void _handleOrderItemUpdate(Map<String, dynamic> data) {
+    final String eventType = data["event_type"] as String? ?? "unknown";
+    final Map<String, dynamic>? newRecord = data["new_record"] as Map<String, dynamic>?;
+    final Map<String, dynamic>? oldRecord = data["old_record"] as Map<String, dynamic>?;
+    log.d(
+      "OrderItem event: $eventType",
+      tag: loggerComponent,
+      fields: <String, dynamic>{"item": newRecord ?? oldRecord},
+    );
+  }
 
   /// カートを確定して正式注文に変換（戻り値: (Order, 成功フラグ)）
   Future<OrderCheckoutResult> checkoutCart(
@@ -135,7 +232,8 @@ class OrderManagementService {
 
         // 在庫確認
         log.d("Starting stock validation for checkout", tag: loggerComponent);
-        final Map<String, bool> stockValidation = await _orderStockService.validateCartStock(
+        final Map<String, bool> stockValidation =
+            await _orderInventoryIntegrationService.validateCartStock(
           cartItems,
         );
 
@@ -164,7 +262,7 @@ class OrderManagementService {
 
         // 材料消費の実行
         log.d("Consuming materials for order", tag: loggerComponent);
-        await _orderStockService.consumeMaterialsForOrder(cartItems);
+  await _orderInventoryIntegrationService.consumeMaterialsForOrder(cartItems);
 
         // 注文番号はカート生成時のコードを原則維持し、未設定時のみ生成する
         String orderNumber = cart.orderNumber ?? "";
@@ -313,7 +411,7 @@ class OrderManagementService {
       if (order.startedPreparingAt == null) {
         log.d("Restoring materials for canceled order", tag: loggerComponent);
         final List<OrderItem> orderItems = await _orderItemRepository.findByOrderId(orderId);
-        await _orderStockService.restoreMaterialsFromOrder(orderItems);
+  await _orderInventoryIntegrationService.restoreMaterialsFromOrder(orderItems);
         log.d("Materials restored successfully", tag: loggerComponent);
       } else {
         log.i("Order already started preparation: materials not restored", tag: loggerComponent);

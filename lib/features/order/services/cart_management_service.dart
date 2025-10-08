@@ -8,7 +8,7 @@ import "../dto/order_dto.dart";
 import "../models/order_model.dart";
 import "models/cart_snapshot.dart";
 import "order_calculation_service.dart";
-import "order_stock_service.dart";
+import "order_inventory_integration_service.dart";
 
 /// カート管理サービス
 class CartManagementService {
@@ -17,14 +17,14 @@ class CartManagementService {
     required OrderRepositoryContract<Order> orderRepository,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
     required MenuItemRepositoryContract<MenuItem> menuItemRepository,
-    required OrderCalculationService orderCalculationService,
-    required OrderStockService orderStockService,
+   required OrderCalculationService orderCalculationService,
+   required OrderInventoryIntegrationService orderInventoryIntegrationService,
   }) : _logger = logger,
        _orderRepository = orderRepository,
        _orderItemRepository = orderItemRepository,
        _menuItemRepository = menuItemRepository,
        _orderCalculationService = orderCalculationService,
-       _orderStockService = orderStockService;
+     _inventoryIntegrationService = orderInventoryIntegrationService;
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;
@@ -33,7 +33,7 @@ class CartManagementService {
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
   final MenuItemRepositoryContract<MenuItem> _menuItemRepository;
   final OrderCalculationService _orderCalculationService;
-  final OrderStockService _orderStockService;
+  final OrderInventoryIntegrationService _inventoryIntegrationService;
 
   String get loggerComponent => "CartManagementService";
 
@@ -118,7 +118,7 @@ class CartManagementService {
 
       final Future<Order?> cartFuture = _orderRepository.getById(cartId);
       final Future<MenuItem?> menuItemFuture = _menuItemRepository.getById(request.menuItemId);
-      final Future<bool> stockFuture = _orderStockService.checkMenuItemStock(
+  final Future<bool> stockFuture = _inventoryIntegrationService.checkMenuItemStock(
         request.menuItemId,
         request.quantity,
       );
@@ -256,7 +256,7 @@ class CartManagementService {
       }
 
       final Future<MenuItem?> menuItemFuture = _menuItemRepository.getById(orderItem.menuItemId);
-      final Future<bool> stockFuture = _orderStockService.checkMenuItemStock(
+  final Future<bool> stockFuture = _inventoryIntegrationService.checkMenuItemStock(
         orderItem.menuItemId,
         newQuantity,
       );
@@ -455,7 +455,7 @@ class CartManagementService {
       log.d("Validating stock for ${cartItems.length} cart items", tag: loggerComponent);
 
       // 在庫検証サービスを使用
-      return _orderStockService.validateCartStock(cartItems);
+  return _inventoryIntegrationService.validateCartStock(cartItems);
     } catch (e, stackTrace) {
       log.e("Failed to validate cart stock", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
