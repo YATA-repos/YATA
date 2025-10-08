@@ -1,6 +1,7 @@
 import "dart:async";
 import "dart:io";
 
+import "package:flutter/foundation.dart";
 import "package:path_provider/path_provider.dart";
 
 import "log_config.dart";
@@ -13,22 +14,55 @@ abstract class LogSink<T> {
 }
 
 class ConsoleSink implements LogSink<String> {
-  ConsoleSink();
+  ConsoleSink() : _isEnabled = _detectConsoleAvailability();
+
+  bool _isEnabled;
+  bool _reportedFailure = false;
+
+  static bool _detectConsoleAvailability() {
+    try {
+      return stdout.hasTerminal;
+    } on Object {
+      return false;
+    }
+  }
+
+  void _handleWriteFailure(Object error, StackTrace stackTrace) {
+    _isEnabled = false;
+    if (!_reportedFailure && kDebugMode) {
+      _reportedFailure = true;
+      debugPrint("ConsoleSink disabled: $error");
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
 
   @override
   Future<void> add(String data) async {
-    // Always append newline for console readability.
-    stdout.writeln(data);
+    if (!_isEnabled) {
+      return;
+    }
+    try {
+      stdout.writeln(data);
+    } on Object catch (error, stackTrace) {
+      _handleWriteFailure(error, stackTrace);
+    }
   }
 
   @override
   Future<void> flush() async {
-    await stdout.flush();
+    if (!_isEnabled) {
+      return;
+    }
+    try {
+      await stdout.flush();
+    } on Object catch (error, stackTrace) {
+      _handleWriteFailure(error, stackTrace);
+    }
   }
 
   @override
   Future<void> close() async {
-    // no-op
+    _isEnabled = false;
   }
 }
 
