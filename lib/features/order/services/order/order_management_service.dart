@@ -17,9 +17,9 @@ import "../../models/order_model.dart";
 import "../../shared/order_status_mapper.dart";
 import "../cart/cart_management_service.dart";
 import "../cart/models/cart_snapshot.dart";
+import "../shared/order_validation_utils.dart";
 import "order_calculation_service.dart";
 import "order_inventory_integration_service.dart";
-import "../shared/order_validation_utils.dart";
 
 /// 注文管理サービス（基本CRUD・チェックアウト・キャンセル・履歴）
 class OrderManagementService with RealtimeServiceContractMixin implements RealtimeServiceControl {
