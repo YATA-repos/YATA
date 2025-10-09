@@ -80,5 +80,15 @@ void main() {
 
       expect(closeCount, 0);
     });
+
+    testWidgets("背景オーバーレイは画面全体を覆う", (WidgetTester tester) async {
+      await _pumpDialog(tester, onClose: () {});
+
+      final Rect overlayRect = tester.getRect(find.byKey(const Key("orderDetailOverlay")));
+      final Size screenSize = tester.binding.renderView.size;
+
+      expect(overlayRect.topLeft, Offset.zero);
+      expect(overlayRect.size, screenSize);
+    });
   });
 }

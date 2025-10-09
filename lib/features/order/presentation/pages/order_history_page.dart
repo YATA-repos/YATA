@@ -38,9 +38,44 @@ class OrderHistoryPage extends ConsumerStatefulWidget {
 class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
     with RouteAwareRefreshMixin<OrderHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
+  OverlayEntry? _orderDetailOverlayEntry;
+  OrderHistoryViewData? _currentOverlayOrder;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listen<OrderHistoryState>(orderHistoryControllerProvider, (
+      OrderHistoryState? previous,
+      OrderHistoryState next,
+    ) {
+      if (!mounted) {
+        return;
+      }
+
+      final OrderHistoryController controller = ref.read(orderHistoryControllerProvider.notifier);
+      final OrderHistoryViewData? selected = next.selectedOrder;
+
+      if (selected != null) {
+        if (identical(_currentOverlayOrder, selected) && _orderDetailOverlayEntry != null) {
+          return;
+        }
+        _showOrderDetailOverlay(selected, controller);
+      } else {
+        _removeOrderDetailOverlay();
+      }
+    });
+
+    final OrderHistoryState initialState = ref.read(orderHistoryControllerProvider);
+    final OrderHistoryViewData? initialSelected = initialState.selectedOrder;
+    if (initialSelected != null) {
+      final OrderHistoryController controller = ref.read(orderHistoryControllerProvider.notifier);
+      _showOrderDetailOverlay(initialSelected, controller);
+    }
+  }
 
   @override
   void dispose() {
+    _removeOrderDetailOverlay();
     _searchController.dispose();
     super.dispose();
   }
@@ -174,121 +209,142 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
           ),
         ],
       ),
-      body: Stack(
-        children: <Widget>[
-          YataPageContainer(
-            scrollable: false,
-            child: Column(
+      body: YataPageContainer(
+        scrollable: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(height: YataSpacingTokens.lg),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: state.isLoading ? const LinearProgressIndicator() : const SizedBox.shrink(),
+            ),
+            if (state.isLoading) const SizedBox(height: YataSpacingTokens.md),
+            if (state.errorMessage != null) ...<Widget>[
+              _HistoryErrorBanner(message: state.errorMessage!, onRetry: controller.refreshHistory),
+              const SizedBox(height: YataSpacingTokens.md),
+            ],
+
+            // ページヘッダー
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const SizedBox(height: YataSpacingTokens.lg),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: state.isLoading
-                      ? const LinearProgressIndicator()
-                      : const SizedBox.shrink(),
-                ),
-                if (state.isLoading) const SizedBox(height: YataSpacingTokens.md),
-                if (state.errorMessage != null) ...<Widget>[
-                  _HistoryErrorBanner(
-                    message: state.errorMessage!,
-                    onRetry: controller.refreshHistory,
-                  ),
-                  const SizedBox(height: YataSpacingTokens.md),
-                ],
-
-                // ページヘッダー
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      "注文履歴",
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: YataColorTokens.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: YataSpacingTokens.xs),
-                    Text(
-                      "過去の注文履歴を確認できます（全${state.totalCount}件）",
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: YataSpacingTokens.xl),
-
-                // フィルターセクション
-                YataSectionCard(
-                  title: "絞り込み",
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      // 検索フィールド
-                      YataSearchField(
-                        controller: _searchController,
-                        hintText: "受付コード、顧客名、メニュー名で検索...",
-                        onChanged: controller.setSearchQuery,
-                      ),
-
-                      const SizedBox(height: YataSpacingTokens.lg),
-
-                      // ステータスフィルター
-                      YataSegmentedFilter(
-                        segments: <YataFilterSegment>[
-                          const YataFilterSegment(label: "全て", value: 0),
-                          ...List<YataFilterSegment>.generate(
-                            statusOptions.length,
-                            (int index) =>
-                                YataFilterSegment(label: statusOptions[index].$1, value: index + 1),
-                          ),
-                        ],
-                        selectedIndex: state.selectedStatusFilter,
-                        onSegmentSelected: controller.setStatusFilter,
-                      ),
-                    ],
+                Text(
+                  "注文履歴",
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: YataColorTokens.textPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-
-                const SizedBox(height: YataSpacingTokens.xl),
-
-                // 注文履歴リスト
-                Expanded(
-                  child: YataSectionCard(
-                    title: "注文一覧",
-                    expandChild: true,
-                    child: state.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : Column(
-                            children: <Widget>[
-                              Expanded(
-                                child: _OrderHistoryList(
-                                  orders: state.filteredOrders,
-                                  controller: controller,
-                                ),
-                              ),
-                              if (state.totalPages > 1)
-                                _PaginationControls(
-                                  currentPage: state.currentPage,
-                                  totalPages: state.totalPages,
-                                  onPageChanged: controller.setPage,
-                                ),
-                            ],
-                          ),
-                  ),
+                const SizedBox(height: YataSpacingTokens.xs),
+                Text(
+                  "過去の注文履歴を確認できます（全${state.totalCount}件）",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
                 ),
               ],
             ),
-          ),
 
-          // 注文詳細ダイアログ
-          if (state.selectedOrder != null)
-            _OrderDetailDialog(order: state.selectedOrder!, onClose: controller.clearSelectedOrder),
-        ],
+            const SizedBox(height: YataSpacingTokens.xl),
+
+            // フィルターセクション
+            YataSectionCard(
+              title: "絞り込み",
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // 検索フィールド
+                  YataSearchField(
+                    controller: _searchController,
+                    hintText: "受付コード、顧客名、メニュー名で検索...",
+                    onChanged: controller.setSearchQuery,
+                  ),
+
+                  const SizedBox(height: YataSpacingTokens.lg),
+
+                  // ステータスフィルター
+                  YataSegmentedFilter(
+                    segments: <YataFilterSegment>[
+                      const YataFilterSegment(label: "全て", value: 0),
+                      ...List<YataFilterSegment>.generate(
+                        statusOptions.length,
+                        (int index) =>
+                            YataFilterSegment(label: statusOptions[index].$1, value: index + 1),
+                      ),
+                    ],
+                    selectedIndex: state.selectedStatusFilter,
+                    onSegmentSelected: controller.setStatusFilter,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: YataSpacingTokens.xl),
+
+            // 注文履歴リスト
+            Expanded(
+              child: YataSectionCard(
+                title: "注文一覧",
+                expandChild: true,
+                child: state.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
+                        children: <Widget>[
+                          Expanded(
+                            child: _OrderHistoryList(
+                              orders: state.filteredOrders,
+                              controller: controller,
+                            ),
+                          ),
+                          if (state.totalPages > 1)
+                            _PaginationControls(
+                              currentPage: state.currentPage,
+                              totalPages: state.totalPages,
+                              onPageChanged: controller.setPage,
+                            ),
+                        ],
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  void _showOrderDetailOverlay(OrderHistoryViewData order, OrderHistoryController controller) {
+    if (!mounted) {
+      return;
+    }
+
+    _orderDetailOverlayEntry?.remove();
+    _orderDetailOverlayEntry = null;
+    _currentOverlayOrder = order;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(_currentOverlayOrder, order)) {
+        return;
+      }
+
+      final OverlayState? overlayState = Overlay.maybeOf(context, rootOverlay: true);
+      if (overlayState == null) {
+        return;
+      }
+
+      _orderDetailOverlayEntry = OverlayEntry(
+        builder: (BuildContext context) =>
+            createOrderDetailDialog(order: order, onClose: controller.clearSelectedOrder),
+      );
+
+      overlayState.insert(_orderDetailOverlayEntry!);
+    });
+  }
+
+  void _removeOrderDetailOverlay() {
+    _currentOverlayOrder = null;
+    _orderDetailOverlayEntry?.remove();
+    _orderDetailOverlayEntry = null;
   }
 }
 
