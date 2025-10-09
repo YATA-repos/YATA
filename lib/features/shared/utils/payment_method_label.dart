@@ -5,8 +5,8 @@ String paymentMethodLabel(PaymentMethod method) {
   switch (method) {
     case PaymentMethod.cash:
       return "現金";
-    case PaymentMethod.card:
-      return "カード";
+    case PaymentMethod.paypay:
+      return "PayPay";
     case PaymentMethod.other:
       return "その他";
   }

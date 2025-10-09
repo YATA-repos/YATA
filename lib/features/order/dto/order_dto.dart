@@ -51,9 +51,7 @@ class OrderCheckoutRequest {
 
   /// JSONからオブジェクトを生成
   factory OrderCheckoutRequest.fromJson(Map<String, dynamic> json) => OrderCheckoutRequest(
-    paymentMethod: PaymentMethod.values.firstWhere(
-      (PaymentMethod method) => method.value == json["payment_method"] as String,
-    ),
+    paymentMethod: _parsePaymentMethod(json["payment_method"] as String?),
     customerName: json["customer_name"] as String?,
     discountAmount: (json["discount_amount"] as num?)?.toInt() ?? 0,
     notes: json["notes"] as String?,
@@ -70,6 +68,20 @@ class OrderCheckoutRequest {
 
   /// 備考
   String? notes;
+
+  static PaymentMethod _parsePaymentMethod(String? rawValue) {
+    if (rawValue == null) {
+      return PaymentMethod.cash;
+    }
+
+  // TODO(2025-11): 旧バージョンから送信される"card"の互換対応。移行完了後に削除する。
+  final normalizedValue = rawValue == "card" ? "paypay" : rawValue;
+
+    return PaymentMethod.values.firstWhere(
+      (PaymentMethod method) => method.value == normalizedValue,
+      orElse: () => PaymentMethod.cash,
+    );
+  }
 
   /// オブジェクトをJSONに変換
   Map<String, dynamic> toJson() => <String, dynamic>{

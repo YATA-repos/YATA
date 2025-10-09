@@ -83,7 +83,7 @@ Builder methods automatically skip null/empty values and ensure keys follow this
     "actor": {"user_id": "user_123"},
     "resource": {"type": "order", "id": "ord_901"},
     "result": {"status": "success", "duration_ms": 482},
-    "metadata": {"items": 3, "payment_method": "card"}
+  "metadata": {"items": 3, "payment_method": "paypay"}
   }
 }
 ```
