@@ -42,38 +42,6 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
   OrderHistoryViewData? _currentOverlayOrder;
 
   @override
-  void initState() {
-    super.initState();
-    ref.listen<OrderHistoryState>(orderHistoryControllerProvider, (
-      OrderHistoryState? previous,
-      OrderHistoryState next,
-    ) {
-      if (!mounted) {
-        return;
-      }
-
-      final OrderHistoryController controller = ref.read(orderHistoryControllerProvider.notifier);
-      final OrderHistoryViewData? selected = next.selectedOrder;
-
-      if (selected != null) {
-        if (identical(_currentOverlayOrder, selected) && _orderDetailOverlayEntry != null) {
-          return;
-        }
-        _showOrderDetailOverlay(selected, controller);
-      } else {
-        _removeOrderDetailOverlay();
-      }
-    });
-
-    final OrderHistoryState initialState = ref.read(orderHistoryControllerProvider);
-    final OrderHistoryViewData? initialSelected = initialState.selectedOrder;
-    if (initialSelected != null) {
-      final OrderHistoryController controller = ref.read(orderHistoryControllerProvider.notifier);
-      _showOrderDetailOverlay(initialSelected, controller);
-    }
-  }
-
-  @override
   void dispose() {
     _removeOrderDetailOverlay();
     _searchController.dispose();
@@ -164,6 +132,13 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
     final OrderHistoryController controller = ref.watch(orderHistoryControllerProvider.notifier);
     final List<(String label, OrderStatus status)> statusOptions =
         OrderStatusPresentation.segmentOptions();
+
+    final OrderHistoryViewData? selectedOrder = state.selectedOrder;
+    if (selectedOrder != null && _currentOverlayOrder?.id != selectedOrder.id) {
+      _showOrderDetailOverlay(selectedOrder, controller);
+    } else if (selectedOrder == null && _currentOverlayOrder != null) {
+      _removeOrderDetailOverlay();
+    }
 
     return Scaffold(
       backgroundColor: YataColorTokens.background,
@@ -318,12 +293,16 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
       return;
     }
 
+    if (_currentOverlayOrder?.id == order.id && _orderDetailOverlayEntry != null) {
+      return;
+    }
+
     _orderDetailOverlayEntry?.remove();
     _orderDetailOverlayEntry = null;
     _currentOverlayOrder = order;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !identical(_currentOverlayOrder, order)) {
+      if (!mounted || _currentOverlayOrder?.id != order.id) {
         return;
       }
 
@@ -672,7 +651,6 @@ class _OrderDetailDialog extends StatelessWidget {
   );
 }
 
-/// テスト用途で注文詳細ダイアログを生成するためのヘルパー。
 @visibleForTesting
 Widget createOrderDetailDialog({
   required OrderHistoryViewData order,
