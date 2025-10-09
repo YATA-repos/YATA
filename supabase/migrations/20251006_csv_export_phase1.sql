@@ -1123,6 +1123,8 @@ BEGIN
   v_encryption_required := COALESCE((v_metadata->>'encryption_required')::boolean, false);
   v_encryption_reasons := COALESCE(v_metadata->'encryption_reasons', '[]'::jsonb);
 
+  -- Prepend the Unicode BOM (Byte Order Mark) to the CSV output to ensure UTF-8 encoding is recognized
+  -- by applications such as Microsoft Excel, which may otherwise misinterpret the file encoding.
   RETURN jsonb_build_object(
     'csv', E'\uFEFF' || COALESCE(v_result.csv, ''),
     'file_name', v_result.default_file_name,
