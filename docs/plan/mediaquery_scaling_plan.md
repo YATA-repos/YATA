@@ -84,3 +84,9 @@
 - Windows 実行環境（高 DPI モニター含む）での検証が可能であること。
 - Flutter バージョンアップ時に `MediaQuery` API の仕様が変わる可能性があるため、変更の影響をウォッチすること。
 - 他アプローチ（Win32 側修正、トークン調整）と併用しない前提で作業する。
+
+## 10. 実装状況サマリ（2025-10-09）
+- `lib/core/constants/windows_scale_settings.dart` に `WindowsScaleSettings` を追加し、`--dart-define` から縮小率を調整可能にした。
+- `lib/app/app.dart` の `MaterialApp.router` に Windows 向けビルダーを追加し、`MediaQuery` の差し替えと `Transform.scale` による縮小を実装した。
+- ユニットテスト `windows_scale_settings_test.dart` を追加し、縮小率計算とクランプ動作を検証済み。
+- 今後は Windows 環境で DPI ごとの見た目・ヒットテストを手動確認し、必要に応じて `minimumScaleFactor` や `overrideScaleFactor` を微調整する。
