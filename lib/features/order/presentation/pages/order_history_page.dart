@@ -1,5 +1,6 @@
 import "dart:async";
 
+import "package:flutter/foundation.dart" show visibleForTesting;
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -548,58 +549,79 @@ class _OrderDetailDialog extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) => Container(
-    color: Colors.black.withValues(alpha: 0.5),
-    child: Center(
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
-        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
-        child: Material(
-          borderRadius: YataRadiusTokens.borderRadiusCard,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: YataColorTokens.surface,
+  Widget build(BuildContext context) => Stack(
+    children: <Widget>[
+      Positioned.fill(
+        child: GestureDetector(
+          key: const Key("orderDetailOverlay"),
+          behavior: HitTestBehavior.opaque,
+          onTap: onClose,
+          child: Container(color: Colors.black.withValues(alpha: 0.5)),
+        ),
+      ),
+      Center(
+        child: GestureDetector(
+          key: const Key("orderDetailDialogSurface"),
+          behavior: HitTestBehavior.translucent,
+          onTap: () {},
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.8,
+            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
+            child: Material(
               borderRadius: YataRadiusTokens.borderRadiusCard,
-            ),
-            child: Column(
-              children: <Widget>[
-                // ダイアログヘッダー
-                Container(
-                  padding: const EdgeInsets.all(YataSpacingTokens.lg),
-                  decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: YataColorTokens.border)),
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          "注文詳細",
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: YataColorTokens.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: onClose,
-                        icon: const Icon(Icons.close),
-                        color: YataColorTokens.textSecondary,
-                      ),
-                    ],
-                  ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: YataColorTokens.surface,
+                  borderRadius: YataRadiusTokens.borderRadiusCard,
                 ),
+                child: Column(
+                  children: <Widget>[
+                    // ダイアログヘッダー
+                    Container(
+                      padding: const EdgeInsets.all(YataSpacingTokens.lg),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: YataColorTokens.border)),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              "注文詳細",
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                color: YataColorTokens.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: onClose,
+                            icon: const Icon(Icons.close),
+                            color: YataColorTokens.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
 
-                // ダイアログコンテンツ
-                Expanded(child: _OrderDetailContent(order: order)),
-              ],
+                    // ダイアログコンテンツ
+                    Expanded(child: _OrderDetailContent(order: order)),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
-    ),
+    ],
   );
 }
+
+/// テスト用途で注文詳細ダイアログを生成するためのヘルパー。
+@visibleForTesting
+Widget createOrderDetailDialog({
+  required OrderHistoryViewData order,
+  required VoidCallback onClose,
+}) => _OrderDetailDialog(order: order, onClose: onClose);
 
 /// 注文詳細コンテンツウィジェット。
 class _OrderDetailContent extends StatelessWidget {
