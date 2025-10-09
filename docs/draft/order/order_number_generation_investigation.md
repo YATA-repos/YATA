@@ -12,7 +12,7 @@
   4. ユニークな値が得られた時点で返却。最大試行回数を超えた場合は例外を送出してログに残す。
 
 ## 採番タイミングと利用箇所
-- 採番の呼び出し元は `lib/features/order/services/order_management_service.dart` の `OrderManagementService.checkoutCart()`。
+- 採番の呼び出し元は `lib/features/order/services/order/order_management_service.dart` の `OrderManagementService.checkoutCart()`。
   - カート確定処理の中で `_orderRepository.generateNextOrderNumber()` を呼び出し、取得した値を `orderNumber` 変数に保持。
   - `updateById` 実行時に `order_number` フィールドへ設定し、`ordered_at` の確定やステータス更新とまとめて保存している。
   - 保存後に金額再計算 (`_orderCalculationService.calculateOrderTotal`) を行い、最終的な注文オブジェクトを返却。

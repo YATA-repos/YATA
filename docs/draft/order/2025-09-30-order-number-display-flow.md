@@ -20,7 +20,7 @@
 
 1. `OrderManagementController` 初期化時に `loadInitialData()` が走る。
 2. `CartService.getActiveCart(userId)` が Supabase 上のアクティブカート（`orders.is_cart = true` の行）を取得。
-3. カートが見つかった場合、`OrderService.getOrderWithItems(cartId, userId)` を通じて `OrderManagementService.getOrderWithItems()` が呼ばれ、`Order` と紐づく `OrderItem` 一覧を読み出す。
+3. カートが見つかった場合、`OrderManagementService.getOrderWithItems(cartId, userId)` が呼ばれ、`Order` と紐づく `OrderItem` 一覧を読み出す（旧 `OrderService` ラッパは削除済み）。
 4. `_loadCartSnapshot()` が取得データを `_CartSnapshot` に詰め直し、`orderNumber`（`order.orderNumber`）を含めて `OrderManagementState` に流し込む。
 5. UI は `state.orderNumber` を購読し、バッジ表示を更新する。
 

@@ -1,7 +1,7 @@
 name: yata
 description: "Inventory and order management system for small restaurants"
 publish_to: 'none'
-version: 0.1.0
+version: 0.1.2
 
 environment:
   sdk: ^3.8.0
@@ -29,6 +29,7 @@ dependencies:
   window_manager: ^0.5.1
   logger: ^2.0.2+1
   crypto: ^3.0.3
+  archive: ^4.0.7
   intl: ^0.20.2
 
 dev_dependencies:
@@ -41,11 +42,21 @@ dev_dependencies:
   mocktail: ^1.0.3
   riverpod_lint: ^2.6.5
   json_serializable: ^6.8.0
+  icons_launcher: ^3.0.3
   build_runner: ^2.5.4
   integration_test:
     sdk: flutter
 
   test: any
+
+icons_launcher:
+  image_path: "assets/icon/icon.png"
+  platforms:
+    windows:
+      enable: true
+    linux:
+      enable: true
+
 flutter:
   uses-material-design: true
   assets:

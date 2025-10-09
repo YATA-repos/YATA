@@ -148,13 +148,12 @@ class OrderStockService {
           "materialCount": processedMaterials.toString(),
         }),
         tag: loggerComponent,
-        fields: fields()
-            .succeeded(durationMs: sw.elapsedMilliseconds)
-            .addMetadata(<String, dynamic>{
-              "materials_processed": processedMaterials,
-              "transactions_created": transactions.length,
-            })
-            .build(),
+        fields: fields().succeeded(durationMs: sw.elapsedMilliseconds).addMetadata(
+          <String, dynamic>{
+            "materials_processed": processedMaterials,
+            "transactions_created": transactions.length,
+          },
+        ).build(),
       );
       return true;
     } catch (e, stackTrace) {
@@ -271,13 +270,12 @@ class OrderStockService {
           "materialCount": restoredMaterials.toString(),
         }),
         tag: loggerComponent,
-        fields: fields()
-            .succeeded(durationMs: sw.elapsedMilliseconds)
-            .addMetadata(<String, dynamic>{
-              "materials_restored": restoredMaterials,
-              "transactions_created": restoreTransactions.length,
-            })
-            .build(),
+        fields: fields().succeeded(durationMs: sw.elapsedMilliseconds).addMetadata(
+          <String, dynamic>{
+            "materials_restored": restoredMaterials,
+            "transactions_created": restoreTransactions.length,
+          },
+        ).build(),
       );
       return true;
     } catch (e, stackTrace) {
@@ -298,19 +296,15 @@ class OrderStockService {
     }
   }
 
-  LogFieldsBuilder _buildConsumptionFields({
-    required String orderId,
-    required String userId,
-  }) => LogFieldsBuilder.operation("inventory.consume_materials")
-        .withActor(userId: userId)
-        .withResource(type: "order", id: orderId)
-        .addMetadata(<String, dynamic>{"order_id": orderId});
+  LogFieldsBuilder _buildConsumptionFields({required String orderId, required String userId}) =>
+      LogFieldsBuilder.operation("inventory.consume_materials")
+          .withActor(userId: userId)
+          .withResource(type: "order", id: orderId)
+          .addMetadata(<String, dynamic>{"order_id": orderId});
 
-  LogFieldsBuilder _buildRestorationFields({
-    required String orderId,
-    required String userId,
-  }) => LogFieldsBuilder.operation("inventory.restore_materials")
-        .withActor(userId: userId)
-        .withResource(type: "order", id: orderId)
-        .addMetadata(<String, dynamic>{"order_id": orderId});
+  LogFieldsBuilder _buildRestorationFields({required String orderId, required String userId}) =>
+      LogFieldsBuilder.operation("inventory.restore_materials")
+          .withActor(userId: userId)
+          .withResource(type: "order", id: orderId)
+          .addMetadata(<String, dynamic>{"order_id": orderId});
 }

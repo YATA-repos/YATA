@@ -62,10 +62,8 @@ class Logger {
   void installCrashCapture({bool? rethrowOnError}) =>
       _core.installCrashCapture(rethrowOnError: rethrowOnError);
 
-  void registerFatalHandler(contract.FatalHandler handler) =>
-    _core.registerFatalHandler(handler);
-  void removeFatalHandler(contract.FatalHandler handler) =>
-    _core.removeFatalHandler(handler);
+  void registerFatalHandler(contract.FatalHandler handler) => _core.registerFatalHandler(handler);
+  void removeFatalHandler(contract.FatalHandler handler) => _core.removeFatalHandler(handler);
   void clearFatalHandlers() => _core.clearFatalHandlers();
   contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) {
     FutureOr<void> handler(contract.FatalLogContext ctx) => notifier.notify(ctx);
@@ -136,12 +134,11 @@ void installCrashCapture({bool? rethrowOnError}) =>
     _globalLogger.installCrashCapture(rethrowOnError: rethrowOnError);
 
 void registerFatalHandler(contract.FatalHandler handler) =>
-  _globalLogger.registerFatalHandler(handler);
-void removeFatalHandler(contract.FatalHandler handler) =>
-  _globalLogger.removeFatalHandler(handler);
+    _globalLogger.registerFatalHandler(handler);
+void removeFatalHandler(contract.FatalHandler handler) => _globalLogger.removeFatalHandler(handler);
 void clearFatalHandlers() => _globalLogger.clearFatalHandlers();
 contract.FatalHandler registerFatalNotifier(FatalNotifier notifier) =>
-  _globalLogger.registerFatalNotifier(notifier);
+    _globalLogger.registerFatalNotifier(notifier);
 
 // Dynamic config exposure (top-level)
 LogConfig get config => _globalLogger.config;
@@ -444,8 +441,9 @@ class _LoggerCore {
 
       if (_fatalHandlers.isNotEmpty) {
         final Duration handlerTimeout = fatalConfig.handlerTimeout;
-        for (final contract.FatalHandler handler in
-            List<contract.FatalHandler>.from(_fatalHandlers)) {
+        for (final contract.FatalHandler handler in List<contract.FatalHandler>.from(
+          _fatalHandlers,
+        )) {
           try {
             final Future<void> task = Future<void>.sync(() => handler(context));
             if (handlerTimeout > Duration.zero) {
@@ -454,9 +452,7 @@ class _LoggerCore {
               await task;
             }
           } on TimeoutException catch (_) {
-            stderr.writeln(
-              "Fatal handler timeout after ${handlerTimeout.inMilliseconds}ms",
-            );
+            stderr.writeln("Fatal handler timeout after ${handlerTimeout.inMilliseconds}ms");
           } catch (err, st) {
             stderr.writeln("Fatal handler error: $err\n$st");
           }

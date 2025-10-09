@@ -366,9 +366,7 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("カテゴリ名を「$newName」に変更しました")),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("カテゴリ名を「$newName」に変更しました")));
   }
 
   Future<void> _handleDeleteCategory(InventoryCategoryPanelData data) async {
@@ -380,9 +378,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("在庫アイテムが残っているカテゴリは削除できません")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("在庫アイテムが残っているカテゴリは削除できません")));
       return;
     }
 
@@ -424,9 +422,7 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("${data.name} を削除しました")),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${data.name} を削除しました")));
   }
 
   Future<String?> _showRenameCategoryDialog({required String initialName}) async {

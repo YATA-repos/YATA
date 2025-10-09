@@ -81,6 +81,34 @@ class EnvValidator {
     "ORDER_MANAGEMENT_PERF_TRACING",
   ];
 
+  /// dart-define から注入されるビルド時環境変数のデフォルト値
+  static const Map<String, String> _dartDefineDefaults = <String, String>{
+    "SUPABASE_URL": String.fromEnvironment("SUPABASE_URL"),
+    "SUPABASE_ANON_KEY": String.fromEnvironment("SUPABASE_ANON_KEY"),
+    "SUPABASE_OAUTH_CALLBACK_URL_DEV": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_DEV"),
+    "SUPABASE_OAUTH_CALLBACK_URL_PROD": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_PROD"),
+    "SUPABASE_OAUTH_CALLBACK_URL_MOBILE": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_MOBILE"),
+    "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_DESKTOP"),
+    "SUPABASE_AUTH_CALLBACK_URL": String.fromEnvironment("SUPABASE_AUTH_CALLBACK_URL"),
+    "DEBUG_MODE": String.fromEnvironment("DEBUG_MODE"),
+    "LOG_LEVEL": String.fromEnvironment("LOG_LEVEL"),
+    "LOG_DIR": String.fromEnvironment("LOG_DIR"),
+    "LOG_FLUSH_INTERVAL_MS": String.fromEnvironment("LOG_FLUSH_INTERVAL_MS"),
+    "LOG_MAX_QUEUE": String.fromEnvironment("LOG_MAX_QUEUE"),
+    "LOG_MAX_FILE_SIZE_MB": String.fromEnvironment("LOG_MAX_FILE_SIZE_MB"),
+    "LOG_MAX_DISK_MB": String.fromEnvironment("LOG_MAX_DISK_MB"),
+    "LOG_RETENTION_DAYS": String.fromEnvironment("LOG_RETENTION_DAYS"),
+    "LOG_BACKPRESSURE": String.fromEnvironment("LOG_BACKPRESSURE"),
+    "ORDER_MANAGEMENT_PERF_TRACING": String.fromEnvironment("ORDER_MANAGEMENT_PERF_TRACING"),
+    "LOG_FATAL_FLUSH_BEFORE_HANDLERS": String.fromEnvironment("LOG_FATAL_FLUSH_BEFORE_HANDLERS"),
+    "LOG_FATAL_FLUSH_TIMEOUT_MS": String.fromEnvironment("LOG_FATAL_FLUSH_TIMEOUT_MS"),
+    "LOG_FATAL_HANDLER_TIMEOUT_MS": String.fromEnvironment("LOG_FATAL_HANDLER_TIMEOUT_MS"),
+    "LOG_FATAL_AUTO_SHUTDOWN": String.fromEnvironment("LOG_FATAL_AUTO_SHUTDOWN"),
+    "LOG_FATAL_EXIT_PROCESS": String.fromEnvironment("LOG_FATAL_EXIT_PROCESS"),
+    "LOG_FATAL_EXIT_CODE": String.fromEnvironment("LOG_FATAL_EXIT_CODE"),
+    "LOG_FATAL_SHUTDOWN_DELAY_MS": String.fromEnvironment("LOG_FATAL_SHUTDOWN_DELAY_MS"),
+  };
+
   static Map<String, String> _cachedEnv = _initializeCachedEnv();
   static bool _fileFallbackAttempted = false;
 
@@ -328,6 +356,7 @@ class EnvValidator {
   /// アプリケーション起動時に一度呼び出してください
   static Future<void> initialize() async {
     final Map<String, String> systemEnv = _readSystemEnvironment();
+    final Map<String, String> dartDefineEnv = _readDartDefineEnvironment();
     Map<String, String> fileEnv = <String, String>{};
 
     try {
@@ -340,7 +369,11 @@ class EnvValidator {
       fileEnv = loadFromFile();
     }
 
-    final Map<String, String> mergedEnv = mergeEnvironments(fileEnv, systemEnv: systemEnv);
+    final Map<String, String> mergedEnv = mergeEnvironments(
+      fileEnv,
+      systemEnv: systemEnv,
+      dartDefineEnv: dartDefineEnv,
+    );
 
     _cachedEnv = Map<String, String>.from(mergedEnv);
     _fileFallbackAttempted = true;
@@ -349,7 +382,12 @@ class EnvValidator {
     );
   }
 
-  static Map<String, String> _initializeCachedEnv() => _readSystemEnvironment();
+  static Map<String, String> _initializeCachedEnv() {
+    final Map<String, String> initial = <String, String>{};
+    initial.addAll(_readDartDefineEnvironment());
+    initial.addAll(_readSystemEnvironment());
+    return initial;
+  }
 
   /// 汎用環境変数取得
   ///
@@ -364,6 +402,7 @@ class EnvValidator {
         final Map<String, String> merged = mergeEnvironments(
           fileEnv,
           systemEnv: _readSystemEnvironment(),
+          dartDefineEnv: _readDartDefineEnvironment(),
         );
         _cachedEnv = Map<String, String>.from(merged);
       }
@@ -454,8 +493,7 @@ class EnvValidator {
   static String get logBackpressure => getEnv("LOG_BACKPRESSURE", defaultValue: "drop-oldest");
 
   /// 注文管理トレーシングの有効状態
-  static bool get orderManagementPerfTracing =>
-      getBoolEnv("ORDER_MANAGEMENT_PERF_TRACING");
+  static bool get orderManagementPerfTracing => getBoolEnv("ORDER_MANAGEMENT_PERF_TRACING");
 
   // =================================================================
   // 代替環境ローダー機能（DotEnvLoader統合）
@@ -517,21 +555,45 @@ class EnvValidator {
     Map<String, String> fileEnv, {
     bool overrideSystem = false,
     Map<String, String>? systemEnv,
+    Map<String, String>? dartDefineEnv,
   }) {
     final Map<String, String> merged = <String, String>{};
+    final Map<String, String> defines = dartDefineEnv ?? _readDartDefineEnvironment();
     final Map<String, String> baseEnv = systemEnv ?? _readSystemEnvironment();
 
-    if (!overrideSystem) {
-      merged.addAll(baseEnv);
-    }
-
-    merged.addAll(fileEnv);
-
-    if (!overrideSystem) {
-      merged.addAll(baseEnv);
+    if (overrideSystem) {
+      if (baseEnv.isNotEmpty) {
+        merged.addAll(baseEnv);
+      }
+      if (defines.isNotEmpty) {
+        merged.addAll(defines);
+      }
+      if (fileEnv.isNotEmpty) {
+        merged.addAll(fileEnv);
+      }
+    } else {
+      if (fileEnv.isNotEmpty) {
+        merged.addAll(fileEnv);
+      }
+      if (defines.isNotEmpty) {
+        merged.addAll(defines);
+      }
+      if (baseEnv.isNotEmpty) {
+        merged.addAll(baseEnv);
+      }
     }
 
     return merged;
+  }
+
+  static Map<String, String> _readDartDefineEnvironment() {
+    final Map<String, String> env = <String, String>{};
+    _dartDefineDefaults.forEach((String key, String value) {
+      if (value.isNotEmpty) {
+        env[key] = value;
+      }
+    });
+    return env;
   }
 
   static Map<String, String> _readSystemEnvironment() {

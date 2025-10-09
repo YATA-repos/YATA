@@ -233,9 +233,7 @@ class SalesAnalyticsPage extends ConsumerWidget {
 
   /// モックデータのため更新処理が未実装である旨を通知する。
   void _showMockRefreshMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("売上データの更新は現在準備中です。")),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("売上データの更新は現在準備中です。")));
   }
 }
 

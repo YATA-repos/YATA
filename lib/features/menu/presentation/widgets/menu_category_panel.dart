@@ -42,14 +42,14 @@ class MenuCategoryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CategoryPanel<MenuCategoryViewData>(
-        items: categories.map(_mapToItem).toList(growable: false),
-        selectedId: selectedCategoryId,
-        onSelect: onCategorySelected,
-        onAdd: onAddCategory,
-        onEdit: onEditCategory,
-        onDelete: onDeleteCategory,
-        isLoading: isLoading,
-      );
+    items: categories.map(_mapToItem).toList(growable: false),
+    selectedId: selectedCategoryId,
+    onSelect: onCategorySelected,
+    onAdd: onAddCategory,
+    onEdit: onEditCategory,
+    onDelete: onDeleteCategory,
+    isLoading: isLoading,
+  );
 
   CategoryPanelItem<MenuCategoryViewData> _mapToItem(MenuCategoryViewData category) {
     final bool isAll = category.isAll;

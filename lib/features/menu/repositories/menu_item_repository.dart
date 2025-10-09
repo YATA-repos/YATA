@@ -38,7 +38,7 @@ class MenuItemRepository implements MenuItemRepositoryContract<MenuItem> {
       const OrderByCondition(column: "display_order"),
     ];
 
-  return _delegate.find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
+    return _delegate.find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
   }
 
   /// 名前でメニューアイテムを検索
@@ -70,7 +70,7 @@ class MenuItemRepository implements MenuItemRepositoryContract<MenuItem> {
       const OrderByCondition(column: "display_order"),
     ];
 
-  return find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
+    return find(filters: filters, orderBy: orderBy, limit: _menuItemFetchLimit);
   }
 
   /// IDリストでメニューアイテムを取得

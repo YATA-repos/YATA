@@ -94,8 +94,8 @@ class AnalyticsService {
       );
 
       return DailyStatsResult(
-  completedOrders: statusCounts[OrderStatus.completed] ?? 0,
-  pendingOrders: statusCounts[OrderStatus.inProgress] ?? 0,
+        completedOrders: statusCounts[OrderStatus.completed] ?? 0,
+        pendingOrders: statusCounts[OrderStatus.inProgress] ?? 0,
         totalRevenue: totalRevenue,
         averagePrepTimeMinutes: averagePrepTime,
         mostPopularItem: mostPopularItem,

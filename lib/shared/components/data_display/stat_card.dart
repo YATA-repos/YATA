@@ -64,8 +64,7 @@ class YataStatCard extends StatelessWidget {
     );
     final List<BoxShadow> shadow = YataElevationTokens.level1;
     final TextTheme textTheme = Theme.of(context).textTheme;
-    final TextStyle titleStyle =
-        textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium;
+    final TextStyle titleStyle = textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium;
     final Widget? indicator = indicatorColor == null
         ? null
         : _StatIndicator(color: indicatorColor!, semanticsLabel: indicatorLabel);
@@ -126,10 +125,7 @@ class _StatIndicator extends StatelessWidget {
     final Widget dot = Container(
       width: 12,
       height: 12,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
 
     if (semanticsLabel == null) {

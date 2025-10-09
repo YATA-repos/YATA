@@ -105,8 +105,6 @@ class SettingsPage extends ConsumerWidget {
 
   /// 設定データの更新が未提供であることを通知する。
   void _showRefreshUnavailableMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("設定データの再取得は現在準備中です。")),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("設定データの再取得は現在準備中です。")));
   }
 }

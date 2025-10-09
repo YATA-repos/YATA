@@ -169,7 +169,6 @@ class DesktopOAuthRedirectServer {
     <main>
       <h1>ログイン処理が完了しました</h1>
       <p>アプリに戻って処理を続けてください。このウィンドウは閉じて構いません。</p>
-      <button onclick='window.close();'>ウィンドウを閉じる</button>
     </main>
   </body>
 </html>

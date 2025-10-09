@@ -11,9 +11,11 @@ import "fake_logger.dart";
 /// - すべてのログは [FakeLogger] と同じ API で参照できる。
 /// - 任意で委譲先ロガーにフォワードできるため、テスト中でも実ログ出力を維持可能。
 class SpyLogger implements contract.LoggerContract, LogProbe {
-  SpyLogger({contract.LoggerContract? delegate, Duration defaultTimeout = const Duration(milliseconds: 200)})
-      : _delegate = delegate,
-        _fake = FakeLogger(defaultTimeout: defaultTimeout);
+  SpyLogger({
+    contract.LoggerContract? delegate,
+    Duration defaultTimeout = const Duration(milliseconds: 200),
+  }) : _delegate = delegate,
+       _fake = FakeLogger(defaultTimeout: defaultTimeout);
 
   final contract.LoggerContract? _delegate;
   final FakeLogger _fake;

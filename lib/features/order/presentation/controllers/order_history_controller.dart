@@ -11,7 +11,7 @@ import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../../menu/models/menu_model.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
-import "../../services/order_service.dart";
+import "../../services/order/order_management_service.dart";
 import "../../shared/order_status_mapper.dart";
 
 /// 注文履歴画面で表示する注文の表示用データ。
@@ -237,9 +237,9 @@ class OrderHistoryState {
 /// 注文履歴画面のコントローラー。
 class OrderHistoryController extends StateNotifier<OrderHistoryState> {
   /// [OrderHistoryController]を生成する。
-  OrderHistoryController({required Ref ref, required OrderService orderService})
+  OrderHistoryController({required Ref ref, required OrderManagementService orderManagementService})
     : _ref = ref,
-      _orderService = orderService,
+      _orderManagementService = orderManagementService,
       super(OrderHistoryState.initial()) {
     unawaited(loadHistory());
   }
@@ -247,7 +247,7 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
   static const int _pageLimit = 20;
 
   final Ref _ref;
-  final OrderService _orderService;
+  final OrderManagementService _orderManagementService;
 
   /// ステータスフィルターを変更する。
   void setStatusFilter(int filterIndex) {
@@ -301,7 +301,8 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
 
     try {
       final OrderSearchRequest request = _buildRequest();
-      final Map<String, dynamic> result = await _orderService.getOrderHistory(request, userId);
+    final Map<String, dynamic> result =
+      await _orderManagementService.getOrderHistory(request, userId);
       final List<Order> rawOrders = (result["orders"] as List<dynamic>).cast<Order>();
 
       final List<OrderHistoryViewData> viewOrders = <OrderHistoryViewData>[];
@@ -312,7 +313,7 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
         if (order.isCart) {
           continue;
         }
-        final List<OrderItemViewData> items = await _loadOrderItems(order.id!, userId);
+  final List<OrderItemViewData> items = await _loadOrderItems(order.id!, userId);
         viewOrders.add(
           OrderHistoryViewData(
             id: order.id!,
@@ -351,7 +352,8 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
   }
 
   Future<List<OrderItemViewData>> _loadOrderItems(String orderId, String userId) async {
-    final Map<String, dynamic>? data = await _orderService.getOrderWithItems(orderId, userId);
+  final Map<String, dynamic>? data =
+    await _orderManagementService.getOrderWithItems(orderId, userId);
     if (data == null) {
       return const <OrderItemViewData>[];
     }
@@ -417,5 +419,8 @@ class OrderHistoryController extends StateNotifier<OrderHistoryState> {
 /// 注文履歴コントローラーのプロバイダー。
 final StateNotifierProvider<OrderHistoryController, OrderHistoryState>
 orderHistoryControllerProvider = StateNotifierProvider<OrderHistoryController, OrderHistoryState>(
-  (Ref ref) => OrderHistoryController(ref: ref, orderService: ref.read(orderServiceProvider)),
+  (Ref ref) => OrderHistoryController(
+    ref: ref,
+    orderManagementService: ref.read(orderManagementServiceProvider),
+  ),
 );

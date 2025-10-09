@@ -419,10 +419,8 @@ class MenuManagementState {
       isRefreshingAvailability: isRefreshingAvailability ?? this.isRefreshingAvailability,
       realtimeEventCount: realtimeEventCount ?? this.realtimeEventCount,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      pendingAvailabilityMenuIds:
-          pendingAvailabilityMenuIds ?? this.pendingAvailabilityMenuIds,
-      availabilityErrorMessages:
-          availabilityErrorMessages ?? this.availabilityErrorMessages,
+      pendingAvailabilityMenuIds: pendingAvailabilityMenuIds ?? this.pendingAvailabilityMenuIds,
+      availabilityErrorMessages: availabilityErrorMessages ?? this.availabilityErrorMessages,
     );
   }
 }

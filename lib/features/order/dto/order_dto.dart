@@ -90,19 +90,11 @@ class OrderCheckoutResult {
 
   /// 正常完了時の結果を生成する。
   factory OrderCheckoutResult.success({required Order order, Order? newCart}) =>
-      OrderCheckoutResult._(
-        order: order,
-        newCart: newCart,
-        isStockInsufficient: false,
-      );
+      OrderCheckoutResult._(order: order, newCart: newCart, isStockInsufficient: false);
 
   /// 在庫不足などにより会計できなかった場合の結果を生成する。
   factory OrderCheckoutResult.stockInsufficient({required Order order}) =>
-      OrderCheckoutResult._(
-        order: order,
-        newCart: null,
-        isStockInsufficient: true,
-      );
+      OrderCheckoutResult._(order: order, newCart: null, isStockInsufficient: true);
 
   /// 会計対象となった注文。
   final Order order;
@@ -136,11 +128,7 @@ class OrderSearchRequest {
     dateTo: json["date_to"] == null ? null : DateTime.parse(json["date_to"] as String),
     statusFilter: json["status_filter"] == null
         ? null
-        : (json["status_filter"] as List<dynamic>)
-              .map(
-        OrderStatusMapper.fromJson,
-              )
-              .toList(),
+        : (json["status_filter"] as List<dynamic>).map(OrderStatusMapper.fromJson).toList(),
     customerName: json["customer_name"] as String?,
     menuItemName: json["menu_item_name"] as String?,
     searchQuery: json["search_query"] as String?,
@@ -176,9 +164,7 @@ class OrderSearchRequest {
   Map<String, dynamic> toJson() => <String, dynamic>{
     "date_from": dateFrom?.toIso8601String(),
     "date_to": dateTo?.toIso8601String(),
-  "status_filter": statusFilter
-    ?.map(OrderStatusMapper.toJson)
-    .toList(),
+    "status_filter": statusFilter?.map(OrderStatusMapper.toJson).toList(),
     "customer_name": customerName,
     "menu_item_name": menuItemName,
     "search_query": searchQuery,

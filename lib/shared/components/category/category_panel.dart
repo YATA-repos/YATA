@@ -55,29 +55,20 @@ class CategoryPanel<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => YataSectionCard(
-        title: title,
-        subtitle: subtitle,
-        expandChild: true,
-        borderColor: Colors.transparent,
-        actions: <Widget>[
-          if (onAdd != null)
-            YataIconButton(
-              icon: Icons.add,
-              tooltip: "カテゴリを追加",
-              onPressed: isLoading ? null : onAdd,
-            ),
-        ],
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _buildContent(context),
-      );
+    title: title,
+    subtitle: subtitle,
+    expandChild: true,
+    borderColor: Colors.transparent,
+    actions: <Widget>[
+      if (onAdd != null)
+        YataIconButton(icon: Icons.add, tooltip: "カテゴリを追加", onPressed: isLoading ? null : onAdd),
+    ],
+    child: isLoading ? const Center(child: CircularProgressIndicator()) : _buildContent(context),
+  );
 
   Widget _buildContent(BuildContext context) {
     if (items.isEmpty) {
-      return SizedBox(
-        height: 160,
-        child: Center(child: Text(emptyMessage)),
-      );
+      return SizedBox(height: 160, child: Center(child: Text(emptyMessage)));
     }
 
     return ListView.separated(
@@ -149,10 +140,7 @@ class CategoryPanelItem<T> {
 
 /// バッジ表示用データ。
 class CategoryPanelBadgeData {
-  const CategoryPanelBadgeData({
-    required this.label,
-    required this.type,
-  });
+  const CategoryPanelBadgeData({required this.label, required this.type});
 
   final String label;
   final YataStatusBadgeType type;
@@ -191,10 +179,10 @@ class _CategoryTile<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final TextStyle titleStyle = (theme.textTheme.titleSmall ?? const TextStyle())
-        .copyWith(color: selected ? YataColorTokens.primary : YataColorTokens.textPrimary);
-    final Color borderColor =
-        selected ? YataColorTokens.primary : YataColorTokens.neutral200;
+    final TextStyle titleStyle = (theme.textTheme.titleSmall ?? const TextStyle()).copyWith(
+      color: selected ? YataColorTokens.primary : YataColorTokens.textPrimary,
+    );
+    final Color borderColor = selected ? YataColorTokens.primary : YataColorTokens.neutral200;
 
     return Material(
       color: Colors.transparent,
@@ -224,16 +212,10 @@ class _CategoryTile<T> extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Expanded(
-                    child: Text(
-                      item.name,
-                      style: titleStyle.copyWith(fontWeight: FontWeight.w600),
-                    ),
+                    child: Text(item.name, style: titleStyle.copyWith(fontWeight: FontWeight.w600)),
                   ),
                   if (item.headerBadge != null)
-                    YataStatusBadge(
-                      label: item.headerBadge!.label,
-                      type: item.headerBadge!.type,
-                    )
+                    YataStatusBadge(label: item.headerBadge!.label, type: item.headerBadge!.type)
                   else if (item.trailingLabel != null)
                     Text(
                       item.trailingLabel!,
@@ -276,10 +258,8 @@ class _CategoryTile<T> extends StatelessWidget {
                   runSpacing: YataSpacingTokens.xs,
                   children: item.badges
                       .map(
-                        (CategoryPanelBadgeData badge) => YataStatusBadge(
-                          label: badge.label,
-                          type: badge.type,
-                        ),
+                        (CategoryPanelBadgeData badge) =>
+                            YataStatusBadge(label: badge.label, type: badge.type),
                       )
                       .toList(growable: false),
                 ),
@@ -292,9 +272,7 @@ class _CategoryTile<T> extends StatelessWidget {
                     final CategoryPanelMetricData metric = item.metrics[index];
                     return Padding(
                       padding: EdgeInsets.only(
-                        bottom: index == item.metrics.length - 1
-                            ? 0
-                            : YataSpacingTokens.xxs,
+                        bottom: index == item.metrics.length - 1 ? 0 : YataSpacingTokens.xxs,
                       ),
                       child: Row(
                         children: <Widget>[
@@ -304,12 +282,7 @@ class _CategoryTile<T> extends StatelessWidget {
                             color: metric.iconColor ?? YataColorTokens.textSecondary,
                           ),
                           const SizedBox(width: YataSpacingTokens.xs),
-                          Expanded(
-                            child: Text(
-                              metric.label,
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ),
+                          Expanded(child: Text(metric.label, style: theme.textTheme.bodySmall)),
                         ],
                       ),
                     );

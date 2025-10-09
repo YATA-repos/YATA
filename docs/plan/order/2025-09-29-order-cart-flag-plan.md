@@ -28,7 +28,7 @@
 - `CartManagementService.getOrCreateActiveCart` がカート生成時に DB へ即挿入。
 - `OrderManagementService.checkoutCart` は成功後に `getOrCreateActiveCart` を再呼び出し、新品のカートを発行。
 - `OrderHistoryController` は `OrderStatus` のみでフィルタし、カートかどうかの判別が無い。
-- リアルタイム監視 (`OrderService.startRealtimeMonitoring`) は `orders` テーブルのイベントをすべて受け取る。
+- リアルタイム監視 (`OrderManagementService.startRealtimeMonitoring`) は `orders` テーブルのイベントをすべて受け取る。
 
 詳細な調査は `docs/draft/2025-09-29-order-cart-flag-investigation.md` を参照。
 
@@ -57,7 +57,7 @@
    - 必要に応じてフィルタ UI に「未会計を含める」オプションを追加（初期リリースでは除外のみで可）。
 
 6. **リアルタイム監視**
-   - `OrderService._handleOrderUpdate` などで `is_cart = true` イベントを無視するか、ログレベルを下げる。
+   - `OrderManagementService._handleOrderUpdate` などで `is_cart = true` イベントを無視するか、ログレベルを下げる。
    - 将来的にキッチンボードで未確定注文を表示する必要があるか検討。
 
 7. **テスト整備**

@@ -12,10 +12,9 @@ void main() {
 
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp("yata_file_sink_test");
-      config = LogConfig.defaults(fileDirPath: tempDir.path).copyWith(
-        flushEveryLines: 1,
-        flushEveryMs: 10,
-      );
+      config = LogConfig.defaults(
+        fileDirPath: tempDir.path,
+      ).copyWith(flushEveryLines: 1, flushEveryMs: 10);
     });
 
     tearDown(() async {
@@ -41,9 +40,7 @@ void main() {
           .where((File f) => f.path.endsWith(".log"))
           .toList();
       expect(logFiles, isNotEmpty);
-      logFiles.sort(
-        (File a, File b) => a.statSync().modified.compareTo(b.statSync().modified),
-      );
+      logFiles.sort((File a, File b) => a.statSync().modified.compareTo(b.statSync().modified));
       final File latest = logFiles.last;
       final String contents = await latest.readAsString();
       expect(contents, contains("first"));
@@ -53,7 +50,9 @@ void main() {
     test("handles concurrent add calls without dropping logs", () async {
       final FileSink sink = FileSink(config);
 
-      final List<Future<void>> writes = <Future<void>>[for (int i = 0; i < 5; i++) sink.add("line-$i")];
+      final List<Future<void>> writes = <Future<void>>[
+        for (int i = 0; i < 5; i++) sink.add("line-$i"),
+      ];
 
       await Future.wait(writes);
       await sink.flush();
@@ -65,13 +64,10 @@ void main() {
           .where((File f) => f.path.endsWith(".log"))
           .toList();
       expect(logFiles, isNotEmpty);
-      logFiles.sort(
-        (File a, File b) => a.statSync().modified.compareTo(b.statSync().modified),
-      );
+      logFiles.sort((File a, File b) => a.statSync().modified.compareTo(b.statSync().modified));
       final File latest = logFiles.last;
       final List<String> lines = await latest.readAsLines();
-      final Iterable<String> loggedLines =
-          lines.where((String line) => line.contains("line-"));
+      final Iterable<String> loggedLines = lines.where((String line) => line.contains("line-"));
       expect(loggedLines.length, 5);
     });
   });

@@ -108,11 +108,7 @@ class MaterialManagementService {
         maxLength: 100,
         fieldName: "カテゴリ名",
       ),
-      InputValidator.validateNumber(
-        category.displayOrder,
-        min: 0,
-        fieldName: "表示順序",
-      ),
+      InputValidator.validateNumber(category.displayOrder, min: 0, fieldName: "表示順序"),
     ];
 
     final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
@@ -172,11 +168,7 @@ class MaterialManagementService {
     final String trimmedName = category.name.trim();
     final List<ValidationResult> validationResults = <ValidationResult>[
       InputValidator.validateCategoryName(trimmedName),
-      InputValidator.validateNumber(
-        category.displayOrder,
-        min: 0,
-        fieldName: "表示順序",
-      ),
+      InputValidator.validateNumber(category.displayOrder, min: 0, fieldName: "表示順序"),
     ];
 
     final List<ValidationResult> errors = InputValidator.validateAll(validationResults);
@@ -197,10 +189,7 @@ class MaterialManagementService {
         }),
         tag: loggerComponent,
       );
-      throw ServiceException.operationFailed(
-        "update_material_category",
-        "Category not found",
-      );
+      throw ServiceException.operationFailed("update_material_category", "Category not found");
     }
 
     final List<QueryFilter> duplicateFilters = <QueryFilter>[
@@ -212,10 +201,7 @@ class MaterialManagementService {
     final int duplicateCount = await _materialCategoryRepository.count(filters: duplicateFilters);
     if (duplicateCount > 0) {
       const String message = "同じ名前のカテゴリが既に存在します";
-      log.w(
-        "Duplicate category name detected during update: $trimmedName",
-        tag: loggerComponent,
-      );
+      log.w("Duplicate category name detected during update: $trimmedName", tag: loggerComponent);
       throw ValidationException(<String>[message]);
     }
 
@@ -282,10 +268,7 @@ class MaterialManagementService {
         }),
         tag: loggerComponent,
       );
-      throw ServiceException.operationFailed(
-        "delete_material_category",
-        "Category not found",
-      );
+      throw ServiceException.operationFailed("delete_material_category", "Category not found");
     }
 
     final int linkedMaterialCount = await _materialRepository.count(

@@ -7,7 +7,7 @@ import "../../../../core/constants/enums.dart";
 import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../models/order_model.dart";
-import "../../services/order_service.dart";
+import "../../services/order/order_management_service.dart";
 import "../../shared/order_status_presentation.dart";
 
 /// 注文状況ページで表示する注文のビューモデル。
@@ -59,18 +59,18 @@ class OrderStatusState {
     this.isLoading = false,
     this.errorMessage,
     Set<String>? updatingOrderIds,
-  })  : inProgressOrders = List<OrderStatusOrderViewData>.unmodifiable(inProgressOrders),
-        completedOrders = List<OrderStatusOrderViewData>.unmodifiable(completedOrders),
-        cancelledOrders = List<OrderStatusOrderViewData>.unmodifiable(cancelledOrders),
-        updatingOrderIds = Set<String>.unmodifiable(updatingOrderIds ?? <String>{});
+  }) : inProgressOrders = List<OrderStatusOrderViewData>.unmodifiable(inProgressOrders),
+       completedOrders = List<OrderStatusOrderViewData>.unmodifiable(completedOrders),
+       cancelledOrders = List<OrderStatusOrderViewData>.unmodifiable(cancelledOrders),
+       updatingOrderIds = Set<String>.unmodifiable(updatingOrderIds ?? <String>{});
 
   /// 初期状態を生成する。
   factory OrderStatusState.initial() => OrderStatusState(
-        inProgressOrders: const <OrderStatusOrderViewData>[],
-        completedOrders: const <OrderStatusOrderViewData>[],
-        cancelledOrders: const <OrderStatusOrderViewData>[],
-        isLoading: true,
-      );
+    inProgressOrders: const <OrderStatusOrderViewData>[],
+    completedOrders: const <OrderStatusOrderViewData>[],
+    cancelledOrders: const <OrderStatusOrderViewData>[],
+    isLoading: true,
+  );
 
   /// 準備中の注文一覧。
   final List<OrderStatusOrderViewData> inProgressOrders;
@@ -100,29 +100,27 @@ class OrderStatusState {
     Set<String>? updatingOrderIds,
     bool clearErrorMessage = false,
   }) => OrderStatusState(
-        inProgressOrders: inProgressOrders ?? this.inProgressOrders,
-        completedOrders: completedOrders ?? this.completedOrders,
-        cancelledOrders: cancelledOrders ?? this.cancelledOrders,
-        isLoading: isLoading ?? this.isLoading,
-        errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
-        updatingOrderIds: updatingOrderIds ?? this.updatingOrderIds,
-      );
+    inProgressOrders: inProgressOrders ?? this.inProgressOrders,
+    completedOrders: completedOrders ?? this.completedOrders,
+    cancelledOrders: cancelledOrders ?? this.cancelledOrders,
+    isLoading: isLoading ?? this.isLoading,
+    errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+    updatingOrderIds: updatingOrderIds ?? this.updatingOrderIds,
+  );
 }
 
 /// 注文状況ページのロジックを担うコントローラ。
 class OrderStatusController extends StateNotifier<OrderStatusState> {
   /// [OrderStatusController]を生成する。
-  OrderStatusController({
-    required Ref ref,
-    required OrderService orderService,
-  })  : _ref = ref,
-        _orderService = orderService,
-        super(OrderStatusState.initial()) {
+  OrderStatusController({required Ref ref, required OrderManagementService orderManagementService})
+    : _ref = ref,
+      _orderManagementService = orderManagementService,
+      super(OrderStatusState.initial()) {
     unawaited(loadOrders());
   }
 
   final Ref _ref;
-  final OrderService _orderService;
+  final OrderManagementService _orderManagementService;
 
   /// 注文一覧を読み込む。
   Future<void> loadOrders({bool showLoadingIndicator = true}) async {
@@ -136,7 +134,8 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     }
 
     try {
-      final Map<OrderStatus, List<Order>> grouped = await _orderService.getOrdersByStatuses(
+    final Map<OrderStatus, List<Order>> grouped =
+      await _orderManagementService.getOrdersByStatuses(
         OrderStatusPresentation.displayOrder,
         userId,
       );
@@ -150,10 +149,7 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
       );
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: message,
-      );
+      state = state.copyWith(isLoading: false, errorMessage: message);
     }
   }
 
@@ -170,7 +166,7 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
 
     try {
-      await _orderService.updateOrderStatus(orderId, OrderStatus.completed, userId);
+  await _orderManagementService.updateOrderStatus(orderId, OrderStatus.completed, userId);
       final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
       await loadOrders(showLoadingIndicator: false);
       state = state.copyWith(updatingOrderIds: updatedSet);
@@ -196,7 +192,8 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
 
     try {
-      final (_, bool didUpdate) = await _orderService.cancelOrder(orderId, reason, userId);
+    final (_, bool didUpdate) =
+      await _orderManagementService.cancelOrder(orderId, reason, userId);
       final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
       await loadOrders(showLoadingIndicator: false);
       state = state.copyWith(updatingOrderIds: updatedSet);
@@ -240,8 +237,10 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
 }
 
 /// 注文状況ページ用のStateNotifierプロバイダー。
-final StateNotifierProvider<OrderStatusController, OrderStatusState>
-    orderStatusControllerProvider =
+final StateNotifierProvider<OrderStatusController, OrderStatusState> orderStatusControllerProvider =
     StateNotifierProvider<OrderStatusController, OrderStatusState>(
-  (Ref ref) => OrderStatusController(ref: ref, orderService: ref.read(orderServiceProvider)),
-);
+      (Ref ref) => OrderStatusController(
+        ref: ref,
+        orderManagementService: ref.read(orderManagementServiceProvider),
+      ),
+    );

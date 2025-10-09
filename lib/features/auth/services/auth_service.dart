@@ -1,7 +1,8 @@
 import "dart:async";
 
-import "package:supabase_flutter/supabase_flutter.dart" as supabase
-  show AuthChangeEvent, AuthState, Session;
+import "package:supabase_flutter/supabase_flutter.dart"
+    as supabase
+    show AuthChangeEvent, AuthState, Session;
 
 import "../../../core/constants/exceptions/auth/auth_exception.dart";
 import "../../../core/contracts/auth/auth_repository_contract.dart" as contract;
@@ -19,12 +20,7 @@ import "../repositories/auth_repository.dart";
 /// 認証のビジネスロジックを管理します。
 /// AuthRepositoryを使用してSupabase Authとやり取りし、
 /// アプリケーション全体の認証状態を管理します。
-enum _SupabaseSessionLifecycleState {
-  idle,
-  warmingUp,
-  ready,
-  failed,
-}
+enum _SupabaseSessionLifecycleState { idle, warmingUp, ready, failed }
 
 const Duration _defaultSessionWarmupTimeout = Duration(seconds: 4);
 
@@ -209,11 +205,7 @@ class AuthService with StreamControllerManagerMixin {
         st: stackTrace,
       );
     } else {
-      log.d(
-        "Supabase session warm-up reset",
-        tag: loggerComponent,
-        fields: fields,
-      );
+      log.d("Supabase session warm-up reset", tag: loggerComponent, fields: fields);
     }
   }
 
@@ -239,10 +231,7 @@ class AuthService with StreamControllerManagerMixin {
 
     _authStateSubscription = concreteRepository.authStateChanges.listen(
       (supabase.AuthState supabaseState) {
-        log.d(
-          "Received Supabase auth event: ${supabaseState.event.name}",
-          tag: loggerComponent,
-        );
+        log.d("Received Supabase auth event: ${supabaseState.event.name}", tag: loggerComponent);
         unawaited(_handleSupabaseAuthState(supabaseState));
       },
       onError: (Object error, StackTrace stackTrace) {
@@ -335,7 +324,8 @@ class AuthService with StreamControllerManagerMixin {
     );
   }
 
-  Future<UserProfile?> _resolveUserProfile(supabase.Session session) async => UserProfile.fromSupabaseUser(session.user);
+  Future<UserProfile?> _resolveUserProfile(supabase.Session session) async =>
+      UserProfile.fromSupabaseUser(session.user);
 
   // =================================================================
   // 認証操作
@@ -355,10 +345,7 @@ class AuthService with StreamControllerManagerMixin {
         log.i("Google OAuth authentication successful: ${user.email}", tag: loggerComponent);
         await ensureSupabaseSessionReady(timeout: const Duration(seconds: 6));
       } else if (response.isPending) {
-        log.i(
-          "Google OAuth authentication pending: awaiting callback",
-          tag: loggerComponent,
-        );
+        log.i("Google OAuth authentication pending: awaiting callback", tag: loggerComponent);
         // 状態は引き続き認証処理中のままとする
       } else {
         final String error = response.error ?? "Authentication failed";
@@ -401,12 +388,7 @@ class AuthService with StreamControllerManagerMixin {
       final String errorMessage = e is AuthException ? e.message : e.toString();
       _updateState(AuthState.error(errorMessage));
       _resetSessionWarmup(reason: "handleOAuthCallback.error", error: e, stackTrace: stackTrace);
-      log.e(
-        "OAuth callback error: $errorMessage",
-        tag: loggerComponent,
-        error: e,
-        st: stackTrace,
-      );
+      log.e("OAuth callback error: $errorMessage", tag: loggerComponent, error: e, st: stackTrace);
       rethrow;
     }
   }
@@ -457,9 +439,7 @@ class AuthService with StreamControllerManagerMixin {
         log.i(
           "Session refreshed successfully: ${user.email}",
           tag: loggerComponent,
-          fields: <String, Object?>{
-            "expiresAt": response.session?.expiresAt.toIso8601String(),
-          },
+          fields: <String, Object?>{"expiresAt": response.session?.expiresAt.toIso8601String()},
         );
         return;
       }
@@ -510,12 +490,7 @@ class AuthService with StreamControllerManagerMixin {
     } catch (e, stackTrace) {
       final String errorMessage = e is AuthException ? e.message : e.toString();
       _resetSessionWarmup(reason: "signOut.error", error: e, stackTrace: stackTrace);
-      log.e(
-        "Sign out failed: $errorMessage",
-        tag: loggerComponent,
-        error: e,
-        st: stackTrace,
-      );
+      log.e("Sign out failed: $errorMessage", tag: loggerComponent, error: e, st: stackTrace);
 
       // ログアウトに失敗しても状態は初期化する（安全のため）
       _updateState(AuthState.initial());
@@ -618,8 +593,8 @@ class AuthService with StreamControllerManagerMixin {
     _authStateSubscription?.cancel();
     _authStateSubscription = null;
     stopAutoRefresh();
-  _sessionWarmupTimeoutTimer?.cancel();
-  _sessionWarmupTimeoutTimer = null;
+    _sessionWarmupTimeoutTimer?.cancel();
+    _sessionWarmupTimeoutTimer = null;
 
     // StreamControllerManagerMixinを使用してStreamControllerを安全に破棄
     disposeControllers();

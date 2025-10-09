@@ -14,9 +14,9 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     required log_contract.LoggerContract logger,
     required repo_contract.CrudRepository<Order, String> delegate,
     OrderIdentifierGenerator? identifierGenerator,
-  })  : _logger = logger,
-        _delegate = delegate,
-        _identifierGenerator = identifierGenerator ?? OrderIdentifierGenerator();
+  }) : _logger = logger,
+       _delegate = delegate,
+       _identifierGenerator = identifierGenerator ?? OrderIdentifierGenerator();
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;
@@ -137,7 +137,10 @@ class OrderRepository implements OrderRepositoryContract<Order> {
     int page,
     int limit,
   ) async {
-    final List<QueryFilter> effectiveFilters = <QueryFilter>[...filters, QueryConditionBuilder.eq("is_cart", false)];
+    final List<QueryFilter> effectiveFilters = <QueryFilter>[
+      ...filters,
+      QueryConditionBuilder.eq("is_cart", false),
+    ];
     // 総件数を取得
     final int totalCount = await _delegate.count(filters: effectiveFilters);
 
@@ -272,10 +275,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
           log.d(
             "Generated next order display code",
             tag: "OrderRepository",
-            fields: <String, Object?>{
-              "orderNumber": candidate,
-              "attempt": attempt + 1,
-            },
+            fields: <String, Object?>{"orderNumber": candidate, "attempt": attempt + 1},
           );
           return candidate;
         }
@@ -283,10 +283,7 @@ class OrderRepository implements OrderRepositoryContract<Order> {
         log.w(
           "Order display code collision detected, regenerating",
           tag: "OrderRepository",
-          fields: <String, Object?>{
-            "orderNumber": candidate,
-            "attempt": attempt + 1,
-          },
+          fields: <String, Object?>{"orderNumber": candidate, "attempt": attempt + 1},
         );
       } catch (error, stackTrace) {
         log.e(
@@ -294,19 +291,17 @@ class OrderRepository implements OrderRepositoryContract<Order> {
           tag: "OrderRepository",
           error: error,
           st: stackTrace,
-          fields: <String, Object?>{
-            "orderNumber": candidate,
-            "attempt": attempt + 1,
-          },
+          fields: <String, Object?>{"orderNumber": candidate, "attempt": attempt + 1},
         );
         rethrow;
       }
     }
 
-    final Exception generationError =
-        Exception("Failed to generate a unique order number after $maxAttempts attempts");
+    final Exception generationError = Exception(
+      "Failed to generate a unique order number after $maxAttempts attempts",
+    );
     log.e(
-  "Failed to generate a unique order display code",
+      "Failed to generate a unique order display code",
       tag: "OrderRepository",
       error: generationError,
       fields: <String, Object?>{"maxAttempts": maxAttempts},

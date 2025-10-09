@@ -1,12 +1,15 @@
-name: Build Desktop Bundles (Tagged)
+name: Build and Release (Tagged)
 
 on:
   push:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
-  build-desktop:
+  build-platforms:
     name: Build ${{ matrix.build-target }} bundle
     runs-on: ${{ matrix.os }}
     strategy:
@@ -14,11 +17,12 @@ jobs:
         include:
           - os: ubuntu-latest
             build-target: linux
-            artifact-path: build/linux/x64/release/bundle
-            artifact-name: yata-linux-bundle
+            artifact-path: build/linux/x64/release/appimage/*.AppImage
+            artifact-name: yata-linux-appimage
           - os: windows-latest
             build-target: windows
-            artifact-path: build/windows/runner/Release
+            # Windows は Release/ 配下のみアップロード (/* で中身のみをアップロード)
+            artifact-path: build/windows/x64/runner/Release/*
             artifact-name: yata-windows-runner
     defaults:
       run:
@@ -92,11 +96,11 @@ jobs:
             fi
           done
 
-      - name: Enable desktop target
+      - name: Enable desktop target (Linux)
         if: matrix.build-target == 'linux'
         run: flutter config --enable-linux-desktop
 
-      - name: Enable desktop target
+      - name: Enable desktop target (Windows)
         if: matrix.build-target == 'windows'
         run: flutter config --enable-windows-desktop
 
@@ -109,8 +113,76 @@ jobs:
       - name: Fetch Flutter dependencies
         run: flutter pub get
 
+      - name: Generate code with build_runner
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      # .env をビルド時に注入
       - name: Build release bundle
-        run: flutter build ${{ matrix.build-target }} --release
+        run: flutter build ${{ matrix.build-target }} --release --dart-define-from-file=.env
+
+      - name: Remove environment file
+        shell: bash
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -f .env
+
+      - name: Package Linux AppImage
+        if: matrix.build-target == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUNDLE_DIR="build/linux/x64/release/bundle"
+          APPDIR="build/linux/x64/release/AppDir"
+          APPIMAGE_DIR="build/linux/x64/release/appimage"
+
+          rm -rf "$APPDIR"
+          mkdir -p "$APPDIR/usr/bin"
+          cp -a "$BUNDLE_DIR/." "$APPDIR/usr/bin"
+
+          cat <<'EOF' > "$APPDIR/AppRun"
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          export LD_LIBRARY_PATH="$HERE/usr/bin/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          cd "$HERE/usr/bin"
+          exec ./yata "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+
+          cat <<'DESKTOP' > "$APPDIR/yata.desktop"
+          [Desktop Entry]
+          Type=Application
+          Name=YATA
+          Comment=Inventory and order management system for food stalls
+          Exec=yata
+          Icon=yata
+          Categories=Office;Utility;
+          StartupNotify=true
+          DESKTOP
+
+          install -Dm644 assets/icon/icon.png "$APPDIR/yata.png"
+          install -Dm644 "$APPDIR/yata.desktop" "$APPDIR/usr/share/applications/yata.desktop"
+          install -Dm644 assets/icon/icon.png "$APPDIR/usr/share/icons/hicolor/512x512/apps/yata.png"
+
+          wget -O appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+
+          mkdir -p "$APPIMAGE_DIR"
+          rm -f ./*.AppImage
+
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run "$APPDIR"
+
+          GENERATED_APPIMAGE="$(ls -1 *.AppImage | head -n 1)"
+          if [ -z "$GENERATED_APPIMAGE" ]; then
+            echo "::error::Failed to generate AppImage"
+            exit 1
+          fi
+
+          VERSION="${GITHUB_REF_NAME:-linux}"
+          TARGET_APPIMAGE="$APPIMAGE_DIR/YATA-$VERSION.AppImage"
+          mv "$GENERATED_APPIMAGE" "$TARGET_APPIMAGE"
+          echo "AppImage created at $TARGET_APPIMAGE"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -118,3 +190,393 @@ jobs:
           name: ${{ matrix.artifact-name }}
           path: ${{ matrix.artifact-path }}
           if-no-files-found: error
+
+  # 🧩 追加：Windows インストーラー生成（Inno Setup）
+  windows-installer:
+    name: Build Windows Installer (Inno Setup)
+    runs-on: windows-latest
+    needs: build-platforms
+    steps:
+      - name: Download Windows runner artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: yata-windows-runner
+          path: installer/workdir
+
+      - name: Debug - Show downloaded structure
+        shell: pwsh
+        run: |
+          Write-Host "=== Downloaded artifact structure ==="
+          Get-ChildItem -Path installer\workdir -Recurse | ForEach-Object {
+            Write-Host $_.FullName
+          }
+          Write-Host "=== End of structure ==="
+
+      - name: Flatten Windows runner directory
+        shell: pwsh
+        run: |
+          $root = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) 'installer\workdir'))
+          Write-Host "Root directory: $root"
+          
+          # yata.exe を探す
+          $exeFiles = Get-ChildItem -Path $root -Recurse -Filter 'yata.exe' -File
+          Write-Host "Found $($exeFiles.Count) yata.exe file(s)"
+          
+          if ($exeFiles.Count -eq 0) {
+            Write-Host "=== Available files in workdir ==="
+            Get-ChildItem -Path $root -Recurse -File | ForEach-Object {
+              Write-Host $_.FullName
+            }
+            throw "yata.exe が ${root} 以下で見つかりませんでした。"
+          }
+          
+          # DirectoryNameプロパティを使用してパスを取得（プレフィックスなし）
+          $releasePath = [System.IO.Path]::GetFullPath($exeFiles[0].DirectoryName)
+          Write-Host "yata.exe found at: $releasePath"
+
+          # パスを正規化して比較（末尾のバックスラッシュを除去）
+          $normalizedReleasePath = $releasePath.TrimEnd('\')
+          $normalizedRoot = $root.TrimEnd('\')
+          
+          Write-Host "Comparing paths:"
+          Write-Host "  Release: '$normalizedReleasePath'"
+          Write-Host "  Root:    '$normalizedRoot'"
+          
+          if ($normalizedReleasePath -ieq $normalizedRoot) {
+            Write-Host 'Runner contents are already flattened.'
+          }
+          else {
+            Write-Host "Moving files from subdirectory to root"
+            Get-ChildItem -Path $releasePath -Force | ForEach-Object {
+              $targetPath = Join-Path $root $_.Name
+              Write-Host "  Moving $($_.Name) to $targetPath"
+              Move-Item -Path $_.FullName -Destination $targetPath -Force
+            }
+
+            Write-Host "Cleaning up empty directories"
+            Remove-Item -Path $releasePath -Recurse -Force -ErrorAction SilentlyContinue
+
+            $parent = Split-Path $releasePath
+            while ($parent -and (Test-Path $parent) -and ($parent -like "$root*") -and ($parent -ine $root)) {
+              if (-not (Get-ChildItem -Path $parent -Force -ErrorAction SilentlyContinue)) {
+                Write-Host "  Removing empty directory: $parent"
+                Remove-Item -Path $parent -Force
+                $parent = Split-Path $parent
+              }
+              else {
+                break
+              }
+            }
+          }
+          
+          Write-Host "=== Final workdir structure ==="
+          Get-ChildItem -Path $root | ForEach-Object {
+            Write-Host $_.Name
+          }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --version=6.2.2 -y
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install Inno Setup via Chocolatey."
+          }
+          
+          # PATH を再読み込み
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+          
+          $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+            throw "ISCC (Inno Setup) not found in PATH after installation."
+          }
+
+      - name: Write Inno Setup script
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_OAUTH_CALLBACK_URL_DEV: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_DEV }}
+          SUPABASE_OAUTH_CALLBACK_URL_PROD: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_PROD }}
+          SUPABASE_OAUTH_CALLBACK_URL_MOBILE: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_MOBILE }}
+          SUPABASE_OAUTH_CALLBACK_URL_DESKTOP: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_DESKTOP }}
+          DEBUG_MODE: ${{ secrets.DEBUG_MODE }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          LOG_DIR: ${{ secrets.LOG_DIR }}
+          LOG_FLUSH_INTERVAL_MS: ${{ secrets.LOG_FLUSH_INTERVAL_MS }}
+          LOG_MAX_QUEUE: ${{ secrets.LOG_MAX_QUEUE }}
+          LOG_MAX_FILE_SIZE_MB: ${{ secrets.LOG_MAX_FILE_SIZE_MB }}
+          LOG_MAX_DISK_MB: ${{ secrets.LOG_MAX_DISK_MB }}
+          LOG_RETENTION_DAYS: ${{ secrets.LOG_RETENTION_DAYS }}
+          LOG_BACKPRESSURE: ${{ secrets.LOG_BACKPRESSURE }}
+          ORDER_MANAGEMENT_PERF_TRACING: ${{ secrets.ORDER_MANAGEMENT_PERF_TRACING }}
+        run: |
+          New-Item -ItemType Directory -Force -Path installer\out | Out-Null
+
+          function New-EnvironmentEntry {
+            param(
+              [Parameter(Mandatory = $true)][string] $Name,
+              [Parameter(Mandatory = $true)][string] $Value
+            )
+
+            $escaped = $Value -replace '"', '""'
+            return ('Name: "{0}"; Value: "{1}"; Flags: machine' -f $Name, $escaped)
+          }
+
+          $requiredEnvKeys = @('SUPABASE_URL', 'SUPABASE_ANON_KEY')
+          $optionalEnvKeys = @(
+            'SUPABASE_OAUTH_CALLBACK_URL_DEV',
+            'SUPABASE_OAUTH_CALLBACK_URL_PROD',
+            'SUPABASE_OAUTH_CALLBACK_URL_MOBILE',
+            'SUPABASE_OAUTH_CALLBACK_URL_DESKTOP',
+            'DEBUG_MODE',
+            'LOG_LEVEL',
+            'LOG_DIR',
+            'LOG_FLUSH_INTERVAL_MS',
+            'LOG_MAX_QUEUE',
+            'LOG_MAX_FILE_SIZE_MB',
+            'LOG_MAX_DISK_MB',
+            'LOG_RETENTION_DAYS',
+            'LOG_BACKPRESSURE',
+            'ORDER_MANAGEMENT_PERF_TRACING'
+          )
+
+          $environmentLines = New-Object System.Collections.Generic.List[string]
+
+          foreach ($key in $requiredEnvKeys) {
+            $value = [Environment]::GetEnvironmentVariable($key)
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              throw "Required environment secret '$key' is missing or empty."
+            }
+            $environmentLines.Add((New-EnvironmentEntry -Name $key -Value $value))
+          }
+
+          foreach ($key in $optionalEnvKeys) {
+            $value = [Environment]::GetEnvironmentVariable($key)
+            if (-not [string]::IsNullOrWhiteSpace($value)) {
+              $environmentLines.Add((New-EnvironmentEntry -Name $key -Value $value))
+            }
+          }
+
+          $lines = @(
+            '#ifndef AppVersion'
+            '#define AppVersion "0.0.0"'
+            '#endif'
+            ''
+            '[Setup]'
+            'AppId={{1B9A9E73-4C46-4E3A-9D9E-3A7F8EACB001}}'
+            'AppName=YATA'
+            'AppVersion={#AppVersion}'
+            'DefaultDirName={pf}\YATA'
+            'DefaultGroupName=YATA'
+            'DisableProgramGroupPage=yes'
+            'OutputDir={#SourcePath}out'
+            'OutputBaseFilename=YATA-{#AppVersion}-setup'
+            'Compression=lzma'
+            'SolidCompression=yes'
+            'ArchitecturesInstallIn64BitMode=x64'
+            'WizardStyle=modern'
+            'ChangesEnvironment=yes'
+            ''
+            '[Files]'
+            'Source: "{#SourcePath}workdir\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion'
+            ''
+            '[Tasks]'
+            'Name: "desktopicon"; Description: "デスクトップにショートカットを作成"; GroupDescription: "追加のアイコン:"; Flags: checkedonce'
+            ''
+            '[Icons]'
+            'Name: "{autoprograms}\YATA"; Filename: "{app}\yata.exe"; IconFilename: "{app}\yata.exe"'
+            'Name: "{autodesktop}\YATA"; Filename: "{app}\yata.exe"; IconFilename: "{app}\yata.exe"; Tasks: desktopicon'
+          )
+
+          if ($environmentLines.Count -gt 0) {
+            $lines += ''
+            $lines += '[Environment]'
+            $lines += $environmentLines.ToArray()
+          }
+
+          $lines += @(
+            ''
+            '[Run]'
+            'Filename: "{app}\yata.exe"; Description: "YATA を起動"; Flags: nowait postinstall skipifsilent'
+          )
+
+          $lines | Set-Content -Path installer\YATA.iss -Encoding UTF8BOM
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          # タグ名から v プレフィックスを除去してバージョン番号を抽出
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          Write-Host "Using version: $version"
+          
+          $iscc = (Get-Command iscc).Source
+          & $iscc /Qp /DAppVersion="$version" installer\YATA.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed." }
+          Get-ChildItem installer\out\*.exe | ForEach-Object FullName
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yata-windows-installer
+          path: installer\out\*.exe
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-platforms, windows-installer]
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: yata-linux-appimage
+          path: release-assets/linux
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: yata-windows-installer
+          path: release-assets/windows-installer
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG_NAME="${GITHUB_REF_NAME}"
+          DIST_DIR="release-assets/dist"
+          mkdir -p "$DIST_DIR"
+
+          # --- Linux AppImage ---
+          LINUX_APPIMAGE="$(find release-assets/linux -name '*.AppImage' -type f | head -n 1)"
+          if [ -z "$LINUX_APPIMAGE" ]; then
+            echo "::error::No AppImage found in release-assets/linux"
+            ls -R release-assets/linux || true
+            exit 1
+          fi
+          LINUX_DEST="$DIST_DIR/YATA-${TAG_NAME}-linux.AppImage"
+          cp "$LINUX_APPIMAGE" "$LINUX_DEST"
+
+          # --- Windows Installer（Setup.exe）---
+          INSTALLER_EXE="$(find release-assets/windows-installer -name '*.exe' -type f | head -n 1)"
+          if [ -z "$INSTALLER_EXE" ]; then
+            echo "::error::No installer exe found in release-assets/windows-installer"
+            ls -R release-assets/windows-installer || true
+            exit 1
+          fi
+          INSTALLER_DEST="$DIST_DIR/YATA-${TAG_NAME}-windows-setup.exe"
+          cp "$INSTALLER_EXE" "$INSTALLER_DEST"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            release-assets/dist/YATA-${{ github.ref_name }}-linux.AppImage
+            release-assets/dist/YATA-${{ github.ref_name }}-windows-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-discord:
+    name: Announce Release to Discord
+    runs-on: ubuntu-latest
+    needs: publish-release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get release info and post to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # GitHub API でリリース情報を取得
+          RELEASE_JSON=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO/releases/tags/$TAG")
+
+          # デバッグ: レスポンスを確認
+          echo "=== GitHub API Response ==="
+          echo "$RELEASE_JSON" | jq '.'
+          echo "=========================="
+
+          RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.html_url // ""')
+          RELEASE_NAME=$(echo "$RELEASE_JSON" | jq -r '.name // .tag_name // ""')
+          RELEASE_AUTHOR=$(echo "$RELEASE_JSON" | jq -r '.author.login // ""')
+
+          # デバッグ: 抽出した値を確認
+          echo "RELEASE_URL: $RELEASE_URL"
+          echo "RELEASE_NAME: $RELEASE_NAME"
+          echo "RELEASE_AUTHOR: $RELEASE_AUTHOR"
+
+          # 値が空の場合は代替値を設定
+          if [ -z "$RELEASE_URL" ]; then
+            RELEASE_URL="https://github.com/$REPO/releases/tag/$TAG"
+            echo "Warning: Using fallback URL"
+          fi
+          if [ -z "$RELEASE_AUTHOR" ]; then
+            RELEASE_AUTHOR="${{ github.actor }}"
+            echo "Warning: Using github.actor as author: $RELEASE_AUTHOR"
+          fi
+          if [ -z "$RELEASE_NAME" ]; then
+            RELEASE_NAME="$TAG"
+            echo "Warning: Using tag as name"
+          fi
+
+          export RELEASE_URL
+          export RELEASE_NAME
+          export RELEASE_AUTHOR
+
+          # アセット情報を取得
+          ASSETS_JSON=$(echo "$RELEASE_JSON" | jq -c '.assets // []')
+          export ASSETS_JSON
+
+          # Python スクリプトで Discord payload を生成して送信
+          python3 - <<'PY' | curl -sS -H 'Content-Type: application/json' -d @- "$WEBHOOK_URL"
+          import json, os, datetime
+
+          tag = os.environ['TAG']
+          repo = os.environ['REPO']
+          release_url = os.environ.get('RELEASE_URL', '')
+          release_name = os.environ.get('RELEASE_NAME', tag)
+          release_author = os.environ.get('RELEASE_AUTHOR', 'unknown')
+          
+          # アセット情報をパース
+          assets_json = os.environ.get('ASSETS_JSON', '[]')
+          assets = json.loads(assets_json)
+          
+          assets_lines = []
+          for a in assets:
+            name = a.get('name', 'asset')
+            url = a.get('browser_download_url', '')
+            size = a.get('size', 0)
+            # KB表示（簡易）
+            assets_lines.append(f"- [{name}]({url}) ({size//1024} KB)")
+          
+          assets_text = "\n".join(assets_lines)[:1000] if assets_lines else "（なし）"
+
+          payload = {
+            "content": f":tada: 新しいリリース **{tag}** を公開しました！\n{repo} by {release_author}\n{release_url}",
+            "embeds": [{
+              "title": release_name,
+              "url": release_url,
+              "description": "リリースノートは上記URLをご確認ください。",
+              "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+              "fields": [
+                {"name": "タグ", "value": tag, "inline": True},
+                {"name": "リポジトリ", "value": repo, "inline": True},
+                {"name": "アセット", "value": assets_text, "inline": False}
+              ],
+              "footer": {"text": "GitHub Releases"}
+            }],
+            "allowed_mentions": {"parse": []}
+          }
+          print(json.dumps(payload, ensure_ascii=False))
+          PY

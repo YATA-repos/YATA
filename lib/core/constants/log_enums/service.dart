@@ -210,7 +210,19 @@ enum ServiceError implements LogMessage {
   materialConsumptionFailed,
 
   /// 材料復元失敗
-  materialRestorationFailed;
+  materialRestorationFailed,
+
+  /// CSVエクスポートのレートリミット超過
+  exportRateLimitExceeded,
+
+  /// CSVエクスポートの同時実行制限違反
+  concurrentExportInProgress,
+
+  /// エクスポートジョブが見つからない
+  exportJobNotFound,
+
+  /// 再ダウンロード期限切れ
+  exportRedownloadExpired;
 
   @override
   String get message {
@@ -227,6 +239,14 @@ enum ServiceError implements LogMessage {
         return "Failed to consume materials for order";
       case ServiceError.materialRestorationFailed:
         return "Failed to restore materials for order";
+      case ServiceError.exportRateLimitExceeded:
+        return "CSV export rate limit exceeded for {organizationId}";
+      case ServiceError.concurrentExportInProgress:
+        return "Another CSV export is already running for {organizationId}";
+      case ServiceError.exportJobNotFound:
+        return "Export job not found: {exportJobId}";
+      case ServiceError.exportRedownloadExpired:
+        return "Export job expired and cannot be redownloaded: {exportJobId}";
     }
   }
 }

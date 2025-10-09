@@ -15,10 +15,8 @@ List<Override> buildProdOverrides({
   Iterable<Override> extra = const <Override>[],
 }) {
   final List<Override> overrides = <Override>[
-    if (logger != null)
-      loggerProvider.overrideWithValue(logger),
-    if (authRepository != null)
-      authRepositoryProvider.overrideWithValue(authRepository),
+    if (logger != null) loggerProvider.overrideWithValue(logger),
+    if (authRepository != null) authRepositoryProvider.overrideWithValue(authRepository),
   ];
 
   // * 環境依存の外部サービスを差し替える場合は `extra` に追記する。

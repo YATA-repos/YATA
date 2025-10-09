@@ -21,7 +21,7 @@
 | Menu Service | `lib/features/menu/services/menu_service.dart` | メニュー CRUD ログ |
 | Inventory Services | `lib/features/inventory/services/{inventory_service,material_management_service,stock_operation_service,stock_level_service?,usage_analysis_service?,order_stock_service,order_workflow_service,csv_import_service}.dart` | 在庫系サービス全般が対象 |
 | Inventory Repository | `lib/features/inventory/services/order_stock_service.dart` | ※ features/inventory 側の注文在庫調整 |
-| Order Services | `lib/features/order/services/{order_service,order_management_service,order_calculation_service,cart_management_service,kitchen_operation_service,kitchen_analysis_service,order_stock_service}.dart` | 注文・キッチン関連サービス |
+| Order Services | `lib/features/order/services/order/{order_management_service,order_calculation_service,order_inventory_integration_service}.dart`, `lib/features/order/services/cart/cart_management_service.dart`, `lib/features/order/services/kitchen/{kitchen_operation_service,kitchen_analysis_service}.dart` | 注文・キッチン関連サービス |
 | Order Repository | `lib/features/order/repositories/order_repository.dart` | 注文リポジトリでログ |
 
 > 注: `inventory/services/stock_level_service.dart` と `usage_analysis_service.dart` は直接 compat import を持っていませんでした。上表は確認対象として列挙しています。

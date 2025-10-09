@@ -35,7 +35,7 @@ Status: Draft (2025-09-07)
 - 互換API検出: `rg -n "YataLogger\.|log(Info|Debug|Warning|Error)Message\(" lib`
 - 直接API推奨例:
   - `i('started', tag: 'InventoryService')`
-  - `e('failed', error: err, st: st, tag: 'OrderService')`
+  - `e('failed', error: err, st: st, tag: 'OrderManagementService')`
 
 ## 参考
 - 標準: `docs/standards/logging.md`

@@ -44,7 +44,9 @@ class StdoutFatalNotifier extends FatalNotifier {
   Future<void> notify(contract.FatalLogContext context) async {
     final contract.LogRecord record = context.record;
     final StringBuffer buffer = StringBuffer()
-      ..write("[FATAL] ${record.timestamp.toIso8601String()} tag=${record.tag ?? '-'} msg=${record.message}");
+      ..write(
+        "[FATAL] ${record.timestamp.toIso8601String()} tag=${record.tag ?? '-'} msg=${record.message}",
+      );
     if (includeError && context.error != null) {
       buffer.write(" error=${context.error}");
     }

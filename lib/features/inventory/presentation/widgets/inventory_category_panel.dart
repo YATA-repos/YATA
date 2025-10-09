@@ -54,10 +54,7 @@ class InventoryCategoryPanel extends StatelessWidget {
       id: summary.index == 0 ? null : summary.name,
       name: summary.name,
       isAll: summary.index == 0,
-      headerBadge: CategoryPanelBadgeData(
-        label: totalLabel,
-        type: YataStatusBadgeType.info,
-      ),
+      headerBadge: CategoryPanelBadgeData(label: totalLabel, type: YataStatusBadgeType.info),
       metrics: <CategoryPanelMetricData>[
         CategoryPanelMetricData(
           icon: Icons.check_circle_outline,
@@ -116,7 +113,8 @@ class InventoryCategoryPanel extends StatelessWidget {
       ),
     ];
 
-    final Map<String, List<InventoryItemViewData>> grouped = <String, List<InventoryItemViewData>>{};
+    final Map<String, List<InventoryItemViewData>> grouped =
+        <String, List<InventoryItemViewData>>{};
     for (final InventoryItemViewData item in state.items) {
       final String category = item.category;
       grouped.putIfAbsent(category, () => <InventoryItemViewData>[]).add(item);
@@ -126,7 +124,9 @@ class InventoryCategoryPanel extends StatelessWidget {
       final String categoryName = state.categories[i];
       final List<InventoryItemViewData> items = grouped[categoryName] ?? <InventoryItemViewData>[];
       final int total = items.length;
-      final int low = items.where((InventoryItemViewData item) => item.status == StockStatus.low).length;
+      final int low = items
+          .where((InventoryItemViewData item) => item.status == StockStatus.low)
+          .length;
       final int critical = items
           .where((InventoryItemViewData item) => item.status == StockStatus.critical)
           .length;
@@ -187,11 +187,11 @@ class InventoryCategoryPanelData {
     int? critical,
     String? categoryId,
   }) => InventoryCategoryPanelData(
-        name: name ?? this.name,
-        index: index ?? this.index,
-        total: total ?? this.total,
-        low: low ?? this.low,
-        critical: critical ?? this.critical,
-        categoryId: categoryId ?? this.categoryId,
-      );
+    name: name ?? this.name,
+    index: index ?? this.index,
+    total: total ?? this.total,
+    low: low ?? this.low,
+    critical: critical ?? this.critical,
+    categoryId: categoryId ?? this.categoryId,
+  );
 }

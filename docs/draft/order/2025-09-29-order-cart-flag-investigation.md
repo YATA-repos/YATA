@@ -59,7 +59,7 @@
 - Supabase マイグレーションの適用タイミング（本番データ初期化手順）。
 - `is_cart` が `true` の注文をユーザーが閲覧できる導線が必要か（デバッグや調査用途）。
 - `CartManagementService.clearCart` などで `is_cart` のまま `total_amount = 0` に戻す際の扱い。
-- リアルタイム通知（`OrderService.startRealtimeMonitoring`）との連携可否。`is_cart = true` のイベントを購読側で無視する処理が必要か要検討。
+- リアルタイム通知（`OrderManagementService.startRealtimeMonitoring`）との連携可否。`is_cart = true` のイベントを購読側で無視する処理が必要か要検討。
 
 ## 6. 次のアクション
 

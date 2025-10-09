@@ -4,7 +4,7 @@
 
 - 対象タスク: Order-Bugfix-3
 - 関連タスク: Order-Bugfix-1（注文番号採番）※ステータス更新時に副作用があるため連携必須
-- 対象コード: `lib/features/order/presentation/pages/order_management_page.dart` / `controllers/order_management_controller.dart` / `services/order_service.dart` / `services/order_management_service.dart` / `services/cart_management_service.dart` / `repositories/order_repository.dart`
+- 対象コード: `lib/features/order/presentation/pages/order_management_page.dart` / `controllers/order_management_controller.dart` / `services/order/order_management_service.dart` / `services/cart/cart_management_service.dart` / `repositories/order_repository.dart`
 
 ## 目的
 
@@ -31,7 +31,7 @@
 
 ### Phase 1: UI からのチェックアウト導線整備
 
-- [ ] `OrderManagementController` に `checkout()` メソッドを追加し、`OrderService.checkoutCart` を呼び出す。
+- [ ] `OrderManagementController` に `checkout()` メソッドを追加し、`OrderManagementService.checkoutCart` を呼び出す。
 - [ ] `order_management_page.dart` の会計ボタンを `controller.checkout()` に差し替え、処理中インジケーターとエラートーストを実装。
 - [ ] 成功時に履歴ページへ遷移し、失敗時は現在のページに留まる UX を定義。
 
@@ -67,7 +67,7 @@
 
 - [ ] UI ボタンのイベント差し替えとローディング状態実装
 - [ ] `OrderManagementController.checkout()` の追加と状態遷移
-- [ ] `OrderService` / `OrderManagementService` へのパラメータ・戻り値拡張
+- [ ] `OrderManagementService` へのパラメータ・戻り値拡張
 - [ ] 注文ステータス更新と注文番号反映
 - [ ] 新規カート生成（`CartManagementService` 改修）
 - [ ] Provider ライフサイクル調整（`autoDispose` or `refresh`）

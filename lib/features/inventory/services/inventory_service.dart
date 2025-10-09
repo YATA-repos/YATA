@@ -33,7 +33,7 @@ class InventoryService
     required UsageAnalysisService usageAnalysisService,
     required OrderStockService orderStockService,
   }) : _logger = logger,
-    _ref = ref,
+       _ref = ref,
        _realtimeManager = realtimeManager,
        _materialManagementService = materialManagementService,
        _stockLevelService = stockLevelService,
@@ -73,66 +73,67 @@ class InventoryService
   String get serviceName => "InventoryService";
 
   Future<void> startRealtimeMonitoring() => log_ctx.traceAsync<void>(
-      "inventory.realtime_monitoring.start",
-      (log_ctx.LogTrace trace) async {
-        final Stopwatch sw = Stopwatch()..start();
-        final String? requestId = trace.context[log_ctx.LogContextKeys.requestId] as String?;
-        LogFieldsBuilder buildTraceFields() => LogFieldsBuilder.operation("inventory.realtime_monitoring")
-            .withFlow(flowId: trace.flowId, requestId: requestId);
+    "inventory.realtime_monitoring.start",
+    (log_ctx.LogTrace trace) async {
+      final Stopwatch sw = Stopwatch()..start();
+      final String? requestId = trace.context[log_ctx.LogContextKeys.requestId] as String?;
+      LogFieldsBuilder buildTraceFields() => LogFieldsBuilder.operation(
+        "inventory.realtime_monitoring",
+      ).withFlow(flowId: trace.flowId, requestId: requestId);
 
-        log.i(
-          "Starting inventory realtime monitoring",
-          tag: loggerComponent,
-          fields: buildTraceFields().started().build(),
+      log.i(
+        "Starting inventory realtime monitoring",
+        tag: loggerComponent,
+        fields: buildTraceFields().started().build(),
+      );
+
+      try {
+        // 材料テーブルの監視開始
+        await startFeatureMonitoring(
+          "inventory",
+          "materials",
+          _handleMaterialUpdate,
+          eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
         );
 
-        try {
-          // 材料テーブルの監視開始
-          await startFeatureMonitoring(
-            "inventory",
-            "materials",
-            _handleMaterialUpdate,
-            eventTypes: const <String>["INSERT", "UPDATE", "DELETE"],
-          );
+        // 在庫テーブルの監視開始
+        await startFeatureMonitoring(
+          "inventory",
+          "stock_levels",
+          _handleStockLevelUpdate,
+          eventTypes: const <String>["UPDATE"],
+        );
 
-          // 在庫テーブルの監視開始
-          await startFeatureMonitoring(
-            "inventory",
-            "stock_levels",
-            _handleStockLevelUpdate,
-            eventTypes: const <String>["UPDATE"],
-          );
-
-          if (sw.isRunning) {
-            sw.stop();
-          }
-          log.i(
-            "Inventory realtime monitoring started",
-            tag: loggerComponent,
-            fields: buildTraceFields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
-          );
-        } catch (e, stackTrace) {
-          if (sw.isRunning) {
-            sw.stop();
-          }
-          log.e(
-            "Failed to start inventory realtime monitoring",
-            tag: loggerComponent,
-            error: e,
-            st: stackTrace,
-            fields: buildTraceFields()
-                .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
-                .addMetadataEntry("message", e.toString())
-                .build(),
-          );
-          rethrow;
+        if (sw.isRunning) {
+          sw.stop();
         }
-      },
-      attributes: <String, Object?>{
-        log_ctx.LogContextKeys.source: loggerComponent,
-        log_ctx.LogContextKeys.operation: "inventory.realtime_monitoring.start",
-      },
-    );
+        log.i(
+          "Inventory realtime monitoring started",
+          tag: loggerComponent,
+          fields: buildTraceFields().succeeded(durationMs: sw.elapsedMilliseconds).build(),
+        );
+      } catch (e, stackTrace) {
+        if (sw.isRunning) {
+          sw.stop();
+        }
+        log.e(
+          "Failed to start inventory realtime monitoring",
+          tag: loggerComponent,
+          error: e,
+          st: stackTrace,
+          fields: buildTraceFields()
+              .failed(reason: e.runtimeType.toString(), durationMs: sw.elapsedMilliseconds)
+              .addMetadataEntry("message", e.toString())
+              .build(),
+        );
+        rethrow;
+      }
+    },
+    attributes: <String, Object?>{
+      log_ctx.LogContextKeys.source: loggerComponent,
+      log_ctx.LogContextKeys.operation: "inventory.realtime_monitoring.start",
+    },
+  );
 
   Future<void> stopRealtimeMonitoring() async {
     try {
@@ -302,12 +303,12 @@ class InventoryService
   /// 材料カテゴリを更新
   @override
   Future<MaterialCategory?> updateMaterialCategory(MaterialCategory category) async =>
-    _materialManagementService.updateCategory(category);
+      _materialManagementService.updateCategory(category);
 
   /// 材料カテゴリを削除
   @override
   Future<void> deleteMaterialCategory(String categoryId) async =>
-    _materialManagementService.deleteCategory(categoryId);
+      _materialManagementService.deleteCategory(categoryId);
 
   /// 材料を更新
   @override

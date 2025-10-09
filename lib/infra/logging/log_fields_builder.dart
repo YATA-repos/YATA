@@ -5,7 +5,8 @@ class LogFieldsBuilder {
   factory LogFieldsBuilder.empty() => LogFieldsBuilder._(<String, dynamic>{});
 
   /// Create a builder for a specific business operation.
-  factory LogFieldsBuilder.operation(String operation) => LogFieldsBuilder.empty().._setString("operation", operation);
+  factory LogFieldsBuilder.operation(String operation) =>
+      LogFieldsBuilder.empty().._setString("operation", operation);
 
   final Map<String, dynamic> _fields;
   final Map<String, dynamic> _actor = <String, dynamic>{};
@@ -38,7 +39,12 @@ class LogFieldsBuilder {
   /// Convenience for marking an operation as failed.
   LogFieldsBuilder failed({String? reason, String? errorCode, int? durationMs}) {
     withStage("failed");
-    return withResult(status: "failure", reason: reason, errorCode: errorCode, durationMs: durationMs);
+    return withResult(
+      status: "failure",
+      reason: reason,
+      errorCode: errorCode,
+      durationMs: durationMs,
+    );
   }
 
   /// Convenience for marking an operation as cancelled.

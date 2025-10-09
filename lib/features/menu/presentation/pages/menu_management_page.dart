@@ -173,7 +173,8 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
                   children: <Widget>[
                     _MenuAttentionSection(
                       items: attentionItems,
-                      onShowAll: () => _controller.updateAvailabilityFilter(MenuAvailabilityFilter.attention),
+                      onShowAll: () =>
+                          _controller.updateAvailabilityFilter(MenuAvailabilityFilter.attention),
                       onOpenDetail: (String id) => _controller.openDetail(id),
                     ),
                     const SizedBox(height: YataSpacingTokens.lg),
@@ -481,10 +482,11 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     });
   }
 
-  Future<String?> _showCategoryNameDialog({required String title, String? initialValue}) => showDialog<String>(
-      context: context,
-      builder: (BuildContext _) => _CategoryNameDialog(title: title, initialValue: initialValue),
-    );
+  Future<String?> _showCategoryNameDialog({required String title, String? initialValue}) =>
+      showDialog<String>(
+        context: context,
+        builder: (BuildContext _) => _CategoryNameDialog(title: title, initialValue: initialValue),
+      );
 
   Future<MenuFormData?> _showMenuFormDialog({
     required List<MenuCategoryViewData> categories,
@@ -492,14 +494,14 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
     MenuItemViewData? initial,
     List<MenuRecipeDetail> initialRecipes = const <MenuRecipeDetail>[],
   }) => showDialog<MenuFormData>(
-      context: context,
-      builder: (BuildContext _) => _MenuFormDialog(
-        categories: categories,
-        materialOptions: materialOptions,
-        initial: initial,
-        initialRecipes: initialRecipes,
-      ),
-    );
+    context: context,
+    builder: (BuildContext _) => _MenuFormDialog(
+      categories: categories,
+      materialOptions: materialOptions,
+      initial: initial,
+      initialRecipes: initialRecipes,
+    ),
+  );
 }
 
 class _MenuAttentionSection extends StatelessWidget {
@@ -532,9 +534,7 @@ class _MenuAttentionSection extends StatelessWidget {
     return YataSectionCard(
       title: "要確認メニュー",
       subtitle: "優先して確認したいメニューをまとめました",
-      actions: <Widget>[
-        TextButton(onPressed: onShowAll, child: const Text("一覧で表示")),
-      ],
+      actions: <Widget>[TextButton(onPressed: onShowAll, child: const Text("一覧で表示"))],
       child: Column(
         children: <Widget>[
           for (int index = 0; index < highlights.length; index++) ...<Widget>[
@@ -574,10 +574,7 @@ class _AttentionMenuTile extends StatelessWidget {
           foregroundColor: YataColorTokens.warning,
         ),
       if (item.estimatedServings != null)
-        YataTag(
-          label: "提供可能目安 ${item.estimatedServings}",
-          icon: Icons.timelapse_outlined,
-        ),
+        YataTag(label: "提供可能目安 ${item.estimatedServings}", icon: Icons.timelapse_outlined),
     ];
 
     return Material(
@@ -614,7 +611,11 @@ class _AttentionMenuTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Wrap(spacing: YataSpacingTokens.xs, runSpacing: YataSpacingTokens.xs, children: badges),
+                  Wrap(
+                    spacing: YataSpacingTokens.xs,
+                    runSpacing: YataSpacingTokens.xs,
+                    children: badges,
+                  ),
                 ],
               ),
               if (item.description != null && item.description!.isNotEmpty) ...<Widget>[
@@ -630,7 +631,11 @@ class _AttentionMenuTile extends StatelessWidget {
               ],
               if (supplemental.isNotEmpty) ...<Widget>[
                 const SizedBox(height: YataSpacingTokens.sm),
-                Wrap(spacing: YataSpacingTokens.sm, runSpacing: YataSpacingTokens.xs, children: supplemental),
+                Wrap(
+                  spacing: YataSpacingTokens.sm,
+                  runSpacing: YataSpacingTokens.xs,
+                  children: supplemental,
+                ),
               ],
             ],
           ),
@@ -786,10 +791,7 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
         .where((MenuCategoryViewData category) => category.id != null)
         .toList();
 
-    assert(
-      _availableCategories.isNotEmpty,
-      "カテゴリが存在しない状態でメニューフォームは生成できません",
-    );
+    assert(_availableCategories.isNotEmpty, "カテゴリが存在しない状態でメニューフォームは生成できません");
 
     _materialOptions = List<MaterialOption>.from(widget.materialOptions);
     _nameController = TextEditingController();
@@ -803,14 +805,16 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
     final String? initialCategoryId = menu?.categoryId;
     _selectedCategoryId =
         initialCategoryId != null &&
-            _availableCategories.any((MenuCategoryViewData category) => category.id == initialCategoryId)
+            _availableCategories.any(
+              (MenuCategoryViewData category) => category.id == initialCategoryId,
+            )
         ? initialCategoryId
         : _availableCategories.first.id!;
 
     _isAvailable = menu?.isAvailable ?? true;
-  _nameController.text = menu?.name ?? "";
-  _priceController.text = menu != null ? menu.price.toString() : "";
-  _descriptionController.text = menu?.description ?? "";
+    _nameController.text = menu?.name ?? "";
+    _priceController.text = menu != null ? menu.price.toString() : "";
+    _descriptionController.text = menu?.description ?? "";
   }
 
   void _resetRecipeForms(List<MenuRecipeDetail> recipes) {
@@ -852,7 +856,9 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
     }
     setState(() {
       _availableCategories = filtered;
-      if (_availableCategories.every((MenuCategoryViewData category) => category.id != _selectedCategoryId)) {
+      if (_availableCategories.every(
+        (MenuCategoryViewData category) => category.id != _selectedCategoryId,
+      )) {
         _selectedCategoryId = _availableCategories.first.id!;
       }
     });
@@ -870,12 +876,7 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
           ),
           child: Row(
             children: <Widget>[
-              Expanded(
-                child: Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
+              Expanded(child: Text(widget.title, style: Theme.of(context).textTheme.titleMedium)),
               ...widget.headerActions,
             ],
           ),
@@ -932,10 +933,9 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
                           margin: const EdgeInsets.only(bottom: YataSpacingTokens.md),
                           child: Text(
                             widget.errorMessage!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: YataColorTokens.danger),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(color: YataColorTokens.danger),
                           ),
                         ),
                         bodyChild,
@@ -977,80 +977,80 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
   );
 
   Widget _buildPrimaryFormFields() => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        TextFormField(
-          controller: _nameController,
-          decoration: const InputDecoration(labelText: "メニュー名"),
-          autofocus: true,
-          enabled: !_isBusy,
-          validator: (String? value) {
-            if (value == null || value.trim().isEmpty) {
-              return "名称を入力してください";
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: YataSpacingTokens.md),
-        DropdownButtonFormField<String>(
-          // ignore: deprecated_member_use
-          value: _selectedCategoryId,
-          decoration: const InputDecoration(labelText: "カテゴリ"),
-          items: _availableCategories
-              .map(
-                (MenuCategoryViewData category) =>
-                    DropdownMenuItem<String>(value: category.id, child: Text(category.name)),
-              )
-              .toList(growable: false),
-          onChanged: _isBusy
-              ? null
-              : (String? value) {
-                  if (value == null) {
-                    return;
-                  }
-                  setState(() => _selectedCategoryId = value);
-                },
-        ),
-        const SizedBox(height: YataSpacingTokens.md),
-        TextFormField(
-          controller: _priceController,
-          enabled: !_isBusy,
-          decoration: const InputDecoration(labelText: "価格"),
-          keyboardType: TextInputType.number,
-          validator: (String? value) {
-            if (value == null || value.trim().isEmpty) {
-              return "価格を入力してください";
-            }
-            final int? price = int.tryParse(value.trim());
-            if (price == null || price < 0) {
-              return "0以上の数値を入力してください";
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: YataSpacingTokens.md),
-        SwitchListTile(
-          value: _isAvailable,
-          onChanged: _isBusy ? null : (bool value) => setState(() => _isAvailable = value),
-          title: const Text("販売可能にする"),
-          contentPadding: EdgeInsets.zero,
-        ),
-      ],
-    );
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: <Widget>[
+      TextFormField(
+        controller: _nameController,
+        decoration: const InputDecoration(labelText: "メニュー名"),
+        autofocus: true,
+        enabled: !_isBusy,
+        validator: (String? value) {
+          if (value == null || value.trim().isEmpty) {
+            return "名称を入力してください";
+          }
+          return null;
+        },
+      ),
+      const SizedBox(height: YataSpacingTokens.md),
+      DropdownButtonFormField<String>(
+        // ignore: deprecated_member_use
+        value: _selectedCategoryId,
+        decoration: const InputDecoration(labelText: "カテゴリ"),
+        items: _availableCategories
+            .map(
+              (MenuCategoryViewData category) =>
+                  DropdownMenuItem<String>(value: category.id, child: Text(category.name)),
+            )
+            .toList(growable: false),
+        onChanged: _isBusy
+            ? null
+            : (String? value) {
+                if (value == null) {
+                  return;
+                }
+                setState(() => _selectedCategoryId = value);
+              },
+      ),
+      const SizedBox(height: YataSpacingTokens.md),
+      TextFormField(
+        controller: _priceController,
+        enabled: !_isBusy,
+        decoration: const InputDecoration(labelText: "価格"),
+        keyboardType: TextInputType.number,
+        validator: (String? value) {
+          if (value == null || value.trim().isEmpty) {
+            return "価格を入力してください";
+          }
+          final int? price = int.tryParse(value.trim());
+          if (price == null || price < 0) {
+            return "0以上の数値を入力してください";
+          }
+          return null;
+        },
+      ),
+      const SizedBox(height: YataSpacingTokens.md),
+      SwitchListTile(
+        value: _isAvailable,
+        onChanged: _isBusy ? null : (bool value) => setState(() => _isAvailable = value),
+        title: const Text("販売可能にする"),
+        contentPadding: EdgeInsets.zero,
+      ),
+    ],
+  );
 
   Widget _buildSecondaryFormFields() => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        TextFormField(
-          controller: _descriptionController,
-          enabled: !_isBusy,
-          decoration: const InputDecoration(labelText: "説明", hintText: "任意"),
-          maxLines: 4,
-        ),
-        const SizedBox(height: YataSpacingTokens.md),
-        _buildRecipeSection(),
-      ],
-    );
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: <Widget>[
+      TextFormField(
+        controller: _descriptionController,
+        enabled: !_isBusy,
+        decoration: const InputDecoration(labelText: "説明", hintText: "任意"),
+        maxLines: 4,
+      ),
+      const SizedBox(height: YataSpacingTokens.md),
+      _buildRecipeSection(),
+    ],
+  );
 
   Widget _buildRecipeSection() {
     final TextTheme textTheme = Theme.of(context).textTheme;
@@ -1185,7 +1185,9 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
               children: <Widget>[
                 Switch.adaptive(
                   value: form.isOptional,
-                  onChanged: _isBusy ? null : (bool value) => setState(() => form.isOptional = value),
+                  onChanged: _isBusy
+                      ? null
+                      : (bool value) => setState(() => form.isOptional = value),
                 ),
                 const SizedBox(width: YataSpacingTokens.xs),
                 const Expanded(child: Text("任意材料")),
@@ -1731,7 +1733,7 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
         _materialOptions = options;
         _isLoading = false;
       });
-  } catch (_) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
@@ -1767,9 +1769,7 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("${data.name} を更新しました")),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${data.name} を更新しました")));
     widget.onClose();
   }
 
@@ -1799,18 +1799,23 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
 
   @override
   Widget build(BuildContext context) => FocusTraversalGroup(
-      policy: OrderedTraversalPolicy(),
-      child: Semantics(
-        container: true,
-        explicitChildNodes: true,
-        label: "メニュー詳細モーダル",
-        child: _buildBody(context),
-      ),
-    );
+    policy: OrderedTraversalPolicy(),
+    child: Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: "メニュー詳細モーダル",
+      child: _buildBody(context),
+    ),
+  );
 
   Widget _buildBody(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: Padding(padding: EdgeInsets.all(YataSpacingTokens.lg), child: CircularProgressIndicator()));
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(YataSpacingTokens.lg),
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     if (_loadErrorMessage != null || _detail == null || _categories.isEmpty) {
@@ -1822,10 +1827,9 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
           children: <Widget>[
             Text(
               _loadErrorMessage ?? "詳細データが利用できません。",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(color: YataColorTokens.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: YataColorTokens.textSecondary),
             ),
             const SizedBox(height: YataSpacingTokens.md),
             Row(
@@ -1850,11 +1854,7 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
           icon: const Icon(Icons.edit_outlined),
           label: const Text("レシピエディター"),
         ),
-      IconButton(
-        icon: const Icon(Icons.close),
-        tooltip: "閉じる",
-        onPressed: widget.onClose,
-      ),
+      IconButton(icon: const Icon(Icons.close), tooltip: "閉じる", onPressed: widget.onClose),
     ];
 
     final Widget footerLeading = TextButton.icon(

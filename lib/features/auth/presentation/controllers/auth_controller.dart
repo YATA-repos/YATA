@@ -10,11 +10,9 @@ import "../../services/auth_service.dart";
 /// [AuthService]の状態更新ストリームを購読し、UI層へ反映する。
 class AuthController extends StateNotifier<AuthState> {
   /// [AuthController]を生成する。
-  AuthController({
-    required log_contract.LoggerContract logger,
-    required AuthService authService,
-  })  : _logger = logger,
-        _authService = authService,
+  AuthController({required log_contract.LoggerContract logger, required AuthService authService})
+    : _logger = logger,
+      _authService = authService,
       super(authService.currentState) {
     _subscription = _authService.authStateChanges.listen(
       _handleStateChange,

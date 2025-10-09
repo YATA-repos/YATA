@@ -7,10 +7,15 @@ import "../../core/contracts/auth/auth_repository_contract.dart" as auth_contrac
 // Batch
 import "../../core/contracts/batch/batch_processing_service.dart" as batch_contract;
 import "../../core/contracts/cache/cache.dart" as cache_contract;
+import "../../core/contracts/logging/analytics_logger.dart" as analytics_contract;
 import "../../core/contracts/logging/logger.dart" as contract;
 import "../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 // Repository contracts
 import "../../core/contracts/repositories/crud_repository.dart" as repo_contract;
+import "../../core/contracts/repositories/export/csv_export_jobs_repository_contract.dart"
+  as export_job_contract;
+import "../../core/contracts/repositories/export/csv_export_repository_contract.dart"
+  as export_contract;
 import "../../core/contracts/repositories/inventory/inventory_repository_contracts.dart"
     as inv_contract;
 import "../../core/contracts/repositories/menu/menu_repository_contracts.dart" as menu_contract;
@@ -23,6 +28,9 @@ import "../../features/auth/dto/auth_response.dart" as auth_local;
 import "../../features/auth/models/user_profile.dart";
 import "../../features/auth/repositories/auth_repository.dart";
 import "../../features/auth/services/auth_service.dart";
+import "../../features/export/repositories/csv_export_jobs_repository.dart";
+import "../../features/export/repositories/csv_export_repository.dart";
+import "../../features/export/services/csv_export_service.dart";
 // Feature models
 import "../../features/inventory/models/inventory_model.dart"
     show Material, MaterialCategory, Recipe;
@@ -52,30 +60,36 @@ import "../../features/menu/services/menu_service.dart";
 import "../../features/order/models/order_model.dart" show Order, OrderItem;
 import "../../features/order/repositories/order_item_repository.dart";
 import "../../features/order/repositories/order_repository.dart";
-import "../../features/order/services/cart_management_service.dart";
-import "../../features/order/services/cart_service.dart";
-import "../../features/order/services/order_calculation_service.dart";
-import "../../features/order/services/order_management_service.dart";
-import "../../features/order/services/order_service.dart";
-import "../../features/order/services/order_stock_service.dart" as order_svc;
+import "../../features/order/services/cart/cart_management_service.dart";
+import "../../features/order/services/order/order_calculation_service.dart";
+import "../../features/order/services/order/order_inventory_integration_service.dart";
+import "../../features/order/services/order/order_management_service.dart";
 import "../../infra/batch/batch_processing_service.dart" as batch_impl;
 import "../../infra/local/cache/memory_cache_adapter.dart";
 import "../../infra/local/cache/ttl_cache_adapter.dart";
 // Infra adapters and concrete repos
+import "../../infra/logging/analytics_logger_adapter.dart";
 import "../../infra/logging/logger_adapter.dart";
 import "../../infra/realtime/realtime_manager_adapter.dart";
 import "../../infra/repositories/generic_crud_repository.dart";
 import "../../shared/utils/order_identifier_generator.dart";
 
 /// グローバルロガー（契約）
-final Provider<contract.LoggerContract> loggerProvider = Provider<contract.LoggerContract>(
-  (Ref ref) {
-    final contract.LoggerContract logger = const InfraLoggerAdapter();
-    LoggerBinding.register(logger);
-    ref.onDispose(LoggerBinding.clear);
-    return logger;
-  },
-);
+final Provider<contract.LoggerContract> loggerProvider = Provider<contract.LoggerContract>((
+  Ref ref,
+) {
+  final contract.LoggerContract logger = const InfraLoggerAdapter();
+  LoggerBinding.register(logger);
+  ref.onDispose(LoggerBinding.clear);
+  return logger;
+});
+
+/// Analytics Logger
+final Provider<analytics_contract.AnalyticsLoggerContract> analyticsLoggerProvider =
+    Provider<analytics_contract.AnalyticsLoggerContract>((Ref ref) {
+      final contract.LoggerContract baseLogger = ref.read(loggerProvider);
+      return InfraAnalyticsLoggerAdapter(baseLogger);
+    });
 
 /// リアルタイムマネージャー（契約）
 final Provider<r_contract.RealtimeManagerContract> realtimeManagerProvider =
@@ -236,6 +250,27 @@ final Provider<DailySummaryRepository> dailySummaryRepositoryProvider =
       (Ref ref) => DailySummaryRepository(delegate: ref.read(dailySummaryRawRepositoryProvider)),
     );
 
+/// Export: CSV エクスポートリポジトリ
+final Provider<export_contract.CsvExportRepositoryContract> csvExportRepositoryProvider =
+    Provider<export_contract.CsvExportRepositoryContract>((Ref ref) => CsvExportRepository());
+
+/// Export: CSV エクスポートジョブリポジトリ
+final Provider<export_job_contract.CsvExportJobsRepositoryContract>
+    csvExportJobsRepositoryProvider = Provider<export_job_contract.CsvExportJobsRepositoryContract>(
+      (Ref ref) => CsvExportJobsRepository(),
+    );
+
+/// Export: CSV エクスポートサービス
+final Provider<CsvExportService> csvExportServiceProvider = Provider<CsvExportService>(
+  (Ref ref) => CsvExportService(
+    logger: ref.read(loggerProvider),
+    repository: ref.read(csvExportRepositoryProvider),
+    jobsRepository: ref.read(csvExportJobsRepositoryProvider),
+    analyticsLogger: ref.read(analyticsLoggerProvider),
+    rateLimitCache: ref.read(ttlCacheProvider),
+  ),
+);
+
 /// Cache: Memory / TTL を契約経由で公開
 final Provider<cache_contract.Cache<String, dynamic>> memoryCacheProvider =
     Provider<cache_contract.Cache<String, dynamic>>((Ref ref) => MemoryCacheAdapter<dynamic>());
@@ -313,10 +348,10 @@ final Provider<OrderCalculationService> orderCalculationServiceProvider =
       );
     });
 
-final Provider<order_svc.OrderStockService> orderStockServiceProvider =
-    Provider<order_svc.OrderStockService>((Ref ref) {
+final Provider<OrderInventoryIntegrationService> orderInventoryIntegrationServiceProvider =
+    Provider<OrderInventoryIntegrationService>((Ref ref) {
       final contract.LoggerContract logger = ref.read(loggerProvider);
-      return order_svc.OrderStockService(
+      return OrderInventoryIntegrationService(
         logger: logger,
         materialRepository: ref.read(materialRepositoryProvider),
         recipeRepository: ref.read(recipeRepositoryProvider),
@@ -332,35 +367,26 @@ final Provider<CartManagementService> cartManagementServiceProvider =
         orderItemRepository: ref.read(orderItemRepositoryProvider),
         menuItemRepository: ref.read(menuItemRepositoryProvider),
         orderCalculationService: ref.read(orderCalculationServiceProvider),
-        orderStockService: ref.read(orderStockServiceProvider),
+        orderInventoryIntegrationService: ref.read(orderInventoryIntegrationServiceProvider),
       );
     });
 
-/// OrderService（契約Realtime注入）
-final Provider<OrderService> orderServiceProvider = Provider<OrderService>((Ref ref) {
-  final contract.LoggerContract logger = ref.read(loggerProvider);
-  final OrderManagementService orderMgmt = OrderManagementService(
-    logger: logger,
-    orderRepository: ref.read(orderRepositoryProvider),
-    orderItemRepository: ref.read(orderItemRepositoryProvider),
-    menuItemRepository: ref.read(menuItemRepositoryProvider),
-    orderCalculationService: ref.read(orderCalculationServiceProvider),
-    orderStockService: ref.read(orderStockServiceProvider),
-    cartManagementService: ref.read(cartManagementServiceProvider),
-  );
-  return OrderService(
-    logger: logger,
-    ref: ref,
-    realtimeManager: ref.read(realtimeManagerProvider),
-    orderManagementService: orderMgmt,
-  );
-});
-
-/// CartService（注文カート管理）
-final Provider<CartService> cartServiceProvider = Provider<CartService>((Ref ref) => CartService(
-    cartManagementService: ref.read(cartManagementServiceProvider),
-    orderCalculationService: ref.read(orderCalculationServiceProvider),
-  ));
+/// OrderManagementService（リアルタイム統合済み）
+final Provider<OrderManagementService> orderManagementServiceProvider =
+    Provider<OrderManagementService>((Ref ref) {
+      final contract.LoggerContract logger = ref.read(loggerProvider);
+      return OrderManagementService(
+        logger: logger,
+        ref: ref,
+        realtimeManager: ref.read(realtimeManagerProvider),
+        orderRepository: ref.read(orderRepositoryProvider),
+        orderItemRepository: ref.read(orderItemRepositoryProvider),
+        menuItemRepository: ref.read(menuItemRepositoryProvider),
+        orderCalculationService: ref.read(orderCalculationServiceProvider),
+        orderInventoryIntegrationService: ref.read(orderInventoryIntegrationServiceProvider),
+        cartManagementService: ref.read(cartManagementServiceProvider),
+      );
+    });
 
 /// MenuService（契約Realtime注入）
 final Provider<MenuService> menuServiceProvider = Provider<MenuService>((Ref ref) {

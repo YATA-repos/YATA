@@ -45,13 +45,9 @@ void main() {
 
       await traceAsync<void>("parent", (LogTrace parent) async {
         parentFlow = parent.flowId;
-        await traceAsync<void>(
-          "detached",
-          (LogTrace child) async {
-            childFlow = child.flowId;
-          },
-          startNewFlow: true,
-        );
+        await traceAsync<void>("detached", (LogTrace child) async {
+          childFlow = child.flowId;
+        }, startNewFlow: true);
       });
 
       expect(parentFlow, isNotNull);

@@ -29,7 +29,7 @@
 - 対象 5 ページ（`OrderManagementPage` / `OrderStatusPage` / `OrderHistoryPage` / `InventoryManagementPage` / `MenuManagementPage`）に mixin を適用し、ページ復帰時に各コントローラの `load...` / `refresh...` 系メソッドを実行。
    - 初回表示は既存のコントローラ初期化処理でカバーされているため、`shouldRefreshOnPush` は `false` に設定し二重ロードを回避。
    - リフレッシュ中 (`isLoading` など) は新規フェッチをスキップして多重実行を防止。
-- `RouteAwareRefreshMixin` のユニットテストおよび `OrderStatusPage` を利用したウィジェットテストを追加し、ページ戻りで `OrderService.getOrdersByStatuses` が再呼び出しされることを検証。
+- `RouteAwareRefreshMixin` のユニットテストおよび `OrderStatusPage` を利用したウィジェットテストを追加し、ページ戻りで `OrderManagementService.getOrdersByStatuses` が再呼び出しされることを検証。
 
 ## ページ別の観察結果
 
