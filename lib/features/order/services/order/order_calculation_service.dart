@@ -9,13 +9,27 @@ class OrderCalculationService {
   OrderCalculationService({
     required log_contract.LoggerContract logger,
     required OrderItemRepositoryContract<OrderItem> orderItemRepository,
+    double initialTaxRate = 0.08,
   }) : _logger = logger,
-       _orderItemRepository = orderItemRepository;
+       _orderItemRepository = orderItemRepository,
+       _taxRate = initialTaxRate;
 
   final log_contract.LoggerContract _logger;
   log_contract.LoggerContract get log => _logger;
 
   final OrderItemRepositoryContract<OrderItem> _orderItemRepository;
+  double _taxRate;
+
+  double get taxRate => _taxRate;
+
+  void setBaseTaxRate(double value) {
+    final double clamped = value.clamp(0, 1).toDouble();
+    if ((_taxRate - clamped).abs() < 0.0001) {
+      return;
+    }
+    _taxRate = clamped;
+    log.d("Base tax rate updated: $_taxRate", tag: loggerComponent);
+  }
 
   String get loggerComponent => "OrderCalculationService";
 
@@ -39,8 +53,7 @@ class OrderCalculationService {
       // 小計の計算
       final int subtotal = orderItems.fold(0, (int sum, OrderItem item) => sum + item.subtotal);
 
-      // 税率（8%と仮定）
-      const double taxRate = 0.08;
+      final double taxRate = _taxRate;
       final int taxAmount = (subtotal * taxRate).round();
 
       // 合計金額の計算
@@ -105,8 +118,9 @@ class OrderCalculationService {
   }
 
   /// 税額を計算
-  int calculateTaxAmount(int subtotal, {double taxRate = 0.08}) {
-    final int taxAmount = (subtotal * taxRate).round();
+  int calculateTaxAmount(int subtotal, {double? taxRate}) {
+    final double rate = taxRate ?? _taxRate;
+    final int taxAmount = (subtotal * rate).round();
     log.d(
       "Tax amount calculated: subtotal=$subtotal, rate=$taxRate, tax=$taxAmount",
       tag: loggerComponent,

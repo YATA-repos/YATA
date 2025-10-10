@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app/app.dart";
+import "app/wiring/provider.dart" show settingsServiceProvider;
 import "core/validation/env_validator.dart";
 import "features/order/presentation/performance/order_management_tracing.dart";
 import "infra/logging/fatal_notifier.dart";
@@ -70,8 +71,19 @@ void main() async {
   }
 
   _setupErrorHandling();
+  final ProviderContainer container = ProviderContainer();
+  try {
+    await container.read(settingsServiceProvider).loadAndApply();
+  } catch (error, stackTrace) {
+    e(
+      "Failed to load settings during bootstrap: $error",
+      error: error,
+      st: stackTrace,
+      tag: "main",
+    );
+  }
 
-  runApp(const ProviderScope(child: YataApp()));
+  runApp(UncontrolledProviderScope(container: container, child: const YataApp()));
 }
 
 bool _shouldInitializeSupabase() {
