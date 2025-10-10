@@ -79,6 +79,7 @@ class EnvValidator {
     "LOG_RETENTION_DAYS",
     "LOG_BACKPRESSURE",
     "ORDER_MANAGEMENT_PERF_TRACING",
+    "ORDER_MANAGEMENT_PERF_SAMPLE_MODULO",
   ];
 
   /// dart-define から注入されるビルド時環境変数のデフォルト値
@@ -87,8 +88,12 @@ class EnvValidator {
     "SUPABASE_ANON_KEY": String.fromEnvironment("SUPABASE_ANON_KEY"),
     "SUPABASE_OAUTH_CALLBACK_URL_DEV": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_DEV"),
     "SUPABASE_OAUTH_CALLBACK_URL_PROD": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_PROD"),
-    "SUPABASE_OAUTH_CALLBACK_URL_MOBILE": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_MOBILE"),
-    "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP": String.fromEnvironment("SUPABASE_OAUTH_CALLBACK_URL_DESKTOP"),
+    "SUPABASE_OAUTH_CALLBACK_URL_MOBILE": String.fromEnvironment(
+      "SUPABASE_OAUTH_CALLBACK_URL_MOBILE",
+    ),
+    "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP": String.fromEnvironment(
+      "SUPABASE_OAUTH_CALLBACK_URL_DESKTOP",
+    ),
     "SUPABASE_AUTH_CALLBACK_URL": String.fromEnvironment("SUPABASE_AUTH_CALLBACK_URL"),
     "DEBUG_MODE": String.fromEnvironment("DEBUG_MODE"),
     "LOG_LEVEL": String.fromEnvironment("LOG_LEVEL"),

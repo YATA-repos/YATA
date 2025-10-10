@@ -67,6 +67,8 @@ Status: Accepted (updated)
 - `LOG_FATAL_EXIT_PROCESS`: 自動シャットダウン時にプロセス終了まで行うか。
 - `LOG_FATAL_EXIT_CODE`: `exitProcess=true` の際に使用する終了コード。
 - `LOG_FATAL_SHUTDOWN_DELAY_MS`: 終了前に待機するディレイ（ミリ秒）。
+- `ORDER_MANAGEMENT_PERF_TRACING`: 注文管理パフォーマンストレーサーの有効化フラグ。未設定時は非リリースビルドで自動的に有効、リリースビルドでは opt-in。
+- `ORDER_MANAGEMENT_PERF_SAMPLE_MODULO`: 注文管理トレーサーのサンプリング周期（正の整数）。
 
 ### 安全モード（PoC）
 - Supabase 初期化が致命的に失敗した場合、`SupabaseClientService` が自動で `fatal` を発火し安全モードへ移行する。
@@ -77,5 +79,10 @@ Status: Accepted (updated)
 - 既存コードは `compat.dart` の `log*` 関数、または `YataLogger` 後方互換を利用。新規コードは `logger.dart` の `i/w/d/e` などを直接使用。
 - 機能別タグが必要な場合は `withTag('FeatureName').i('msg')` か `i('msg', tag: 'FeatureName')` を使用。
 - 平文で機微情報を出力しない。PII マスキングは二重化のための仕組み。
+
+### パフォーマンストレーシング (`omperf` タグ)
+- `OrderManagementTracer` は `omperf` タグ付きでロガーに出力し、Console/File sink 双方に記録される。
+- 実行中は `OrderManagementTracer.applyRuntimeOverride(enabled: true, sampleModulo: 5)` のように有効化・サンプリング率を即時調整できる。
+- 環境変数 `ORDER_MANAGEMENT_PERF_TRACING=true` と `ORDER_MANAGEMENT_PERF_SAMPLE_MODULO=<正の整数>` を設定すると、本番ビルドでも `_logs/app-*.log` に `tag=omperf` のNDJSONが残り、flow/span情報を含む計測結果を取得できる。
 
 References: `docs/draft/logging/temp.md:1`
