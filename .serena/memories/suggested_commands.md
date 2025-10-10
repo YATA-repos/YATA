@@ -1,7 +1,0 @@
-- 依存取得: `flutter pub get`
-- アプリ実行: `flutter run`
-- 静的解析: `flutter analyze`
-- テスト実行: `flutter test`
-- ビルド確認: `flutter build <platform>`（例: `flutter build apk`）
-- コード生成/更新: `flutter pub run build_runner build --delete-conflicting-outputs`
-- 差分確認: `git status` / `git diff`（Linux 標準ツール）
