@@ -18,6 +18,7 @@ import "../../../settings/presentation/pages/settings_page.dart";
 import "../../models/inventory_model.dart" as inventory_models;
 import "../controllers/inventory_management_controller.dart";
 import "../widgets/inventory_category_panel.dart";
+import "../widgets/inventory_management_header.dart";
 
 /// 在庫管理画面。
 class InventoryManagementPage extends ConsumerStatefulWidget {
@@ -188,13 +189,16 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                 final Widget mainContent = Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    _HeaderStats(state: state, controller: controller, onDrillDown: _scrollToTable),
-                    const SizedBox(height: YataSpacingTokens.lg),
-                    _ControlsRow(
-                      searchController: _searchController,
+                    InventoryManagementHeader(
                       state: state,
-                      controller: controller,
+                      searchController: _searchController,
+                      onSearchChanged: controller.setSearchText,
+                      onStatusFilterChanged: (StockStatus? status) {
+                        controller.setStatusFilter(status);
+                        _scrollToTable();
+                      },
                       onAddItem: _handleAddItem,
+                      onRefresh: controller.refresh,
                     ),
                     const SizedBox(height: YataSpacingTokens.lg),
                     _InventoryTable(
@@ -806,224 +810,6 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
   }
 }
 
-class _HeaderStats extends StatelessWidget {
-  const _HeaderStats({required this.state, required this.controller, required this.onDrillDown});
-  final InventoryManagementState state;
-  final InventoryManagementController controller;
-  final VoidCallback onDrillDown;
-
-  @override
-  Widget build(BuildContext context) {
-    final int adequateCount = state.totalItems - state.lowCount - state.criticalCount;
-    final int adequateSafe = adequateCount < 0 ? 0 : adequateCount;
-    final List<OverviewStatData> overviewStats = <OverviewStatData>[
-      OverviewStatData(
-        title: "総在庫アイテム",
-        value: state.totalItems.toString(),
-        indicatorColor: YataColorTokens.primary,
-        indicatorLabel: "登録済み在庫アイテムの総数",
-      ),
-      OverviewStatData(
-        title: "適正在庫",
-        value: adequateSafe.toString(),
-        indicatorColor: YataColorTokens.success,
-        indicatorLabel: "警告なしの在庫アイテム数",
-      ),
-      OverviewStatData(
-        title: "要注意",
-        value: state.lowCount.toString(),
-        indicatorColor: YataColorTokens.warning,
-        indicatorLabel: "閾値警告に達した在庫アイテム数",
-      ),
-      OverviewStatData(
-        title: "緊急補充",
-        value: state.criticalCount.toString(),
-        indicatorColor: YataColorTokens.danger,
-        indicatorLabel: "致命的閾値を下回る在庫アイテム数",
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        OverviewStatCards(stats: overviewStats),
-        const SizedBox(height: YataSpacingTokens.lg),
-        YataSectionCard(
-          title: "在庫ステータス",
-          subtitle: "タップで絞り込みができます",
-          child: Wrap(
-            spacing: YataSpacingTokens.md,
-            runSpacing: YataSpacingTokens.md,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              _StatusPill(
-                color: YataColorTokens.success,
-                bg: YataColorTokens.successSoft,
-                label: "適正: $adequateSafe",
-                isActive: state.selectedStatusFilter == StockStatus.sufficient,
-                onTap: () {
-                  controller.toggleStatusFilter(StockStatus.sufficient);
-                  onDrillDown();
-                },
-              ),
-              _StatusPill(
-                color: YataColorTokens.warning,
-                bg: YataColorTokens.warningSoft,
-                label: "要注意: ${state.lowCount}",
-                isActive: state.selectedStatusFilter == StockStatus.low,
-                onTap: () {
-                  controller.toggleStatusFilter(StockStatus.low);
-                  onDrillDown();
-                },
-              ),
-              _StatusPill(
-                color: YataColorTokens.danger,
-                bg: YataColorTokens.dangerSoft,
-                label: "危険: ${state.criticalCount}",
-                isActive: state.selectedStatusFilter == StockStatus.critical,
-                onTap: () {
-                  controller.toggleStatusFilter(StockStatus.critical);
-                  onDrillDown();
-                },
-              ),
-              TextButton.icon(
-                onPressed: onDrillDown,
-                icon: const Icon(Icons.table_rows_outlined),
-                label: const Text("一覧を確認"),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.color,
-    required this.bg,
-    required this.label,
-    this.isActive = false,
-    this.onTap,
-  });
-
-  final Color color;
-  final Color bg;
-  final String label;
-  final bool isActive;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color effectiveBg = isActive ? color.withValues(alpha: 0.1) : bg;
-    final Color effectiveBorder = isActive ? color : color.withValues(alpha: 0.6);
-    final Widget chip = Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: YataSpacingTokens.md,
-        vertical: YataSpacingTokens.xs,
-      ),
-      decoration: BoxDecoration(
-        color: effectiveBg,
-        borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-        border: Border.all(color: effectiveBorder, width: isActive ? 2 : 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            label,
-            style: (Theme.of(context).textTheme.labelLarge ?? YataTypographyTokens.labelLarge)
-                .copyWith(color: color),
-          ),
-        ],
-      ),
-    );
-    final Widget interactive = onTap == null
-        ? chip
-        : InkWell(
-            onTap: onTap,
-            borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-            child: chip,
-          );
-    final String tooltipMessage = onTap == null
-        ? label
-        : (isActive ? "$label を表示中です。\nタップでフィルタを解除します。" : "$label の在庫を表示します。\nタップでフィルタを適用します。");
-
-    return Tooltip(message: tooltipMessage, child: interactive);
-  }
-}
-
-/// 在庫一覧の検索欄と操作ボタンをまとめたコンポーネント。
-class _ControlsRow extends StatelessWidget {
-  const _ControlsRow({
-    required this.searchController,
-    required this.state,
-    required this.controller,
-    required this.onAddItem,
-  });
-
-  final TextEditingController searchController;
-  final InventoryManagementState state;
-  final InventoryManagementController controller;
-  final VoidCallback onAddItem;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isBusy = state.isLoading;
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool narrow = constraints.maxWidth < 720;
-        final List<Widget> actions = <Widget>[
-          OutlinedButton.icon(
-            onPressed: isBusy ? null : controller.refresh,
-            icon: const Icon(Icons.refresh_outlined),
-            label: const Text("再取得"),
-          ),
-          FilledButton.icon(
-            onPressed: isBusy ? null : onAddItem,
-            icon: const Icon(Icons.add),
-            label: const Text("新規在庫追加"),
-          ),
-        ];
-
-        final Widget actionWrap = Wrap(
-          spacing: YataSpacingTokens.sm,
-          runSpacing: YataSpacingTokens.sm,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: narrow ? WrapAlignment.start : WrapAlignment.end,
-          children: actions,
-        );
-
-        final Widget searchField = YataSearchField(
-          controller: searchController,
-          hintText: "在庫アイテム、カテゴリで検索",
-          onChanged: controller.setSearchText,
-        );
-
-        if (narrow) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              searchField,
-              const SizedBox(height: YataSpacingTokens.sm),
-              actionWrap,
-            ],
-          );
-        }
-
-        return Row(
-          children: <Widget>[
-            Expanded(child: searchField),
-            const SizedBox(width: YataSpacingTokens.md),
-            actionWrap,
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _InventoryTable extends StatefulWidget {
   const _InventoryTable({
     required this.state,
@@ -1452,12 +1238,41 @@ class _InventoryTableState extends State<_InventoryTable> {
             },
           ),
           const SizedBox(height: YataSpacingTokens.md),
-          YataDataTable(
-            columns: columns,
-            rows: rows,
-            sortColumnIndex: sortIndex,
-            sortAscending: state.sortAsc,
-          ),
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(YataSpacingTokens.xl),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 64,
+                      color: YataColorTokens.neutral400,
+                    ),
+                    const SizedBox(height: YataSpacingTokens.md),
+                    Text(
+                      "在庫アイテムがありません",
+                      style: (Theme.of(context).textTheme.titleMedium ?? YataTypographyTokens.titleMedium)
+                          .copyWith(color: YataColorTokens.textSecondary),
+                    ),
+                    const SizedBox(height: YataSpacingTokens.sm),
+                    Text(
+                      "「在庫を追加」ボタンから新しい在庫を登録してください",
+                      style: (Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium)
+                          .copyWith(color: YataColorTokens.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            YataDataTable(
+              columns: columns,
+              rows: rows,
+              sortColumnIndex: sortIndex,
+              sortAscending: state.sortAsc,
+            ),
         ],
       ),
     );

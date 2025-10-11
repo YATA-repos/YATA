@@ -645,6 +645,14 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     );
   }
 
+  /// ステータスフィルターを直接設定。
+  void setStatusFilter(StockStatus? status) {
+    state = state.copyWith(
+      selectedStatusFilter: status,
+      selectedStatusFilterSet: true,
+    );
+  }
+
   /// ソートキーの変更。既に同じキーなら昇順/降順をトグル、違うキーなら昇順に設定。
   void sortBy(InventorySortBy key) {
     if (state.sortBy == key) {
