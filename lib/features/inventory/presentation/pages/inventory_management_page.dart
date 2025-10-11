@@ -186,6 +186,12 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final bool showSidebar = constraints.maxWidth >= 1080;
+                // 要注意・緊急補充のアイテムを抽出
+                final List<InventoryItemViewData> attentionItems = state.items
+                    .where((InventoryItemViewData item) =>
+                        item.status == StockStatus.low || item.status == StockStatus.critical)
+                    .toList(growable: false);
+
                 final Widget mainContent = Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
@@ -199,6 +205,16 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                       },
                       onAddItem: _handleAddItem,
                       onRefresh: controller.refresh,
+                    ),
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    _InventoryAttentionSection(
+                      items: attentionItems,
+                      onEditItem: _handleEditItem,
+                      onShowAll: () {
+                        // 要注意・緊急補充のフィルターは無いので、とりあえずすべて表示
+                        controller.setStatusFilter(null);
+                        _scrollToTable();
+                      },
                     ),
                     const SizedBox(height: YataSpacingTokens.lg),
                     _InventoryTable(
@@ -1307,6 +1323,146 @@ class _InventoryTableState extends State<_InventoryTable> {
       ),
     );
     return result ?? false;
+  }
+}
+
+/// 要注意在庫セクション。
+class _InventoryAttentionSection extends StatelessWidget {
+  const _InventoryAttentionSection({
+    required this.items,
+    required this.onEditItem,
+    required this.onShowAll,
+  });
+
+  final List<InventoryItemViewData> items;
+  final ValueChanged<InventoryItemViewData> onEditItem;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    if (items.isEmpty) {
+      return YataSectionCard(
+        title: "要注意在庫アイテム",
+        subtitle: "対応が必要な在庫アイテムはありません",
+        child: Text(
+          "すべての在庫状態は良好です。",
+          style: theme.textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
+        ),
+      );
+    }
+
+    final List<InventoryItemViewData> highlights = items.take(3).toList(growable: false);
+
+    return YataSectionCard(
+      title: "要注意在庫アイテム",
+      subtitle: "優先して確認したい在庫アイテムをまとめました",
+      actions: <Widget>[TextButton(onPressed: onShowAll, child: const Text("一覧で表示"))],
+      child: Column(
+        children: <Widget>[
+          for (int index = 0; index < highlights.length; index++) ...<Widget>[
+            _AttentionInventoryTile(item: highlights[index], onEditItem: onEditItem),
+            if (index != highlights.length - 1) const SizedBox(height: YataSpacingTokens.sm),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 要注意在庫アイテムのタイル。
+class _AttentionInventoryTile extends StatelessWidget {
+  const _AttentionInventoryTile({required this.item, required this.onEditItem});
+
+  final InventoryItemViewData item;
+  final ValueChanged<InventoryItemViewData> onEditItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final _Status status = _statusFor(item.status);
+    final UnitType unitType = _unitFromSymbol(item.unit);
+
+    final List<Widget> badges = <Widget>[
+      if (item.status == StockStatus.critical)
+        const YataStatusBadge(label: "緊急補充", type: YataStatusBadgeType.danger)
+      else if (item.status == StockStatus.low)
+        const YataStatusBadge(label: "要注意", type: YataStatusBadgeType.warning),
+    ];
+
+    final List<Widget> supplemental = <Widget>[
+      YataTag(
+        label: "現在: ${UnitFormatter.format(item.current, unitType)}",
+        icon: Icons.inventory_2_outlined,
+        backgroundColor: status.bg,
+        foregroundColor: status.color,
+      ),
+      YataTag(
+        label: "警告: ${UnitFormatter.format(item.alertThreshold, unitType)}",
+        icon: Icons.warning_amber_outlined,
+        backgroundColor: YataColorTokens.warningSoft,
+        foregroundColor: YataColorTokens.warning,
+      ),
+      YataTag(
+        label: "危険: ${UnitFormatter.format(item.criticalThreshold, unitType)}",
+        icon: Icons.report_outlined,
+        backgroundColor: YataColorTokens.dangerSoft,
+        foregroundColor: YataColorTokens.danger,
+      ),
+    ];
+
+    return Material(
+      color: YataColorTokens.neutral50,
+      borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
+      child: InkWell(
+        onTap: () => onEditItem(item),
+        borderRadius: BorderRadius.circular(YataRadiusTokens.medium),
+        child: Padding(
+          padding: const EdgeInsets.all(YataSpacingTokens.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          item.name,
+                          style: (textTheme.titleMedium ?? const TextStyle()).copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: YataSpacingTokens.xs),
+                        Text(
+                          item.category,
+                          style: (textTheme.bodySmall ?? const TextStyle()).copyWith(
+                            color: YataColorTokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Wrap(
+                    spacing: YataSpacingTokens.xs,
+                    runSpacing: YataSpacingTokens.xs,
+                    children: badges,
+                  ),
+                ],
+              ),
+              const SizedBox(height: YataSpacingTokens.sm),
+              Wrap(
+                spacing: YataSpacingTokens.sm,
+                runSpacing: YataSpacingTokens.xs,
+                children: supplemental,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
