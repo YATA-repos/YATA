@@ -31,6 +31,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   late final TextEditingController _taxRateController;
   late final Future<String> _defaultLogDirectoryFuture;
+  late final ProviderSubscription<SettingsFormState> _formStateSubscription;
 
   @override
   void initState() {
@@ -39,26 +40,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _taxRateController = TextEditingController(text: formState.taxRateText);
     _defaultLogDirectoryFuture = ref.read(settingsServiceProvider).resolveDefaultLogDirectory();
 
-    ref.listen<SettingsFormState>(settingsFormProvider, (
-      SettingsFormState? previous,
-      SettingsFormState next,
-    ) {
-      if (previous?.taxRateText == next.taxRateText) {
-        return;
-      }
-      if (_taxRateController.text != next.taxRateText) {
-        _taxRateController.value = _taxRateController.value.copyWith(
-          text: next.taxRateText,
-          selection: TextSelection.collapsed(offset: next.taxRateText.length),
-        );
-      }
-    });
+    _formStateSubscription = ref.listenManual<SettingsFormState>(
+      settingsFormProvider,
+      _handleFormStateChanged,
+    );
   }
 
   @override
   void dispose() {
+    _formStateSubscription.close();
     _taxRateController.dispose();
     super.dispose();
+  }
+
+  void _handleFormStateChanged(SettingsFormState? previous, SettingsFormState next) {
+    if (previous?.taxRateText == next.taxRateText) {
+      return;
+    }
+    if (_taxRateController.text == next.taxRateText) {
+      return;
+    }
+    _taxRateController.value = _taxRateController.value.copyWith(
+      text: next.taxRateText,
+      selection: TextSelection.collapsed(offset: next.taxRateText.length),
+    );
   }
 
   @override
