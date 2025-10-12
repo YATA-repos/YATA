@@ -92,6 +92,7 @@ class CsvExportService {
     bool includeHeaders = true,
     CsvExportFilters filters = const <String, dynamic>{},
     String? requestedBy,
+    String? generatedByAppVersion,
     Duration? timeout,
   }) {
     final CsvExportRequest request = CsvExportRequest(
@@ -103,6 +104,7 @@ class CsvExportService {
       includeHeaders: includeHeaders,
       filters: filters,
       requestedBy: requestedBy,
+      generatedByAppVersion: generatedByAppVersion,
       timeout: timeout,
     );
     return export(request);
@@ -117,6 +119,7 @@ class CsvExportService {
     bool includeHeaders = true,
     CsvExportFilters filters = const <String, dynamic>{},
     String? requestedBy,
+    String? generatedByAppVersion,
     Duration? timeout,
   }) {
     final CsvExportRequest request = CsvExportRequest(
@@ -128,6 +131,7 @@ class CsvExportService {
       includeHeaders: includeHeaders,
       filters: filters,
       requestedBy: requestedBy,
+      generatedByAppVersion: generatedByAppVersion,
       timeout: timeout,
     );
     return export(request);
@@ -142,6 +146,7 @@ class CsvExportService {
     bool includeHeaders = true,
     CsvExportFilters filters = const <String, dynamic>{},
     String? requestedBy,
+    String? generatedByAppVersion,
     Duration? timeout,
   }) {
     final CsvExportRequest request = CsvExportRequest(
@@ -153,6 +158,7 @@ class CsvExportService {
       includeHeaders: includeHeaders,
       filters: filters,
       requestedBy: requestedBy,
+      generatedByAppVersion: generatedByAppVersion,
       timeout: timeout,
     );
     return export(request);
@@ -167,6 +173,7 @@ class CsvExportService {
     bool includeHeaders = true,
     CsvExportFilters filters = const <String, dynamic>{},
     String? requestedBy,
+    String? generatedByAppVersion,
     Duration? timeout,
   }) {
     final CsvExportRequest request = CsvExportRequest(
@@ -178,6 +185,7 @@ class CsvExportService {
       includeHeaders: includeHeaders,
       filters: filters,
       requestedBy: requestedBy,
+      generatedByAppVersion: generatedByAppVersion,
       timeout: timeout,
     );
     return export(request);
@@ -192,6 +200,7 @@ class CsvExportService {
     bool includeHeaders = true,
     CsvExportFilters filters = const <String, dynamic>{},
     String? requestedBy,
+    String? generatedByAppVersion,
     Duration? timeout,
   }) {
     final CsvExportRequest request = CsvExportRequest(
@@ -203,6 +212,7 @@ class CsvExportService {
       includeHeaders: includeHeaders,
       filters: filters,
       requestedBy: requestedBy,
+      generatedByAppVersion: generatedByAppVersion,
       timeout: timeout,
     );
     return export(request);
@@ -745,16 +755,28 @@ class CsvExportService {
         ? Map<String, dynamic>.from(raw.metadata!)
         : <String, dynamic>{};
 
+    final String? metadataSourceViewVersion = _stringFromObject(metadata["source_view_version"]);
+    final String? metadataGeneratedByAppVersion =
+        _stringFromObject(metadata["generated_by_app_version"]);
+    final String? requestGeneratedByAppVersion =
+        _stringFromObject(request.generatedByAppVersion);
+    final String resolvedGeneratedByAppVersion = metadataGeneratedByAppVersion ??
+        requestGeneratedByAppVersion ??
+        AppConstants.appVersion;
+
     metadata["dataset_id"] ??= request.dataset.id;
     metadata["operation"] ??= operation.name;
     metadata["generated_at"] ??= generatedAt.toIso8601String();
-    metadata["generated_by_app_version"] ??= AppConstants.appVersion;
+    metadata["generated_by_app_version"] = resolvedGeneratedByAppVersion;
+    if (metadataSourceViewVersion != null) {
+      metadata["source_view_version"] = metadataSourceViewVersion;
+    }
     if (redownloadOf != null) {
       metadata["redownload_of"] = redownloadOf;
     }
 
     final String? exportJobId = _stringFromObject(metadata["export_job_id"]);
-    final String? sourceViewVersion = _stringFromObject(metadata["source_view_version"]);
+    final String? sourceViewVersion = metadataSourceViewVersion;
 
     final CsvExportEncryptionResult? encryptionResult = await _encryptionService.maybeEncrypt(
       fileName: baseFileName,
@@ -792,7 +814,7 @@ class CsvExportService {
       encryption: encryptionInfo,
       exportJobId: exportJobId,
       sourceViewVersion: sourceViewVersion,
-      generatedByAppVersion: AppConstants.appVersion,
+      generatedByAppVersion: resolvedGeneratedByAppVersion,
     );
   }
 
@@ -822,6 +844,8 @@ class CsvExportService {
       filters: filters,
       timeZone: timeZone,
       requestedBy: job.requestedBy,
+      generatedByAppVersion:
+          job.generatedByAppVersion ?? _stringFromObject(_metadataValue(metadata, "generated_by_app_version")),
     );
   }
 

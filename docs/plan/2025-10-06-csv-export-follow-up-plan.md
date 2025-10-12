@@ -41,18 +41,43 @@
 - [x] `CsvExportService` へ `export_jobs` ログ書き込み/失敗時リトライ制御を追加。
 - [x] データセット拡張 (`purchasesLineItems`, `inventoryTransactions`, `wasteLog`, `menuEngineeringDaily`) 対応のロジックとバリデーション共通化。
 - [ ] サービスレイヤー向け Integration Test (Supabaseローカル or Testcontainers) の計画を策定。
+  - 方針: `scripts/test/export_service_it.fish` で Supabase CLI の `supabase start` を起動し、ローカル Postgres に最新マイグレーションとシードデータ (`test_cache/export_seed.sql`) を適用してから `dart test integration/export_service_test.dart` を実行。
+  - CI: GitHub Actions では service container で Supabase を起動し、`INTEGRATION_TEST=1` 設定時のみ走らせる。`Makefile` に `integration-test` ターゲットを追加し、ローカル/CI の手順差分をなくす。
+  - スコープ: 正常系(全5データセット)、レートリミット429、暗号化ZIP生成、再ダウンロード動作までを網羅。異常系はモックテストに委譲。
+  - 現状: `scripts/test/export_service_it.fish` / `test_cache/export_seed.sql` / `test/integration/export/export_service_test.dart` を追加済み。各スクリプト・SQLはまだ未実行で、Supabase ローカル環境でも検証前。
 - [ ] `CsvExportResult` のメタ情報 (`source_view_version`, `generated_by_app_version`) 付与方針を決める。
+  - `source_view_version`: Supabase ビューの COMMENT にバージョン文字列を保持し、`fn_export_csv` から返却するメタに含める。`export_jobs` ログにも保存してトレーサビリティを確保。
+  - `generated_by_app_version`: クライアント側で `package_info_plus` から取得したビルドバージョンを RPC 呼び出し時にヘッダーへ渡し、サービス層で `CsvExportResult` に格納。UI には暗号化ZIP時のみ補足情報として表示。
+  - 追加検討: バージョン変更時のリリースノート連動や互換性警告は Phase 2 で議論する。
 - [x] 1日5件・同時1件のレートリミットを `export_jobs` とクライアントキャッシュで判定し、429エラーと再試行案内に統一。
 - [x] 再ダウンロードAPI/ユースケースを追加し、7日以内の `export_jobs` メタデータから再取得できるようにする。
 - [x] CSV取得後のPIIスキャン＋暗号化ZIP生成処理をサービス層に実装し、パスワード生成と返却値に連携。
 
 ### 3.3 Flutter UI / UX
-- [ ] `Settings > Data Export` 画面モックのレビュー完了 (`docs/plan/2025-10-02` Phase 1-1)。JST固定カレンダー、CSV種別選択、暗号化時のOTP表示領域を含める。
+- [ ] `Settings > Data Export` 画面モックのレビュー完了、JST固定カレンダー、CSV種別選択、暗号化時のOTP表示領域を含める。
+  - レイアウト: `Scaffold` + `CustomScrollView`、ヘッダーに対象店舗概要とレート残数チップ、ボディは `Card` 3枚構成 (期間選択・データ種別・出力オプション)。
+  - デザイン原則: 既存の Settings セクションと同じカラー/タイポグラフィを踏襲し、暗号化フローはワンタイムパスワードパネルをモーダルで表示。
+  - モック承認者: モバイル担当 + Security WG + 会計担当。2025-10-15 のUIレビュー会議で最終合意。
 - [ ] 期間・店舗フィルター、CSV種別ラジオボタン (Phase 1は単一選択) のForm実装。レートリミット残数のラベル/警告を表示。
+  - フォーム: `FormBuilder` + `Riverpod` 管理、期間は `showDateRangePicker` をJSTに固定、店舗は `DropdownMenu<Store>`。
+  - CSV種別: `SegmentedButton` で単一選択、説明テキストでデータセットのカラム概要を表示。
+  - レート残数表示: `InfoChip` で残回数/リセット時刻を表示し、残0時は `FilledButton.tonal` を disable して retry 手順リンクを表示。
 - [ ] エクスポート中プログレス + 完了トースト/429や権限不足時の管理者向けメッセージ(再試行/開発者連絡)を実装。
+  - 進行表示: `showModalBottomSheet` に `LinearProgressIndicator` を表示し、暗号化処理中は段階的メッセージを切替。
+  - 完了通知: `ScaffoldMessenger` の `SnackBar` + 成功時は保存先ショートカット、429/権限エラー時は `AlertDialog` で次アクションを提示。
+  - メッセージ原本: Security WG と共有し、監査ログの案内文と整合させる。
 - [ ] Androidファイル保存 ( `path_provider` + `share_plus`) と Windows保存ダイアログで即時ダウンロードし、保存成功/失敗をユーザーに通知。
+  - Android: `path_provider` で `Download/yata/exports` 配下へ一時保存後、`share_plus` の `shareXFiles` でユーザーに保存先を明示。
+  - Windows: `file_selector` パッケージを採用し、デフォルトディレクトリを `Documents\Yata\Exports` に設定。保存完了時は Explorer を開くオプションを提示。
+  - 共通: 保存失敗時は再試行/問い合わせナレッジベースへのリンクを `SnackBar` に同梱。
 - [ ] 暗号化ZIP生成時のダウンロード/パスワード表示UI、セッション終了時のパスワード破棄をハンドリング。
+  - パスワード提示: エクスポート完了シートに16桁コードを表示し、「コピー」「QR表示」「閉じる」アクションを配置。閉じるとローカル状態をクリア。
+  - 再表示制御: 再ダウンロード時のみ再発行、`Clipboard.setData` 後は `SnackBar` で注意喚起。セッション終了で `SecureStorage` から値を削除。
+  - ドキュメント連携: ガイド (`docs/guide/csv_export.md` 仮) に手順を追記し、UIからリンクする。
 - [ ] オフライン時のリトライUI設計 (Phase 3までの先行メモ)。
+  - 検出: `Connectivity` プラグインでオンライン監視し、送信前に `ExportService.canSubmit` をチェック。
+  - 表示: オフライン時は `Banner` で通知し、「端末がオンラインになったら再送」トグルを提供。
+  - 振る舞い: Phase 1では手動リトライのみ、Phase 3で自動再送ワークフローを設計する旨をコメントとして残す。
 
 ### 3.4 Telemetry / Analytics
 - [x] `analyticsLogger` へ `csv_export_started/completed/failed` イベントを追加し、`dataset_id`, `range_days`, `duration_ms`, `row_count` を記録。
