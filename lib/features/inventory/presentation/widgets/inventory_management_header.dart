@@ -45,19 +45,19 @@ class InventoryManagementHeader extends StatelessWidget {
         indicatorLabel: "登録済み在庫アイテムの総数",
       ),
       OverviewStatData(
-        title: "適正在庫",
+        title: "適切",
         value: "$adequateSafe",
         indicatorColor: YataColorTokens.success,
         indicatorLabel: "警告なしの在庫アイテム数",
       ),
       OverviewStatData(
-        title: "要注意",
+        title: "注意",
         value: "${state.lowCount}",
         indicatorColor: YataColorTokens.warning,
         indicatorLabel: "閾値警告に達した在庫アイテム数",
       ),
       OverviewStatData(
-        title: "緊急補充",
+        title: "危険",
         value: "${state.criticalCount}",
         indicatorColor: YataColorTokens.danger,
         indicatorLabel: "致命的閾値を下回る在庫アイテム数",
@@ -66,9 +66,9 @@ class InventoryManagementHeader extends StatelessWidget {
 
     final List<YataFilterSegment> segments = <YataFilterSegment>[
       const YataFilterSegment(label: "すべて"),
-      const YataFilterSegment(label: "適正在庫"),
-      const YataFilterSegment(label: "要注意"),
-      const YataFilterSegment(label: "緊急補充"),
+      const YataFilterSegment(label: "適切"),
+      const YataFilterSegment(label: "注意"),
+      const YataFilterSegment(label: "危険"),
     ];
 
     final int selectedIndex = _getFilterIndex(state.selectedStatusFilter);
@@ -149,11 +149,11 @@ class InventoryManagementHeader extends StatelessWidget {
     }
     switch (filter) {
       case StockStatus.sufficient:
-        return 1; // 適正在庫
+        return 1; // 適切
       case StockStatus.low:
-        return 2; // 要注意
+        return 2; // 注意
       case StockStatus.critical:
-        return 3; // 緊急補充
+        return 3; // 危険
     }
   }
 
@@ -163,11 +163,11 @@ class InventoryManagementHeader extends StatelessWidget {
       case 0:
         return null; // すべて
       case 1:
-        return StockStatus.sufficient; // 適正在庫
+        return StockStatus.sufficient; // 適切
       case 2:
-        return StockStatus.low; // 要注意
+        return StockStatus.low; // 注意
       case 3:
-        return StockStatus.critical; // 緊急補充
+        return StockStatus.critical; // 危険
       default:
         return null;
     }

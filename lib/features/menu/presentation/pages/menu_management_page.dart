@@ -522,7 +522,7 @@ class _MenuAttentionSection extends StatelessWidget {
         title: "要確認メニュー",
         subtitle: "対応が必要なメニューはありません",
         child: Text(
-          "在庫・レシピの状態は良好です。",
+          "在庫・レシピの状態は適切です。",
           style: theme.textTheme.bodyMedium?.copyWith(color: YataColorTokens.textSecondary),
         ),
       );
@@ -740,6 +740,7 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
   late final TextEditingController _nameController;
   late final TextEditingController _priceController;
   late final TextEditingController _descriptionController;
+  late final ScrollController _scrollController;
   late List<MenuCategoryViewData> _availableCategories;
   late List<MaterialOption> _materialOptions;
   late String _selectedCategoryId;
@@ -753,6 +754,7 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _initializeForm();
   }
 
@@ -779,6 +781,7 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
     _nameController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
+    _scrollController.dispose();
     for (final _RecipeFormFieldSet form in _recipeForms) {
       form.dispose();
     }
@@ -888,8 +891,10 @@ class _MenuFormEditorState extends State<_MenuFormEditor> {
           ),
         Expanded(
           child: Scrollbar(
+            controller: _scrollController,
             thumbVisibility: false,
             child: SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(YataSpacingTokens.lg),
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
@@ -1485,7 +1490,8 @@ class _RecipeEditorDialogState extends ConsumerState<_RecipeEditorDialog> {
                 Expanded(
                   child: ListView.separated(
                     itemCount: recipes.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: YataSpacingTokens.sm),
+                    separatorBuilder: (BuildContext context, int _) =>
+                        const SizedBox(height: YataSpacingTokens.sm),
                     itemBuilder: (BuildContext context, int index) {
                       final MenuRecipeDetail recipe = recipes[index];
                       return Card(
@@ -1847,12 +1853,6 @@ class _MenuDetailDialogContentState extends ConsumerState<_MenuDetailDialogConte
 
     final MenuDetailViewData detail = _detail!;
     final List<Widget> headerActions = <Widget>[
-      if (widget.onEditRecipes != null)
-        TextButton.icon(
-          onPressed: _isSubmitting ? null : _handleEditRecipes,
-          icon: const Icon(Icons.edit_outlined),
-          label: const Text("レシピエディター"),
-        ),
       IconButton(icon: const Icon(Icons.close), tooltip: "閉じる", onPressed: widget.onClose),
     ];
 

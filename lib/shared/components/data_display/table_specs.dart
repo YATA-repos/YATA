@@ -55,6 +55,7 @@ class YataTableRowSpec {
     this.semanticLabel,
     this.isBusy = false,
     this.errorMessage,
+    this.backgroundColor,
   }) : assert(cells.length > 0, "Row requires at least one cell");
 
   /// 行を識別するID。
@@ -80,6 +81,9 @@ class YataTableRowSpec {
 
   /// 行レベルのエラーメッセージ。
   final String? errorMessage;
+
+  /// 行全体に適用する背景色。
+  final Color? backgroundColor;
 }
 
 /// セル表示を抽象化するスペック。

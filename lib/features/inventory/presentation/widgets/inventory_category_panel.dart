@@ -41,9 +41,9 @@ class InventoryCategoryPanel extends StatelessWidget {
   }
 
   CategoryPanelItem<InventoryCategoryPanelData> _toItem(InventoryCategoryPanelData summary) {
-    final String totalLabel = "合計 ${summary.total}件";
-    final String adequateLabel = "適正 ${summary.adequate}件";
-    final String lowLabel = "要注意 ${summary.low}件";
+    final String totalLabel = "登録 ${summary.total}件";
+    final String adequateLabel = "適切 ${summary.adequate}件";
+    final String lowLabel = "注意 ${summary.low}件";
     final String criticalLabel = "危険 ${summary.critical}件";
 
     final bool actionsEnabled =

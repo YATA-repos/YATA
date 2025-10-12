@@ -110,11 +110,22 @@ class YataDataTable extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(
         dataTableTheme: DataTableThemeData(
-          headingRowColor: WidgetStateProperty.all(YataColorTokens.neutral100),
+          headingRowColor: MaterialStateProperty.all(YataColorTokens.neutral100),
           headingTextStyle: headingStyle,
-          dataRowColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
-            if (states.contains(WidgetState.hovered)) {
+          dataRowColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
+            // selected状態でもデフォルトのグレーアウトを防ぐため、
+            // 常に透明を返す（個別の行の色設定を優先させる）
+            if (states.contains(MaterialState.selected)) {
+              return Colors.transparent;
+            }
+            if (states.contains(MaterialState.hovered)) {
               return YataColorTokens.primarySoft.withValues(alpha: 0.6);
+            }
+            if (states.contains(MaterialState.focused) ||
+                states.contains(MaterialState.pressed) ||
+                states.contains(MaterialState.dragged)) {
+              // フォーカスやドラッグ時も独自背景に頼らず、行固有の配色を優先する
+              return Colors.transparent;
             }
             return null;
           }),
@@ -157,7 +168,11 @@ class YataDataTable extends StatelessWidget {
               ),
             );
           }
-          return table;
+          // 背景を白に設定してselected状態のグレーアウトを隠す
+          return Container(
+            color: Colors.white,
+            child: table,
+          );
         },
       ),
     );
@@ -272,9 +287,24 @@ class YataDataTable extends StatelessWidget {
         tapHandler = () => onRowTap!(rowIndex);
       }
 
-      final MaterialStateProperty<Color?>? rowColor = rowSpec.errorMessage == null
-          ? null
-          : MaterialStateProperty.all<Color?>(YataColorTokens.dangerSoft.withValues(alpha: 0.6));
+      MaterialStateProperty<Color?>? rowColor;
+      if (rowSpec.errorMessage != null && rowSpec.errorMessage!.isNotEmpty) {
+        rowColor = MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
+          final Color base = YataColorTokens.dangerSoft.withValues(alpha: 0.6);
+          if (states.contains(MaterialState.hovered)) {
+            return Color.alphaBlend(YataColorTokens.selectionTint, base);
+          }
+          return base;
+        });
+      } else if (rowSpec.backgroundColor != null) {
+        final Color base = rowSpec.backgroundColor!;
+        rowColor = MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
+          if (states.contains(MaterialState.hovered)) {
+            return Color.alphaBlend(YataColorTokens.selectionTint, base);
+          }
+          return base;
+        });
+      }
 
       return DataRow(
         key: rowSpec.key ?? ValueKey<String>(rowSpec.id),

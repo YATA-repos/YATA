@@ -102,7 +102,7 @@ class MenuItemTable extends StatelessWidget {
     final String price = "¥${_currencyFormat.format(item.price)}";
     final String updatedAt = item.updatedAt == null ? "-" : _dateFormat.format(item.updatedAt!);
     final String stockNote = item.missingMaterials.isEmpty
-        ? (item.isStockAvailable ? "在庫良好" : "在庫未取得")
+        ? (item.isStockAvailable ? "適切" : "在庫未取得")
         : item.missingMaterials.join(", ");
 
     return YataTableRowSpec(

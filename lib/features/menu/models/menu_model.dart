@@ -10,6 +10,7 @@ class MenuCategory extends BaseModel {
   MenuCategory({
     required this.name,
     required this.displayOrder,
+    this.code,
     this.createdAt,
     this.updatedAt,
     super.id,
@@ -24,6 +25,10 @@ class MenuCategory extends BaseModel {
 
   /// 表示順序
   int displayOrder;
+
+  /// カテゴリコード
+  @JsonKey(includeIfNull: false)
+  String? code;
 
   /// 作成日時
   @JsonKey(includeIfNull: false)
