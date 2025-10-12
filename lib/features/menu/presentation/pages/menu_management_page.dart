@@ -130,7 +130,6 @@ class _MenuManagementPageState extends ConsumerState<MenuManagementPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const SizedBox(height: YataSpacingTokens.lg),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: state.isLoading ? const LinearProgressIndicator() : const SizedBox.shrink(),

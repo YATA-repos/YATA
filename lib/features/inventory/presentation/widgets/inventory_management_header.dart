@@ -15,7 +15,6 @@ class InventoryManagementHeader extends StatelessWidget {
     required this.onStatusFilterChanged,
     super.key,
     this.onAddItem,
-    this.onRefresh,
   });
 
   /// 現在の画面状態。
@@ -32,9 +31,6 @@ class InventoryManagementHeader extends StatelessWidget {
 
   /// 在庫追加モーダルを開くコールバック。
   final VoidCallback? onAddItem;
-
-  /// 再取得コールバック。
-  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -98,15 +94,6 @@ class InventoryManagementHeader extends StatelessWidget {
             );
 
             final List<Widget> actionButtons = <Widget>[];
-            if (onRefresh != null) {
-              actionButtons.add(
-                YataIconLabelButton(
-                  icon: Icons.refresh,
-                  label: "再取得",
-                  onPressed: state.isLoading ? null : onRefresh,
-                ),
-              );
-            }
             if (onAddItem != null) {
               actionButtons.add(
                 YataIconLabelButton(

@@ -1,5 +1,4 @@
 import "package:flutter/foundation.dart";
-import "package:meta/meta.dart";
 
 import "../../../infra/logging/log_level.dart";
 
@@ -12,17 +11,17 @@ class DebugOptions {
     required this.globalLogLevel,
   });
 
-  /// デベロッパーモードを有効にするか。
-  final bool developerMode;
-
-  /// ログ全体の出力レベル。
-  final LogLevel globalLogLevel;
-
   /// デフォルト値を返す。
   factory DebugOptions.defaults() => DebugOptions(
         developerMode: !kReleaseMode,
         globalLogLevel: kReleaseMode ? LogLevel.info : LogLevel.debug,
       );
+
+  /// デベロッパーモードを有効にするか。
+  final bool developerMode;
+
+  /// ログ全体の出力レベル。
+  final LogLevel globalLogLevel;
 
   /// コピーを生成する。
   DebugOptions copyWith({
@@ -56,6 +55,14 @@ class AppSettings {
     this.updatedAt,
   });
 
+  /// デフォルト設定。
+  factory AppSettings.defaults() => AppSettings(
+        schemaVersion: currentSchemaVersion,
+        taxRate: 0.10,
+        debug: DebugOptions.defaults(),
+        updatedAt: DateTime.now(),
+      );
+
   /// 設定スキーマのバージョン番号。
   final int schemaVersion;
 
@@ -73,15 +80,6 @@ class AppSettings {
 
   /// 現行スキーマバージョン。
   static const int currentSchemaVersion = 1;
-
-  /// デフォルト設定。
-  factory AppSettings.defaults() => AppSettings(
-        schemaVersion: currentSchemaVersion,
-        taxRate: 0.10,
-        debug: DebugOptions.defaults(),
-        logDirectory: null,
-        updatedAt: DateTime.now(),
-      );
 
   /// 設定値を更新したコピーを返す。
   AppSettings copyWith({

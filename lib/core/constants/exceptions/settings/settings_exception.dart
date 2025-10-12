@@ -3,11 +3,7 @@ import "../base/yata_exception.dart";
 /// 設定機能で発生する例外を表す。
 class SettingsException extends YataException {
   /// 一般的な設定例外を生成する。
-  const SettingsException(String message, {String? code, this.cause})
-    : super(message, code: code);
-
-  /// 根本原因となった例外。
-  final Object? cause;
+  const SettingsException(super.message, {super.code, this.cause});
 
   /// バリデーションに失敗したときの例外。
   factory SettingsException.validation(String field, String reason) =>
@@ -30,4 +26,7 @@ class SettingsException extends YataException {
     code: "settings.apply",
     cause: error,
   );
+
+  /// 根本原因となった例外。
+  final Object? cause;
 }

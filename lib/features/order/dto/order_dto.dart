@@ -75,7 +75,7 @@ class OrderCheckoutRequest {
     }
 
   // TODO(2025-11): 旧バージョンから送信される"card"の互換対応。移行完了後に削除する。
-  final normalizedValue = rawValue == "card" ? "paypay" : rawValue;
+  final String normalizedValue = rawValue == "card" ? "paypay" : rawValue;
 
     return PaymentMethod.values.firstWhere(
       (PaymentMethod method) => method.value == normalizedValue,

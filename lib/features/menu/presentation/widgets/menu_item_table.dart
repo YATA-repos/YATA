@@ -58,10 +58,10 @@ class MenuItemTable extends StatelessWidget {
       );
     }
 
-    final List<DataRow> rows = items.map(_buildRow).toList(growable: false);
+    final List<YataTableRowSpec> rows = items.map(_buildRow).toList(growable: false);
 
-    return YataDataTable(
-      columns: _buildColumns(),
+    return YataDataTable.fromSpecs(
+      columns: _columnSpecs,
       rows: rows,
       onRowTap: (int index) => onRowTap(items[index].id),
       dataRowMinHeight: 60,
@@ -70,17 +70,22 @@ class MenuItemTable extends StatelessWidget {
     );
   }
 
-  List<DataColumn> _buildColumns() => const <DataColumn>[
-    DataColumn(label: Text("メニュー")),
-    DataColumn(label: Text("カテゴリ")),
-    DataColumn(label: Text("価格")),
-    DataColumn(label: Text("ステータス")),
-    DataColumn(label: Text("在庫メモ")),
-    DataColumn(label: Text("更新日時")),
-    DataColumn(label: Text("販売状態")),
+  static const List<YataTableColumnSpec> _columnSpecs = <YataTableColumnSpec>[
+    YataTableColumnSpec(id: "menu", label: Text("メニュー")),
+    YataTableColumnSpec(id: "category", label: Text("カテゴリ")),
+    YataTableColumnSpec(
+      id: "price",
+      label: Text("価格"),
+      numeric: true,
+      defaultAlignment: Alignment.centerRight,
+    ),
+    YataTableColumnSpec(id: "status", label: Text("ステータス")),
+    YataTableColumnSpec(id: "stockNote", label: Text("在庫メモ")),
+    YataTableColumnSpec(id: "updatedAt", label: Text("更新日時")),
+    YataTableColumnSpec(id: "availability", label: Text("販売状態")),
   ];
 
-  DataRow _buildRow(MenuItemViewData item) {
+  YataTableRowSpec _buildRow(MenuItemViewData item) {
     final bool isToggleBusy = isBusy || busyMenuIds.contains(item.id);
     final String? error = availabilityErrors[item.id];
     final List<Widget> statusBadges = <Widget>[
@@ -100,55 +105,30 @@ class MenuItemTable extends StatelessWidget {
         ? (item.isStockAvailable ? "在庫良好" : "在庫未取得")
         : item.missingMaterials.join(", ");
 
-    return DataRow(
-      cells: <DataCell>[
-        DataCell(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-              if (item.description != null && item.description!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    item.description!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: YataColorTokens.textSecondary, fontSize: 12),
-                  ),
-                ),
-            ],
-          ),
+    return YataTableRowSpec(
+      id: item.id,
+      semanticLabel: item.name,
+      cells: <YataTableCellSpec>[
+        YataTableCellSpec.text(
+          label: item.name,
+          description: item.description,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+          descriptionStyle: const TextStyle(color: YataColorTokens.textSecondary, fontSize: 12),
+          descriptionMaxLines: 1,
         ),
-        DataCell(Text(item.categoryName)),
-        DataCell(Text(price)),
-        DataCell(Wrap(spacing: YataSpacingTokens.xs, children: statusBadges)),
-        DataCell(Text(stockNote, maxLines: 1, overflow: TextOverflow.ellipsis)),
-        DataCell(Text(updatedAt)),
-        DataCell(
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _AvailabilityToggle(
-                menuId: item.id,
-                isAvailable: item.isAvailable,
-                isBusy: isToggleBusy,
-                onToggleAvailability: onToggleAvailability,
-              ),
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    error,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: YataColorTokens.danger, fontSize: 12),
-                  ),
-                ),
-            ],
+        YataTableCellSpec.text(label: item.categoryName),
+        YataTableCellSpec.text(label: price, alignment: Alignment.centerRight),
+        YataTableCellSpec.badges(badges: statusBadges),
+        YataTableCellSpec.text(label: stockNote, labelMaxLines: 1),
+        YataTableCellSpec.text(label: updatedAt),
+        YataTableCellSpec.widget(
+          builder: (_) => _AvailabilityToggle(
+            menuId: item.id,
+            isAvailable: item.isAvailable,
+            isBusy: isToggleBusy,
+            onToggleAvailability: onToggleAvailability,
           ),
+          errorMessage: error,
         ),
       ],
     );

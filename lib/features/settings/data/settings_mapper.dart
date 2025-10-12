@@ -26,10 +26,8 @@ class SettingsMapper {
         updatedAt: settings.updatedAt,
       );
 
-  LogLevel _parseLogLevel(String raw) {
-    return LogLevel.values.firstWhere(
+  LogLevel _parseLogLevel(String raw) => LogLevel.values.firstWhere(
       (LogLevel level) => level.name == raw,
       orElse: () => LogLevel.info,
     );
-  }
 }

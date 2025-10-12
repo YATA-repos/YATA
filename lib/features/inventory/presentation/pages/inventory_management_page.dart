@@ -183,52 +183,48 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
               _ErrorBanner(message: state.errorMessage!, onRetry: controller.refresh),
               const SizedBox(height: YataSpacingTokens.md),
             ],
+            InventoryManagementHeader(
+              state: state,
+              searchController: _searchController,
+              onSearchChanged: controller.setSearchText,
+              onStatusFilterChanged: (StockStatus? status) {
+                controller.setStatusFilter(status);
+                _scrollToTable();
+              },
+              onAddItem: _handleAddItem,
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                final bool showSidebar = constraints.maxWidth >= 1080;
+                final bool showSidebar = constraints.maxWidth >= 1100;
                 // 要注意・緊急補充のアイテムを抽出
                 final List<InventoryItemViewData> attentionItems = state.items
-                    .where((InventoryItemViewData item) =>
-                        item.status == StockStatus.low || item.status == StockStatus.critical)
+                    .where(
+                      (InventoryItemViewData item) =>
+                          item.status == StockStatus.low || item.status == StockStatus.critical,
+                    )
                     .toList(growable: false);
 
-                final Widget mainContent = Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    InventoryManagementHeader(
-                      state: state,
-                      searchController: _searchController,
-                      onSearchChanged: controller.setSearchText,
-                      onStatusFilterChanged: (StockStatus? status) {
-                        controller.setStatusFilter(status);
-                        _scrollToTable();
-                      },
-                      onAddItem: _handleAddItem,
-                      onRefresh: controller.refresh,
-                    ),
-                    const SizedBox(height: YataSpacingTokens.lg),
-                    _InventoryAttentionSection(
-                      items: attentionItems,
-                      onEditItem: _handleEditItem,
-                      onShowAll: () {
-                        // 要注意・緊急補充のフィルターは無いので、とりあえずすべて表示
-                        controller.setStatusFilter(null);
-                        _scrollToTable();
-                      },
-                    ),
-                    const SizedBox(height: YataSpacingTokens.lg),
-                    _InventoryTable(
-                      key: _tableKey,
-                      state: state,
-                      controller: controller,
-                      onAddItem: _handleAddItem,
-                      onEditItem: _handleEditItem,
-                    ),
-                  ],
+                final Widget attentionSection = _InventoryAttentionSection(
+                  items: attentionItems,
+                  onEditItem: _handleEditItem,
+                  onShowAll: () {
+                    // 要注意・緊急補充のフィルターは無いので、とりあえずすべて表示
+                    controller.setStatusFilter(null);
+                    _scrollToTable();
+                  },
+                );
+
+                final Widget tableSection = _InventoryTable(
+                  key: _tableKey,
+                  state: state,
+                  controller: controller,
+                  onAddItem: _handleAddItem,
+                  onEditItem: _handleEditItem,
                 );
 
                 final Widget sidebar = SizedBox(
-                  width: showSidebar ? 320 : double.infinity,
+                  width: showSidebar ? 260 : double.infinity,
                   child: InventoryCategoryPanel(
                     state: state,
                     onCategorySelected: controller.selectCategory,
@@ -240,13 +236,22 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                   ),
                 );
 
+                final Widget contentColumn = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    attentionSection,
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    tableSection,
+                  ],
+                );
+
                 if (showSidebar) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       sidebar,
                       const SizedBox(width: YataSpacingTokens.lg),
-                      Expanded(child: mainContent),
+                      Expanded(child: contentColumn),
                     ],
                   );
                 }
@@ -254,9 +259,9 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    mainContent,
-                    const SizedBox(height: YataSpacingTokens.lg),
                     sidebar,
+                    const SizedBox(height: YataSpacingTokens.lg),
+                    contentColumn,
                   ],
                 );
               },
@@ -853,476 +858,288 @@ class _InventoryTableState extends State<_InventoryTable> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final Set<String> visibleIds = state.filteredItems
-        .map((InventoryItemViewData i) => i.id)
-        .toSet();
-    final int selectedVisibleCount = state.selectedIds.where(visibleIds.contains).length;
-    final bool noneSelected = selectedVisibleCount == 0;
-    final bool allSelected = selectedVisibleCount == visibleIds.length && visibleIds.isNotEmpty;
-    final bool hasApplicableSelection = state.selectedIds.any((String id) {
-      final int delta = state.pendingAdjustments[id] ?? 0;
-      if (delta == 0) {
-        return false;
-      }
-      return controller.canApply(id);
-    });
+    final List<InventoryRowViewData> rowViewData = controller.buildRowViewData();
+    final Map<String, InventoryItemViewData> itemById = <String, InventoryItemViewData>{
+      for (final InventoryItemViewData item in state.filteredItems) item.id: item,
+    };
 
-    int? sortIndex;
-    switch (state.sortBy) {
-      case InventorySortBy.category:
-        sortIndex = 1;
-        break;
-      case InventorySortBy.state:
-        sortIndex = 5;
-        break;
-      case InventorySortBy.quantity:
-        sortIndex = 3;
-        break;
-      case InventorySortBy.delta:
-        sortIndex = 6;
-        break;
-      case InventorySortBy.updatedAt:
-        sortIndex = 7;
-        break;
-      case InventorySortBy.none:
-        sortIndex = null;
-        break;
-    }
+    final String? sortColumnId = _columnIdForSort(state.sortBy);
 
-    final List<DataColumn> columns = <DataColumn>[
-      DataColumn(
-        label: Tooltip(
-          message: "表示中の行を全選択/全解除",
-          child: Checkbox(
-            tristate: true,
-            value: allSelected ? true : (noneSelected ? false : null),
-            onChanged: (bool? v) => controller.selectAll(v ?? false),
-          ),
-        ),
-      ),
-      DataColumn(
+    final ThemeData theme = Theme.of(context);
+
+    final List<YataTableColumnSpec> columnSpecs = <YataTableColumnSpec>[
+      const YataTableColumnSpec(id: "item", label: Text("在庫アイテム")),
+      YataTableColumnSpec(
+        id: "category",
         label: const Text("カテゴリ"),
-        onSort: (int columnIndex, bool ascending) {
-          columnIndex;
-          ascending;
-          controller.cycleSort(InventorySortBy.category);
-        },
+        onSort: (_) => controller.cycleSort(InventorySortBy.category),
       ),
-      const DataColumn(label: Text("品目")),
-      DataColumn(
-        label: const Text("在庫量"),
-        numeric: true,
-        onSort: (int columnIndex, bool ascending) {
-          columnIndex;
-          ascending;
-          controller.cycleSort(InventorySortBy.quantity);
-        },
+      YataTableColumnSpec(
+        id: "quantity",
+        label: const Text("在庫状況"),
+        onSort: (_) => controller.cycleSort(InventorySortBy.quantity),
       ),
-      DataColumn(
-        label: Row(
-          children: <Widget>[
-            const Text("閾値"),
-            const SizedBox(width: 4),
-            Tooltip(
-              message: "警告閾値: 在庫がこの値以下で\n警告状態に。\n危険閾値: 在庫がこの値以下で\n危険状態に。",
-              child: InkWell(
-                onTap: () => _showThresholdHelp(context),
-                child: const Icon(Icons.help_outline, size: 16),
-              ),
-            ),
-          ],
-        ),
+      YataTableColumnSpec(
+        id: "status",
+        label: const Text("ステータス"),
+        onSort: (_) => controller.cycleSort(InventorySortBy.state),
       ),
-      DataColumn(
-        label: const Text("状態"),
-        onSort: (int columnIndex, bool ascending) {
-          columnIndex;
-          ascending;
-          controller.cycleSort(InventorySortBy.state);
-        },
-      ),
-      DataColumn(
+      YataTableColumnSpec(
+        id: "adjustment",
         label: const Text("調整"),
-        onSort: (int columnIndex, bool ascending) {
-          columnIndex;
-          ascending;
-          controller.cycleSort(InventorySortBy.delta);
-        },
+        onSort: (_) => controller.cycleSort(InventorySortBy.delta),
       ),
-      DataColumn(
-        label: const Text("更新日時"),
-        onSort: (int columnIndex, bool ascending) {
-          columnIndex;
-          ascending;
-          controller.cycleSort(InventorySortBy.updatedAt);
-        },
+      YataTableColumnSpec(
+        id: "updated",
+        label: const Text("更新"),
+        onSort: (_) => controller.cycleSort(InventorySortBy.updatedAt),
       ),
-      const DataColumn(label: Text("編集")),
-      const DataColumn(label: Text("適用")),
     ];
 
-    final List<DataRow> rows = state.filteredItems
-        .map((InventoryItemViewData item) {
-          final int delta = state.pendingAdjustments[item.id] ?? 0;
-          final double after = (item.current + delta).clamp(0, double.infinity);
-          final UnitType unitType = _unitFromSymbol(item.unit);
-          final String threshold =
-              "警告閾値:${UnitFormatter.format(item.alertThreshold, unitType)} / 危険閾値:${UnitFormatter.format(item.criticalThreshold, unitType)}";
-          final _Status status = _statusFor(item.status);
-          final Color deltaColor = delta == 0
-              ? YataColorTokens.textSecondary
-              : (delta > 0 ? YataColorTokens.success : YataColorTokens.danger);
-          final bool selected = state.selectedIds.contains(item.id);
-          final bool hasDelta = delta != 0;
-          final bool canApplyByController = controller.canApply(item.id);
-          final bool selectionActive = state.selectedIds.isNotEmpty;
-          final bool disableBySelection = selectionActive && selected;
-          final bool canApplyItem = hasDelta && canApplyByController && !disableBySelection;
+    final List<YataTableRowSpec> rows = rowViewData
+        .map((InventoryRowViewData row) {
+          final bool canApplyItem = row.canApplyByRule && !row.isBusy;
+          final Color deltaColor = _deltaColorFor(row.deltaTrend);
 
-          String fmtDate(DateTime d) {
-            final DateTime dd = d.toLocal();
-            final String ymd =
-                "${dd.year.toString().padLeft(4, '0')}-${dd.month.toString().padLeft(2, '0')}-${dd.day.toString().padLeft(2, '0')}";
-            final String hm =
-                "${dd.hour.toString().padLeft(2, '0')}:${dd.minute.toString().padLeft(2, '0')}";
-            return "$ymd $hm";
+          final List<Widget> badgeWidgets = <Widget>[
+            for (final InventoryRowBadgeViewData badge in row.badges)
+              YataStatusBadge(label: badge.label, type: _toStatusBadgeType(badge.type)),
+            if (row.isBusy)
+              const YataStatusBadge(label: "処理中", type: YataStatusBadgeType.info, icon: Icons.sync),
+          ];
+
+          final Widget itemCell = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                row.name,
+                style: (theme.textTheme.titleSmall ?? YataTypographyTokens.titleSmall).copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: YataSpacingTokens.xs),
+                child: Text(
+                  row.memo,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
+                    color: row.hasMemo
+                        ? YataColorTokens.textSecondary
+                        : YataColorTokens.textTertiary,
+                    fontStyle: row.hasMemo ? null : FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          );
+
+          final Widget quantityCell = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(row.quantityLabel),
+              const SizedBox(height: YataSpacingTokens.xs),
+              Text(
+                row.thresholdsLabel,
+                style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
+                  color: YataColorTokens.textSecondary,
+                ),
+              ),
+            ],
+          );
+
+          final String applyTooltip;
+          if (!row.hasPendingDelta) {
+            applyTooltip = "変更がありません";
+          } else if (!row.canApplyByRule) {
+            applyTooltip = "新在庫が0未満のため適用不可";
+          } else if (row.isBusy) {
+            applyTooltip = "処理中です";
+          } else {
+            applyTooltip = "この行の調整を適用";
           }
 
-          return DataRow(
-            cells: <DataCell>[
-              DataCell(
-                Tooltip(
-                  message: selected ? "選択解除" : "この行を選択",
-                  child: Checkbox(
-                    value: selected,
-                    onChanged: (bool? v) => controller.toggleSelect(item.id),
-                  ),
-                ),
-              ),
-              DataCell(Text(item.category)),
-              DataCell(Text(item.name)),
-              DataCell(
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(text: item.current.toStringAsFixed(0)),
-                        const TextSpan(text: " "),
-                        TextSpan(
-                          text: item.unit,
-                          style: TextStyle(color: YataColorTokens.textSecondary),
-                        ),
-                      ],
+          final Widget adjustmentColumn = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text(
+                    row.deltaLabel,
+                    style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+                      color: deltaColor,
                     ),
-                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                ),
+                  Text(row.afterChangeLabel, style: theme.textTheme.labelLarge),
+                ],
               ),
-              DataCell(Text(threshold)),
-              DataCell(_StatusChip(status: status)),
-              DataCell(
-                SizedBox(
-                  width: double.infinity,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            delta == 0 ? "±0" : (delta > 0 ? "+$delta" : "$delta"),
-                            style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle())
-                                .copyWith(color: deltaColor),
-                          ),
-                          const SizedBox(width: YataSpacingTokens.sm),
-                          Text(
-                            "→ ${UnitFormatter.format(after, unitType)} ${item.unit}",
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                        ],
-                      ),
-                      SizedBox(
-                        height: 36,
-                        child: Tooltip(
-                          message: "未適用差分を調整",
-                          child: YataQuantityStepper(
-                            value: delta,
-                            min: -9999,
-                            onChanged: (int value) =>
-                                controller.setPendingAdjustment(item.id, value),
-                            compact: true,
-                          ),
+              const SizedBox(height: YataSpacingTokens.xs),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Expanded(
+                    child: SizedBox(
+                      height: 36,
+                      child: Tooltip(
+                        message: "未適用差分を調整",
+                        child: YataQuantityStepper(
+                          value: row.pendingDelta,
+                          min: -9999,
+                          onChanged: (int value) => controller.setPendingAdjustment(row.id, value),
+                          compact: true,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              DataCell(
-                Tooltip(
-                  message: "最終更新: ${fmtDate(item.updatedAt)} / by ${item.updatedBy}",
-                  child: Text(fmtDate(item.updatedAt)),
-                ),
-              ),
-              DataCell(
-                Tooltip(
-                  message: "在庫情報を編集",
-                  child: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => widget.onEditItem(item),
+                  const SizedBox(width: YataSpacingTokens.sm),
+                  SizedBox(
+                    height: 36,
+                    child: Tooltip(
+                      message: applyTooltip,
+                      child: ElevatedButton.icon(
+                        onPressed: canApplyItem ? () => controller.applyAdjustment(row.id) : null,
+                        icon: const Icon(Icons.save_outlined),
+                        label: const Text("適用"),
+                        style: ElevatedButton.styleFrom(backgroundColor: YataColorTokens.primary),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-              DataCell(
-                Tooltip(
-                  message: () {
-                    if (!hasDelta) {
-                      return "変更がありません";
-                    }
-                    if (!canApplyByController) {
-                      return "新在庫が0未満のため適用不可";
-                    }
-                    if (disableBySelection) {
-                      return "選択中は一括適用ボタンをご利用ください";
-                    }
-                    return "この行の調整を適用";
-                  }(),
-                  child: ElevatedButton.icon(
-                    onPressed: canApplyItem ? () => controller.applyAdjustment(item.id) : null,
-                    icon: const Icon(Icons.save_outlined),
-                    label: const Text("適用"),
-                    style: ElevatedButton.styleFrom(backgroundColor: YataColorTokens.primary),
-                  ),
-                ),
+            ],
+          );
+
+          return YataTableRowSpec(
+            id: row.id,
+            semanticLabel: row.name,
+            isBusy: row.isBusy,
+            cells: <YataTableCellSpec>[
+              YataTableCellSpec.widget(builder: (_) => itemCell),
+              YataTableCellSpec.text(label: row.categoryName),
+              YataTableCellSpec.widget(builder: (_) => quantityCell),
+              YataTableCellSpec.badges(
+                badges: badgeWidgets,
+                spacing: YataSpacingTokens.xs,
+                runSpacing: YataSpacingTokens.xs,
+              ),
+              YataTableCellSpec.widget(
+                builder: (_) => SizedBox(width: double.infinity, child: adjustmentColumn),
+                applyRowBusyOverlay: true,
+                errorMessage: row.errorMessage,
+              ),
+              YataTableCellSpec.widget(
+                builder: (_) =>
+                    Tooltip(message: row.updatedTooltip, child: Text(row.updatedAtLabel)),
               ),
             ],
           );
         })
         .toList(growable: false);
 
-    final int visibleApplicableCount = state.filteredItems.where((InventoryItemViewData item) {
-      final int delta = state.pendingAdjustments[item.id] ?? 0;
-      if (delta == 0) {
-        return false;
-      }
-      return controller.canApply(item.id);
-    }).length;
-    final bool canApplyVisible = visibleApplicableCount > 0;
-    final bool hasPending = state.pendingAdjustments.isNotEmpty;
-    final int pendingTotal = state.pendingDeltaTotal;
-    final String pendingTotalLabel = pendingTotal > 0 ? "+$pendingTotal" : "$pendingTotal";
-    final String pendingSummary = "未適用: ${state.pendingCount}件 / 合計: $pendingTotalLabel";
-
-    return YataSectionCard(
-      title: "在庫一覧",
-      expandChild: true,
-      subtitle: "数量の調整はその場で編集できます",
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              final Animation<double> curve = CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              );
-              return FadeTransition(
-                opacity: curve,
-                child: SizeTransition(sizeFactor: curve, child: child),
-              );
-            },
-            child: state.selectedIds.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: YataSpacingTokens.sm),
-                    child: Wrap(
-                      spacing: YataSpacingTokens.sm,
-                      runSpacing: YataSpacingTokens.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: <Widget>[
-                        Tooltip(
-                          message: "選択行に一括で減算 (−1)",
-                          child: OutlinedButton(
-                            onPressed: () => controller.incrementSelectedBy(-1),
-                            child: const Icon(Icons.remove),
-                          ),
-                        ),
-                        Tooltip(
-                          message: "選択行に一括で加算 (+1)",
-                          child: OutlinedButton(
-                            onPressed: () => controller.incrementSelectedBy(1),
-                            child: const Icon(Icons.add),
-                          ),
-                        ),
-                        Tooltip(
-                          message: hasApplicableSelection ? "選択された行の調整をまとめて適用" : "適用可能な差分がありません",
-                          child: FilledButton.icon(
-                            onPressed: hasApplicableSelection ? controller.applySelected : null,
-                            icon: const Icon(Icons.task_alt),
-                            label: const Text("適用 (選択)"),
-                            style: FilledButton.styleFrom(backgroundColor: YataColorTokens.primary),
-                          ),
-                        ),
-                        Tooltip(
-                          message: "選択を解除",
-                          child: OutlinedButton.icon(
-                            onPressed: controller.clearSelection,
-                            icon: const Icon(Icons.clear),
-                            label: const Text("選択解除"),
-                          ),
-                        ),
-                        Tooltip(
-                          message: "選択行を削除（モック）",
-                          child: TextButton.icon(
-                            onPressed: () async {
-                              final int count = state.selectedIds.length;
-                              final bool confirmed = await _confirmBulkAction(
-                                context: context,
-                                title: "選択行を削除",
-                                message: "$count件の行を削除します。よろしいですか？",
-                                confirmLabel: "削除する",
-                                confirmColor: Colors.redAccent,
-                              );
-                              if (!confirmed || !mounted) {
-                                return;
-                              }
-                              controller.deleteSelected();
-                            },
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                            label: const Text("削除", style: TextStyle(color: Colors.redAccent)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-          const SizedBox(height: YataSpacingTokens.md),
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final bool narrow = constraints.maxWidth < 720;
-              final TextStyle summaryStyle =
-                  Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium;
-              final Widget summaryLabel = Text(pendingSummary, style: summaryStyle);
-              final List<Widget> actions = <Widget>[
-                OutlinedButton.icon(
-                  onPressed: hasPending ? controller.clearAllAdjustments : null,
-                  icon: const Icon(Icons.undo),
-                  label: const Text("全てクリア"),
-                ),
-                OutlinedButton.icon(
-                  onPressed: canApplyVisible ? controller.applyAllVisible : null,
-                  icon: const Icon(Icons.save_alt_outlined),
-                  label: const Text("表示分を適用"),
-                ),
-                FilledButton.icon(
-                  onPressed: widget.onAddItem,
-                  icon: const Icon(Icons.add),
-                  label: const Text("在庫を追加"),
-                  style: FilledButton.styleFrom(backgroundColor: YataColorTokens.primary),
-                ),
-              ];
-
-              if (narrow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    summaryLabel,
-                    const SizedBox(height: YataSpacingTokens.sm),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: YataSpacingTokens.sm,
-                      runSpacing: YataSpacingTokens.sm,
-                      children: actions,
-                    ),
-                  ],
-                );
-              }
-
-              return Row(
-                children: <Widget>[
-                  Expanded(child: summaryLabel),
-                  Wrap(
-                    spacing: YataSpacingTokens.sm,
-                    runSpacing: YataSpacingTokens.sm,
-                    alignment: WrapAlignment.end,
-                    children: actions,
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: YataSpacingTokens.md),
-          if (rows.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(YataSpacingTokens.xl),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Icon(
-                      Icons.inventory_2_outlined,
-                      size: 64,
-                      color: YataColorTokens.neutral400,
-                    ),
-                    const SizedBox(height: YataSpacingTokens.md),
-                    Text(
-                      "在庫アイテムがありません",
-                      style: (Theme.of(context).textTheme.titleMedium ?? YataTypographyTokens.titleMedium)
-                          .copyWith(color: YataColorTokens.textSecondary),
-                    ),
-                    const SizedBox(height: YataSpacingTokens.sm),
-                    Text(
-                      "「在庫を追加」ボタンから新しい在庫を登録してください",
-                      style: (Theme.of(context).textTheme.bodyMedium ?? YataTypographyTokens.bodyMedium)
-                          .copyWith(color: YataColorTokens.textTertiary),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            YataDataTable(
-              columns: columns,
-              rows: rows,
-              sortColumnIndex: sortIndex,
-              sortAscending: state.sortAsc,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (rows.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: YataSpacingTokens.xl,
+              vertical: YataSpacingTokens.lg,
             ),
-        ],
-      ),
+            decoration: BoxDecoration(
+              color: YataColorTokens.neutral0,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: YataColorTokens.border),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Icon(Icons.inventory_2_outlined, size: 48, color: YataColorTokens.neutral400),
+                const SizedBox(height: YataSpacingTokens.sm),
+                Text(
+                  "登録済みの在庫アイテムがありません",
+                  textAlign: TextAlign.center,
+                  style: (theme.textTheme.titleSmall ?? YataTypographyTokens.titleSmall).copyWith(
+                    color: YataColorTokens.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: YataSpacingTokens.xs),
+                Text(
+                  "右上の「在庫を追加」から新しい在庫を登録してください。",
+                  textAlign: TextAlign.center,
+                  style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
+                    color: YataColorTokens.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          YataDataTable.fromSpecs(
+            columns: columnSpecs,
+            rows: rows,
+            sortColumnId: sortColumnId,
+            sortAscending: state.sortAsc,
+            dataRowMinHeight: 60,
+            dataRowMaxHeight: 68,
+            columnSpacing: YataSpacingTokens.xl,
+            onRowTap: (int index) {
+              final InventoryRowViewData tappedRow = rowViewData[index];
+              final InventoryItemViewData? tappedItem = itemById[tappedRow.id];
+              if (tappedItem != null && !tappedRow.isBusy) {
+                widget.onEditItem(tappedItem);
+              }
+            },
+          ),
+      ],
     );
   }
 
-  Future<bool> _confirmBulkAction({
-    required BuildContext context,
-    required String title,
-    required String message,
-    required String confirmLabel,
-    Color? confirmColor,
-    String cancelLabel = "キャンセル",
-  }) async {
-    final bool? result = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(cancelLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: confirmColor == null
-                ? null
-                : FilledButton.styleFrom(backgroundColor: confirmColor),
-            child: Text(confirmLabel),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
+  YataStatusBadgeType _toStatusBadgeType(InventoryRowBadgeType type) {
+    switch (type) {
+      case InventoryRowBadgeType.success:
+        return YataStatusBadgeType.success;
+      case InventoryRowBadgeType.warning:
+        return YataStatusBadgeType.warning;
+      case InventoryRowBadgeType.danger:
+        return YataStatusBadgeType.danger;
+      case InventoryRowBadgeType.info:
+        return YataStatusBadgeType.info;
+      case InventoryRowBadgeType.neutral:
+        return YataStatusBadgeType.neutral;
+    }
+  }
+
+  Color _deltaColorFor(InventoryDeltaTrend trend) {
+    switch (trend) {
+      case InventoryDeltaTrend.increase:
+        return YataColorTokens.success;
+      case InventoryDeltaTrend.decrease:
+        return YataColorTokens.danger;
+      case InventoryDeltaTrend.none:
+        return YataColorTokens.textSecondary;
+    }
+  }
+
+  String? _columnIdForSort(InventorySortBy sortBy) {
+    switch (sortBy) {
+      case InventorySortBy.category:
+        return "category";
+      case InventorySortBy.state:
+        return "status";
+      case InventorySortBy.quantity:
+        return "quantity";
+      case InventorySortBy.delta:
+        return "adjustment";
+      case InventorySortBy.updatedAt:
+        return "updated";
+      case InventorySortBy.none:
+        return null;
+    }
   }
 }
 
@@ -1367,6 +1184,24 @@ class _InventoryAttentionSection extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _Status {
+  const _Status({required this.color, required this.bg});
+
+  final Color color;
+  final Color bg;
+}
+
+_Status _statusFor(StockStatus status) {
+  switch (status) {
+    case StockStatus.sufficient:
+      return const _Status(color: YataColorTokens.success, bg: YataColorTokens.successSoft);
+    case StockStatus.low:
+      return const _Status(color: YataColorTokens.warning, bg: YataColorTokens.warningSoft);
+    case StockStatus.critical:
+      return const _Status(color: YataColorTokens.danger, bg: YataColorTokens.dangerSoft);
   }
 }
 
@@ -1503,48 +1338,6 @@ class _ErrorBanner extends StatelessWidget {
   );
 }
 
-class _Status {
-  const _Status(this.label, this.color, this.bg);
-  final String label;
-  final Color color;
-  final Color bg;
-}
-
-_Status _statusFor(StockStatus s) {
-  switch (s) {
-    case StockStatus.sufficient:
-      return _Status("十分", YataColorTokens.success, YataColorTokens.successSoft);
-    case StockStatus.low:
-      return _Status("少", YataColorTokens.warning, YataColorTokens.warningSoft);
-    case StockStatus.critical:
-      return _Status("危険", YataColorTokens.danger, YataColorTokens.dangerSoft);
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-  final _Status status;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(
-      horizontal: YataSpacingTokens.sm,
-      vertical: YataSpacingTokens.xs,
-    ),
-    decoration: BoxDecoration(
-      color: status.bg,
-      borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-      border: Border.all(color: status.color.withValues(alpha: 0.6)),
-    ),
-    child: Text(
-      status.label,
-      style: (Theme.of(context).textTheme.labelMedium ?? YataTypographyTokens.labelMedium).copyWith(
-        color: status.color,
-      ),
-    ),
-  );
-}
-
 // --- Helpers & dialogs ---
 
 void _showThresholdHelp(BuildContext context) {
@@ -1577,5 +1370,3 @@ UnitType _unitFromSymbol(String symbol) {
       return UnitType.piece;
   }
 }
-
-// removed unused legacy helper

@@ -1,13 +1,14 @@
 import "dart:async";
 import "dart:io";
 import "dart:math";
+
 import "package:path_provider/path_provider.dart";
 
+import "../../../core/constants/exceptions/settings/settings_exception.dart";
+import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../infra/config/runtime_overrides.dart";
 import "../../../infra/logging/log_config.dart";
 import "../../../infra/logging/logger.dart" as app_logger;
-import "../../../core/constants/exceptions/settings/settings_exception.dart";
-import "../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../auth/services/auth_service.dart";
 import "../data/settings_repository.dart";
 import "../domain/app_settings.dart";
@@ -150,8 +151,7 @@ class SettingsService {
 
   Future<void> _applySettings(
     AppSettings next, {
-    AppSettings? previous,
-    required String source,
+    required String source, AppSettings? previous,
   }) async {
     try {
       await _applyDebugOptions(next.debug, previous: previous?.debug);
@@ -217,7 +217,7 @@ class SettingsService {
       }
       await _writeProbeFile(directory);
     } on Object catch (error) {
-      throw SettingsException.validation("logDirectory", "${error.toString()}");
+      throw SettingsException.validation("logDirectory", error.toString());
     }
     return directory.path;
   }

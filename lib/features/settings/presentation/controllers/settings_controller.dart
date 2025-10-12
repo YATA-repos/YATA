@@ -2,11 +2,12 @@ import "dart:async";
 
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
-import "../../domain/app_settings.dart";
-import "../../services/settings_service.dart";
 import "../../../../app/wiring/provider.dart" show loggerProvider, settingsServiceProvider;
 import "../../../../core/constants/exceptions/settings/settings_exception.dart";
+import "../../../../core/contracts/logging/logger.dart";
 import "../../../../infra/logging/log_level.dart";
+import "../../domain/app_settings.dart";
+import "../../services/settings_service.dart";
 
 class SettingsState {
   const SettingsState({
@@ -304,7 +305,7 @@ class SettingsController extends StateNotifier<SettingsState> {
   }
 
   void _reportError(String action, Object error, StackTrace stackTrace) {
-    final logger = _ref.read(loggerProvider);
+    final LoggerContract logger = _ref.read(loggerProvider);
     logger.e(
       "SettingsController action failed: $action",
       tag: "SettingsController",
