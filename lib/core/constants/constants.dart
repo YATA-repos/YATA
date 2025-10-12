@@ -7,3 +7,4 @@ export "./exceptions/exceptions.dart";
 export "./log_enums/log_enums.dart";
 export "./query_types.dart";
 export "./timezone.dart";
+export "./windows_scale_settings.dart";

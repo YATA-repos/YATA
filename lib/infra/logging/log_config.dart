@@ -207,6 +207,7 @@ class LogConfig {
       queueCapacity: 500,
       piiMaskingEnabled: true,
       maskMode: MaskMode.redact(),
+      tagLevels: <String, LogLevel>{"omperf": LogLevel.debug},
       enableContext: true,
       enableFieldsThunk: true,
       rate: RateConfig.defaults(),

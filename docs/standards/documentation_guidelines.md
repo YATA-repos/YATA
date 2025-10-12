@@ -4,7 +4,11 @@
 
 ## 概要
 
-本指針は、YATAプロジェクトにおけるドキュメント作成・管理・メンテナンスの統一的な方針を定めるものです。
+本指針は、YATAプロジェクトにおけるドキュメント作成・管理・メンテナンスの統一的な方針を定めるものです。運用プロセスや自動化の詳細は `docs/standards/documentation_operations.md` を参照し、本書では日々の執筆・レビューの実務指針にフォーカスします。
+
+## 関連ドキュメント
+- `docs/standards/documentation_operations.md`: draft/plan を中心とした運用ルールと自動化ロードマップ
+- `docs/plan/docs/documentation-operations-policy/plan.md`: ドキュメント運用刷新の計画書
 
 ## ドキュメントの目的
 
@@ -20,11 +24,9 @@ docs/
 ├── reference/(対象)/      # API仕様・詳細リファレンス・簡易的内部実装説明
 ├── plan/(対象)/          # 実装計画・仕様書（実装完了後も保持）
 ├── intent/(対象)/        # 実装意図・背景・判断理由（ADR的な用途）
-├── external/               # 外部ライブラリ用語説明・簡易ガイド
 ├── survey/(対象)/         # 機能調査・技術比較・検証レポート
 ├── draft/(対象)/           # メモ・草案置き場（正式化前の作業用）
 ├── standards/              # 開発ガイドライン・プロジェクト標準（本ファイル含む）
-└── temp/                  # 一時作業用
 ```
 
 ### `docs/guide/(機能名)/` - 使用方法ガイド
@@ -68,14 +70,6 @@ docs/
 - **特徴**: 現状の事実（reference）と実装意図を分離管理
 - **記録対象**: アーキテクチャ決定、技術選択、設計方針変更等
 
-### `docs/external/` - 外部ライブラリ用語説明
-
-- **目的**: 外部ライブラリ・技術の用語説明・簡易ガイド
-- **読者**: 外部技術の基本を確認したい開発者
-- **内容**: Flutter/Dart/Riverpod/Supabase等の必要最小限の補足説明
-- **範囲**: 本格的な技術解説は行わず、プロジェクト内で必要な部分のみ
-- **注意**: メインドキュメント（guide/reference）では外部技術は詳細説明しない
-
 ### `docs/survey/(対象)/` - 調査レポート・検証結果
 
 - **目的**: 調査・検証・比較検討の結果を体系的に蓄積し、意思決定や後続作業の根拠を共有する
@@ -102,7 +96,11 @@ docs/
 - **運用**: メモと草案を区別せず統一的に管理
 - **ライフサイクル**: 正式ドキュメント化後は移動・削除
 
-> **ドキュメント昇格フロー**: draft → survey（調査完了時） → plan/intent/guide/reference（実装・運用段階に応じて展開）
+> **ドキュメント昇格フロー**: draft → survey（調査完了時） → plan → intent → guide/reference（詳細は `docs/standards/documentation_operations.md` を参照）
+
+#### draft の TTL と保守
+- 各 draft には front-matter で `ttl_days`（既定30日）を設定し、期限と担当者（`next_action_by`）を明示する。
+- 期限超過時は stale Bot の Issue 発行に従い、昇格/クローズ/延長の判断を3営業日以内にコメントする。
 
 ### `docs/standards/` - 開発ガイドライン・標準
 
@@ -110,6 +108,18 @@ docs/
 - **読者**: 全プロジェクトメンバー
 - **内容**: 本指針、コーディング規約、その他プロジェクト標準
 - **特徴**: プロジェクト横断的なルール・方針を集約
+
+## Front-matter の必須要素
+
+全ての正式ドキュメント（draft含む）には front-matter を付与し、以下の必須キーを管理する。追加のフィールドや詳細スキーマは `documentation_operations.md` を参照。
+
+| 区分 | 必須キー |
+| --- | --- |
+| 共通 | `title`, `domain`, `status`, `version`, `authors`, `created`, `updated`, `related_issues`, `related_prs`, `references` |
+| draft 専用 | `state`, `hypothesis`, `options`, `open_questions`, `next_action_by`, `review_due`, `ttl_days` |
+| plan 専用 | `scope`, `non_goals`, `requirements`, `constraints`, `api_changes`, `data_models`, `migrations`, `rollout_plan`, `rollback`, `test_plan`, `observability`, `security_privacy`, `performance_budget`, `i18n_a11y`, `acceptance_criteria`, `owners` |
+
+front-matter の検証は Phase 3 で CI に導入予定。それまではレビュー時に必須キーの有無を確認し、欠落がある場合は修正またはIssue化する。
 
 ## 対象読者
 
@@ -189,23 +199,30 @@ docs/
 - **優先度**: 明確に設けないが、暗黙的に「新機能 > リファクタリング」順になる可能性（排除しない）
 - **時間経過**: 実装時の意図や目的がブレやすいため、コミット時のメモ作成を重視
 
-### 整合性チェック
+### 整合性チェック & 自動化
 
-- **手法**: 手動チェックを原則
-- **自動化**: 当面実装せず、将来も未定
-- **対応ルール**（暗黙的運用）:
-  1. **発見時対応**: 問題を見つけた人が修正またはissue作成
-  2. **優先度**: 実害のある不整合 > 表記の不統一 > 軽微な古い情報
-  3. **修正範囲**: 関連する guide/ と reference/ を同時確認・修正
+- **手法**: lint（markdownlint-cli2） / link-check（lychee） / front-matter 検証を段階的に導入予定。詳細は `documentation_operations.md` のロードマップを参照。
+- **現状**: 自動化フェーズの移行中。CI 未導入の項目はレビュー時に手動確認する。
+- **対応ルール**:
+  1. **発見時対応**: 問題を見つけた人が修正または Issue 作成。Issue 番号は該当ドキュメントの `related_issues` に追記。
+  2. **優先度**: 実害のある不整合 > 表記の不統一 > 軽微な古い情報。
+  3. **修正範囲**: 関連する `guide/` や `reference/` を同時に確認し、必要なら plan / intent も更新する。
 
 ### 品質保証
 
 - **レビュータイミング**:
   - 正式ドキュメント完成時
-  - 関与領域更新時（簡易的に）
-  - 定期的（2~3ヶ月に一度、変動可能性あり）
-- **古い情報の検出**: 人力・手動が基本
-- **将来的検討**: GitHub Actions + LLM によるレビュー（具体的予定なし）
+  - 関与領域更新時（簡易レビュー）
+  - stale Bot からの通知（draft TTL 超過）
+  - 定期棚卸し（Docs Platform WG が四半期ごとに実施）
+- **古い情報の検出**: lint / link-check / stale Bot と手動レビューを併用。
+- **将来的検討**: Front-matter 検証を CI に導入後、LLM レビューの PoC を検討。
+
+### Bot・CI 運用
+
+- stale draft Bot が `ttl_days` を監視し、期限超過で Issue を自動生成。受領者は 3 営業日以内に「昇格・クローズ・延長」の方針をコメントする。
+- markdownlint / lychee / front-matter チェックの結果は PR で確認し、失敗時は作成者が一次対応。継続した不具合は Docs Platform WG にエスカレーション。
+- CI の実行時間は合計 5 分以内を上限とし、超過する場合はドキュメント標準のパフォーマンス予算に従い調整する。
 
 ## 重複・相互参照方針
 
@@ -231,7 +248,7 @@ docs/
    - `docs/reference/(機能名)/` にAPI仕様リファレンス作成
    - `docs/intent/(機能名)/` に設計意図ドキュメント作成
 5. **レビュー**: 各ドキュメントをレビューし正式化
-6. **クリーンアップ**: `docs/draft/(機能名)/` を整理・移動・削除し、必要に応じて survey ドキュメントを更新
+6. **クリーンアップ**: `docs/draft/(機能名)/` を整理・移動・削除し、必要に応じて survey ドキュメントを更新。期限延長が必要な場合は `ttl_days` を更新し、理由を関連 Issue にコメントする。
 
 ## よくある質問
 
@@ -240,9 +257,6 @@ A: まず `docs/draft/` に書き始めてください。内容が固まって�
 
 ### Q: 既存ドキュメントとの整合性が心配な場合は？
 A: 関連する guide/ と reference/ を同時に確認し、必要に応じて両方を更新してください。
-
-### Q: 外部ライブラリの説明をどこまで書くべきか？
-A: メインドキュメントでは詳細説明せず、必要に応じて `docs/external/` に簡易説明を作成してください。
 
 ### Q: 実装途中の機能をドキュメント化すべきか？
 A: reference/ では🚧マークを付けて記載可能ですが、未実装部分は plan/ に記述してください。
@@ -253,4 +267,4 @@ A: reference/ では🚧マークを付けて記載可能ですが、未実装�
 
 ---
 
-*本指針は 2025年8月 に策定されました。*
+*本指針は 2025年8月 に策定され、2025年10月に `documentation_operations` 標準と整合化されました。*

@@ -149,6 +149,25 @@ void main() {
       expect(completedProps["operation"], equals("fresh"));
     });
 
+    test("propagates client app version into metadata", () async {
+      when(() => repository.export(any())).thenAnswer((_) async => const CsvExportRawResult(
+            csvContent: "order_id\n1\n",
+            rowCount: 1,
+          ));
+
+      final CsvExportResult result = await service.exportSalesLineItems(
+        dateFrom: DateTime(2025, 10, 5),
+        dateTo: DateTime(2025, 10, 5),
+        organizationId: "org-1",
+        locationId: "loc-1",
+        generatedByAppVersion: "1.2.3+45",
+      );
+
+      expect(result.generatedByAppVersion, equals("1.2.3+45"));
+      expect(result.metadata, isNotNull);
+      expect(result.metadata!["generated_by_app_version"], equals("1.2.3+45"));
+    });
+
     test("throws ValidationException when organizationId is missing", () async {
       await expectLater(
         () => service.export(

@@ -14,10 +14,17 @@ mixin MenuFilterController on _OrderManagementControllerBase {
     );
 
     await _traceAsyncSection<void>("loadInitialData", () async {
+      final SettingsService settingsService = _ref.read(settingsServiceProvider);
+      final double taxRate = settingsService.current.taxRate;
+
       if (reset) {
-        state = OrderManagementState.initial();
+        state = OrderManagementState.initial().copyWith(taxRate: taxRate);
       } else {
-        state = state.copyWith(isLoading: true, clearErrorMessage: true);
+        state = state.copyWith(
+          isLoading: true,
+          clearErrorMessage: true,
+          taxRate: taxRate,
+        );
       }
 
       final AuthService authService = _ref.read(authServiceProvider);
@@ -160,6 +167,7 @@ mixin MenuFilterController on _OrderManagementControllerBase {
           selectedCategoryIndex: safeIndex,
           isLoading: false,
           clearErrorMessage: true,
+          taxRate: taxRate,
         );
 
         logSession.succeeded(

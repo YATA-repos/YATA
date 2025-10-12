@@ -5,8 +5,8 @@ import "../../../../core/contracts/logging/logger.dart" as log_contract;
 import "../../../../core/contracts/repositories/order/order_repository_contracts.dart";
 import "../../models/order_model.dart";
 import "../../shared/order_status_mapper.dart";
-import "kitchen_operation_service.dart";
 import "../shared/order_validation_utils.dart";
+import "kitchen_operation_service.dart";
 
 /// キッチン分析・予測サービス
 class KitchenAnalysisService {

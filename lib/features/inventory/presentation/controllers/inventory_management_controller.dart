@@ -1,10 +1,13 @@
 import "dart:async";
 
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:intl/intl.dart";
 
 import "../../../../app/wiring/provider.dart";
 import "../../../../core/constants/enums.dart";
 import "../../../../core/utils/error_handler.dart";
+import "../../../../shared/search/search_utils.dart";
+import "../../../../shared/utils/unit_config.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
 import "../../dto/inventory_dto.dart";
 import "../../dto/transaction_dto.dart";
@@ -21,6 +24,7 @@ class InventoryItemViewData {
     required this.name,
     required this.categoryId,
     required this.category,
+    this.categoryCode,
     required this.current,
     required this.unitType,
     required this.unit,
@@ -29,12 +33,14 @@ class InventoryItemViewData {
     required this.updatedAt,
     required this.updatedBy,
     this.notes,
+    required this.searchIndex,
   });
 
   final String id;
   final String name;
   final String categoryId;
   final String category;
+  final String? categoryCode;
   final double current;
   final UnitType unitType;
   final String unit;
@@ -43,6 +49,7 @@ class InventoryItemViewData {
   final DateTime updatedAt;
   final String updatedBy;
   final String? notes;
+  final String searchIndex;
 
   StockStatus get status {
     if (current <= criticalThreshold) {
@@ -59,6 +66,7 @@ class InventoryItemViewData {
     String? name,
     String? categoryId,
     String? category,
+    String? categoryCode,
     double? current,
     UnitType? unitType,
     String? unit,
@@ -67,21 +75,111 @@ class InventoryItemViewData {
     DateTime? updatedAt,
     String? updatedBy,
     String? notes,
-  }) => InventoryItemViewData(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    categoryId: categoryId ?? this.categoryId,
-    category: category ?? this.category,
-    current: current ?? this.current,
-    unitType: unitType ?? this.unitType,
-    unit: unit ?? this.unit,
-    alertThreshold: alertThreshold ?? this.alertThreshold,
-    criticalThreshold: criticalThreshold ?? this.criticalThreshold,
-    updatedAt: updatedAt ?? this.updatedAt,
-    updatedBy: updatedBy ?? this.updatedBy,
-    notes: notes ?? this.notes,
-  );
+    String? searchIndex,
+  }) {
+    final String resolvedName = name ?? this.name;
+    final String resolvedCategory = category ?? this.category;
+    final String? resolvedCategoryCode = categoryCode ?? this.categoryCode;
+    return InventoryItemViewData(
+      id: id ?? this.id,
+      name: resolvedName,
+      categoryId: categoryId ?? this.categoryId,
+      category: resolvedCategory,
+      categoryCode: resolvedCategoryCode,
+      current: current ?? this.current,
+      unitType: unitType ?? this.unitType,
+      unit: unit ?? this.unit,
+      alertThreshold: alertThreshold ?? this.alertThreshold,
+      criticalThreshold: criticalThreshold ?? this.criticalThreshold,
+      updatedAt: updatedAt ?? this.updatedAt,
+      updatedBy: updatedBy ?? this.updatedBy,
+      notes: notes ?? this.notes,
+      searchIndex: searchIndex ??
+          InventoryItemViewData.composeSearchIndex(
+            name: resolvedName,
+            categoryName: resolvedCategory,
+            categoryCode: resolvedCategoryCode,
+          ),
+    );
+  }
+
+  static String composeSearchIndex({
+    required String name,
+    required String categoryName,
+    String? categoryCode,
+  }) {
+    final SearchIndexBuilder builder = SearchIndexBuilder()
+      ..add(name)
+      ..add(categoryName)
+      ..add(categoryCode);
+    return builder.build();
+  }
 }
+
+/// テーブル表示用のステータスバッジ種別。
+enum InventoryRowBadgeType { success, warning, danger, info, neutral }
+
+/// テーブル表示用のステータスバッジ情報。
+class InventoryRowBadgeViewData {
+  const InventoryRowBadgeViewData({required this.label, required this.type});
+
+  final String label;
+  final InventoryRowBadgeType type;
+}
+
+/// 行ごとに必要なフォーマット済みデータ。
+class InventoryRowViewData {
+  const InventoryRowViewData({
+    required this.id,
+    required this.name,
+    required this.categoryName,
+    required this.quantityLabel,
+    required this.quantityValueLabel,
+    required this.unitLabel,
+    required this.thresholdsLabel,
+    required this.badges,
+    required this.memo,
+    required this.memoTooltip,
+    required this.hasMemo,
+    required this.deltaLabel,
+    required this.afterChangeLabel,
+    required this.deltaTrend,
+    required this.pendingDelta,
+    required this.updatedAtLabel,
+    required this.updatedTooltip,
+    required this.hasPendingDelta,
+    required this.canApplyByRule,
+    required this.isBusy,
+    required this.status,
+    this.errorMessage,
+  });
+
+  final String id;
+  final String name;
+  final String categoryName;
+  final String quantityLabel;
+  final String quantityValueLabel;
+  final String unitLabel;
+  final String thresholdsLabel;
+  final List<InventoryRowBadgeViewData> badges;
+  final String memo;
+  final String? memoTooltip;
+  final bool hasMemo;
+  final String deltaLabel;
+  final String afterChangeLabel;
+  final InventoryDeltaTrend deltaTrend;
+  final int pendingDelta;
+  final String updatedAtLabel;
+  final String updatedTooltip;
+  final bool hasPendingDelta;
+  final bool canApplyByRule;
+  final bool isBusy;
+  final StockStatus status;
+  final String? errorMessage;
+}
+
+/// 差分トレンド。
+enum InventoryDeltaTrend { increase, decrease, none }
 
 /// 画面状態。
 class InventoryManagementState {
@@ -96,7 +194,8 @@ class InventoryManagementState {
     required this.pendingAdjustments,
     required this.sortBy,
     required this.sortAsc,
-    required this.selectedIds,
+    this.busyItemIds = const <String>{},
+    this.rowErrors = const <String, String>{},
     this.isLoading = false,
     this.errorMessage,
   });
@@ -113,7 +212,6 @@ class InventoryManagementState {
     pendingAdjustments: const <String, int>{},
     sortBy: InventorySortBy.none,
     sortAsc: true,
-    selectedIds: const <String>{},
     isLoading: true,
   );
 
@@ -127,17 +225,18 @@ class InventoryManagementState {
   final Map<String, int> pendingAdjustments; // itemId -> delta
   final InventorySortBy sortBy;
   final bool sortAsc;
-  final Set<String> selectedIds;
+  final Set<String> busyItemIds;
+  final Map<String, String> rowErrors;
   final bool isLoading;
   final String? errorMessage;
 
   List<InventoryItemViewData> get filteredItems {
-    final String query = searchText.trim().toLowerCase();
+    final List<String> searchTokens = tokenizeSearchQuery(searchText);
     final String? category = selectedCategoryIndex == 0 ? null : categories[selectedCategoryIndex];
 
     List<InventoryItemViewData> list = items
         .where((InventoryItemViewData i) {
-          final bool q = query.isEmpty || i.name.toLowerCase().contains(query);
+          final bool q = searchTokens.isEmpty || matchesSearchTokens(i.searchIndex, searchTokens);
           final bool c = category == null || i.category == category;
           final bool s = selectedStatusFilter == null || i.status == selectedStatusFilter;
           return q && c && s;
@@ -208,7 +307,8 @@ class InventoryManagementState {
     Map<String, int>? pendingAdjustments,
     InventorySortBy? sortBy,
     bool? sortAsc,
-    Set<String>? selectedIds,
+    Set<String>? busyItemIds,
+    Map<String, String>? rowErrors,
     bool? isLoading,
     String? errorMessage,
     bool clearErrorMessage = false,
@@ -225,7 +325,8 @@ class InventoryManagementState {
     pendingAdjustments: pendingAdjustments ?? this.pendingAdjustments,
     sortBy: sortBy ?? this.sortBy,
     sortAsc: sortAsc ?? this.sortAsc,
-    selectedIds: selectedIds ?? this.selectedIds,
+    busyItemIds: busyItemIds ?? this.busyItemIds,
+    rowErrors: rowErrors ?? this.rowErrors,
     isLoading: isLoading ?? this.isLoading,
     errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
   );
@@ -244,6 +345,8 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
 
   final Ref _ref;
   final InventoryServiceContract _inventoryService;
+  static final DateFormat _rowDateFormat = DateFormat("MM/dd HH:mm");
+  static final DateFormat _rowTooltipFormat = DateFormat("yyyy/MM/dd HH:mm");
 
   /// 初期データおよび最新データを取得する。
   Future<void> loadInventory() async {
@@ -289,6 +392,17 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         for (final MaterialCategory category in categoryModels)
           if (category.id != null) category.id!: category.name.trim(),
       };
+      String? normalizeCategoryCode(String? value) {
+        if (value == null) {
+          return null;
+        }
+        final String trimmed = value.trim();
+        return trimmed.isEmpty ? null : trimmed;
+      }
+      final Map<String, String?> categoryCodeById = <String, String?>{
+        for (final MaterialCategory category in categoryModels)
+          if (category.id != null) category.id!: normalizeCategoryCode(category.code),
+      };
 
       final Set<String> validIds = <String>{};
       final Map<String, Material> materialMap = <String, Material>{};
@@ -304,6 +418,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
             final String categoryName = rawCategoryName.trim().isEmpty
                 ? "未分類"
                 : rawCategoryName.trim();
+            final String? categoryCode = categoryCodeById[material.categoryId];
 
             final DateTime updatedAt = material.updatedAt ?? material.createdAt ?? DateTime.now();
 
@@ -312,6 +427,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
               name: material.name,
               categoryId: material.categoryId,
               category: categoryName,
+              categoryCode: categoryCode,
               current: material.currentStock,
               unitType: material.unitType,
               unit: material.unitType.symbol,
@@ -320,6 +436,11 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
               updatedAt: updatedAt,
               updatedBy: material.userId ?? "system",
               notes: material.notes,
+              searchIndex: InventoryItemViewData.composeSearchIndex(
+                name: material.name,
+                categoryName: categoryName,
+                categoryCode: categoryCode,
+              ),
             );
           })
           .toList(growable: false);
@@ -376,8 +497,6 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
       final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
         ..removeWhere((String key, _) => !validIds.contains(key));
 
-      final Set<String> selectedIds = state.selectedIds.where(validIds.contains).toSet();
-
       state = state.copyWith(
         items: items,
         categories: categories,
@@ -385,7 +504,6 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         materialById: Map<String, Material>.unmodifiable(materialMap),
         selectedCategoryIndex: resolvedCategoryIndex,
         pendingAdjustments: pending,
-        selectedIds: selectedIds,
         isLoading: false,
         clearErrorMessage: true,
       );
@@ -645,6 +763,11 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     );
   }
 
+  /// ステータスフィルターを直接設定。
+  void setStatusFilter(StockStatus? status) {
+    state = state.copyWith(selectedStatusFilter: status, selectedStatusFilterSet: true);
+  }
+
   /// ソートキーの変更。既に同じキーなら昇順/降順をトグル、違うキーなら昇順に設定。
   void sortBy(InventorySortBy key) {
     if (state.sortBy == key) {
@@ -654,7 +777,41 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     }
   }
 
-  /// ソートのサイクル: none -> asc -> desc -> none ...
+  /// サマリー列のソートサイクル (カテゴリのみ)。
+  void cycleSummarySort() {
+    if (state.sortBy != InventorySortBy.category) {
+      state = state.copyWith(sortBy: InventorySortBy.category, sortAsc: true);
+      return;
+    }
+    if (state.sortAsc) {
+      state = state.copyWith(sortAsc: false);
+      return;
+    }
+    state = state.copyWith(sortBy: InventorySortBy.none);
+  }
+
+  /// ステータス/数量列のソートサイクル。
+  void cycleMetricsSort() {
+    const List<InventorySortBy> order = <InventorySortBy>[
+      InventorySortBy.state,
+      InventorySortBy.quantity,
+    ];
+    final int currentIndex = order.indexOf(state.sortBy);
+    if (currentIndex == -1) {
+      state = state.copyWith(sortBy: order.first, sortAsc: true);
+      return;
+    }
+    if (state.sortAsc) {
+      state = state.copyWith(sortAsc: false);
+      return;
+    }
+    if (currentIndex == order.length - 1) {
+      state = state.copyWith(sortBy: InventorySortBy.none);
+      return;
+    }
+    state = state.copyWith(sortBy: order[currentIndex + 1], sortAsc: true);
+  }
+
   void cycleSort(InventorySortBy key) {
     if (state.sortBy != key) {
       state = state.copyWith(sortBy: key, sortAsc: true);
@@ -665,6 +822,111 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     } else {
       state = state.copyWith(sortBy: InventorySortBy.none);
     }
+  }
+
+  /// テーブル表示用の行データを生成する。
+  List<InventoryRowViewData> buildRowViewData() =>
+      state.filteredItems.map(_composeRowViewData).toList(growable: false);
+
+  InventoryRowViewData _composeRowViewData(InventoryItemViewData item) {
+    final int pendingDelta = state.pendingAdjustments[item.id] ?? 0;
+    final double adjustedQuantity = (item.current + pendingDelta).clamp(0, double.infinity);
+    final UnitType unitType = item.unitType;
+    final String unitLabel = item.unit;
+    final String quantityValueLabel = UnitFormatter.format(item.current, unitType);
+    final String quantityLabel = "$quantityValueLabel $unitLabel";
+    final String thresholdsLabel =
+        "警告 ${UnitFormatter.format(item.alertThreshold, unitType)} / 危険 ${UnitFormatter.format(item.criticalThreshold, unitType)} $unitLabel";
+
+    final List<InventoryRowBadgeViewData> badges = _resolveBadges(item.status, pendingDelta);
+    final String? memo = _resolveMemo(item.notes);
+    final bool hasMemo = memo != null;
+    final String memoLabel = memo ?? "メモ未登録";
+
+    final InventoryDeltaTrend deltaTrend;
+    final String deltaLabel;
+    if (pendingDelta > 0) {
+      deltaTrend = InventoryDeltaTrend.increase;
+      deltaLabel = "+$pendingDelta";
+    } else if (pendingDelta < 0) {
+      deltaTrend = InventoryDeltaTrend.decrease;
+      deltaLabel = pendingDelta.toString();
+    } else {
+      deltaTrend = InventoryDeltaTrend.none;
+      deltaLabel = "±0";
+    }
+
+    final String afterChangeLabel =
+        "→ ${UnitFormatter.format(adjustedQuantity, unitType)} $unitLabel";
+    final DateTime localUpdatedAt = item.updatedAt.toLocal();
+    final String updatedAtLabel = _rowDateFormat.format(localUpdatedAt);
+    final String updatedTooltip =
+        "最終更新: ${_rowTooltipFormat.format(localUpdatedAt)} / by ${item.updatedBy}";
+
+    final bool hasPendingDelta = pendingDelta != 0;
+    final bool canApplyByRule = hasPendingDelta && canApply(item.id);
+    final bool isBusy = state.busyItemIds.contains(item.id);
+    final String? errorMessage = state.rowErrors[item.id];
+
+    return InventoryRowViewData(
+      id: item.id,
+      name: item.name,
+      categoryName: item.category,
+      quantityLabel: quantityLabel,
+      quantityValueLabel: quantityValueLabel,
+      unitLabel: unitLabel,
+      thresholdsLabel: thresholdsLabel,
+      badges: badges,
+      memo: memoLabel,
+      memoTooltip: memo,
+      hasMemo: hasMemo,
+      deltaLabel: deltaLabel,
+      afterChangeLabel: afterChangeLabel,
+      deltaTrend: deltaTrend,
+      pendingDelta: pendingDelta,
+      updatedAtLabel: updatedAtLabel,
+      updatedTooltip: updatedTooltip,
+      hasPendingDelta: hasPendingDelta,
+      canApplyByRule: canApplyByRule,
+      isBusy: isBusy,
+      status: item.status,
+      errorMessage: errorMessage,
+    );
+  }
+
+  List<InventoryRowBadgeViewData> _resolveBadges(StockStatus status, int pendingDelta) {
+    final List<InventoryRowBadgeViewData> badges = <InventoryRowBadgeViewData>[
+      _statusToBadge(status),
+    ];
+    if (pendingDelta != 0) {
+      final String deltaLabel = pendingDelta > 0 ? "+$pendingDelta" : pendingDelta.toString();
+      badges.add(
+        InventoryRowBadgeViewData(label: "未適用 $deltaLabel", type: InventoryRowBadgeType.info),
+      );
+    }
+    return badges;
+  }
+
+  InventoryRowBadgeViewData _statusToBadge(StockStatus status) {
+    switch (status) {
+      case StockStatus.sufficient:
+        return const InventoryRowBadgeViewData(label: "適切", type: InventoryRowBadgeType.success);
+      case StockStatus.low:
+        return const InventoryRowBadgeViewData(label: "注意", type: InventoryRowBadgeType.warning);
+      case StockStatus.critical:
+        return const InventoryRowBadgeViewData(label: "危険", type: InventoryRowBadgeType.danger);
+    }
+  }
+
+  String? _resolveMemo(String? notes) {
+    if (notes == null) {
+      return null;
+    }
+    final String trimmed = notes.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
   }
 
   /// 行の調整量(差分)を設定。負数で出庫、正数で入庫。
@@ -713,8 +975,15 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     final InventoryItemViewData currentItem = target;
     final double newQuantity = (currentItem.current + delta).clamp(0, double.infinity);
 
+    final Set<String> busyItems = Set<String>.from(state.busyItemIds)..add(itemId);
+    final Map<String, String> rowErrors = Map<String, String>.from(state.rowErrors)..remove(itemId);
+    state = state.copyWith(
+      busyItemIds: Set<String>.unmodifiable(busyItems),
+      rowErrors: Map<String, String>.unmodifiable(rowErrors),
+      clearErrorMessage: true,
+    );
+
     try {
-      state = state.copyWith(clearErrorMessage: true);
       await _inventoryService.updateMaterialStock(
         StockUpdateRequest(
           materialId: itemId,
@@ -735,7 +1004,6 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
 
       final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
         ..remove(itemId);
-      final Set<String> selectedIds = Set<String>.from(state.selectedIds)..remove(itemId);
       final Map<String, Material> materials = Map<String, Material>.from(state.materialById);
       final Material? existingMaterial = materials[itemId];
       if (existingMaterial != null) {
@@ -754,37 +1022,28 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         );
       }
 
+      final Set<String> busyAfter = Set<String>.from(state.busyItemIds)..remove(itemId);
+      final Map<String, String> rowErrorsAfter = Map<String, String>.from(state.rowErrors)
+        ..remove(itemId);
+
       state = state.copyWith(
         items: updatedItems,
         pendingAdjustments: pending,
-        selectedIds: selectedIds,
         materialById: Map<String, Material>.unmodifiable(materials),
+        busyItemIds: Set<String>.unmodifiable(busyAfter),
+        rowErrors: Map<String, String>.unmodifiable(rowErrorsAfter),
         clearErrorMessage: true,
       );
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(errorMessage: message);
-    }
-  }
-
-  void toggleSelect(String itemId) {
-    final Set<String> s = Set<String>.from(state.selectedIds);
-    if (s.contains(itemId)) {
-      s.remove(itemId);
-    } else {
-      s.add(itemId);
-    }
-    state = state.copyWith(selectedIds: s);
-  }
-
-  /// 全選択/解除。
-  void selectAll(bool selected) {
-    if (selected) {
+      final Set<String> busyAfter = Set<String>.from(state.busyItemIds)..remove(itemId);
+      final Map<String, String> rowErrorsAfter = Map<String, String>.from(state.rowErrors)
+        ..[itemId] = message;
       state = state.copyWith(
-        selectedIds: state.filteredItems.map((InventoryItemViewData e) => e.id).toSet(),
+        errorMessage: message,
+        busyItemIds: Set<String>.unmodifiable(busyAfter),
+        rowErrors: Map<String, String>.unmodifiable(rowErrorsAfter),
       );
-    } else {
-      state = state.copyWith(selectedIds: <String>{});
     }
   }
 
@@ -798,6 +1057,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         name: "",
         categoryId: "",
         category: "",
+        categoryCode: null,
         current: 0,
         unitType: UnitType.piece,
         unit: "",
@@ -805,6 +1065,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         criticalThreshold: 0,
         updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
         updatedBy: "",
+        searchIndex: "",
       ),
     );
     if (item.id == "__invalid__") {
@@ -814,90 +1075,8 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     return after >= 0;
   }
 
-  /// 選択行に対して一括適用（負在庫になる行はスキップ）。
-  void applySelected() => unawaited(_applySelected());
-
-  Future<void> _applySelected() async {
-    final List<String> ids = state.selectedIds.toList(growable: false);
-    for (final String id in ids) {
-      if (!canApply(id)) {
-        continue;
-      }
-      await _applyAdjustment(id);
-    }
-    state = state.copyWith(selectedIds: <String>{});
-  }
-
-  /// フィルタ後の全件に対して一括適用（負在庫になる行はスキップ）。
-  void applyAllVisible() => unawaited(_applyAllVisible());
-
-  Future<void> _applyAllVisible() async {
-    final List<InventoryItemViewData> visibleItems = state.filteredItems;
-    for (final InventoryItemViewData item in visibleItems) {
-      if (!canApply(item.id)) {
-        continue;
-      }
-      await _applyAdjustment(item.id);
-    }
-    state = state.copyWith(selectedIds: <String>{});
-  }
-
-  /// 選択解除。
-  void clearSelection() => state = state.copyWith(selectedIds: <String>{});
-
   /// 全件に対する未適用の調整をクリア。
   void clearAllAdjustments() => state = state.copyWith(pendingAdjustments: <String, int>{});
-
-  // * 以下は選択行向けの一括操作API（UIの選択ツールバーから利用）
-
-  /// 選択されている行すべての未適用差分に対して、[amount] を加算する。
-  /// 例: +5 なら各行の差分に +5、-3 なら -3 を加算。
-  void incrementSelectedBy(int amount) {
-    if (amount == 0 || state.selectedIds.isEmpty) {
-      return;
-    }
-    final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments);
-    for (final String id in state.selectedIds) {
-      final int current = map[id] ?? 0;
-      map[id] = current + amount;
-    }
-    state = state.copyWith(pendingAdjustments: map);
-  }
-
-  /// 選択行の未適用差分をクリア（0に）する。
-  void clearAdjustmentsForSelected() {
-    if (state.selectedIds.isEmpty) {
-      return;
-    }
-    final Map<String, int> map = Map<String, int>.from(state.pendingAdjustments);
-    for (final String id in state.selectedIds) {
-      map.remove(id);
-    }
-    state = state.copyWith(pendingAdjustments: map);
-  }
-
-  /// 選択されている行を削除（モック実装）。
-  /// 実サービス接続後は Service -> Repository 経由に置換する。
-  void deleteSelected() {
-    if (state.selectedIds.isEmpty) {
-      return;
-    }
-    final Set<String> toDelete = state.selectedIds;
-    final List<InventoryItemViewData> remaining = state.items
-        .where((InventoryItemViewData i) => !toDelete.contains(i.id))
-        .toList(growable: false);
-    final Map<String, int> pending = Map<String, int>.from(state.pendingAdjustments)
-      ..removeWhere((String key, _) => toDelete.contains(key));
-    final Map<String, Material> materials = Map<String, Material>.from(state.materialById)
-      ..removeWhere((String key, _) => toDelete.contains(key));
-    state = state.copyWith(
-      items: remaining,
-      pendingAdjustments: pending,
-      selectedIds: <String>{},
-      materialById: Map<String, Material>.unmodifiable(materials),
-    );
-    // TODO サービスレイヤー統合: まとめて削除APIに接続する
-  }
 }
 
 final StateNotifierProvider<InventoryManagementController, InventoryManagementState>
@@ -914,109 +1093,11 @@ enum InventorySortBy { none, category, state, quantity, delta, updatedAt }
 
 /// カテゴリ名を比較して50音順・アルファベット順での昇順/降順ソートを実現する。
 int _compareCategoryName(String a, String b) {
-  final String left = _normalizeForSort(a);
-  final String right = _normalizeForSort(b);
+  final String left = SearchNormalizer.normalizeForSort(a);
+  final String right = SearchNormalizer.normalizeForSort(b);
   final int primary = left.compareTo(right);
   if (primary != 0) {
     return primary;
   }
   return a.compareTo(b);
 }
-
-/// 50音・アルファベットの比較を行いやすいように文字列を正規化する。
-String _normalizeForSort(String input) {
-  final String trimmed = input.trim();
-  if (trimmed.isEmpty) {
-    return "";
-  }
-
-  final StringBuffer buffer = StringBuffer();
-  for (final int rune in trimmed.runes) {
-    // カタカナ -> ひらがな
-    if (rune >= 0x30A1 && rune <= 0x30F3) {
-      buffer.writeCharCode(rune - 0x60);
-      continue;
-    }
-
-    // 半角カタカナをひらがなに寄せる
-    final int? halfWidth = _halfWidthKatakanaToHiragana[rune];
-    if (halfWidth != null) {
-      buffer.writeCharCode(halfWidth);
-      continue;
-    }
-
-    // 全角英数字 -> 半角英数字
-    if ((rune >= 0xFF10 && rune <= 0xFF19) ||
-        (rune >= 0xFF21 && rune <= 0xFF3A) ||
-        (rune >= 0xFF41 && rune <= 0xFF5A)) {
-      buffer.writeCharCode(rune - 0xFEE0);
-      continue;
-    }
-
-    buffer.writeCharCode(rune);
-  }
-
-  return buffer.toString().toLowerCase();
-}
-
-/// 半角カタカナ -> ひらがな変換マップ。
-const Map<int, int> _halfWidthKatakanaToHiragana = <int, int>{
-  0xFF66: 0x3092, // ｦ -> を
-  0xFF67: 0x3041, // ｧ -> ぁ
-  0xFF68: 0x3043, // ｨ -> ぃ
-  0xFF69: 0x3045, // ｩ -> ぅ
-  0xFF6A: 0x3047, // ｪ -> ぇ
-  0xFF6B: 0x3049, // ｫ -> ぉ
-  0xFF6C: 0x3083, // ｬ -> ゃ
-  0xFF6D: 0x3085, // ｭ -> ゅ
-  0xFF6E: 0x3087, // ｮ -> ょ
-  0xFF6F: 0x3063, // ｯ -> っ
-  0xFF70: 0x30FC, // ｰ -> ー
-  0xFF71: 0x3042, // ｱ -> あ
-  0xFF72: 0x3044, // ｲ -> い
-  0xFF73: 0x3046, // ｳ -> う
-  0xFF74: 0x3048, // ｴ -> え
-  0xFF75: 0x304A, // ｵ -> お
-  0xFF76: 0x304B, // ｶ -> か
-  0xFF77: 0x304D, // ｷ -> き
-  0xFF78: 0x304F, // ｸ -> く
-  0xFF79: 0x3051, // ｹ -> け
-  0xFF7A: 0x3053, // ｺ -> こ
-  0xFF7B: 0x3055, // ｻ -> さ
-  0xFF7C: 0x3057, // ｼ -> し
-  0xFF7D: 0x3059, // ｽ -> す
-  0xFF7E: 0x305B, // ｾ -> せ
-  0xFF7F: 0x305D, // ｿ -> そ
-  0xFF80: 0x305F, // ﾀ -> た
-  0xFF81: 0x3061, // ﾁ -> ち
-  0xFF82: 0x3064, // ﾂ -> つ
-  0xFF83: 0x3066, // ﾃ -> て
-  0xFF84: 0x3068, // ﾄ -> と
-  0xFF85: 0x306A, // ﾅ -> な
-  0xFF86: 0x306B, // ﾆ -> に
-  0xFF87: 0x306C, // ﾇ -> ぬ
-  0xFF88: 0x306D, // ﾈ -> ね
-  0xFF89: 0x306E, // ﾉ -> の
-  0xFF8A: 0x306F, // ﾊ -> は
-  0xFF8B: 0x3072, // ﾋ -> ひ
-  0xFF8C: 0x3075, // ﾌ -> ふ
-  0xFF8D: 0x3078, // ﾍ -> へ
-  0xFF8E: 0x307B, // ﾎ -> ほ
-  0xFF8F: 0x307E, // ﾏ -> ま
-  0xFF90: 0x307F, // ﾐ -> み
-  0xFF91: 0x3080, // ﾑ -> む
-  0xFF92: 0x3081, // ﾒ -> め
-  0xFF93: 0x3082, // ﾓ -> も
-  0xFF94: 0x3084, // ﾔ -> や
-  0xFF95: 0x3086, // ﾕ -> ゆ
-  0xFF96: 0x3088, // ﾖ -> よ
-  0xFF97: 0x3089, // ﾗ -> ら
-  0xFF98: 0x308A, // ﾘ -> り
-  0xFF99: 0x308B, // ﾙ -> る
-  0xFF9A: 0x308C, // ﾚ -> れ
-  0xFF9B: 0x308D, // ﾛ -> ろ
-  0xFF9C: 0x308F, // ﾜ -> わ
-  0xFF9D: 0x3093, // ﾝ -> ん
-  0xFF9E: 0x309B, // ﾞ -> ゛
-  0xFF9F: 0x309C, // ﾟ -> ゜
-};

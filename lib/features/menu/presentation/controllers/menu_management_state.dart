@@ -1,5 +1,6 @@
 import "../../dto/menu_recipe_detail.dart";
 import "../../models/menu_model.dart";
+import "../../../../shared/search/search_utils.dart";
 
 /// メニュー可用性で使用するフィルター種別。
 enum MenuAvailabilityFilter {
@@ -93,6 +94,7 @@ class MenuItemViewData {
     required this.isStockAvailable,
     required this.categoryId,
     required this.categoryName,
+    this.categoryCode,
     required this.displayOrder,
     required this.hasRecipe,
     required this.missingMaterials,
@@ -100,6 +102,7 @@ class MenuItemViewData {
     this.imageUrl,
     this.updatedAt,
     this.estimatedServings,
+    required this.searchIndex,
   });
 
   /// メニューID。
@@ -123,6 +126,9 @@ class MenuItemViewData {
   /// カテゴリ名。
   final String categoryName;
 
+  /// カテゴリコード。
+  final String? categoryCode;
+
   /// 表示順。
   final int displayOrder;
 
@@ -144,6 +150,9 @@ class MenuItemViewData {
   /// 材料在庫から算出した最大提供数。
   final int? estimatedServings;
 
+  /// 検索用インデックス。
+  final String searchIndex;
+
   /// 在庫可否が判定できているか。
   bool get hasAvailabilityCheck => estimatedServings != null || missingMaterials.isNotEmpty;
 
@@ -162,6 +171,7 @@ class MenuItemViewData {
     bool? isStockAvailable,
     String? categoryId,
     String? categoryName,
+    String? categoryCode,
     int? displayOrder,
     bool? hasRecipe,
     List<String>? missingMaterials,
@@ -169,6 +179,7 @@ class MenuItemViewData {
     String? imageUrl,
     DateTime? updatedAt,
     int? estimatedServings,
+    String? searchIndex,
   }) => MenuItemViewData(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -177,6 +188,7 @@ class MenuItemViewData {
     isStockAvailable: isStockAvailable ?? this.isStockAvailable,
     categoryId: categoryId ?? this.categoryId,
     categoryName: categoryName ?? this.categoryName,
+    categoryCode: categoryCode ?? this.categoryCode,
     displayOrder: displayOrder ?? this.displayOrder,
     hasRecipe: hasRecipe ?? this.hasRecipe,
     missingMaterials: missingMaterials ?? List<String>.from(this.missingMaterials),
@@ -184,7 +196,28 @@ class MenuItemViewData {
     imageUrl: imageUrl ?? this.imageUrl,
     updatedAt: updatedAt ?? this.updatedAt,
     estimatedServings: estimatedServings ?? this.estimatedServings,
+    searchIndex: searchIndex ??
+        MenuItemViewData.composeSearchIndex(
+          name: name ?? this.name,
+          categoryName: categoryName ?? this.categoryName,
+          categoryCode: categoryCode ?? this.categoryCode,
+          description: description ?? this.description,
+        ),
   );
+
+  static String composeSearchIndex({
+    required String name,
+    required String categoryName,
+    String? categoryCode,
+    String? description,
+  }) {
+    final SearchIndexBuilder builder = SearchIndexBuilder()
+      ..add(name)
+      ..add(description)
+      ..add(categoryName)
+      ..add(categoryCode);
+    return builder.build();
+  }
 }
 
 /// メニュー詳細パネルで使用するデータ。
@@ -320,16 +353,12 @@ class MenuManagementState {
   /// フィルター適用後の一覧。
   List<MenuItemViewData> get filteredMenuItems {
     final Iterable<MenuItemViewData> base = menuItems.where(_matchesCategory).where(_matchesStatus);
-    if (searchQuery.trim().isEmpty) {
+    final List<String> tokens = tokenizeSearchQuery(searchQuery);
+    if (tokens.isEmpty) {
       return base.toList(growable: false);
     }
-    final String normalized = searchQuery.trim().toLowerCase();
     return base
-        .where(
-          (MenuItemViewData item) =>
-              item.name.toLowerCase().contains(normalized) ||
-              (item.description != null && item.description!.toLowerCase().contains(normalized)),
-        )
+        .where((MenuItemViewData item) => matchesSearchTokens(item.searchIndex, tokens))
         .toList(growable: false);
   }
 

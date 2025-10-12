@@ -45,6 +45,7 @@ class CsvExportRequest {
     this.filters = const <String, dynamic>{},
     this.timeZone = "Asia/Tokyo",
     this.requestedBy,
+    this.generatedByAppVersion,
     this.timeout,
   });
 
@@ -78,6 +79,9 @@ class CsvExportRequest {
   /// RPC 実行のタイムアウト (未指定時は上位層で決定)
   final Duration? timeout;
 
+  /// クライアントアプリで認識しているビルドバージョン
+  final String? generatedByAppVersion;
+
   CsvExportRequest copyWith({
     CsvExportDataset? dataset,
     DateTime? dateFrom,
@@ -88,6 +92,7 @@ class CsvExportRequest {
     CsvExportFilters? filters,
     String? timeZone,
     String? requestedBy,
+    String? generatedByAppVersion,
     Duration? timeout,
   }) => CsvExportRequest(
     dataset: dataset ?? this.dataset,
@@ -99,6 +104,7 @@ class CsvExportRequest {
     filters: filters ?? this.filters,
     timeZone: timeZone ?? this.timeZone,
     requestedBy: requestedBy ?? this.requestedBy,
+    generatedByAppVersion: generatedByAppVersion ?? this.generatedByAppVersion,
     timeout: timeout ?? this.timeout,
   );
 
@@ -115,6 +121,8 @@ class CsvExportRequest {
       if (organizationId != null && organizationId!.isNotEmpty) "org_id": organizationId,
       if (locationId != null && locationId!.isNotEmpty) "location_id": locationId,
       if (requestedBy != null && requestedBy!.isNotEmpty) "requested_by": requestedBy,
+      if (generatedByAppVersion != null && generatedByAppVersion!.isNotEmpty)
+        "generated_by_app_version": generatedByAppVersion,
     };
 
     if (filters.isNotEmpty) {

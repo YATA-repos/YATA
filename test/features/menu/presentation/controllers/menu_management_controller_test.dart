@@ -247,6 +247,148 @@ void main() {
     ).called(1);
   });
 
+    test("filteredMenuItems matches category name in search", () async {
+      final MenuItemViewData ramen = MenuItemViewData(
+        id: "menu-ramen",
+        name: "醤油ラーメン",
+        price: 850,
+        isAvailable: true,
+        isStockAvailable: true,
+        categoryId: "cat-main",
+        categoryName: "メイン",
+        categoryCode: "MAIN",
+        displayOrder: 1,
+        hasRecipe: true,
+        missingMaterials: const <String>[],
+        description: "定番",
+        imageUrl: null,
+        updatedAt: DateTime(2025, 10, 1),
+        estimatedServings: 8,
+        searchIndex: MenuItemViewData.composeSearchIndex(
+          name: "醤油ラーメン",
+          categoryName: "メイン",
+          categoryCode: "MAIN",
+          description: "定番",
+        ),
+      );
+      final MenuItemViewData parfait = MenuItemViewData(
+        id: "menu-parfait",
+        name: "いちごパフェ",
+        price: 720,
+        isAvailable: true,
+        isStockAvailable: true,
+        categoryId: "cat-dessert",
+        categoryName: "デザート",
+        categoryCode: "DST",
+        displayOrder: 2,
+        hasRecipe: true,
+        missingMaterials: const <String>[],
+        description: "季節限定",
+        imageUrl: null,
+        updatedAt: DateTime(2025, 10, 1),
+        estimatedServings: 6,
+        searchIndex: MenuItemViewData.composeSearchIndex(
+          name: "いちごパフェ",
+          categoryName: "デザート",
+          categoryCode: "DST",
+          description: "季節限定",
+        ),
+      );
+
+      MenuManagementState state = MenuManagementState.initial().copyWith(
+        categories: const <MenuCategoryViewData>[],
+        menuItems: <MenuItemViewData>[ramen, parfait],
+        searchQuery: "デザート",
+        clearError: true,
+      );
+
+      expect(state.filteredMenuItems, <MenuItemViewData>[parfait]);
+
+      state = state.copyWith(searchQuery: "メイン", clearError: true);
+      expect(state.filteredMenuItems, <MenuItemViewData>[ramen]);
+    });
+
+    test("filteredMenuItems matches category code in search", () {
+      final MenuItemViewData cola = MenuItemViewData(
+        id: "menu-cola",
+        name: "コーラ",
+        price: 250,
+        isAvailable: true,
+        isStockAvailable: true,
+        categoryId: "cat-drink",
+        categoryName: "ドリンク",
+        categoryCode: "DRK",
+        displayOrder: 1,
+        hasRecipe: false,
+        missingMaterials: const <String>[],
+        description: null,
+        imageUrl: null,
+        updatedAt: DateTime(2025, 10, 1),
+        estimatedServings: 20,
+        searchIndex: MenuItemViewData.composeSearchIndex(
+          name: "コーラ",
+          categoryName: "ドリンク",
+          categoryCode: "DRK",
+          description: null,
+        ),
+      );
+      final MenuItemViewData tea = MenuItemViewData(
+        id: "menu-tea",
+        name: "紅茶",
+        price: 300,
+        isAvailable: true,
+        isStockAvailable: true,
+        categoryId: "cat-drink",
+        categoryName: "ドリンク",
+        categoryCode: "DRK",
+        displayOrder: 2,
+        hasRecipe: false,
+        missingMaterials: const <String>[],
+        description: null,
+        imageUrl: null,
+        updatedAt: DateTime(2025, 10, 1),
+        estimatedServings: 18,
+        searchIndex: MenuItemViewData.composeSearchIndex(
+          name: "紅茶",
+          categoryName: "ドリンク",
+          categoryCode: "DRK",
+          description: null,
+        ),
+      );
+      final MenuItemViewData salad = MenuItemViewData(
+        id: "menu-salad",
+        name: "コブサラダ",
+        price: 680,
+        isAvailable: true,
+        isStockAvailable: true,
+        categoryId: "cat-salad",
+        categoryName: "サラダ",
+        categoryCode: "SLD",
+        displayOrder: 3,
+        hasRecipe: true,
+        missingMaterials: const <String>[],
+        description: null,
+        imageUrl: null,
+        updatedAt: DateTime(2025, 10, 1),
+        estimatedServings: 10,
+        searchIndex: MenuItemViewData.composeSearchIndex(
+          name: "コブサラダ",
+          categoryName: "サラダ",
+          categoryCode: "SLD",
+          description: null,
+        ),
+      );
+
+      final MenuManagementState state = MenuManagementState.initial().copyWith(
+        categories: const <MenuCategoryViewData>[],
+        menuItems: <MenuItemViewData>[cola, tea, salad],
+        searchQuery: "sld",
+        clearError: true,
+      );
+
+      expect(state.filteredMenuItems, <MenuItemViewData>[salad]);
+    });
+
   test("updateMenu syncs recipe changes including deletions", () async {
     final inventory.Material cabbage = inventory.Material(
       id: "mat-1",

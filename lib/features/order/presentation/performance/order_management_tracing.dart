@@ -3,7 +3,10 @@ import "dart:developer";
 
 import "package:flutter/foundation.dart";
 import "../../../../core/validation/env_validator.dart";
+import "../../../../infra/config/runtime_overrides.dart";
 import "../../../../infra/logging/context_utils.dart" as log_ctx;
+import "../../../../infra/logging/log_level.dart" as log_level;
+import "../../../../infra/logging/logger.dart" as log;
 
 typedef TraceCallback<T> = T Function();
 typedef AsyncTraceCallback<T> = Future<T> Function();
@@ -16,55 +19,71 @@ typedef LazyLogMessageBuilder = String Function();
 /// を使用してセッション単位で切り替える。
 const String kOrderManagementPerformanceTracingEnvKey = "ORDER_MANAGEMENT_PERF_TRACING";
 
-const bool kOrderManagementPerformanceTracingEnabled = bool.fromEnvironment(
-  kOrderManagementPerformanceTracingEnvKey,
-);
-
 /// 注文管理画面向けのパフォーマンス計測ユーティリティ。
 class OrderManagementTracer {
   OrderManagementTracer._();
 
   static const String _timelineCategory = "OrderManagement";
+  static const String _logTag = "omperf";
   static const String _logPrefix = "[OMPerf]";
   static const Duration _defaultLogThreshold = Duration(milliseconds: 8);
   static const int _defaultSampleModulo = 20;
   static const String _runtimeToggleKey = kOrderManagementPerformanceTracingEnvKey;
+  static const String _sampleModuloKey = "ORDER_MANAGEMENT_PERF_SAMPLE_MODULO";
 
+  static final log.Logger _logger = log.withTag(_logTag);
+
+  static bool? _environmentEnabled;
   static bool? _runtimeOverride;
+  static int? _environmentSampleModulo;
+  static int? _runtimeSampleModulo;
+  static bool? _lastLoggerEnabled;
 
   /// 現在のトレーシング有効状態。
   static bool get isEnabled {
-    if (!kDebugMode) {
-      return false;
+    final bool enabled = _computeIsEnabled();
+    if (_lastLoggerEnabled == null) {
+      _applyLoggerTagLevel(enabled);
     }
-    bool enabled = kOrderManagementPerformanceTracingEnabled;
-    assert(() {
-      if (_runtimeOverride != null) {
-        enabled = _runtimeOverride!;
-      }
-      return true;
-    }());
     return enabled;
   }
 
   /// `debug` モード動作中のみセッション単位で有効/無効を切り替える。
   static void overrideForDebug(bool? enabled) {
-    assert(() {
-      _runtimeOverride = enabled;
-      return true;
-    }());
+    if (!kDebugMode) {
+      return;
+    }
+    applyRuntimeOverride(enabled: enabled);
   }
 
-  /// 環境変数からトレーシングの有効状態を初期化する。
+  /// 環境変数からトレーシング設定を初期化する。
   static void configureFromEnvironment({Map<String, String>? env}) {
-    assert(() {
-      final Map<String, String> source = env ?? EnvValidator.env;
-      if (source.containsKey(_runtimeToggleKey)) {
-        final bool enabled = EnvValidator.orderManagementPerfTracing;
-        overrideForDebug(enabled);
-      }
-      return true;
-    }());
+    final Map<String, String> source = env ?? EnvValidator.env;
+    _environmentEnabled = _parseBool(source[_runtimeToggleKey]);
+    _environmentSampleModulo = _parsePositiveInt(source[_sampleModuloKey]);
+    _syncLoggerTagLevel();
+  }
+
+  /// 実行中にトレーシング設定を上書きする。
+  static void applyRuntimeOverride({bool? enabled, int? sampleModulo}) {
+    if (enabled != null) {
+      _runtimeOverride = enabled;
+      RuntimeOverrides.setBool(_runtimeToggleKey, value: enabled);
+    } else {
+      _runtimeOverride = null;
+      RuntimeOverrides.clear(_runtimeToggleKey);
+    }
+
+    final int? normalizedSample = _normalizeSampleModulo(sampleModulo);
+    if (normalizedSample != null) {
+      _runtimeSampleModulo = normalizedSample;
+      RuntimeOverrides.setInt(_sampleModuloKey, value: normalizedSample);
+    } else {
+      _runtimeSampleModulo = null;
+      RuntimeOverrides.clear(_sampleModuloKey);
+    }
+
+    _syncLoggerTagLevel();
   }
 
   /// 同期ブロックを計測する。
@@ -103,7 +122,7 @@ class OrderManagementTracer {
         }
       },
       attributes: <String, Object?>{
-        log_ctx.LogContextKeys.source: _logPrefix,
+        log_ctx.LogContextKeys.source: _logTag,
         log_ctx.LogContextKeys.operation: name,
       },
     );
@@ -145,7 +164,7 @@ class OrderManagementTracer {
         }
       },
       attributes: <String, Object?>{
-        log_ctx.LogContextKeys.source: _logPrefix,
+        log_ctx.LogContextKeys.source: _logTag,
         log_ctx.LogContextKeys.operation: name,
       },
     );
@@ -156,7 +175,7 @@ class OrderManagementTracer {
     if (!isEnabled) {
       return;
     }
-    debugPrint("$_logPrefix $message");
+    _logger.d(() => "$_logPrefix $message");
   }
 
   /// ログメッセージを遅延生成して出力する。
@@ -164,15 +183,19 @@ class OrderManagementTracer {
     if (!isEnabled) {
       return;
     }
-    debugPrint("$_logPrefix ${builder()}");
+    _logger.d(() => "$_logPrefix ${builder()}");
   }
 
   /// Grid のビルドなどでサンプリング計測が必要な場合のヘルパー。
-  static bool shouldSample(int index, {int sampleModulo = _defaultSampleModulo}) {
-    if (!isEnabled || sampleModulo <= 0) {
+  static bool shouldSample(int index, {int? sampleModulo}) {
+    if (!isEnabled) {
       return false;
     }
-    return index % sampleModulo == 0;
+    final int modulo = _resolveSampleModulo(sampleModulo);
+    if (modulo <= 0) {
+      return false;
+    }
+    return index % modulo == 0;
   }
 
   static Map<String, dynamic>? _buildArguments(
@@ -221,6 +244,116 @@ class OrderManagementTracer {
     return <String, dynamic>{if (first != null) ...first, if (second != null) ...second};
   }
 
+  static bool _computeIsEnabled() {
+    bool? runtime = _runtimeOverride;
+    if (runtime == null) {
+      runtime = RuntimeOverrides.getBool(_runtimeToggleKey);
+      if (runtime != null) {
+        _runtimeOverride = runtime;
+      }
+    }
+    if (runtime != null) {
+      return runtime;
+    }
+    if (_environmentEnabled != null) {
+      return _environmentEnabled!;
+    }
+    return !kReleaseMode;
+  }
+
+  static void _syncLoggerTagLevel() {
+    final bool enabled = _computeIsEnabled();
+    if (_lastLoggerEnabled == enabled) {
+      return;
+    }
+    _applyLoggerTagLevel(enabled);
+  }
+
+  static void _applyLoggerTagLevel(bool enabled) {
+    if (enabled) {
+      log.setTagLevel(_logTag, log_level.LogLevel.debug);
+    } else {
+      log.clearTagLevel(_logTag);
+    }
+    _lastLoggerEnabled = enabled;
+  }
+
+  static int get _effectiveSampleModulo {
+    int? runtime = _runtimeSampleModulo;
+    if (runtime == null) {
+      runtime = RuntimeOverrides.getInt(_sampleModuloKey);
+      if (runtime != null && runtime > 0) {
+        _runtimeSampleModulo = runtime;
+      }
+    }
+    if (runtime != null && runtime > 0) {
+      return runtime;
+    }
+    if (_environmentSampleModulo != null) {
+      return _environmentSampleModulo!;
+    }
+    return _defaultSampleModulo;
+  }
+
+  static int _resolveSampleModulo(int? override) {
+    final int? normalized = _normalizeSampleModulo(override);
+    if (normalized != null) {
+      return normalized;
+    }
+    return _effectiveSampleModulo;
+  }
+
+  static int? _normalizeSampleModulo(int? value) {
+    if (value == null) {
+      return null;
+    }
+    return value > 0 ? value : null;
+  }
+
+  static int? _parsePositiveInt(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+    final String normalized = raw.trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    final int? parsed = int.tryParse(normalized);
+    if (parsed == null || parsed <= 0) {
+      return null;
+    }
+    return parsed;
+  }
+
+  static bool? _parseBool(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+    final String normalized = raw.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (<String>{"1", "true", "yes", "on"}.contains(normalized)) {
+      return true;
+    }
+    if (<String>{"0", "false", "no", "off"}.contains(normalized)) {
+      return false;
+    }
+    return null;
+  }
+
+  @visibleForTesting
+  static void debugReset() {
+    _environmentEnabled = null;
+    _runtimeOverride = null;
+    _environmentSampleModulo = null;
+    _runtimeSampleModulo = null;
+    _lastLoggerEnabled = null;
+    RuntimeOverrides.clear(_runtimeToggleKey);
+    RuntimeOverrides.clear(_sampleModuloKey);
+    _syncLoggerTagLevel();
+  }
+
   static void _logElapsed(
     String name,
     Duration elapsed,
@@ -230,21 +363,18 @@ class OrderManagementTracer {
     if (elapsed < threshold) {
       return;
     }
-    final StringBuffer buffer = StringBuffer()
-      ..write(_logPrefix)
-      ..write(" $name ")
-      ..write(_elapsedFormat(elapsed));
+    final Map<String, dynamic> fields = <String, dynamic>{
+      "operation": name,
+      "elapsed_ms": _elapsedMs(elapsed),
+      "threshold_ms": _elapsedMs(threshold),
+      "threshold_exceeded": true,
+      "sample_modulo": _effectiveSampleModulo,
+    };
     if (arguments != null && arguments.isNotEmpty) {
-      buffer
-        ..write(" ")
-        ..write(_formatArguments(arguments));
+      fields.addAll(arguments);
     }
-    debugPrint(buffer.toString());
+    _logger.d(() => "$_logPrefix $name ${_elapsedFormat(elapsed)}", fields: () => fields);
   }
 
   static String _elapsedFormat(Duration duration) => "${_elapsedMs(duration).toStringAsFixed(2)}ms";
-
-  static String _formatArguments(Map<String, dynamic> arguments) => arguments.entries
-      .map((MapEntry<String, dynamic> entry) => "${entry.key}=${entry.value}")
-      .join(", ");
 }

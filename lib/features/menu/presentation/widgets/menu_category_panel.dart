@@ -62,7 +62,7 @@ class MenuCategoryPanel extends StatelessWidget {
       name: category.name,
       isAll: isAll,
       headerBadge: CategoryPanelBadgeData(
-        label: "合計 ${category.totalItems}件",
+        label: "登録 ${category.totalItems}件",
         type: YataStatusBadgeType.info,
       ),
       metrics: <CategoryPanelMetricData>[

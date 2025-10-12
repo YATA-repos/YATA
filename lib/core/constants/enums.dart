@@ -5,10 +5,10 @@ enum PaymentMethod {
   /// 現金支払い
   cash("cash"),
 
-  /// クレジットカード・デビットカード支払い
-  card("card"),
+  /// QRコード決済 (PayPay)
+  paypay("paypay"),
 
-  /// 電子マネー・QRコード決済など、そのほかの方法
+  /// 電子マネー・QRコード決済など、PayPay以外の方法
   other("other");
 
   const PaymentMethod(this.value);

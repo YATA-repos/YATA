@@ -1,5 +1,7 @@
 // DI: アプリ全体の公開プロバイダ集約
 
+import "dart:async";
+
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 // Auth
@@ -13,9 +15,9 @@ import "../../core/contracts/realtime/realtime_manager.dart" as r_contract;
 // Repository contracts
 import "../../core/contracts/repositories/crud_repository.dart" as repo_contract;
 import "../../core/contracts/repositories/export/csv_export_jobs_repository_contract.dart"
-  as export_job_contract;
+    as export_job_contract;
 import "../../core/contracts/repositories/export/csv_export_repository_contract.dart"
-  as export_contract;
+    as export_contract;
 import "../../core/contracts/repositories/inventory/inventory_repository_contracts.dart"
     as inv_contract;
 import "../../core/contracts/repositories/menu/menu_repository_contracts.dart" as menu_contract;
@@ -64,6 +66,10 @@ import "../../features/order/services/cart/cart_management_service.dart";
 import "../../features/order/services/order/order_calculation_service.dart";
 import "../../features/order/services/order/order_inventory_integration_service.dart";
 import "../../features/order/services/order/order_management_service.dart";
+import "../../features/settings/data/settings_local_data_source.dart";
+import "../../features/settings/data/settings_repository.dart";
+import "../../features/settings/domain/app_settings.dart";
+import "../../features/settings/services/settings_service.dart";
 import "../../infra/batch/batch_processing_service.dart" as batch_impl;
 import "../../infra/local/cache/memory_cache_adapter.dart";
 import "../../infra/local/cache/ttl_cache_adapter.dart";
@@ -256,9 +262,9 @@ final Provider<export_contract.CsvExportRepositoryContract> csvExportRepositoryP
 
 /// Export: CSV エクスポートジョブリポジトリ
 final Provider<export_job_contract.CsvExportJobsRepositoryContract>
-    csvExportJobsRepositoryProvider = Provider<export_job_contract.CsvExportJobsRepositoryContract>(
-      (Ref ref) => CsvExportJobsRepository(),
-    );
+csvExportJobsRepositoryProvider = Provider<export_job_contract.CsvExportJobsRepositoryContract>(
+  (Ref ref) => CsvExportJobsRepository(),
+);
 
 /// Export: CSV エクスポートサービス
 final Provider<CsvExportService> csvExportServiceProvider = Provider<CsvExportService>(
@@ -342,10 +348,25 @@ final Provider<InventoryService> inventoryServiceProvider = Provider<InventorySe
 final Provider<OrderCalculationService> orderCalculationServiceProvider =
     Provider<OrderCalculationService>((Ref ref) {
       final contract.LoggerContract logger = ref.read(loggerProvider);
-      return OrderCalculationService(
+      final SettingsService settingsService = ref.read(settingsServiceProvider);
+      final OrderCalculationService service = OrderCalculationService(
         logger: logger,
         orderItemRepository: ref.read(orderItemRepositoryProvider),
+        initialTaxRate: settingsService.current.taxRate,
       );
+      final StreamSubscription<AppSettings> subscription = settingsService.watch().listen(
+        (AppSettings settings) => service.setBaseTaxRate(settings.taxRate),
+        onError: (Object error, StackTrace stackTrace) {
+          logger.e(
+            "Failed to sync tax rate from settings",
+            tag: "OrderCalculationService",
+            error: error,
+            st: stackTrace,
+          );
+        },
+      );
+      ref.onDispose(subscription.cancel);
+      return service;
     });
 
 final Provider<OrderInventoryIntegrationService> orderInventoryIntegrationServiceProvider =
@@ -416,6 +437,31 @@ final Provider<AuthService> authServiceProvider = Provider<AuthService>(
     authRepository: ref.read(authRepositoryProvider),
   ),
 );
+
+/// Settings: ローカルデータソース
+final Provider<SettingsLocalDataSource> settingsLocalDataSourceProvider =
+    Provider<SettingsLocalDataSource>((Ref ref) => SettingsLocalDataSource());
+
+/// Settings: リポジトリ
+final Provider<SettingsRepository> settingsRepositoryProvider = Provider<SettingsRepository>(
+  (Ref ref) => SettingsRepository(
+    localDataSource: ref.read(settingsLocalDataSourceProvider),
+    logger: ref.read(loggerProvider),
+  ),
+);
+
+/// Settings: サービス
+final Provider<SettingsService> settingsServiceProvider = Provider<SettingsService>((Ref ref) {
+  final SettingsService service = SettingsService(
+    repository: ref.read(settingsRepositoryProvider),
+    authService: ref.read(authServiceProvider),
+    logger: ref.read(loggerProvider),
+  );
+  ref.onDispose(() {
+    unawaited(service.dispose());
+  });
+  return service;
+});
 
 /// BatchProcessingService（契約型）
 final Provider<batch_contract.BatchProcessingServiceContract> batchProcessingServiceProvider =

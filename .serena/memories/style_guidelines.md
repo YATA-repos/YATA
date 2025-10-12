@@ -1,4 +1,0 @@
-- コーディング規約は `docs/standards/coding_conventions.md` に準拠。クラスは UpperCamelCase、メソッド/変数は lowerCamelCase、ファイルは snake_case。
-- コメントは原則日本語。公開APIには `///` ドキュメントコメント、複雑な処理には `//` で補足。接頭辞は `// TODO` `// !` `// ?` `// *` のみ許可。
-- インポートは相対パスを基本とし、Barrel は features/core/shared の一部のみ許容。
-- `analysis_options.yaml` で `implicit_casts: false` 等の厳格設定と very_good_analysis 系ルールを有効化。フォーマッタの page_width は 100。

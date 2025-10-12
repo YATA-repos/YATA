@@ -112,7 +112,7 @@ void main() {
       final OrderPaymentMethodSelector selector = tester.widget<OrderPaymentMethodSelector>(
         find.byType(OrderPaymentMethodSelector),
       );
-      await selector.onChanged(PaymentMethod.card);
+      await selector.onChanged(PaymentMethod.paypay);
       expect(paymentChanged, isTrue);
 
       await tester.tap(find.text("会計"));

@@ -1,4 +1,0 @@
-- 言語/フレームワーク: Dart 3.8 以上、Flutter
-- 主な依存: flutter_riverpod & riverpod_annotation（DI/状態管理）、supabase_flutter & gotrue（BaaS連携）、go_router（ルーティング）、json_annotation/json_serializable（シリアライズ）、shared_preferences/path_provider/file_picker/csv 等
-- 補助ライブラリ: google_fonts、lucide_icons、logger、intl など
-- 開発支援: build_runner、riverpod_generator、custom_lint、very_good_analysis、flutter_lints、mocktail/test/integration_test

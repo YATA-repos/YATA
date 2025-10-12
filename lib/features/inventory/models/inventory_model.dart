@@ -77,6 +77,7 @@ class MaterialCategory extends BaseModel {
   MaterialCategory({
     required this.name,
     required this.displayOrder,
+    this.code,
     this.createdAt,
     this.updatedAt,
     super.id,
@@ -91,6 +92,10 @@ class MaterialCategory extends BaseModel {
 
   /// 表示順序
   int displayOrder;
+
+  /// カテゴリコード
+  @JsonKey(includeIfNull: false)
+  String? code;
 
   /// 作成日時
   DateTime? createdAt;

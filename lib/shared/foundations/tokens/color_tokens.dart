@@ -81,4 +81,7 @@ class YataColorTokens {
 
   /// 弱いテキストのカラー。
   static const Color textTertiary = neutral500;
+
+  /// 無効状態のテキストカラー。
+  static const Color textDisabled = neutral400;
 }

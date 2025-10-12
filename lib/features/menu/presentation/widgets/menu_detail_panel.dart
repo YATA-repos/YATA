@@ -152,7 +152,7 @@ class _DetailContent extends StatelessWidget {
         _InfoRow(
           label: "在庫メモ",
           value: menu.missingMaterials.isEmpty
-              ? (menu.isStockAvailable ? "在庫良好" : "-")
+              ? (menu.isStockAvailable ? "適切" : "-")
               : menu.missingMaterials.join(", "),
         ),
         if (detail.maxServings != null) _InfoRow(label: "最大提供可能数", value: "${detail.maxServings}"),

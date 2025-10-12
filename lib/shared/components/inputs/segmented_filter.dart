@@ -104,7 +104,7 @@ class _SegmentChip extends StatelessWidget {
         curve: Curves.easeOut,
         padding: EdgeInsets.symmetric(
           horizontal: compact ? YataSpacingTokens.sm : YataSpacingTokens.md,
-          vertical: compact ? YataSpacingTokens.xxs : YataSpacingTokens.xs,
+          vertical: YataSpacingTokens.xs,
         ),
         decoration: BoxDecoration(
           color: backgroundColor,

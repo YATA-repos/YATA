@@ -10,6 +10,7 @@ import "../../../auth/services/auth_service.dart";
 import "../../../menu/models/menu_model.dart";
 import "../../../menu/services/menu_service.dart";
 import "../../../shared/logging/ui_action_logger.dart";
+import "../../../settings/services/settings_service.dart";
 import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../services/cart/cart_management_service.dart";

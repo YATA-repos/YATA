@@ -1043,7 +1043,9 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
         continue;
       }
       final MenuAvailabilityInfo? info = availability[id];
-      final String categoryName = _categoryIndex[item.categoryId]?.name ?? "未分類";
+      final MenuCategory? category = _categoryIndex[item.categoryId];
+      final String categoryName = category?.name ?? "未分類";
+      final String? categoryCode = _normalizeNullableText(category?.code);
       result.add(
         MenuItemViewData(
           id: id,
@@ -1053,6 +1055,7 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
           isStockAvailable: info?.isAvailable ?? item.isAvailable,
           categoryId: item.categoryId,
           categoryName: categoryName,
+          categoryCode: categoryCode,
           displayOrder: item.displayOrder,
           hasRecipe: recipePresence[id] ?? false,
           missingMaterials: info == null
@@ -1062,6 +1065,12 @@ class MenuManagementController extends StateNotifier<MenuManagementState> {
           imageUrl: item.imageUrl,
           updatedAt: item.updatedAt ?? item.createdAt,
           estimatedServings: info?.estimatedServings,
+          searchIndex: MenuItemViewData.composeSearchIndex(
+            name: item.name,
+            categoryName: categoryName,
+            categoryCode: categoryCode,
+            description: item.description,
+          ),
         ),
       );
     }

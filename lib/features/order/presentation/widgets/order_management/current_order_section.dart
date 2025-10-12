@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:intl/intl.dart";
 
 import "../../../../../core/constants/enums.dart";
 import "../../../../../shared/components/inputs/quantity_stepper.dart";
@@ -36,6 +37,7 @@ class CurrentOrderSection extends StatefulWidget {
 }
 
 class _CurrentOrderSectionState extends State<CurrentOrderSection> {
+  static final NumberFormat _taxRateFormat = NumberFormat("0.##", "ja");
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _itemKeys = <String, GlobalKey>{};
   late final TextEditingController _notesController;
@@ -85,10 +87,17 @@ class _CurrentOrderSectionState extends State<CurrentOrderSection> {
     }
   }
 
+  String _buildTaxLabel(double taxRate) {
+    final double percentage = taxRate * 100;
+    final String formattedRate = _taxRateFormat.format(percentage);
+    return "消費税 ($formattedRate%)";
+  }
+
   @override
   Widget build(BuildContext context) {
     final OrderManagementState state = widget.state;
     final TextTheme textTheme = Theme.of(context).textTheme;
+    final String taxLabel = _buildTaxLabel(state.taxRate);
 
     return SizedBox.expand(
       child: YataSectionCard(
@@ -250,7 +259,7 @@ class _CurrentOrderSectionState extends State<CurrentOrderSection> {
             ),
             const SizedBox(height: YataSpacingTokens.xs),
             SummaryRow(
-              label: "消費税 (10%)",
+              label: taxLabel,
               value: state.formatPrice(state.tax),
               textTheme: textTheme,
             ),

@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:mocktail/mocktail.dart";
@@ -8,19 +10,32 @@ import "package:yata/core/logging/logger_binding.dart";
 import "package:yata/features/order/dto/order_dto.dart";
 import "package:yata/features/order/models/order_model.dart";
 import "package:yata/features/order/services/order/order_calculation_service.dart";
+import "package:yata/features/settings/domain/app_settings.dart";
+import "package:yata/features/settings/services/settings_service.dart";
 
 import "../../../support/logging/fake_logger.dart";
 import "../../../support/logging/log_expectations.dart";
 
 class _MockOrderItemRepository extends Mock implements OrderItemRepositoryContract<OrderItem> {}
 
+class _MockSettingsService extends Mock implements SettingsService {}
+
 void main() {
   late FakeLogger logger;
   late _MockOrderItemRepository repository;
+  late _MockSettingsService settingsService;
+  late AppSettings initialSettings;
 
   setUp(() {
     logger = FakeLogger();
     repository = _MockOrderItemRepository();
+    settingsService = _MockSettingsService();
+    initialSettings = AppSettings.defaults();
+
+    when(() => settingsService.current).thenReturn(initialSettings);
+    when(
+      () => settingsService.watch(),
+    ).thenAnswer((_) => Stream<AppSettings>.value(initialSettings));
   });
 
   test("calculateOrderTotal logs summary with debug level", () async {
@@ -46,17 +61,19 @@ void main() {
           return logger;
         }),
         orderItemRepositoryProvider.overrideWithValue(repository),
+        settingsServiceProvider.overrideWithValue(settingsService),
       ],
     );
     addTearDown(container.dispose);
 
     final OrderCalculationService service = container.read(orderCalculationServiceProvider);
+    expect(service.taxRate, moreOrLessEquals(initialSettings.taxRate, epsilon: 1e-4));
 
     final OrderCalculationResult result = await service.calculateOrderTotal(orderId);
 
     expect(result.subtotal, 3200);
-    expect(result.taxAmount, 256);
-    expect(result.totalAmount, 3456);
+    expect(result.taxAmount, 320);
+    expect(result.totalAmount, 3520);
 
     final CapturedLog summaryLog = await expectLog(
       logger,
@@ -83,6 +100,7 @@ void main() {
           return logger;
         }),
         orderItemRepositoryProvider.overrideWithValue(repository),
+        settingsServiceProvider.overrideWithValue(settingsService),
       ],
     );
     addTearDown(container.dispose);
@@ -100,5 +118,50 @@ void main() {
     );
 
     expect(errorLog.stackTrace, isNotNull);
+  });
+
+  test("orderCalculationServiceProvider updates tax rate when settings change", () async {
+    final StreamController<AppSettings> controller = StreamController<AppSettings>.broadcast();
+    when(() => settingsService.watch()).thenAnswer((_) => controller.stream);
+
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        loggerProvider.overrideWith((Ref ref) {
+          LoggerBinding.register(logger);
+          ref.onDispose(LoggerBinding.clear);
+          return logger;
+        }),
+        orderItemRepositoryProvider.overrideWithValue(repository),
+        settingsServiceProvider.overrideWithValue(settingsService),
+      ],
+    );
+    addTearDown(() async {
+      await controller.close();
+      container.dispose();
+    });
+
+    final OrderCalculationService service = container.read(orderCalculationServiceProvider);
+    expect(service.taxRate, closeTo(initialSettings.taxRate, 0.0001));
+
+    final AppSettings updated = initialSettings.copyWith(taxRate: 0.05);
+    controller.add(updated);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(service.taxRate, moreOrLessEquals(0.05, epsilon: 1e-4));
+  });
+
+  test("setBaseTaxRate clamps negatives to zero", () {
+    final OrderCalculationService service = OrderCalculationService(
+      logger: logger,
+      orderItemRepository: repository,
+    );
+    final void Function(double) setRate = service.setBaseTaxRate;
+
+    setRate(-0.25);
+    expect(service.taxRate, 0);
+    expect(service.calculateTaxAmount(1000), 0);
+
+    setRate(0.2);
+    expect(service.taxRate, moreOrLessEquals(0.2, epsilon: 1e-4));
   });
 }
