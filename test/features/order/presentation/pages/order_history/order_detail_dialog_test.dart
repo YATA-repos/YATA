@@ -13,7 +13,6 @@ OrderHistoryViewData _buildSampleOrder() => OrderHistoryViewData(
   discountAmount: 100,
   paymentMethod: PaymentMethod.cash,
   orderedAt: DateTime(2025, 10, 9, 12, 30),
-  completedAt: null,
   notes: "辛め",
   items: const <OrderItemViewData>[
     OrderItemViewData(
