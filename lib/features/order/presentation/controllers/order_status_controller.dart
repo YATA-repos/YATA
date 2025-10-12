@@ -6,9 +6,11 @@ import "../../../../app/wiring/provider.dart";
 import "../../../../core/constants/enums.dart";
 import "../../../../core/utils/error_handler.dart";
 import "../../../auth/presentation/providers/auth_providers.dart";
+import "../../../menu/models/menu_model.dart";
 import "../../models/order_model.dart";
 import "../../services/order/order_management_service.dart";
 import "../../shared/order_status_presentation.dart";
+import "../view_data/order_history_view_data.dart";
 
 /// 注文状況ページで表示する注文のビューモデル。
 class OrderStatusOrderViewData {
@@ -58,6 +60,8 @@ class OrderStatusState {
     required List<OrderStatusOrderViewData> cancelledOrders,
     this.isLoading = false,
     this.errorMessage,
+    this.selectedOrder,
+    this.isDetailLoading = false,
     Set<String>? updatingOrderIds,
   }) : inProgressOrders = List<OrderStatusOrderViewData>.unmodifiable(inProgressOrders),
        completedOrders = List<OrderStatusOrderViewData>.unmodifiable(completedOrders),
@@ -87,6 +91,12 @@ class OrderStatusState {
   /// エラーメッセージ。
   final String? errorMessage;
 
+  /// モーダル表示中の注文詳細。
+  final OrderHistoryViewData? selectedOrder;
+
+  /// 詳細取得のローディング状態。
+  final bool isDetailLoading;
+
   /// 更新中の注文ID集合。
   final Set<String> updatingOrderIds;
 
@@ -99,12 +109,17 @@ class OrderStatusState {
     String? errorMessage,
     Set<String>? updatingOrderIds,
     bool clearErrorMessage = false,
+    OrderHistoryViewData? selectedOrder,
+    bool clearSelectedOrder = false,
+    bool? isDetailLoading,
   }) => OrderStatusState(
     inProgressOrders: inProgressOrders ?? this.inProgressOrders,
     completedOrders: completedOrders ?? this.completedOrders,
     cancelledOrders: cancelledOrders ?? this.cancelledOrders,
     isLoading: isLoading ?? this.isLoading,
     errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+    selectedOrder: clearSelectedOrder ? null : (selectedOrder ?? this.selectedOrder),
+    isDetailLoading: isDetailLoading ?? this.isDetailLoading,
     updatingOrderIds: updatingOrderIds ?? this.updatingOrderIds,
   );
 }
@@ -134,11 +149,8 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     }
 
     try {
-    final Map<OrderStatus, List<Order>> grouped =
-      await _orderManagementService.getOrdersByStatuses(
-        OrderStatusPresentation.displayOrder,
-        userId,
-      );
+      final Map<OrderStatus, List<Order>> grouped = await _orderManagementService
+          .getOrdersByStatuses(OrderStatusPresentation.displayOrder, userId);
 
       state = state.copyWith(
         inProgressOrders: _mapOrders(grouped[OrderStatus.inProgress] ?? const <Order>[]),
@@ -146,10 +158,12 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
         cancelledOrders: _mapOrders(grouped[OrderStatus.cancelled] ?? const <Order>[]),
         isLoading: showLoadingIndicator ? false : state.isLoading,
         clearErrorMessage: true,
+        clearSelectedOrder: true,
+        isDetailLoading: false,
       );
     } catch (error) {
       final String message = ErrorHandler.instance.handleError(error);
-      state = state.copyWith(isLoading: false, errorMessage: message);
+      state = state.copyWith(isLoading: false, errorMessage: message, isDetailLoading: false);
     }
   }
 
@@ -166,7 +180,7 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
 
     try {
-  await _orderManagementService.updateOrderStatus(orderId, OrderStatus.completed, userId);
+      await _orderManagementService.updateOrderStatus(orderId, OrderStatus.completed, userId);
       final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
       await loadOrders(showLoadingIndicator: false);
       state = state.copyWith(updatingOrderIds: updatedSet);
@@ -192,8 +206,11 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
     state = state.copyWith(updatingOrderIds: nextUpdating, clearErrorMessage: true);
 
     try {
-    final (_, bool didUpdate) =
-      await _orderManagementService.cancelOrder(orderId, reason, userId);
+      final (_, bool didUpdate) = await _orderManagementService.cancelOrder(
+        orderId,
+        reason,
+        userId,
+      );
       final Set<String> updatedSet = <String>{...state.updatingOrderIds}..remove(orderId);
       await loadOrders(showLoadingIndicator: false);
       state = state.copyWith(updatingOrderIds: updatedSet);
@@ -209,6 +226,99 @@ class OrderStatusController extends StateNotifier<OrderStatusState> {
       state = state.copyWith(errorMessage: message, updatingOrderIds: updatedSet);
       return message;
     }
+  }
+
+  /// 注文詳細を読み込んでモーダル表示用に保持する。
+  Future<String?> loadOrderDetail(String orderId) async {
+    final String? userId = _ensureUserId();
+    if (userId == null) {
+      return "ユーザー情報を取得できませんでした。再度ログインしてください。";
+    }
+
+    if (state.isDetailLoading && state.selectedOrder?.id == orderId) {
+      return null;
+    }
+
+    state = state.copyWith(isDetailLoading: true, clearErrorMessage: true);
+
+    try {
+      final OrderHistoryViewData? detail = await _fetchOrderDetail(orderId, userId);
+      if (detail == null) {
+        state = state.copyWith(isDetailLoading: false);
+        return "注文詳細を取得できませんでした";
+      }
+
+      state = state.copyWith(
+        selectedOrder: detail,
+        isDetailLoading: false,
+        clearErrorMessage: true,
+      );
+      return null;
+    } catch (error) {
+      final String message = ErrorHandler.instance.handleError(error);
+      state = state.copyWith(isDetailLoading: false);
+      return message;
+    }
+  }
+
+  /// 注文詳細モーダルを閉じる。
+  void clearSelectedOrder() {
+    state = state.copyWith(clearSelectedOrder: true, isDetailLoading: false);
+  }
+
+  Future<OrderHistoryViewData?> _fetchOrderDetail(String orderId, String userId) async {
+    final Map<String, dynamic>? data = await _orderManagementService.getOrderWithItems(
+      orderId,
+      userId,
+    );
+    if (data == null) {
+      return null;
+    }
+
+    final Order? order = data["order"] as Order?;
+    if (order == null || order.id == null) {
+      return null;
+    }
+
+    final List<Map<String, dynamic>> rawItems = (data["items"] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final List<OrderItemViewData> items = _mapOrderItems(rawItems);
+
+    return OrderHistoryViewData(
+      id: order.id!,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      customerName: order.customerName,
+      totalAmount: order.totalAmount,
+      discountAmount: order.discountAmount,
+      paymentMethod: order.paymentMethod,
+      orderedAt: order.orderedAt,
+      items: items,
+      notes: order.notes,
+      completedAt: order.completedAt,
+    );
+  }
+
+  List<OrderItemViewData> _mapOrderItems(List<Map<String, dynamic>> rawItems) {
+    final List<OrderItemViewData> items = <OrderItemViewData>[];
+    for (final Map<String, dynamic> entry in rawItems) {
+      final OrderItem orderItem = entry["order_item"] as OrderItem;
+      final MenuItem? menuItem = entry["menu_item"] as MenuItem?;
+      final String menuName = menuItem?.name ?? orderItem.menuItemId;
+      items.add(
+        OrderItemViewData(
+          menuItemId: orderItem.menuItemId,
+          menuItemName: menuName,
+          quantity: orderItem.quantity,
+          unitPrice: orderItem.unitPrice,
+          subtotal: orderItem.subtotal,
+          selectedOptions: orderItem.selectedOptions,
+          specialRequest: orderItem.specialRequest,
+        ),
+      );
+    }
+
+    return items;
   }
 
   /// ユーザーIDを取得する。

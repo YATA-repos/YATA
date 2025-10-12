@@ -18,6 +18,8 @@ import "../../../../shared/patterns/navigation/app_top_bar.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 import "../../shared/order_status_presentation.dart";
 import "../controllers/order_status_controller.dart";
+import "../view_data/order_history_view_data.dart";
+import "../widgets/order_detail_dialog.dart";
 
 /// 注文状況更新ページ。
 class OrderStatusPage extends ConsumerStatefulWidget {
@@ -36,6 +38,14 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
   final NumberFormat _currencyFormat = NumberFormat("#,###");
   final DateFormat _timeFormat = DateFormat("HH:mm");
   final DateFormat _dateTimeFormat = DateFormat("yyyy/MM/dd HH:mm");
+  OverlayEntry? _orderDetailOverlayEntry;
+  OrderHistoryViewData? _currentOverlayOrder;
+
+  @override
+  void dispose() {
+    _removeOrderDetailOverlay();
+    super.dispose();
+  }
 
   @override
   bool get shouldRefreshOnPush => false;
@@ -116,6 +126,12 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
   Widget build(BuildContext context) {
     final OrderStatusState state = ref.watch(orderStatusControllerProvider);
     final OrderStatusController controller = ref.read(orderStatusControllerProvider.notifier);
+    final OrderHistoryViewData? selectedOrder = state.selectedOrder;
+    if (selectedOrder != null && _currentOverlayOrder?.id != selectedOrder.id) {
+      _showOrderDetailOverlay(selectedOrder, controller);
+    } else if (selectedOrder == null && _currentOverlayOrder != null) {
+      _removeOrderDetailOverlay();
+    }
     final Map<OrderStatus, List<OrderStatusOrderViewData>> sections =
         <OrderStatus, List<OrderStatusOrderViewData>>{
           OrderStatus.inProgress: state.inProgressOrders,
@@ -253,6 +269,18 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
                             context,
                           ).showSnackBar(SnackBar(content: Text(message)));
                         },
+                        onOpenDetail: (OrderStatusOrderViewData order) async {
+                          final String? error = await controller.loadOrderDetail(order.id);
+                          if (!context.mounted) {
+                            return;
+                          }
+                          if (error != null) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(error)));
+                          }
+                        },
+                        isDetailLoading: state.isDetailLoading,
                       ),
                     ),
                     _OrderStatusSection(
@@ -264,6 +292,18 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
                         currencyFormat: _currencyFormat,
                         timeFormat: _timeFormat,
                         dateTimeFormat: _dateTimeFormat,
+                        onOpenDetail: (OrderStatusOrderViewData order) async {
+                          final String? error = await controller.loadOrderDetail(order.id);
+                          if (!context.mounted) {
+                            return;
+                          }
+                          if (error != null) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(error)));
+                          }
+                        },
+                        isDetailLoading: state.isDetailLoading,
                       ),
                     ),
                     _OrderStatusSection(
@@ -274,6 +314,18 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
                             sections[OrderStatus.cancelled] ?? const <OrderStatusOrderViewData>[],
                         currencyFormat: _currencyFormat,
                         timeFormat: _timeFormat,
+                        onOpenDetail: (OrderStatusOrderViewData order) async {
+                          final String? error = await controller.loadOrderDetail(order.id);
+                          if (!context.mounted) {
+                            return;
+                          }
+                          if (error != null) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(SnackBar(content: Text(error)));
+                          }
+                        },
+                        isDetailLoading: state.isDetailLoading,
                       ),
                     ),
                   ];
@@ -311,6 +363,44 @@ class _OrderStatusPageState extends ConsumerState<OrderStatusPage>
       ),
     );
   }
+
+  void _showOrderDetailOverlay(OrderHistoryViewData order, OrderStatusController controller) {
+    if (!mounted) {
+      return;
+    }
+
+    if (_currentOverlayOrder?.id == order.id && _orderDetailOverlayEntry != null) {
+      return;
+    }
+
+    _orderDetailOverlayEntry?.remove();
+    _orderDetailOverlayEntry = null;
+    _currentOverlayOrder = order;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _currentOverlayOrder?.id != order.id) {
+        return;
+      }
+
+      final OverlayState? overlayState = Overlay.maybeOf(context, rootOverlay: true);
+      if (overlayState == null) {
+        return;
+      }
+
+      _orderDetailOverlayEntry = OverlayEntry(
+        builder: (BuildContext context) =>
+            createOrderDetailDialog(order: order, onClose: controller.clearSelectedOrder),
+      );
+
+      overlayState.insert(_orderDetailOverlayEntry!);
+    });
+  }
+
+  void _removeOrderDetailOverlay() {
+    _currentOverlayOrder = null;
+    _orderDetailOverlayEntry?.remove();
+    _orderDetailOverlayEntry = null;
+  }
 }
 
 class _OrderStatusSection extends StatelessWidget {
@@ -334,6 +424,8 @@ class _InProgressOrderList extends StatelessWidget {
     required this.timeFormat,
     required this.onMarkCompleted,
     required this.onCancelOrder,
+    required this.onOpenDetail,
+    required this.isDetailLoading,
   });
 
   final List<OrderStatusOrderViewData> orders;
@@ -343,6 +435,8 @@ class _InProgressOrderList extends StatelessWidget {
   final DateFormat timeFormat;
   final Future<void> Function(OrderStatusOrderViewData order) onMarkCompleted;
   final Future<void> Function(OrderStatusOrderViewData order) onCancelOrder;
+  final void Function(OrderStatusOrderViewData order) onOpenDetail;
+  final bool isDetailLoading;
   @override
   Widget build(BuildContext context) {
     if (orders.isEmpty) {
@@ -357,84 +451,103 @@ class _InProgressOrderList extends StatelessWidget {
         final OrderStatusOrderViewData order = orders[index];
         final bool isUpdating = updatingOrderIds.contains(order.id) || isBusy;
         final TextTheme textTheme = Theme.of(context).textTheme;
+        final bool disableDetailTap = isDetailLoading || isUpdating;
 
-        return Container(
-          padding: const EdgeInsets.all(YataSpacingTokens.md),
-          decoration: BoxDecoration(
-            color: YataColorTokens.surfaceAlt,
-            borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-            border: Border.all(color: YataColorTokens.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
+        return MouseRegion(
+          cursor: disableDetailTap ? SystemMouseCursors.basic : SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.all(YataSpacingTokens.md),
+            decoration: BoxDecoration(
+              color: YataColorTokens.surfaceAlt,
+              borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+              border: Border.all(color: YataColorTokens.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: disableDetailTap ? null : () => onOpenDetail(order),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  order.orderNumber ?? "受付コード未設定",
+                                  style:
+                                      textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ) ??
+                                      YataTypographyTokens.titleMedium,
+                                ),
+                                const SizedBox(height: YataSpacingTokens.xs),
+                                Text(
+                                  "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
+                                  style:
+                                      textTheme.bodySmall?.copyWith(
+                                        color: YataColorTokens.textSecondary,
+                                      ) ??
+                                      YataTypographyTokens.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: YataSpacingTokens.sm),
+                          Text(
+                            "¥${currencyFormat.format(order.totalAmount)}",
+                            style:
+                                textTheme.titleMedium?.copyWith(
+                                  color: YataColorTokens.textPrimary,
+                                ) ??
+                                YataTypographyTokens.titleMedium,
+                          ),
+                        ],
+                      ),
+                      if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: YataSpacingTokens.sm),
                         Text(
-                          order.orderNumber ?? "受付コード未設定",
-                          style:
-                              textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
-                              YataTypographyTokens.titleMedium,
-                        ),
-                        const SizedBox(height: YataSpacingTokens.xs),
-                        Text(
-                          "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
+                          order.notes!,
                           style:
                               textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
                               YataTypographyTokens.bodySmall,
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: YataSpacingTokens.sm),
-                  Text(
-                    "¥${currencyFormat.format(order.totalAmount)}",
-                    style:
-                        textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
-                        YataTypographyTokens.titleMedium,
+                ),
+                const SizedBox(height: YataSpacingTokens.md),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: YataSpacingTokens.sm,
+                    runSpacing: YataSpacingTokens.xs,
+                    children: <Widget>[
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text("キャンセル"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: YataColorTokens.danger,
+                          side: const BorderSide(color: YataColorTokens.danger),
+                        ),
+                        onPressed: isUpdating ? null : () => onCancelOrder(order),
+                      ),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text("完了にする"),
+                        onPressed: isUpdating ? null : () => onMarkCompleted(order),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
-                const SizedBox(height: YataSpacingTokens.sm),
-                Text(
-                  order.notes!,
-                  style:
-                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
-                      YataTypographyTokens.bodySmall,
                 ),
               ],
-              const SizedBox(height: YataSpacingTokens.md),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: YataSpacingTokens.sm,
-                  runSpacing: YataSpacingTokens.xs,
-                  children: <Widget>[
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.cancel_outlined),
-                      label: const Text("キャンセル"),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: YataColorTokens.danger,
-                        side: const BorderSide(color: YataColorTokens.danger),
-                      ),
-                      onPressed: isUpdating ? null : () => onCancelOrder(order),
-                    ),
-                    FilledButton.icon(
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text("完了にする"),
-                      onPressed: isUpdating ? null : () => onMarkCompleted(order),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -448,12 +561,16 @@ class _CompletedOrderList extends StatelessWidget {
     required this.currencyFormat,
     required this.timeFormat,
     required this.dateTimeFormat,
+    required this.onOpenDetail,
+    required this.isDetailLoading,
   });
 
   final List<OrderStatusOrderViewData> orders;
   final NumberFormat currencyFormat;
   final DateFormat timeFormat;
   final DateFormat dateTimeFormat;
+  final void Function(OrderStatusOrderViewData order) onOpenDetail;
+  final bool isDetailLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -469,60 +586,67 @@ class _CompletedOrderList extends StatelessWidget {
         final OrderStatusOrderViewData order = orders[index];
         final TextTheme textTheme = Theme.of(context).textTheme;
 
-        return Container(
-          padding: const EdgeInsets.all(YataSpacingTokens.md),
-          decoration: BoxDecoration(
-            color: YataColorTokens.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-            border: Border.all(color: YataColorTokens.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
+        return MouseRegion(
+          cursor: isDetailLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: isDetailLoading ? null : () => onOpenDetail(order),
+            child: Container(
+              padding: const EdgeInsets.all(YataSpacingTokens.md),
+              decoration: BoxDecoration(
+                color: YataColorTokens.surface,
+                borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+                border: Border.all(color: YataColorTokens.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      order.orderNumber ?? "受付コード未設定",
-                      style:
-                          textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
-                          YataTypographyTokens.titleMedium,
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          order.orderNumber ?? "受付コード未設定",
+                          style:
+                              textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
+                              YataTypographyTokens.titleMedium,
+                        ),
+                      ),
+                      Text(
+                        "¥${currencyFormat.format(order.totalAmount)}",
+                        style:
+                            textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
+                            YataTypographyTokens.titleMedium,
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: YataSpacingTokens.xs),
                   Text(
-                    "¥${currencyFormat.format(order.totalAmount)}",
+                    "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
                     style:
-                        textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
-                        YataTypographyTokens.titleMedium,
+                        textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                        YataTypographyTokens.bodySmall,
                   ),
+                  if (order.completedAt != null) ...<Widget>[
+                    const SizedBox(height: YataSpacingTokens.xs),
+                    Text(
+                      "提供完了: ${dateTimeFormat.format(order.completedAt!)}",
+                      style:
+                          textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                          YataTypographyTokens.bodySmall,
+                    ),
+                  ],
+                  if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: YataSpacingTokens.sm),
+                    Text(
+                      order.notes!,
+                      style:
+                          textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                          YataTypographyTokens.bodySmall,
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: YataSpacingTokens.xs),
-              Text(
-                "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
-                style:
-                    textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
-                    YataTypographyTokens.bodySmall,
-              ),
-              if (order.completedAt != null) ...<Widget>[
-                const SizedBox(height: YataSpacingTokens.xs),
-                Text(
-                  "提供完了: ${dateTimeFormat.format(order.completedAt!)}",
-                  style:
-                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
-                      YataTypographyTokens.bodySmall,
-                ),
-              ],
-              if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
-                const SizedBox(height: YataSpacingTokens.sm),
-                Text(
-                  order.notes!,
-                  style:
-                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
-                      YataTypographyTokens.bodySmall,
-                ),
-              ],
-            ],
+            ),
           ),
         );
       },
@@ -535,11 +659,15 @@ class _CancelledOrderList extends StatelessWidget {
     required this.orders,
     required this.currencyFormat,
     required this.timeFormat,
+    required this.onOpenDetail,
+    required this.isDetailLoading,
   });
 
   final List<OrderStatusOrderViewData> orders;
   final NumberFormat currencyFormat;
   final DateFormat timeFormat;
+  final void Function(OrderStatusOrderViewData order) onOpenDetail;
+  final bool isDetailLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -555,51 +683,58 @@ class _CancelledOrderList extends StatelessWidget {
         final OrderStatusOrderViewData order = orders[index];
         final TextTheme textTheme = Theme.of(context).textTheme;
 
-        return Container(
-          padding: const EdgeInsets.all(YataSpacingTokens.md),
-          decoration: BoxDecoration(
-            color: YataColorTokens.surfaceAlt,
-            borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-            border: Border.all(color: YataColorTokens.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
+        return MouseRegion(
+          cursor: isDetailLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: isDetailLoading ? null : () => onOpenDetail(order),
+            child: Container(
+              padding: const EdgeInsets.all(YataSpacingTokens.md),
+              decoration: BoxDecoration(
+                color: YataColorTokens.surfaceAlt,
+                borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
+                border: Border.all(color: YataColorTokens.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      order.orderNumber ?? "受付コード未設定",
-                      style:
-                          textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
-                          YataTypographyTokens.titleMedium,
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          order.orderNumber ?? "受付コード未設定",
+                          style:
+                              textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
+                              YataTypographyTokens.titleMedium,
+                        ),
+                      ),
+                      Text(
+                        "¥${currencyFormat.format(order.totalAmount)}",
+                        style:
+                            textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
+                            YataTypographyTokens.titleMedium,
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: YataSpacingTokens.xs),
                   Text(
-                    "¥${currencyFormat.format(order.totalAmount)}",
+                    "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
                     style:
-                        textTheme.titleMedium?.copyWith(color: YataColorTokens.textPrimary) ??
-                        YataTypographyTokens.titleMedium,
+                        textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                        YataTypographyTokens.bodySmall,
                   ),
+                  if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: YataSpacingTokens.sm),
+                    Text(
+                      order.notes!,
+                      style:
+                          textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
+                          YataTypographyTokens.bodySmall,
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: YataSpacingTokens.xs),
-              Text(
-                "${order.customerName ?? "名前なし"} ・ ${timeFormat.format(order.orderedAt)}",
-                style:
-                    textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
-                    YataTypographyTokens.bodySmall,
-              ),
-              if (order.notes != null && order.notes!.isNotEmpty) ...<Widget>[
-                const SizedBox(height: YataSpacingTokens.sm),
-                Text(
-                  order.notes!,
-                  style:
-                      textTheme.bodySmall?.copyWith(color: YataColorTokens.textSecondary) ??
-                      YataTypographyTokens.bodySmall,
-                ),
-              ],
-            ],
+            ),
           ),
         );
       },
