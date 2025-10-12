@@ -60,7 +60,7 @@
 4. テーブル横スクロールと列幅バランスを確認し、数量ステッパー列が狭くならないよう `flex` や `SizedBox` を調整。
 
 ### WS-B: ステータス/バッジ整備
-1. 現行 `_StatusChip` を `YataStatusBadge` ベースにリファクタし、在庫ステータス (`在庫不足`, `在庫良好`, `確認中` など) を `MenuItemTable` の配色ポリシーに合わせる。
+1. 現行 `_StatusChip` を `YataStatusBadge` ベースにリファクタし、在庫ステータス (`在庫不足`, `適切`, `確認中` など) を `MenuItemTable` の配色ポリシーに合わせる。
 2. バッジ列を `Wrap(spacing: YataSpacingTokens.sm)` で表示し、複数バッジが折り返す際の高さが 68px 内に収まるよう検証。
 3. 在庫ステータスを算出するロジックを `InventoryRowViewData.statusBadges` に集約し、UI 側は ViewData のみ描画する形へ変更。
 4. 既存の Snackbar ベースエラーを、必要に応じて行内バッジ（危険色）や行下メッセージへ移行。

@@ -51,13 +51,13 @@
 ### WS-A: 在庫ヘッダー再構成
 1. `MenuManagementHeader` の構造を参考に、在庫専用の `InventoryManagementHeader` コンポーネントを新設。
    - 入力: `InventoryManagementState`, `TextEditingController`, コールバック（検索・ステータス・追加・再取得）。
-   - 出力: OverviewStatCards（総在庫 / 適正 / 要注意 / 緊急補充）、SegmentedFilter、検索フィールド、`再取得`・`在庫を追加` ボタンを直列配置。
+   - 出力: OverviewStatCards（総在庫 / 適正 / 注意 / 危険）、SegmentedFilter、検索フィールド、`再取得`・`在庫を追加` ボタンを直列配置。
 2. `_HeaderStats` と `_ControlsRow` を削除 or 代替し、`InventoryManagementPage` から新コンポーネントを呼び出す。
 3. メニュー側同様に `LayoutBuilder` で 720px ブレークポイントを使い、狭幅時は縦並びに切り替える。
 4. LinearProgressIndicator/エラーバナーがヘッダーと干渉しないよう、余白を統一（SpacingTokens）。
 
 ### WS-B: ステータスフィルター統一
-1. `YataSegmentedFilter` を使用し、セグメントを `全て / 適正 / 要注意 / 緊急補充` に定義。
+1. `YataSegmentedFilter` を使用し、セグメントを `全て / 適正 / 注意 / 危険` に定義。
 2. `InventoryManagementState.selectedStatusFilter` を `StockStatusFilter` enum (null を含めず enum 値 4 件) にリネーム検討、または `state.selectedStatusFilter` を Segment index で扱えるよう `StockStatus?` → `InventoryStatusFilter` に移行。
 3. コントローラに `updateStatusFilter(InventoryStatusFilter filter)` を追加し、既存 `toggleStatusFilter` 呼び出し箇所を置き換え。
 4. セマティクス・トークバック対応（MenuHeader 同様の `Semantics` ラッパー）を追加。
