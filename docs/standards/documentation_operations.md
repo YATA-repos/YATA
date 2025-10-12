@@ -1,18 +1,18 @@
-# Documentation Operations Standards
+*# Documentation Operations Standards
 
 Status: Proposed — pending rollout of automation phases.
 
-## 🎯 Purpose
+## Purpose
 - `docs/draft/` と `docs/plan/` を中心に、ドキュメント種別ごとの役割と運用境界を明確化する。
 - 昇格・更新・廃止フローとレビュープロセスを標準化し、全メンバーが同じ基準で扱えるようにする。
 - Front-matter スキーマ、テンプレート、CI を連携させ、ドキュメント品質と可観測性を高める。
 
-## 📚 Scope
+## Scope
 - 対象: `docs/draft/`, `docs/plan/`, およびそれらと連携する `intent/`, `survey/`, `guide/`, `reference/`。
 - 適用範囲: ドキュメント作成・レビュー・承認・保守・自動化。
 - 非対象: アプリケーションコードや API の実装規約（別 standards を参照）。
 
-## 🧭 Directory Roles
+## Directory Roles
 | パス | 目的 | 主な利用者 | 備考 |
 | --- | --- | --- | --- |
 | `docs/draft/` | アイデア、検討メモ、仮説、代替案等の一時保管 | 設計者・実装者・調査担当 | TTL管理（既定30日）。決定事項はここに残さない。 |
@@ -21,7 +21,7 @@ Status: Proposed — pending rollout of automation phases.
 | `docs/survey/` | 調査・検証レポート | 調査担当・意思決定者 | plan/intent から根拠として参照。 |
 | `docs/guide/` / `docs/reference/` | 実装済み機能の運用ガイド・リファレンス | 全メンバー | plan の結果を反映。議論や検討は含めない。 |
 
-## 🔁 Lifecycle & Promotion Rules
+## Lifecycle & Promotion Rules
 1. **基本フロー**: `draft → (survey) → plan → intent → guide/reference`
 2. **draft 運用**
    - `state`（`idea | exploring | paused`）で進行状況を明示。
@@ -39,7 +39,7 @@ Status: Proposed — pending rollout of automation phases.
    - リスク分析と `rollback` 戦略が用意されている。
    - 関連 Issue / PR が front-matter で紐付いている。
 
-## 🧾 Front-matter Schema
+## Front-matter Schema
 ### 共通必須フィールド
 | キー | 説明 |
 | --- | --- |
@@ -81,7 +81,7 @@ Status: Proposed — pending rollout of automation phases.
 | `owners` | 実装・レビュー責任者 |
 | `supersedes` / `superseded_by` | 旧/新 plan との関係（任意） |
 
-## ✅ Review & Approval Workflow
+## Review & Approval Workflow
 1. **PR テンプレート**
    - draft: 目的 / 仮説 / 期限 / 担当のチェックリストを記入。
    - plan: 昇格ゲート項目を全て Yes/No で確認。
@@ -93,7 +93,7 @@ Status: Proposed — pending rollout of automation phases.
    - plan 作成/更新時は GitHub Issues に Epic を作成 or 紐付け、front-matter の `related_issues` と相互リンク。
    - 更新内容が意志決定を伴う場合は `docs/intent/` に ADR を追加し、plan から参照。
 
-## ⚙️ Automation Roadmap
+## Automation Roadmap
 | フェーズ | 対応範囲 | 成果物 |
 | --- | --- | --- |
 | Phase 0 | 指針合意とテンプレート草案共有 | 本 standards / plan 承認、Epic 登録 |
@@ -101,12 +101,12 @@ Status: Proposed — pending rollout of automation phases.
 | Phase 2 | lint + link-check を CI へ導入 | `markdownlint-cli2`, `lycheeverse/lychee` を GitHub Actions で実行 |
 | Phase 3 | Front-matter 検証 + stale draft Bot | JSON Schema 検証 & `ttl_days` 超過通知の自動化 |
 
-## 📊 Observability & Metrics
+## Observability & Metrics
 - CI 成功率と平均実行時間を週次でレビュー。閾値超過時は改善Issueを起票。
 - stale draft Bot の Issue 数 / 平均対応時間を月次で集計し、TTL の妥当性を評価。
 - plan 更新時は `updated` を必須更新、`intent/` との差分を確認する。
 
-## ⚠️ Risk Management
+## Risk Management
 | リスク | 影響 | 対応策 |
 | --- | --- | --- |
 | テンプレート変更による負荷増 | 変更作業が停滞 | ガイド付きチュートリアルとサンプル提供。初回はサポートレビューを実施。 |
@@ -114,12 +114,12 @@ Status: Proposed — pending rollout of automation phases.
 | Front-matter 移行の失敗 | 旧planとの互換性問題 | 移行期間は警告モード。30日間は旧フォーマットを許容。 |
 | stale Bot の過検知 | 不要なチケット増加 | 初期 TTL は60日に設定し、実データを基に調整。 |
 
-## 🔐 Compliance Rules
+## Compliance Rules
 - ドキュメントに秘密情報・個人情報を含めない。環境値は `.env.example` を参照。
 - CI ログ出力にはマスク設定を適用し、機密情報が残らないようにする。
 - 公開資料として扱える品質を前提に、OSS 化を想定した文言に統一する。
 
-## 📝 Maintenance Checklist
+## Maintenance Checklist
 - [ ] `docs/_templates/` に draft / plan テンプレートを追加し、最新スキーマを反映。
 - [ ] PR テンプレートのチェックリストを更新し、CODEOWNERS へ告知。
 - [ ] lint + link-check 用 GitHub Actions を導入し、しきい値を監視。
@@ -128,3 +128,4 @@ Status: Proposed — pending rollout of automation phases.
 
 ---
 本 standards は `documentation_operations_policy` Plan を具現化するための実務規約であり、Plan の更新に応じて本書も改訂する。変更時は `Status` と `updated` 日付を必ず更新すること。
+*
