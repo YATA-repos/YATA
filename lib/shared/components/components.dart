@@ -1,11 +1,11 @@
 export "buttons/icon_button.dart";
 export "category/category_panel.dart";
 export "data_display/data_table.dart";
-export "data_display/table_specs.dart";
 export "data_display/key_value_row.dart";
 export "data_display/progress_bar.dart";
 export "data_display/stat_card.dart";
 export "data_display/status_badge.dart";
+export "data_display/table_specs.dart";
 export "data_display/tag.dart";
 export "inputs/quantity_stepper.dart";
 export "inputs/search_field.dart";

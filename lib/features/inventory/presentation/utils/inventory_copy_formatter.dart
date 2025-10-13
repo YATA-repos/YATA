@@ -1,5 +1,5 @@
-import "../controllers/inventory_management_controller.dart";
 import "../../../../shared/utils/unit_config.dart";
+import "../controllers/inventory_management_controller.dart";
 
 /// 在庫関連のコピー文言を生成するヘルパー。
 class InventoryCopyFormatter {
