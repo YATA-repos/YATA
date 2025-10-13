@@ -31,45 +31,6 @@ Definitions to suppress Markdown warnings
   3. `lib/features/order/presentation/controllers/order_management_controller.dart` など既存利用箇所のインポートと実装を更新し、旧 `features/shared/logging` を撤去した上で動作確認とテストを実施する。
 - **Description**: 現状は `features/shared/logging/ui_action_logger.dart` が infra 層のユーティリティへ直接アクセスしており、`docs/standards/architecture.md` のレイヤー制約に反している。UI 向けログ集約の責務を適切なレイヤーへ移し、将来の機能追加時に同様の逸脱が発生しないよう整理する。
 
-### [Refactor] PaymentMethod ラベルヘルパーを列挙型へ統合する
-- **ID**: Core-Refactor-28
-- **Priority**: P2
-- **Size**: S
-- **Area**: Core
-- **Dependencies**: None
-- **Goal**: `PaymentMethod` 列挙体が日本語表示ラベルを提供し、`features/shared/utils/payment_method_label.dart` への依存が解消されている。
-- **Steps**:
-  1. `lib/core/constants/enums.dart` の既存 `displayName` 実装パターンに合わせ、`PaymentMethod` 向けの表示ロジック追加案と影響範囲を整理する。
-  2. 列挙体または拡張に表示ラベルを実装し、`lib/features/order/presentation/widgets/order_payment_method_selector.dart` や `lib/features/order/presentation/pages/order_history_page.dart` などの呼び出し箇所を新 API へ置き換える。
-  3. 旧ヘルパーの削除とユニットテスト追加を行い、ラベル表示が期待通りであることを確認する。
-- **Description**: `features/shared/utils/payment_method_label.dart` は `core/constants/enums.dart` に既にある `displayName` パターンと重複しており、shared ディレクトリの責務とも整合しない。列挙型へ表示責務を統合し、`features/shared` 配下のユーティリティを整理することでレイヤー設計を明確化する。
-
-### [Enhancement] CSVエクスポート画面のUIモックを作成する
-- **ID**: UI/UX-Enhancement-20
-- **Priority**: P1
-- **Size**: M
-- **Area**: UI/UX
-- **Dependencies**: Core-Enhancement-19
-- **Goal**: エクスポート設定画面のUIモックが作成され、デザインレビューで承認される。
-- **Steps**:
-  1. フィルタ・進捗表示・完了通知を含むワイヤーフレームを作成する。
-  2. デザインレビューを実施し、フィードバックを反映する。
-  3. 最終モックとUXノートを`docs/plan/2025-10-02-csv-export-implementation-plan.md`へ追記する。
-- **Description**: Flutter実装前にUI/UXを固め、Phase 1での画面開発を円滑に進める。
-
-### [Feature] Supabase RPCプロトタイプで売上明細CSVを生成する
-- **ID**: Core-Feature-21
-- **Priority**: P1
-- **Size**: M
-- **Area**: Core
-- **Dependencies**: Core-Enhancement-19
-- **Goal**: `fn_export_csv` プロトタイプが構築され、売上明細CSVを指定期間で出力できることを確認する。
-- **Steps**:
-  1. モックデータ環境で必要なビュー・サンプルデータを準備する。
-  2. Supabase RPCを実装し、期間・店舗パラメータでCSV文字列を返す。
-  3. 出力フォーマットと性能を検証し、改善点を記録する。
-- **Description**: Phase 1の実装に向けて、Supabase側のエクスポート基盤を技術検証する。
-
 ### [Chore] セキュリティ・権限レビューを実施する
 - **ID**: DevOps-Chore-22
 - **Priority**: P1
@@ -82,84 +43,6 @@ Definitions to suppress Markdown warnings
   2. Security WGとのレビューセッションを実施し、フィードバックを収集する。
   3. 反映内容とフォローアップタスクをドキュメント化しTODOに登録する。
 - **Description**: データ抽出機能のリリース前にセキュリティ観点の確認を行い、運用リスクを抑える。
-
-### [Enhancement] 在庫管理画面をmockベースで再設計するか検討
-- **ID**: Inventory-Enhancement-2
-- **Priority**: P2
-- **Size**: L
-- **Area**: Inventory
-- **Dependencies**: None
-- **Goal**: モックと現行UIの差分が整理され、再設計方針と後続タスクがドキュメント化されている。
-- **Steps**:
-  1. 現行画面とモックUIを比較し差分・課題を洗い出す。
-  2. 改善事項を優先度と影響範囲ごとに整理する。
-  3. 再設計方針と必要タスクをドキュメントにまとめる。
-- **Description**: モックの方が完成度が高い現状を解消するため、再設計の方針を決定し後続開発を進められる状態にする。
-
-### [Enhancement] 在庫管理ページのUIを新フォーマットへ刷新
-- **ID**: Inventory-Enhancement-25
-- **Priority**: P2
-- **Size**: L
-- **Area**: Inventory
-- **Dependencies**: Menu-Enhancement-4
-- **Goal**: メニュー管理画面の刷新方針を踏襲したUIが在庫管理ページに実装され、主要フローで新デザインが機能する。
-- **Steps**:
-  1. メニュー管理画面刷新後のコンポーネント構成とスタイルガイドを分析し、在庫管理ページへの適用方針を策定する。
-  2. 在庫管理ページのUI構造を再設計し、必要なコンポーネントやサービス連携の改修範囲を確定する。
-  3. 再設計内容を実装し、在庫検索・編集など主要操作でUI/UXが改善されていることを確認する。
-- **Description**: メニュー管理画面で整備した新UI/UXを在庫管理にも適用し、全体の体験を統一する。
-
-### [Enhancement] メニュー管理画面のUI整理方針を検討する
-- **ID**: Menu-Enhancement-4
-- **Priority**: P2
-- **Size**: M
-- **Area**: Menu
-- **Dependencies**: None
-- **Goal**: メニュー管理画面の問題点と改善指針を整理したドキュメントが用意され、具体的な改修タスクを切り出せる。
-- **Steps**:
-  1. 現行画面の情報量・導線・UIコンポーネントを棚卸しする。
-  2. 課題をカテゴリ分けし優先度と対応策を検討する。
-  3. 整理結果と推奨アクションをまとめたドキュメントを作成する。
-- **Description**: メニュー管理画面がごちゃついているため、改善方針を整理し次の実装につなげる準備を行う。
-
-### [Feature] メニュー追加モーダルでレシピ依存を設定可能にする
-- **ID**: Menu-Feature-1
-- **Priority**: P1
-- **Size**: M
-- **Area**: Menu
-- **Dependencies**: Documentation-Documentation-9
-- **Goal**: メニュー追加モーダルから材料依存（レシピ）を定義・保存でき、必要分の在庫計算に反映される。
-- **Steps**:
-  1. メニューとレシピのデータモデル／バリデーション要件を整理し、モーダルで扱う項目を決定する。
-  2. モーダルUIにレシピ選択・追加インターフェースを実装し、材料・数量の編集を可能にする。
-  3. 保存処理とテストを更新し、登録・編集フローでレシピ依存情報が正しく扱われることを確認する。
-- **Description**: 現在のモーダルでは材料依存を設定できず、メニューと在庫の紐付けが管理できない課題を解消する。
-
-### [Feature] 注文状況カードから詳細を開くフロー整備
-- **ID**: UI/UX-Feature-23
-- **Priority**: P2
-- **Size**: M
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: 注文状況ページで注文カードをクリックすると定義した挙動（ページ内モーダルまたは履歴遷移）で詳細が確認できる。
-- **Steps**:
-  1. 現行のカードタップ時挙動とユーザーフィードバックを調査し、期待値を整理する。
-  2. モーダル表示と履歴ページ遷移の選択肢を比較検討し、関係者合意のもと仕様を確定させる。
-  3. 決定した仕様に沿ってUIロジックを実装し、PC・モバイル双方で表示・操作を確認する。
-- **Description**: 注文状況ページで詳細にアクセスする導線が不明確なため、カード操作で即座に詳細情報を確認できるフローを整備する。
-
-### [Enhancement] PC表示時にレイアウト幅を最適化する
-- **ID**: UI/UX-Enhancement-5
-- **Priority**: P2
-- **Size**: S
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: PCフルスクリーン表示で利用可能領域が適切に広がり、空白が減って見やすいレイアウトになる。
-- **Steps**:
-  1. 現行のブレークポイント設定とレイアウト挙動を確認する。
-  2. 望ましいレイアウト幅とコンポーネント配置を設計する。
-  3. レスポンシブ設定を調整し、主要解像度で表示を確認する。
-- **Description**: PC全画面に近い表示で余白が大きく非効率なため、ブレークポイントやレイアウトを調整して広い画面を活かす。
 
 ### [Feature] Realtime 監視対象を主要画面へ拡張する
 - **ID**: Core-Feature-8
@@ -187,19 +70,6 @@ Definitions to suppress Markdown warnings
   3. デザインを実装し、ユーザビリティを確認する。
 - **Description**: 注文状態画面の進行方向が分かりづらい。視覚的な導線を強化し操作性を高める。
 
-### [Bugfix] 注文履歴モーダルの挙動を他画面と統一
-- **ID**: UI/UX-Bugfix-26
-- **Priority**: P2
-- **Size**: S
-- **Area**: UI/UX
-- **Dependencies**: UI/UX-Enhancement-14
-- **Goal**: 注文履歴ページの詳細モーダルが背景クリックで閉じられ、表示中は上部ナビゲーションが他ページ同様にグレーアウトする。
-- **Steps**:
-  1. 現行の注文履歴モーダル実装を確認し、他ページとの挙動差分を特定する。
-  2. オーバーレイクリックのハンドリングとナビゲーションの非活性化を適用し、スタイル差異を吸収する。
-  3. PC・モバイルでモーダル表示とクローズ挙動が他ページと一致することを確認する。
-- **Description**: 注文履歴ページだけモーダル挙動が異なり操作性が低下しているため、既存の標準挙動に合わせて修正する。
-
 ---
 
 ## Ready
@@ -216,19 +86,6 @@ Definitions to suppress Markdown warnings
   2. Page側・Router側いずれに定義を寄せるか方針を決定し、共通化手段を設計する。
   3. 既存コードを方針に沿ってリファクタリングし、画面遷移が従来通り動作することを検証する。
 - **Description**: ルーティング定義が分散・重複しているため、保守性を高めるべくパス定義の統一と命名整理を行う。
-
-### [Chore] 在庫管理画面の適用ボタンアイコンを削除する
-- **ID**: UI/UX-Chore-17
-- **Priority**: P3
-- **Size**: XS
-- **Area**: UI/UX
-- **Dependencies**: None
-- **Goal**: 在庫管理画面の適用ボタンからアイコンが取り除かれ、テキストのみで表示される。
-- **Steps**:
-  1. 対象ボタンのコンポーネントを特定する。
-  2. アイコンウィジェットの記述を削除し、スタイルを調整する。
-  3. ボタン表示が崩れないことを確認する。
-- **Description**: 適用ボタンのアイコンが不要で視覚的ノイズになっているため、テキストのみの表示にする。
 
 ---
 
