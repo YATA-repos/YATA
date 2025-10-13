@@ -228,7 +228,7 @@ void main() {
       unit: "個",
       alertThreshold: 2,
       criticalThreshold: 1,
-      updatedAt: DateTime(2025, 10, 1),
+      updatedAt: DateTime(2025, 10),
       updatedBy: "user-1",
       searchIndex: InventoryItemViewData.composeSearchIndex(
         name: "鶏肉",

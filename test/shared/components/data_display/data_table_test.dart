@@ -45,8 +45,8 @@ void main() {
               Wrap(
                 spacing: 4,
                 children: const <Widget>[
-                  Chip(label: const Text("警告")),
-                  Chip(label: const Text("処理中")),
+                  Chip(label: Text("警告")),
+                  Chip(label: Text("処理中")),
                 ],
               ),
             ),
@@ -116,7 +116,7 @@ void main() {
               labelStyle: const TextStyle(fontWeight: FontWeight.w600),
             ),
             YataTableCellSpec.text(label: "メイン"),
-            YataTableCellSpec.badges(badges: const <Widget>[Chip(label: const Text("警告"))]),
+            YataTableCellSpec.badges(badges: const <Widget>[Chip(label: Text("警告"))]),
           ],
         ),
       ];

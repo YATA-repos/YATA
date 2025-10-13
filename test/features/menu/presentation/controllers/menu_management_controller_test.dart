@@ -261,8 +261,7 @@ void main() {
         hasRecipe: true,
         missingMaterials: const <String>[],
         description: "定番",
-        imageUrl: null,
-        updatedAt: DateTime(2025, 10, 1),
+        updatedAt: DateTime(2025, 10),
         estimatedServings: 8,
         searchIndex: MenuItemViewData.composeSearchIndex(
           name: "醤油ラーメン",
@@ -284,8 +283,7 @@ void main() {
         hasRecipe: true,
         missingMaterials: const <String>[],
         description: "季節限定",
-        imageUrl: null,
-        updatedAt: DateTime(2025, 10, 1),
+        updatedAt: DateTime(2025, 10),
         estimatedServings: 6,
         searchIndex: MenuItemViewData.composeSearchIndex(
           name: "いちごパフェ",
@@ -321,15 +319,12 @@ void main() {
         displayOrder: 1,
         hasRecipe: false,
         missingMaterials: const <String>[],
-        description: null,
-        imageUrl: null,
-        updatedAt: DateTime(2025, 10, 1),
+        updatedAt: DateTime(2025, 10),
         estimatedServings: 20,
         searchIndex: MenuItemViewData.composeSearchIndex(
           name: "コーラ",
           categoryName: "ドリンク",
           categoryCode: "DRK",
-          description: null,
         ),
       );
       final MenuItemViewData tea = MenuItemViewData(
@@ -344,15 +339,12 @@ void main() {
         displayOrder: 2,
         hasRecipe: false,
         missingMaterials: const <String>[],
-        description: null,
-        imageUrl: null,
-        updatedAt: DateTime(2025, 10, 1),
+        updatedAt: DateTime(2025, 10),
         estimatedServings: 18,
         searchIndex: MenuItemViewData.composeSearchIndex(
           name: "紅茶",
           categoryName: "ドリンク",
           categoryCode: "DRK",
-          description: null,
         ),
       );
       final MenuItemViewData salad = MenuItemViewData(
@@ -367,15 +359,12 @@ void main() {
         displayOrder: 3,
         hasRecipe: true,
         missingMaterials: const <String>[],
-        description: null,
-        imageUrl: null,
-        updatedAt: DateTime(2025, 10, 1),
+        updatedAt: DateTime(2025, 10),
         estimatedServings: 10,
         searchIndex: MenuItemViewData.composeSearchIndex(
           name: "コブサラダ",
           categoryName: "サラダ",
           categoryCode: "SLD",
-          description: null,
         ),
       );
 
