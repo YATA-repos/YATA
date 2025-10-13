@@ -853,7 +853,7 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     final DateTime localUpdatedAt = item.updatedAt.toLocal();
     final String updatedAtLabel = _rowDateFormat.format(localUpdatedAt);
     final String updatedTooltip =
-        "最終更新: ${_rowTooltipFormat.format(localUpdatedAt)} / by ${item.updatedBy}";
+        "最終更新: ${_rowTooltipFormat.format(localUpdatedAt)}";
 
     final bool hasPendingDelta = pendingDelta != 0;
     final bool canApplyByRule = hasPendingDelta && canApply(item.id);
