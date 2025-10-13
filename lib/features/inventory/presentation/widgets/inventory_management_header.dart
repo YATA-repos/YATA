@@ -39,12 +39,6 @@ class InventoryManagementHeader extends StatelessWidget {
 
     final List<OverviewStatData> overviewStats = <OverviewStatData>[
       OverviewStatData(
-        title: "総在庫アイテム",
-        value: "${state.totalItems}",
-        indicatorColor: YataColorTokens.primary,
-        indicatorLabel: "登録済み在庫アイテムの総数",
-      ),
-      OverviewStatData(
         title: "適切",
         value: "$adequateSafe",
         indicatorColor: YataColorTokens.success,

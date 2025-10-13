@@ -47,12 +47,6 @@ class MenuManagementHeader extends StatelessWidget {
         indicatorColor: YataColorTokens.success,
         indicatorLabel: "現在提供できるメニューの数",
       ),
-      OverviewStatData(
-        title: "登録メニュー",
-        value: "${state.totalMenuCount}",
-        indicatorColor: YataColorTokens.info,
-        indicatorLabel: "登録済みメニューの総数",
-      ),
     ];
 
     final List<YataFilterSegment> segments = <YataFilterSegment>[
