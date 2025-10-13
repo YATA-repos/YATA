@@ -5,7 +5,6 @@ import "package:flutter/foundation.dart";
 import "../../../../core/validation/env_validator.dart";
 import "../../../../infra/config/runtime_overrides.dart";
 import "../../../../infra/logging/context_utils.dart" as log_ctx;
-import "../../../../infra/logging/log_level.dart" as log_level;
 import "../../../../infra/logging/logger.dart" as log;
 
 typedef TraceCallback<T> = T Function();
@@ -43,7 +42,8 @@ class OrderManagementTracer {
   static bool get isEnabled {
     final bool enabled = _computeIsEnabled();
     if (_lastLoggerEnabled == null) {
-      _applyLoggerTagLevel(enabled);
+      // 以前に設定されたタグレベルをクリア
+      log.clearTagLevel(_logTag);
     }
     return enabled;
   }
@@ -266,17 +266,12 @@ class OrderManagementTracer {
     if (_lastLoggerEnabled == enabled) {
       return;
     }
-    _applyLoggerTagLevel(enabled);
-  }
-
-  static void _applyLoggerTagLevel(bool enabled) {
-    if (enabled) {
-      log.setTagLevel(_logTag, log_level.LogLevel.debug);
-    } else {
-      log.clearTagLevel(_logTag);
-    }
+    // タグレベルをクリアしてグローバルレベルに従う
+    log.clearTagLevel(_logTag);
     _lastLoggerEnabled = enabled;
   }
+
+
 
   static int get _effectiveSampleModulo {
     int? runtime = _runtimeSampleModulo;
