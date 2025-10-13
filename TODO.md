@@ -16,6 +16,8 @@ Definitions to suppress Markdown warnings
 
 ## あとでタスク定義
 
+- 注文履歴ページの検索フィールドにおいて、支払い方法で検索をかけられるようにする。
+
 ## Backlog
 
 ### [Refactor] features/shared/logging をアーキテクチャ整合に再配置する
