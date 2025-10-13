@@ -7,6 +7,7 @@ import "package:go_router/go_router.dart";
 import "../../../../app/wiring/provider.dart" show settingsServiceProvider;
 import "../../../../infra/logging/log_level.dart";
 import "../../../../shared/components/buttons/icon_button.dart";
+import "../../../../shared/components/components.dart";
 import "../../../../shared/components/layout/page_container.dart";
 import "../../../../shared/components/layout/section_card.dart";
 import "../../../../shared/foundations/tokens/color_tokens.dart";
@@ -432,23 +433,27 @@ class _TaxSection extends StatelessWidget {
             spacing: YataSpacingTokens.sm,
             runSpacing: YataSpacingTokens.sm,
             children: <Widget>[
-              ChoiceChip(
-                label: const Text("8%"),
-                selected: isPresetEight,
-                onSelected: status.isLoading
-                    ? null
-                    : (_) {
-                        controller.applyPresetTaxRate(8);
-                      },
-              ),
-              ChoiceChip(
-                label: const Text("10%"),
-                selected: isPresetTen,
-                onSelected: status.isLoading
-                    ? null
-                    : (_) {
-                        controller.applyPresetTaxRate(10);
-                      },
+              YataSegmentedFilter(
+                segments: const <YataFilterSegment>[
+                  YataFilterSegment(label: "0%"),
+                  YataFilterSegment(label: "8%"),
+                  YataFilterSegment(label: "10%"),
+                ],
+                selectedIndex: isPresetEight
+                    ? 1
+                    : isPresetTen
+                        ? 2
+                        : 0,
+                onSegmentSelected: (int index) {
+                  if (index == 0) {
+                    controller.applyPresetTaxRate(0);
+                  } else if (index == 1) {
+                    controller.applyPresetTaxRate(8);
+                  } else if (index == 2) {
+                    controller.applyPresetTaxRate(10);
+                  }
+                },
+                compact: true,
               ),
             ],
           ),
