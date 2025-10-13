@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 
 import "../../components/inputs/quantity_stepper.dart";
 import "../../foundations/tokens/color_tokens.dart";
+import "../../foundations/tokens/elevetion_token.dart";
 import "../../foundations/tokens/radius_tokens.dart";
 import "../../foundations/tokens/spacing_tokens.dart";
 import "../../foundations/tokens/typography_tokens.dart";
@@ -79,7 +80,12 @@ class YataMenuItemTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
-            border: Border.all(color: borderColor, width: isSelected ? 1.4 : 1),
+            border: Border.all(
+              // color: isSelected ? borderColor : YataColorTokens.selectionSoft,
+              color: borderColor,
+              width: isSelected ? 1.4 : 1
+            ),
+            boxShadow: YataElevationTokens.level2,
           ),
           child: Row(
             children: <Widget>[
@@ -145,5 +151,3 @@ class _AddButton extends StatelessWidget {
     );
   }
 }
-
-/// 数量ステッパー。

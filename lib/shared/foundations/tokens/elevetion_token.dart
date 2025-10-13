@@ -4,6 +4,8 @@ import "package:flutter/material.dart";
 class YataElevationTokens {
   const YataElevationTokens._();
 
+  // TODO: level2を基準として、他のレベルを作成し直す。それか、デザイン的shadowとレイアウト的shadowを分ける。(level2はレイアウト的と言える。)
+
   /// フラットな状態。影なし。
   static const List<BoxShadow> level0 = <BoxShadow>[BoxShadow(color: Colors.transparent)];
 
@@ -12,18 +14,22 @@ class YataElevationTokens {
     BoxShadow(color: Color(0x1411182A), blurRadius: 12, offset: Offset(0, 3), spreadRadius: -1),
   ];
 
-  /// ホバーカードやモーダルヘッダーに使用。
   static const List<BoxShadow> level2 = <BoxShadow>[
+    BoxShadow(color: Color(0x1E11182A), blurRadius: 6, offset: Offset(1.2, 2), spreadRadius: -0.21),
+  ];
+
+  /// ホバーカードやモーダルヘッダーに使用。
+  static const List<BoxShadow> level3 = <BoxShadow>[
     BoxShadow(color: Color(0x1A11182A), blurRadius: 18, offset: Offset(0, 6), spreadRadius: -1),
   ];
 
   /// 浮き上がり感を強調する影。
-  static const List<BoxShadow> level3 = <BoxShadow>[
+  static const List<BoxShadow> level4 = <BoxShadow>[
     BoxShadow(color: Color(0x2611182A), blurRadius: 28, offset: Offset(0, 12), spreadRadius: -2),
   ];
 
   /// ダイアログやオーバーレイで使用する強い影。
-  static const List<BoxShadow> level4 = <BoxShadow>[
+  static const List<BoxShadow> level5 = <BoxShadow>[
     BoxShadow(color: Color(0x3311182A), blurRadius: 36, offset: Offset(0, 18), spreadRadius: -4),
   ];
 }
