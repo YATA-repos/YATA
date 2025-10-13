@@ -2,7 +2,6 @@ import "package:flutter/material.dart";
 
 import "../../../../shared/components/category/category_panel.dart";
 import "../../../../shared/components/data_display/status_badge.dart";
-import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../controllers/menu_management_state.dart";
 
 /// メニューカテゴリ一覧を表示するパネル。
@@ -53,8 +52,6 @@ class MenuCategoryPanel extends StatelessWidget {
 
   CategoryPanelItem<MenuCategoryViewData> _mapToItem(MenuCategoryViewData category) {
     final bool isAll = category.isAll;
-    final String availableLabel = "提供可能 ${category.availableItems}件";
-    final String attentionLabel = "要確認 ${category.attentionItems}件";
 
     return CategoryPanelItem<MenuCategoryViewData>(
       payload: category,
@@ -65,18 +62,6 @@ class MenuCategoryPanel extends StatelessWidget {
         label: "登録 ${category.totalItems}件",
         type: YataStatusBadgeType.info,
       ),
-      metrics: <CategoryPanelMetricData>[
-        CategoryPanelMetricData(
-          icon: Icons.check_circle_outline,
-          iconColor: YataColorTokens.success,
-          label: availableLabel,
-        ),
-        CategoryPanelMetricData(
-          icon: Icons.report_gmailerrorred_outlined,
-          iconColor: YataColorTokens.warning,
-          label: attentionLabel,
-        ),
-      ],
     );
   }
 }

@@ -2,7 +2,6 @@ import "package:flutter/material.dart";
 
 import "../../../../shared/components/category/category_panel.dart";
 import "../../../../shared/components/data_display/status_badge.dart";
-import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../models/inventory_model.dart";
 import "../controllers/inventory_management_controller.dart";
 
@@ -29,7 +28,6 @@ class InventoryCategoryPanel extends StatelessWidget {
     final String? selectedId = _resolveSelectedId(state);
 
     return CategoryPanel<InventoryCategoryPanelData>(
-      subtitle: "在庫アイテムをカテゴリ別に管理",
       items: summaries.map(_toItem).toList(growable: false),
       selectedId: selectedId,
       onSelect: (String? id) => onCategorySelected(_resolveIndex(id, state.categories)),
@@ -42,9 +40,6 @@ class InventoryCategoryPanel extends StatelessWidget {
 
   CategoryPanelItem<InventoryCategoryPanelData> _toItem(InventoryCategoryPanelData summary) {
     final String totalLabel = "登録 ${summary.total}件";
-    final String adequateLabel = "適切 ${summary.adequate}件";
-    final String lowLabel = "注意 ${summary.low}件";
-    final String criticalLabel = "危険 ${summary.critical}件";
 
     final bool actionsEnabled =
         summary.categoryId != null && (onEditCategory != null || onDeleteCategory != null);
@@ -55,23 +50,6 @@ class InventoryCategoryPanel extends StatelessWidget {
       name: summary.name,
       isAll: summary.index == 0,
       headerBadge: CategoryPanelBadgeData(label: totalLabel, type: YataStatusBadgeType.info),
-      metrics: <CategoryPanelMetricData>[
-        CategoryPanelMetricData(
-          icon: Icons.check_circle_outline,
-          iconColor: YataColorTokens.success,
-          label: adequateLabel,
-        ),
-        CategoryPanelMetricData(
-          icon: Icons.error_outline,
-          iconColor: YataColorTokens.warning,
-          label: lowLabel,
-        ),
-        CategoryPanelMetricData(
-          icon: Icons.warning_amber_outlined,
-          iconColor: YataColorTokens.danger,
-          label: criticalLabel,
-        ),
-      ],
       enableActions: actionsEnabled,
     );
   }
