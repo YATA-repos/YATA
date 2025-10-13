@@ -48,7 +48,7 @@ class YataColorTokens {
   /// ニュートラルカラースケール (ライト → ダーク)。
   static const Color neutral0 = Color(0xFFFFFFFF);
   static const Color neutral50 = Color(0xFFF8FAFC);
-  static const Color neutral100 = Color(0xFFF1F5F9);
+  static const Color neutral100 = Color(0xFFF2F6FA);
   static const Color neutral200 = Color(0xFFE2E8F0);
   static const Color neutral300 = Color(0xFFCBD5E1);
   static const Color neutral400 = Color(0xFF94A3B8);
@@ -63,6 +63,9 @@ class YataColorTokens {
 
   /// 一般的なカード/シートの表面色。
   static const Color surface = neutral0;
+
+  /// カード/シートに入れ子構造にする際のセカンダリ表面色。
+  static const Color surfaceContainer = neutral50;
 
   /// 強調カードなどで使用するセカンダリ表面色。
   static const Color surfaceAlt = neutral100;

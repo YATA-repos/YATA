@@ -458,7 +458,7 @@ class _InProgressOrderList extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(YataSpacingTokens.md),
             decoration: BoxDecoration(
-              color: YataColorTokens.surfaceAlt,
+              color: YataColorTokens.surfaceContainer,
               borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
               border: Border.all(color: YataColorTokens.border),
             ),
@@ -691,7 +691,7 @@ class _CancelledOrderList extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(YataSpacingTokens.md),
               decoration: BoxDecoration(
-                color: YataColorTokens.surfaceAlt,
+                color: YataColorTokens.surfaceContainer,
                 borderRadius: const BorderRadius.all(Radius.circular(YataRadiusTokens.medium)),
                 border: Border.all(color: YataColorTokens.border),
               ),
