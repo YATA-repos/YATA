@@ -874,6 +874,7 @@ class _InventoryTableState extends State<_InventoryTable> {
 
     final Widget summaryHeader = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         const Text("在庫情報"),
         Text(summarySortHint ?? "カテゴリ / 在庫名", style: hintStyle),
@@ -882,6 +883,7 @@ class _InventoryTableState extends State<_InventoryTable> {
 
     final Widget metricsHeader = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         const Text("在庫状況"),
         Text(metricsSortHint ?? "ステータス / 数量", style: hintStyle),
@@ -890,6 +892,7 @@ class _InventoryTableState extends State<_InventoryTable> {
 
     final Widget actionHeader = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         const Text("調整操作"),
         Text(actionSortHint ?? "ステッパー / 適用", style: hintStyle),
@@ -975,7 +978,12 @@ class _InventoryTableState extends State<_InventoryTable> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Text(row.name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      row.name,
+                      style: nameStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -1110,25 +1118,6 @@ class _InventoryTableState extends State<_InventoryTable> {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  Text(
-                    row.deltaLabel,
-                    style: (theme.textTheme.labelMedium ?? YataTypographyTokens.labelMedium)
-                        .copyWith(color: deltaColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    row.afterChangeLabel,
-                    style: (theme.textTheme.bodySmall ?? YataTypographyTokens.bodySmall).copyWith(
-                      color: YataColorTokens.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ),
             ],
           );
@@ -1332,7 +1321,6 @@ class _InventoryAttentionSection extends StatelessWidget {
 
     return YataSectionCard(
       title: "注意在庫アイテム",
-      subtitle: "優先して確認したい在庫アイテムをまとめました",
       actions: <Widget>[TextButton(onPressed: onShowAll, child: const Text("一覧で表示"))],
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
@@ -1498,7 +1486,7 @@ class _AttentionInventoryTile extends StatelessWidget {
   }
 }
 
-/// テストで `_AttentionInventoryTile` を直接生成するためのアクセサ。
+/// テストで `_AttentionInventoryTile` を直接生成するためのアクセサリ
 @visibleForTesting
 Widget buildAttentionInventoryTileForTest({
   required InventoryItemViewData item,
@@ -1546,5 +1534,3 @@ class _ErrorBanner extends StatelessWidget {
     ),
   );
 }
-
-// --- Helpers & dialogs ---
