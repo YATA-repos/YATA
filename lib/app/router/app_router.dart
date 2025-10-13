@@ -6,6 +6,7 @@ import "../../features/analytics/presentation/pages/sales_analytics_page.dart";
 import "../../features/auth/models/auth_state.dart";
 import "../../features/auth/presentation/pages/auth_page.dart";
 import "../../features/auth/presentation/providers/auth_providers.dart";
+import "../../features/export/presentation/pages/data_export_page.dart";
 import "../../features/inventory/presentation/pages/inventory_management_page.dart";
 import "../../features/menu/presentation/pages/menu_management_page.dart";
 import "../../features/order/presentation/pages/order_history_page.dart";
@@ -71,6 +72,11 @@ class AppRouter {
           path: SettingsPage.routeName,
           name: "settings",
           builder: (BuildContext context, GoRouterState state) => const SettingsPage(),
+        ),
+        GoRoute(
+          path: DataExportPage.routeName,
+          name: "settings-data-export",
+          builder: (BuildContext context, GoRouterState state) => const DataExportPage(),
         ),
       ],
       redirect: (BuildContext context, GoRouterState state) =>

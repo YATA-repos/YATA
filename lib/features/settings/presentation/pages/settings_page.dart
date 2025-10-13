@@ -13,6 +13,7 @@ import "../../../../shared/foundations/tokens/color_tokens.dart";
 import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
+import "../../../export/presentation/pages/data_export_page.dart";
 import "../../domain/app_settings.dart";
 import "../controllers/settings_controller.dart";
 
@@ -156,6 +157,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 defaultDirectoryFuture: _defaultLogDirectoryFuture,
                 onPickDirectory: () => _pickLogDirectory(controller),
               ),
+              const SizedBox(height: YataSpacingTokens.lg),
+              const _DataExportShortcut(),
             ],
           ),
         ),
@@ -172,6 +175,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
     await controller.chooseLogDirectory(directoryPath);
   }
+}
+
+class _DataExportShortcut extends StatelessWidget {
+  const _DataExportShortcut();
+
+  @override
+  Widget build(BuildContext context) => YataSectionCard(
+        title: "データエクスポート",
+        subtitle: "CSV出力の管理・履歴確認はこちら",
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.file_download_outlined),
+          title: const Text("CSVエクスポートセンターを開く"),
+          subtitle: const Text("注文・仕入・在庫など5種類のCSVを出力します"),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.go(DataExportPage.routeName),
+        ),
+      );
 }
 
 class _OverviewSection extends StatelessWidget {
