@@ -24,16 +24,8 @@ class InventoryItemViewData {
     required this.name,
     required this.categoryId,
     required this.category,
-    this.categoryCode,
-    required this.current,
-    required this.unitType,
-    required this.unit,
-    required this.alertThreshold,
-    required this.criticalThreshold,
-    required this.updatedAt,
-    required this.updatedBy,
+    required this.current, required this.unitType, required this.unit, required this.alertThreshold, required this.criticalThreshold, required this.updatedAt, required this.updatedBy, required this.searchIndex, this.categoryCode,
     this.notes,
-    required this.searchIndex,
   });
 
   final String id;
@@ -1057,7 +1049,6 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
         name: "",
         categoryId: "",
         category: "",
-        categoryCode: null,
         current: 0,
         unitType: UnitType.piece,
         unit: "",

@@ -1,6 +1,6 @@
+import "../../../../shared/search/search_utils.dart";
 import "../../dto/menu_recipe_detail.dart";
 import "../../models/menu_model.dart";
-import "../../../../shared/search/search_utils.dart";
 
 /// メニュー可用性で使用するフィルター種別。
 enum MenuAvailabilityFilter {
@@ -94,15 +94,11 @@ class MenuItemViewData {
     required this.isStockAvailable,
     required this.categoryId,
     required this.categoryName,
-    this.categoryCode,
-    required this.displayOrder,
-    required this.hasRecipe,
-    required this.missingMaterials,
+    required this.displayOrder, required this.hasRecipe, required this.missingMaterials, required this.searchIndex, this.categoryCode,
     this.description,
     this.imageUrl,
     this.updatedAt,
     this.estimatedServings,
-    required this.searchIndex,
   });
 
   /// メニューID。

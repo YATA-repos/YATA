@@ -1,6 +1,5 @@
 import "dart:async";
 
-import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
@@ -909,7 +908,6 @@ class _InventoryTableState extends State<_InventoryTable> {
         id: "metrics",
         label: metricsHeader,
         onSort: (_) => controller.cycleMetricsSort(),
-        defaultAlignment: Alignment.centerLeft,
         minWidth: 240,
         maxWidth: 280,
       ),
@@ -964,7 +962,6 @@ class _InventoryTableState extends State<_InventoryTable> {
           ].where((String text) => text.isNotEmpty).join("\n");
 
           final Widget summaryCell = Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               Expanded(
                 child: Column(
@@ -1000,11 +997,9 @@ class _InventoryTableState extends State<_InventoryTable> {
           final Widget metricsCell = Tooltip(
             message: quantityTooltip.isEmpty ? "" : quantityTooltip,
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 if (statusBadges.isNotEmpty)
                   Flexible(
-                    fit: FlexFit.loose,
                     child: Wrap(spacing: 6, runSpacing: 4, children: statusBadges),
                   ),
                 if (statusBadges.isNotEmpty) const SizedBox(width: 8),
@@ -1356,7 +1351,6 @@ class _InventoryAttentionSection extends StatelessWidget {
           return Wrap(
             spacing: horizontalSpacing,
             runSpacing: YataSpacingTokens.xs,
-            alignment: WrapAlignment.start,
             children: <Widget>[
               for (final InventoryItemViewData item in highlights)
                 SizedBox(
