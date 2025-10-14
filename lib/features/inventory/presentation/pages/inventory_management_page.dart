@@ -866,7 +866,9 @@ class _InventoryTableState extends State<_InventoryTable> {
     final ThemeData theme = Theme.of(context);
     final String? sortColumnId = _columnIdForSort(state.sortBy);
 
-    final String? summarySortHint = _summarySortHint(state.sortBy, state.sortAsc);
+  final String? summarySortHint = _summarySortHint(state.sortBy, state.sortAsc);
+  final String? nameSortHint = _nameSortHint(state.sortBy, state.sortAsc);
+  final String? memoSortHint = _memoSortHint(state.sortBy, state.sortAsc);
     final String? metricsSortHint = _metricsSortHint(state.sortBy, state.sortAsc);
     final String? actionSortHint = _actionSortHint(state.sortBy, state.sortAsc);
     final TextStyle hintStyle = (theme.textTheme.labelSmall ?? YataTypographyTokens.labelSmall)
@@ -876,8 +878,26 @@ class _InventoryTableState extends State<_InventoryTable> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        const Text("在庫情報"),
-        Text(summarySortHint ?? "カテゴリ / 在庫名", style: hintStyle),
+        const Text("カテゴリ"),
+        Text(summarySortHint ?? "カテゴリー名", style: hintStyle),
+      ],
+    );
+
+    final Widget nameHeader = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        const Text("在庫名"),
+        Text(nameSortHint ?? "アイテム名", style: hintStyle),
+      ],
+    );
+
+    final Widget memoHeader = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        const Text("メモ"),
+        Text(memoSortHint ?? "メモ有無", style: hintStyle),
       ],
     );
 
@@ -904,30 +924,43 @@ class _InventoryTableState extends State<_InventoryTable> {
         id: "summary",
         label: summaryHeader,
         onSort: (_) => controller.cycleSummarySort(),
-        minWidth: 360,
-        maxWidth: 420,
+        minWidth: 0,
+        maxWidth: 160,
+      ),
+      YataTableColumnSpec(
+        id: "name",
+        label: nameHeader,
+        onSort: (_) => controller.cycleNameSort(),
+        minWidth: 0,
+        maxWidth: 220,
+      ),
+      YataTableColumnSpec(
+        id: "memo",
+        label: memoHeader,
+        onSort: (_) => controller.cycleMemoSort(),
+        minWidth: 0,
+        maxWidth: 90,
       ),
       YataTableColumnSpec(
         id: "metrics",
         label: metricsHeader,
         onSort: (_) => controller.cycleMetricsSort(),
-        minWidth: 240,
-        maxWidth: 280,
+        minWidth: 0,
+        maxWidth: 510,
       ),
       YataTableColumnSpec(
         id: "actions",
         label: actionHeader,
         onSort: (_) => controller.cycleSort(InventorySortBy.delta),
         defaultAlignment: Alignment.centerRight,
-        minWidth: 260,
-        maxWidth: 320,
+        minWidth: 0,
+        maxWidth: 210,
       ),
     ];
 
     final List<YataTableRowSpec> rows = rowViewData
         .map((InventoryRowViewData row) {
           final bool canApplyItem = row.canApplyByRule && !row.isBusy;
-          final Color deltaColor = _deltaColorFor(row.deltaTrend);
           final InventoryRowBadgeViewData? primaryBadge = row.badges.isEmpty
               ? null
               : row.badges.first;
@@ -959,58 +992,54 @@ class _InventoryTableState extends State<_InventoryTable> {
               const YataStatusBadge(label: "処理中", type: YataStatusBadgeType.info, icon: Icons.sync),
           ];
 
+          final Widget summaryCell = Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              row.categoryName,
+              style: metaStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+
+          final Widget nameCell = Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              row.name,
+              style: nameStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+
+          final Widget memoCell = row.hasMemo
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: Tooltip(
+                    message: row.memoTooltip ?? row.memo,
+                    child: const Icon(
+                      Icons.sticky_note_2_outlined,
+                      size: 20,
+                      color: YataColorTokens.textSecondary,
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink();
+
           final String quantityTooltip = <String>[
             row.thresholdsLabel,
             row.updatedTooltip,
           ].where((String text) => text.isNotEmpty).join("\n");
 
-          final Widget summaryCell = Row(
-            children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Text(
-                      row.categoryName,
-                      style: metaStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      row.name,
-                      style: nameStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              if (row.hasMemo)
-                Padding(
-                  padding: const EdgeInsets.only(left: YataSpacingTokens.xs),
-                  child: Tooltip(
-                    message: row.memoTooltip ?? row.memo,
-                    child: const Icon(
-                      Icons.sticky_note_2_outlined,
-                      size: 18,
-                      color: YataColorTokens.textSecondary,
-                    ),
-                  ),
-                ),
-            ],
-          );
-
           final Widget metricsCell = Tooltip(
             message: quantityTooltip.isEmpty ? "" : quantityTooltip,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 if (statusBadges.isNotEmpty)
-                  Flexible(
-                    child: Wrap(spacing: 6, runSpacing: 4, children: statusBadges),
-                  ),
-                if (statusBadges.isNotEmpty) const SizedBox(width: 8),
+                  Flexible(child: Wrap(spacing: 6, runSpacing: 4, children: statusBadges)),
+                if (statusBadges.isNotEmpty)
+                  const SizedBox(width: 4),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -1049,6 +1078,7 @@ class _InventoryTableState extends State<_InventoryTable> {
                     ],
                   ),
                 ),
+                // const SizedBox(width: YataSpacingTokens.xxl),
               ],
             ),
           );
@@ -1064,62 +1094,53 @@ class _InventoryTableState extends State<_InventoryTable> {
             applyTooltip = "この行の調整を適用";
           }
 
-          final Widget actionCell = Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Align(
-                alignment: Alignment.centerRight,
-                child: FocusTraversalGroup(
-                  policy: OrderedTraversalPolicy(),
+          // 調整ステッパー・適用ボタンの列
+          final Widget actionCell = Padding(
+            padding: const EdgeInsets.symmetric(horizontal: YataSpacingTokens.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Align(
+                  alignment: Alignment.centerRight,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      FocusTraversalOrder(
-                        order: const NumericFocusOrder(0),
-                        child: IgnorePointer(
-                          ignoring: row.isBusy,
-                          child: YataQuantityStepper(
-                            value: row.pendingDelta,
-                            onChanged: (int value) =>
-                                controller.setPendingAdjustment(row.id, value),
-                            min: -9999,
-                            max: 9999,
-                            compact: true,
-                          ),
+                      // 数量ステッパー
+                      IgnorePointer(
+                        ignoring: row.isBusy,
+                        child: YataQuantityStepper(
+                          value: row.pendingDelta,
+                          onChanged: (int value) =>
+                              controller.setPendingAdjustment(row.id, value),
+                          // 手動で在庫調整の際に減ることもあるので、マイナスも許容
+                          min: -9999,
+                          max: 9999,
+                          compact: true,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      FocusTraversalOrder(
-                        order: const NumericFocusOrder(1),
-                        child: Semantics(
-                          button: true,
-                          enabled: canApplyItem,
-                          label: "${row.name} の調整を適用",
-                          child: YataIconButton(
-                            icon: Icons.save_outlined,
-                            onPressed: canApplyItem
-                                ? () => controller.applyAdjustment(row.id)
-                                : null,
-                            size: 36,
-                            backgroundColor: canApplyItem
-                                ? YataColorTokens.primary
-                                : YataColorTokens.neutral100,
-                            iconColor: canApplyItem
-                                ? YataColorTokens.neutral0
-                                : YataColorTokens.textDisabled,
-                            borderColor: canApplyItem
-                                ? Colors.transparent
-                                : YataColorTokens.neutral200,
-                            tooltip: applyTooltip,
-                          ),
-                        ),
+                      YataIconButton(
+                        icon: Icons.save_outlined,
+                        onPressed: canApplyItem
+                            ? () => controller.applyAdjustment(row.id)
+                            : null,
+                        size: 36,
+                        backgroundColor: canApplyItem
+                            ? YataColorTokens.primary
+                            : YataColorTokens.neutral100,
+                        iconColor: canApplyItem
+                            ? YataColorTokens.neutral0
+                            : YataColorTokens.textDisabled,
+                        borderColor: canApplyItem
+                            ? Colors.transparent
+                            : YataColorTokens.neutral200,
+                        tooltip: applyTooltip,
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
 
           return YataTableRowSpec(
@@ -1129,6 +1150,8 @@ class _InventoryTableState extends State<_InventoryTable> {
             backgroundColor: _rowBackgroundColor(row.status),
             cells: <YataTableCellSpec>[
               YataTableCellSpec.widget(builder: (_) => summaryCell),
+              YataTableCellSpec.widget(builder: (_) => nameCell),
+              YataTableCellSpec.widget(builder: (_) => memoCell),
               YataTableCellSpec.widget(builder: (_) => metricsCell),
               YataTableCellSpec.widget(
                 builder: (_) => actionCell,
@@ -1207,6 +1230,20 @@ class _InventoryTableState extends State<_InventoryTable> {
     return null;
   }
 
+  String? _nameSortHint(InventorySortBy sortBy, bool ascending) {
+    if (sortBy == InventorySortBy.name) {
+      return ascending ? "在庫名昇順" : "在庫名降順";
+    }
+    return null;
+  }
+
+  String? _memoSortHint(InventorySortBy sortBy, bool ascending) {
+    if (sortBy == InventorySortBy.memo) {
+      return ascending ? "メモなし→あり" : "メモあり→なし";
+    }
+    return null;
+  }
+
   String? _metricsSortHint(InventorySortBy sortBy, bool ascending) {
     switch (sortBy) {
       case InventorySortBy.state:
@@ -1262,21 +1299,14 @@ class _InventoryTableState extends State<_InventoryTable> {
     }
   }
 
-  Color _deltaColorFor(InventoryDeltaTrend trend) {
-    switch (trend) {
-      case InventoryDeltaTrend.increase:
-        return YataColorTokens.success;
-      case InventoryDeltaTrend.decrease:
-        return YataColorTokens.danger;
-      case InventoryDeltaTrend.none:
-        return YataColorTokens.textSecondary;
-    }
-  }
-
   String? _columnIdForSort(InventorySortBy sortBy) {
     switch (sortBy) {
       case InventorySortBy.category:
         return "summary";
+      case InventorySortBy.name:
+        return "name";
+      case InventorySortBy.memo:
+        return "memo";
       case InventorySortBy.state:
         return "metrics";
       case InventorySortBy.quantity:

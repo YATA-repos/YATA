@@ -226,6 +226,14 @@ class InventoryManagementState {
     final List<String> searchTokens = tokenizeSearchQuery(searchText);
     final String? category = selectedCategoryIndex == 0 ? null : categories[selectedCategoryIndex];
 
+    bool hasMemo(InventoryItemViewData data) {
+      final String? notes = data.notes;
+      if (notes == null) {
+        return false;
+      }
+      return notes.trim().isNotEmpty;
+    }
+
     List<InventoryItemViewData> list = items
         .where((InventoryItemViewData i) {
           final bool q = searchTokens.isEmpty || matchesSearchTokens(i.searchIndex, searchTokens);
@@ -243,6 +251,22 @@ class InventoryManagementState {
           (InventoryItemViewData a, InventoryItemViewData b) =>
               _compareCategoryName(a.category, b.category),
         );
+        break;
+      case InventorySortBy.name:
+        list.sort(
+          (InventoryItemViewData a, InventoryItemViewData b) =>
+              _compareItemName(a.name, b.name),
+        );
+        break;
+      case InventorySortBy.memo:
+        list.sort((InventoryItemViewData a, InventoryItemViewData b) {
+          final bool aHasMemo = hasMemo(a);
+          final bool bHasMemo = hasMemo(b);
+          if (aHasMemo == bHasMemo) {
+            return _compareItemName(a.name, b.name);
+          }
+          return aHasMemo ? 1 : -1;
+        });
         break;
       case InventorySortBy.state:
         list.sort(
@@ -782,6 +806,32 @@ class InventoryManagementController extends StateNotifier<InventoryManagementSta
     state = state.copyWith(sortBy: InventorySortBy.none);
   }
 
+  /// 在庫名列のソートサイクル。
+  void cycleNameSort() {
+    if (state.sortBy != InventorySortBy.name) {
+      state = state.copyWith(sortBy: InventorySortBy.name, sortAsc: true);
+      return;
+    }
+    if (state.sortAsc) {
+      state = state.copyWith(sortAsc: false);
+      return;
+    }
+    state = state.copyWith(sortBy: InventorySortBy.none);
+  }
+
+  /// メモ列のソートサイクル (メモ有無)。
+  void cycleMemoSort() {
+    if (state.sortBy != InventorySortBy.memo) {
+      state = state.copyWith(sortBy: InventorySortBy.memo, sortAsc: true);
+      return;
+    }
+    if (state.sortAsc) {
+      state = state.copyWith(sortAsc: false);
+      return;
+    }
+    state = state.copyWith(sortBy: InventorySortBy.none);
+  }
+
   /// ステータス/数量列のソートサイクル。
   void cycleMetricsSort() {
     const List<InventorySortBy> order = <InventorySortBy>[
@@ -1080,10 +1130,20 @@ inventoryManagementControllerProvider =
     );
 
 /// ソートキー。
-enum InventorySortBy { none, category, state, quantity, delta, updatedAt }
+enum InventorySortBy { none, category, name, memo, state, quantity, delta, updatedAt }
 
 /// カテゴリ名を比較して50音順・アルファベット順での昇順/降順ソートを実現する。
 int _compareCategoryName(String a, String b) {
+  final String left = SearchNormalizer.normalizeForSort(a);
+  final String right = SearchNormalizer.normalizeForSort(b);
+  final int primary = left.compareTo(right);
+  if (primary != 0) {
+    return primary;
+  }
+  return a.compareTo(b);
+}
+
+int _compareItemName(String a, String b) {
   final String left = SearchNormalizer.normalizeForSort(a);
   final String right = SearchNormalizer.normalizeForSort(b);
   final int primary = left.compareTo(right);
