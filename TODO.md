@@ -1,6 +1,6 @@
 # TODO
 
-Next ID No: 29
+Next ID No: 38
 
 --- 
 
@@ -14,11 +14,12 @@ Definitions to suppress Markdown warnings
 [Documentation]: #
 [Chore]: #
 
-## あとでタスク定義
+## 後でタスク定義
+- 新たに商品の"サイズ"バリエーションを追加できるようにする
+  - `./docs/draft/add_size_to_menu.md` にて要件定義・調査中。
+- realtimeを注文状況画面・在庫管理画面にも導入する。
+- 
 
-- 注文履歴ページの検索フィールドにおいて、支払い方法で検索をかけられるようにする。
-- メニュー管理画面の要確認メニュー一覧において、在庫が要注意状態になっている場合にも表示されるようにする。
-- メニュー管理画面の状態オーバービューヘッダーにおいて、新たに"提供不可"状態を新設する。
 
 ## Backlog
 
@@ -48,19 +49,6 @@ Definitions to suppress Markdown warnings
   3. 反映内容とフォローアップタスクをドキュメント化しTODOに登録する。
 - **Description**: データ抽出機能のリリース前にセキュリティ観点の確認を行い、運用リスクを抑える。
 
-### [Feature] Realtime 監視対象を主要画面へ拡張する
-- **ID**: Core-Feature-8
-- **Priority**: P2
-- **Size**: L
-- **Area**: Core
-- **Dependencies**: UI/UX-Enhancement-7
-- **Goal**: 注文・在庫・履歴等の主要データで Supabase Realtime を活用し、他端末からの更新を即座に UI へ反映できるようにする。
-- **Steps**:
-  1. 各機能で必要なチャンネル／イベント種別を定義し、既存サービス層へ監視フックを追加する。
-  2. Realtime イベントを StateNotifier へ伝搬させる共通ハンドリング（デバウンスやエラー処理を含む）を実装する。
-  3. 対象ページでの UI 反映と回帰テスト、運用ドキュメントの更新を行う。
-- **Description**: 端末間でデータが乖離しないよう Realtime を段階的に導入し、周期更新と組み合わせて鮮度を高める。
-
 ### [Enhancement] 注文状態ボードの左→右導線を強化する
 - **ID**: UI/UX-Enhancement-12
 - **Priority**: P3
@@ -74,9 +62,70 @@ Definitions to suppress Markdown warnings
   3. デザインを実装し、ユーザビリティを確認する。
 - **Description**: 注文状態画面の進行方向が分かりづらい。視覚的な導線を強化し操作性を高める。
 
----
+### [Enhancement] メニュー管理画面の要確認メニュー一覧において、在庫が要注意状態になっている場合にも表示されるようにする
+- **ID**: Menu-Enhancement-30
+- **Priority**: P2
+- **Size**: M
+- **Area**: Menu
+- **Dependencies**: None
+- **Goal**: メニュー管理画面の要確認メニュー一覧に、在庫要注意状態のメニューも表示されるようになる。
+- **Steps**:
+  1. 要確認メニューの判定ロジックを調査し、在庫要注意状態の条件を追加する。
+  2. `MenuManagementController` のフィルタリング処理を更新する。
+  3. UI表示と動作確認を行う。
+- **Description**: 現在は提供不可状態のみ表示。要注意状態も含めて事前確認を促す。
 
-## Ready
+### [Enhancement] メニュー管理画面の状態オーバービューヘッダーにおいて、新たに"提供不可"状態を新設する
+- **ID**: Menu-Enhancement-31
+- **Priority**: P2
+- **Size**: M
+- **Area**: Menu
+- **Dependencies**: None
+- **Goal**: メニュー管理画面の状態オーバービューヘッダーに"提供不可"状態が追加され、該当メニューの数が表示される。
+- **Steps**:
+  1. メニュー状態の定義に"提供不可"を追加する。
+  2. オーバービューヘッダーのUIに"提供不可"状態のバッジを追加する。
+  3. 該当メニューのカウントロジックを実装する。
+- **Description**: メニュー状態の可視性を高め、管理効率を向上させる。
+
+### [Refactor] 在庫管理画面において、spacingの値をハードコードしている箇所をYataSpacingTokensに置き換える
+- **ID**: UI/UX-Refactor-32
+- **Priority**: P2
+- **Size**: M
+- **Area**: UI/UX
+- **Dependencies**: None
+- **Goal**: 在庫管理画面のハードコードされたspacing値が全てYataSpacingTokensに置き換えられ、一貫性と保守性が向上する。
+- **Steps**:
+  1. 在庫管理画面のコードを調査し、ハードコードされたspacing値（例: `SizedBox(height: 16)`）を特定する。
+  2. 各ハードコード値を適切なYataSpacingTokens（例: `YataSpacingTokens.lg`）に置き換える。
+  3. 他の画面でも同様のハードコードがないか確認し、必要に応じて対応する。
+- **Description**: 在庫管理画面でspacingがハードコードされている箇所が多く、デザインシステムの統一が図られていない。他画面でも同様の可能性があるため、YataSpacingTokensへの移行を行う。
+
+### [Enhancement] カテゴリアイテムの"登録~件"のバッジを、より簡易的なものにする
+- **ID**: Inventory-Enhancement-33
+- **Priority**: P3
+- **Size**: S
+- **Area**: Inventory
+- **Dependencies**: None
+- **Goal**: カテゴリアイテムの登録件数バッジが簡易的なデザイン（文字またはシンプルなchip）になる。
+- **Steps**:
+  1. 現在のバッジ実装を調査する。
+  2. より簡易的なデザイン案を検討し実装する。
+  3. UI確認を行う。
+- **Description**: 現在のバッジが複雑すぎるため、シンプルな表示に変更する。
+
+### [Enhancement] 在庫管理画面のレイアウトを再構成する
+- **ID**: Inventory-Enhancement-34
+- **Priority**: P2
+- **Size**: M
+- **Area**: Inventory
+- **Dependencies**: None
+- **Goal**: 在庫管理画面のレイアウトが再構成され、検索窓とフィルターの配置が改善される。
+- **Steps**:
+  1. 現在のレイアウトを分析し、提案案（検索窓+再読み込みボタン配置、または検索窓・フィルター・追加ボタンの移動）を評価する。
+  2. 選定した案を実装する。
+  3. UIテストとユーザビリティ確認を行う。
+- **Description**: 現在のレイアウトが使いにくいため、検索とフィルターの配置を改善する。
 
 ### [Refactor] app_routerのパス定義を統一する
 - **ID**: UI/UX-Refactor-24
@@ -90,6 +139,46 @@ Definitions to suppress Markdown warnings
   2. Page側・Router側いずれに定義を寄せるか方針を決定し、共通化手段を設計する。
   3. 既存コードを方針に沿ってリファクタリングし、画面遷移が従来通り動作することを検証する。
 - **Description**: ルーティング定義が分散・重複しているため、保守性を高めるべくパス定義の統一と命名整理を行う。
+
+## Ready
+
+### [Enhancement] 在庫管理画面のテーブル、メモカラムにおいて、メモアイコンを中央にalignする
+- **ID**: Inventory-Enhancement-35
+- **Priority**: P3
+- **Size**: XS
+- **Area**: Inventory
+- **Dependencies**: None
+- **Goal**: 在庫管理テーブルのメモカラムでメモアイコンが中央揃えになる。
+- **Steps**:
+  1. メモカラムのアイコン配置を中央揃えに変更する。
+  2. UI確認を行う。
+- **Description**: メモアイコンの配置が不揃いなため、中央揃えにする。
+
+### [Enhancement] 注文履歴ページの検索フィールドにおいて、支払い方法で検索をかけられるようにする
+- **ID**: Order-Enhancement-29
+- **Priority**: P2
+- **Size**: S
+- **Area**: Order
+- **Dependencies**: None
+- **Goal**: 注文履歴ページの検索フィールドで支払い方法による検索が可能になる。
+- **Steps**:
+  1. `OrderHistoryController.filteredOrders` の検索ロジックに支払い方法のマッチングを追加する。
+  2. 検索ヒントテキストに支払い方法を追加し、ユーザーに検索可能項目を明示する。
+  3. 動作確認とテストを実施する。
+- **Description**: 現在は受付コード、顧客名、メニュー名でのみ検索可能。支払い方法（現金、カードなど）での検索を追加し、利便性を向上させる。
+
+### [Enhancement] メニュー管理画面のテーブルを、注文管理画面のようにソート可能な物にする
+- **ID**: Menu-Enhancement-37
+- **Priority**: P2
+- **Size**: M
+- **Area**: Menu
+- **Dependencies**: None
+- **Goal**: メニュー管理画面のテーブルがソート可能になり、列ヘッダークリックで並び替えができる。
+- **Steps**:
+  1. 注文管理画面のソート実装を調査する。
+  2. メニュー管理画面のテーブルにソート機能を追加する。
+  3. 動作確認を行う。
+- **Description**: メニュー管理テーブルの操作性を向上させるため、ソート機能を追加する。
 
 ---
 
