@@ -99,7 +99,7 @@ class _MenuSelectionSectionState extends State<MenuSelectionSection> {
                         ),
                       );
                     }
-
+                    // レイアウト計算
                     const double spacing = YataSpacingTokens.xl;
                     const double scrollbarThickness = 8;
                     const double scrollPad = scrollbarThickness + YataSpacingTokens.xs;
