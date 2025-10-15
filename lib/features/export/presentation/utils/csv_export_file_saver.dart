@@ -11,11 +11,7 @@ import "../../../../core/logging/levels.dart";
 
 /// CSVファイル保存処理の結果。
 class CsvFileSaveSummary {
-  const CsvFileSaveSummary({
-    required this.saved,
-    this.path,
-    this.openedShareSheet = false,
-  });
+  const CsvFileSaveSummary({required this.saved, this.path, this.openedShareSheet = false});
 
   final bool saved;
   final String? path;
@@ -63,9 +59,7 @@ class CsvExportFileSaver {
     try {
       await Share.shareXFiles(
         <XFile>[XFile(file.path, mimeType: result.contentType, name: result.fileName)],
-        text: result.encryption?.required ?? false
-            ? "暗号化ZIPのパスワードを控えてから保存してください"
-            : "CSVを保存してください",
+        text: result.encryption?.required ?? false ? "暗号化ZIPのパスワードを控えてから保存してください" : "CSVを保存してください",
       );
     } on Object catch (error, stackTrace) {
       _logger.log(
@@ -132,10 +126,7 @@ class CsvExportFileSaver {
     final FileSaveLocation? location = await getSaveLocation(
       suggestedName: result.fileName,
       acceptedTypeGroups: <XTypeGroup>[
-        XTypeGroup(
-          label: "データエクスポート",
-          extensions: <String>[result.fileName.split(".").last],
-        ),
+        XTypeGroup(label: "データエクスポート", extensions: <String>[result.fileName.split(".").last]),
       ],
     );
 
@@ -152,12 +143,7 @@ class CsvExportFileSaver {
     try {
       await exportFile.saveTo(location.path);
     } on Object catch (error, stackTrace) {
-      _logger.e(
-        "デスクトップへのファイル保存に失敗",
-        tag: "CsvExportFileSaver",
-        error: error,
-        st: stackTrace,
-      );
+      _logger.e("デスクトップへのファイル保存に失敗", tag: "CsvExportFileSaver", error: error, st: stackTrace);
       throw CsvFileSaveException("ファイルの保存に失敗しました", cause: error);
     }
 
@@ -170,12 +156,7 @@ class CsvExportFileSaver {
     try {
       await file.writeAsBytes(result.bytes, flush: true);
     } on Object catch (error, stackTrace) {
-      _logger.e(
-        "テンポラリへの保存に失敗",
-        tag: "CsvExportFileSaver",
-        error: error,
-        st: stackTrace,
-      );
+      _logger.e("テンポラリへの保存に失敗", tag: "CsvExportFileSaver", error: error, st: stackTrace);
       throw CsvFileSaveException("一時ディレクトリへの保存に失敗しました", cause: error);
     }
 

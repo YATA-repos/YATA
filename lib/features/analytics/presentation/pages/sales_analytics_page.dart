@@ -8,6 +8,7 @@ import "../../../../shared/foundations/tokens/radius_tokens.dart";
 import "../../../../shared/foundations/tokens/spacing_tokens.dart";
 import "../../../../shared/foundations/tokens/typography_tokens.dart";
 import "../../../../shared/patterns/patterns.dart";
+import "../../../export/presentation/pages/data_export_page.dart";
 import "../../../settings/presentation/pages/settings_page.dart";
 
 /// 売上分析画面のモック実装。
@@ -80,6 +81,15 @@ class SalesAnalyticsPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: YataSpacingTokens.xl),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: () => context.go(DataExportPage.routeName),
+                icon: const Icon(Icons.download_outlined),
+                label: const Text("CSVエクスポート (開発中)"),
+              ),
+            ),
+            const SizedBox(height: YataSpacingTokens.lg),
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final double maxWidth = constraints.maxWidth;
