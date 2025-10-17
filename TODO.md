@@ -18,7 +18,7 @@ Definitions to suppress Markdown warnings
 - 新たに商品の"サイズ"バリエーションを追加できるようにする
   - `./docs/draft/add_size_to_menu.md` にて要件定義・調査中。
 - realtimeを注文状況画面・在庫管理画面にも導入する。
-- 
+- メニュー・在庫カテゴリの名前について、UNIQUEにしたので、このエラーが返ってきたときに適切にUI表示、再命名の促しを行う。
 
 
 ## Backlog
