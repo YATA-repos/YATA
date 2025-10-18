@@ -232,7 +232,7 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage>
                   // 検索フィールド
                   YataSearchField(
                     controller: _searchController,
-                    hintText: "受付コード、顧客名、メニュー名で検索...",
+                    hintText: "受付コード、顧客名、メニュー名、支払い方法で検索...",
                     onChanged: controller.setSearchQuery,
                   ),
 

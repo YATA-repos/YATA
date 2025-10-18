@@ -13,6 +13,7 @@ import "../../dto/order_dto.dart";
 import "../../models/order_model.dart";
 import "../../services/order/order_management_service.dart";
 import "../../shared/order_status_mapper.dart";
+import "../../../shared/utils/payment_method_label.dart";
 import "../view_data/order_history_view_data.dart";
 
 /// 注文履歴画面の状態。
@@ -122,7 +123,13 @@ class OrderHistoryState {
         final bool matchesItemName = order.items.any(
           (OrderItemViewData item) => item.menuItemName.toLowerCase().contains(query),
         );
-        return matchesOrderNumber || matchesCustomerName || matchesItemName;
+        final bool matchesPaymentMethod =
+            paymentMethodLabel(order.paymentMethod).toLowerCase().contains(query);
+
+        return matchesOrderNumber ||
+            matchesCustomerName ||
+            matchesItemName ||
+            matchesPaymentMethod;
       }).toList();
     }
 
