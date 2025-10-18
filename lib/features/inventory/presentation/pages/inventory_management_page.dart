@@ -1014,7 +1014,6 @@ class _InventoryTableState extends State<_InventoryTable> {
 
           final Widget memoCell = row.hasMemo
               ? Align(
-                  alignment: Alignment.centerLeft,
                   child: Tooltip(
                     message: row.memoTooltip ?? row.memo,
                     child: const Icon(
