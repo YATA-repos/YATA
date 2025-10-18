@@ -1,3 +1,5 @@
+import "dart:ui" as ui;
+
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -11,9 +13,15 @@ import "infra/logging/log_runtime_config.dart";
 import "infra/logging/logger.dart";
 import "infra/supabase/supabase_client.dart";
 
+const bool _logDpiInfo = bool.fromEnvironment("LOG_DPI_INFO", defaultValue: false);
+
 void main() async {
   // flutter初期化
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (_logDpiInfo) {
+    _scheduleDisplayMetricsProbe();
+  }
 
   // ロガー初期化（クラッシュキャプチャ等）
   installCrashCapture();
@@ -115,4 +123,51 @@ void _setupErrorHandling() {
     }
     return true;
   };
+}
+
+void _scheduleDisplayMetricsProbe() {
+  final WidgetsBinding binding = WidgetsBinding.instance;
+  // TODO: remove after DPI normalization rollout completes.
+  binding.addPostFrameCallback((_) {
+    _logDisplayMetrics(binding);
+  });
+}
+
+void _logDisplayMetrics(WidgetsBinding binding) {
+  final PlatformDispatcher dispatcher = binding.platformDispatcher;
+  final ui.FlutterView? view = dispatcher.implicitView;
+
+  if (view == null) {
+    i(
+      "LOG_DPI_INFO enabled but no active view was available for metrics collection.",
+      tag: "dpi_probe",
+    );
+    return;
+  }
+
+  final ui.Size physicalSize = view.physicalSize;
+  final double devicePixelRatio = view.devicePixelRatio;
+  final ui.Size logicalSize = ui.Size(
+    physicalSize.width / devicePixelRatio,
+    physicalSize.height / devicePixelRatio,
+  );
+
+  final Map<String, Object?> metrics = <String, Object?>{
+    "platform": defaultTargetPlatform.name,
+    "devicePixelRatio": devicePixelRatio,
+    "textScaleFactor": dispatcher.textScaleFactor,
+    "physicalWidth": physicalSize.width,
+    "physicalHeight": physicalSize.height,
+    "logicalWidth": logicalSize.width,
+    "logicalHeight": logicalSize.height,
+    "viewId": view.viewId,
+    "displayRefreshRateHz": view.display?.refreshRate,
+    "displayDevicePixelRatio": view.display?.devicePixelRatio,
+  };
+
+  i(
+    "Captured initial display metrics for normalization survey (LOG_DPI_INFO).",
+    tag: "dpi_probe",
+    fields: metrics,
+  );
 }
