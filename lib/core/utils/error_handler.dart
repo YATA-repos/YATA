@@ -12,12 +12,17 @@ class ErrorHandler {
 
   static final ErrorHandler _instance = ErrorHandler._();
   static ErrorHandler get instance => _instance;
+  static const Set<String> _duplicateErrorCodes = <String>{"23505"};
 
   // String get loggerComponent => "ErrorHandler"; // deprecated
 
   /// エラーをハンドリングしてユーザーフレンドリーなメッセージを生成
   String handleError(dynamic error, {String? fallbackMessage}) {
     LoggerBinding.instance.e("Handling error", error: error);
+
+    if (_isDuplicateKeyError(error)) {
+      return _getDuplicateKeyMessage();
+    }
 
     if (error is RepositoryException) {
       return error.userMessage;
@@ -132,4 +137,43 @@ class ErrorHandler {
       params: <String, String>{"operation": operation, "error": error.toString()},
     );
   }
+
+  bool _isDuplicateKeyError(dynamic error) {
+    if (error is! RepositoryException) {
+      return false;
+    }
+
+    final String normalizedMessage = error.message.toLowerCase();
+    final String paramsText = error.params.values.join(" ").toLowerCase();
+    final String? code = error.code;
+
+    final bool hasDuplicateKeyword =
+        normalizedMessage.contains("duplicate") ||
+        normalizedMessage.contains("unique constraint") ||
+        normalizedMessage.contains("unique violation") ||
+        paramsText.contains("duplicate") ||
+        paramsText.contains("unique constraint");
+
+    if (!hasDuplicateKeyword) {
+      return false;
+    }
+
+    final bool mentionsCategory =
+        normalizedMessage.contains("category") ||
+        normalizedMessage.contains("カテゴリ") ||
+        paramsText.contains("category") ||
+        paramsText.contains("カテゴリ");
+
+    if (!mentionsCategory) {
+      return false;
+    }
+
+    if (code != null && _duplicateErrorCodes.contains(code)) {
+      return true;
+    }
+
+    return normalizedMessage.contains("23505") || paramsText.contains("23505");
+  }
+
+  String _getDuplicateKeyMessage() => "このカテゴリ名は既に使用されています。別の名前を入力してください。";
 }

@@ -294,6 +294,7 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
     bool isSaving = false;
     bool created = false;
+    String? duplicateError;
 
     await showDialog<void>(
       context: context,
@@ -307,8 +308,13 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                 child: TextFormField(
                   controller: nameController,
                   autofocus: true,
-                  decoration: const InputDecoration(labelText: "カテゴリ名"),
+                  decoration: InputDecoration(labelText: "カテゴリ名", errorText: duplicateError),
                   enabled: !isSaving,
+                  onChanged: (_) {
+                    if (duplicateError != null) {
+                      setDialogState(() => duplicateError = null);
+                    }
+                  },
                   validator: (String? value) {
                     if (value == null || value.trim().isEmpty) {
                       return "カテゴリ名を入力してください";
@@ -330,7 +336,10 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                             return;
                           }
 
-                          setDialogState(() => isSaving = true);
+                          setDialogState(() {
+                            isSaving = true;
+                            duplicateError = null;
+                          });
 
                           final String? errorMessage = await controller.createCategory(
                             nameController.text,
@@ -341,10 +350,23 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                           }
 
                           if (errorMessage != null) {
-                            ScaffoldMessenger.of(
-                              context,
-                            ).showSnackBar(SnackBar(content: Text(errorMessage)));
-                            setDialogState(() => isSaving = false);
+                            final bool isDuplicate = errorMessage.contains("既に使用されています");
+
+                            if (isDuplicate) {
+                              setDialogState(() {
+                                duplicateError = errorMessage;
+                                isSaving = false;
+                              });
+                              nameController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: nameController.text.length,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(errorMessage)));
+                              setDialogState(() => isSaving = false);
+                            }
                             return;
                           }
 
@@ -371,27 +393,16 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
       return;
     }
 
-    final String? newName = await _showRenameCategoryDialog(initialName: data.name);
-    if (newName == null) {
-      return;
-    }
-
-    final InventoryManagementController controller = ref.read(
-      inventoryManagementControllerProvider.notifier,
+    final String? renamed = await _showRenameCategoryDialog(
+      categoryId: data.categoryId!,
+      initialName: data.name,
     );
 
-    final String? errorMessage = await controller.renameCategory(data.categoryId!, newName);
-
-    if (!mounted) {
+    if (!mounted || renamed == null) {
       return;
     }
 
-    if (errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("カテゴリ名を「$newName」に変更しました")));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("カテゴリ名を「$renamed」に変更しました")));
   }
 
   Future<void> _handleDeleteCategory(InventoryCategoryPanelData data) async {
@@ -450,10 +461,17 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${data.name} を削除しました")));
   }
 
-  Future<String?> _showRenameCategoryDialog({required String initialName}) async {
+  Future<String?> _showRenameCategoryDialog({
+    required String categoryId,
+    required String initialName,
+  }) async {
+    final InventoryManagementController controller = ref.read(
+      inventoryManagementControllerProvider.notifier,
+    );
     final TextEditingController nameController = TextEditingController(text: initialName);
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
     bool isSaving = false;
+    String? duplicateError;
     String? result;
 
     await showDialog<void>(
@@ -468,8 +486,13 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                 child: TextFormField(
                   controller: nameController,
                   autofocus: true,
-                  decoration: const InputDecoration(labelText: "新しいカテゴリ名"),
+                  decoration: InputDecoration(labelText: "新しいカテゴリ名", errorText: duplicateError),
                   enabled: !isSaving,
+                  onChanged: (_) {
+                    if (duplicateError != null) {
+                      setDialogState(() => duplicateError = null);
+                    }
+                  },
                   validator: (String? value) {
                     if (value == null || value.trim().isEmpty) {
                       return "カテゴリ名を入力してください";
@@ -489,11 +512,46 @@ class _InventoryManagementPageState extends ConsumerState<InventoryManagementPag
                 FilledButton(
                   onPressed: isSaving
                       ? null
-                      : () {
+                      : () async {
                           if (!formKey.currentState!.validate()) {
                             return;
                           }
-                          setDialogState(() => isSaving = true);
+
+                          setDialogState(() {
+                            isSaving = true;
+                            duplicateError = null;
+                          });
+
+                          final String? errorMessage = await controller.renameCategory(
+                            categoryId,
+                            nameController.text,
+                          );
+
+                          if (!mounted || !dialogContext.mounted) {
+                            return;
+                          }
+
+                          if (errorMessage != null) {
+                            final bool isDuplicate = errorMessage.contains("既に使用されています");
+
+                            if (isDuplicate) {
+                              setDialogState(() {
+                                duplicateError = errorMessage;
+                                isSaving = false;
+                              });
+                              nameController.selection = TextSelection(
+                                baseOffset: 0,
+                                extentOffset: nameController.text.length,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(errorMessage)));
+                              setDialogState(() => isSaving = false);
+                            }
+                            return;
+                          }
+
                           result = nameController.text.trim();
                           Navigator.of(dialogContext).pop();
                         },
@@ -866,9 +924,9 @@ class _InventoryTableState extends State<_InventoryTable> {
     final ThemeData theme = Theme.of(context);
     final String? sortColumnId = _columnIdForSort(state.sortBy);
 
-  final String? summarySortHint = _summarySortHint(state.sortBy, state.sortAsc);
-  final String? nameSortHint = _nameSortHint(state.sortBy, state.sortAsc);
-  final String? memoSortHint = _memoSortHint(state.sortBy, state.sortAsc);
+    final String? summarySortHint = _summarySortHint(state.sortBy, state.sortAsc);
+    final String? nameSortHint = _nameSortHint(state.sortBy, state.sortAsc);
+    final String? memoSortHint = _memoSortHint(state.sortBy, state.sortAsc);
     final String? metricsSortHint = _metricsSortHint(state.sortBy, state.sortAsc);
     final String? actionSortHint = _actionSortHint(state.sortBy, state.sortAsc);
     final TextStyle hintStyle = (theme.textTheme.labelSmall ?? YataTypographyTokens.labelSmall)
@@ -1004,12 +1062,7 @@ class _InventoryTableState extends State<_InventoryTable> {
 
           final Widget nameCell = Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              row.name,
-              style: nameStyle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(row.name, style: nameStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
           );
 
           final Widget memoCell = row.hasMemo
@@ -1037,8 +1090,7 @@ class _InventoryTableState extends State<_InventoryTable> {
               children: <Widget>[
                 if (statusBadges.isNotEmpty)
                   Flexible(child: Wrap(spacing: 6, runSpacing: 4, children: statusBadges)),
-                if (statusBadges.isNotEmpty)
-                  const SizedBox(width: 4),
+                if (statusBadges.isNotEmpty) const SizedBox(width: 4),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -1109,8 +1161,7 @@ class _InventoryTableState extends State<_InventoryTable> {
                         ignoring: row.isBusy,
                         child: YataQuantityStepper(
                           value: row.pendingDelta,
-                          onChanged: (int value) =>
-                              controller.setPendingAdjustment(row.id, value),
+                          onChanged: (int value) => controller.setPendingAdjustment(row.id, value),
                           // 手動で在庫調整の際に減ることもあるので、マイナスも許容
                           min: -9999,
                           max: 9999,
@@ -1120,9 +1171,7 @@ class _InventoryTableState extends State<_InventoryTable> {
                       const SizedBox(width: 12),
                       YataIconButton(
                         icon: Icons.save_outlined,
-                        onPressed: canApplyItem
-                            ? () => controller.applyAdjustment(row.id)
-                            : null,
+                        onPressed: canApplyItem ? () => controller.applyAdjustment(row.id) : null,
                         size: 36,
                         backgroundColor: canApplyItem
                             ? YataColorTokens.primary
@@ -1130,9 +1179,7 @@ class _InventoryTableState extends State<_InventoryTable> {
                         iconColor: canApplyItem
                             ? YataColorTokens.neutral0
                             : YataColorTokens.textDisabled,
-                        borderColor: canApplyItem
-                            ? Colors.transparent
-                            : YataColorTokens.neutral200,
+                        borderColor: canApplyItem ? Colors.transparent : YataColorTokens.neutral200,
                         tooltip: applyTooltip,
                       ),
                     ],
