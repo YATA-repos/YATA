@@ -1,0 +1,106 @@
+name: Windows Build (Alpha Tags)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*-alpha*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows runner
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Generate environment file
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_OAUTH_CALLBACK_URL_DEV: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_DEV }}
+          SUPABASE_OAUTH_CALLBACK_URL_PROD: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_PROD }}
+          SUPABASE_OAUTH_CALLBACK_URL_MOBILE: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_MOBILE }}
+          SUPABASE_OAUTH_CALLBACK_URL_DESKTOP: ${{ secrets.SUPABASE_OAUTH_CALLBACK_URL_DESKTOP }}
+          DEBUG_MODE: ${{ secrets.DEBUG_MODE }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          LOG_DIR: ${{ secrets.LOG_DIR }}
+          LOG_FLUSH_INTERVAL_MS: ${{ secrets.LOG_FLUSH_INTERVAL_MS }}
+          LOG_MAX_QUEUE: ${{ secrets.LOG_MAX_QUEUE }}
+          LOG_MAX_FILE_SIZE_MB: ${{ secrets.LOG_MAX_FILE_SIZE_MB }}
+          LOG_MAX_DISK_MB: ${{ secrets.LOG_MAX_DISK_MB }}
+          LOG_RETENTION_DAYS: ${{ secrets.LOG_RETENTION_DAYS }}
+          LOG_BACKPRESSURE: ${{ secrets.LOG_BACKPRESSURE }}
+          ORDER_MANAGEMENT_PERF_TRACING: ${{ secrets.ORDER_MANAGEMENT_PERF_TRACING }}
+        run: |
+          set -euo pipefail
+
+          required=(SUPABASE_URL SUPABASE_ANON_KEY)
+          for key in "${required[@]}"; do
+            value="${!key:-}"
+            if [ -z "$value" ]; then
+              echo "::error::Missing required secret: $key"
+              exit 1
+            fi
+          done
+
+          {
+            printf "SUPABASE_URL=%s\n" "$SUPABASE_URL"
+            printf "SUPABASE_ANON_KEY=%s\n" "$SUPABASE_ANON_KEY"
+          } > .env
+
+          optional=(
+            SUPABASE_OAUTH_CALLBACK_URL_DEV
+            SUPABASE_OAUTH_CALLBACK_URL_PROD
+            SUPABASE_OAUTH_CALLBACK_URL_MOBILE
+            SUPABASE_OAUTH_CALLBACK_URL_DESKTOP
+            DEBUG_MODE
+            LOG_LEVEL
+            LOG_DIR
+            LOG_FLUSH_INTERVAL_MS
+            LOG_MAX_QUEUE
+            LOG_MAX_FILE_SIZE_MB
+            LOG_MAX_DISK_MB
+            LOG_RETENTION_DAYS
+            LOG_BACKPRESSURE
+            ORDER_MANAGEMENT_PERF_TRACING
+          )
+
+          for key in "${optional[@]}"; do
+            value="${!key:-}"
+            if [ -n "$value" ]; then
+              printf "%s=%s\n" "$key" "$value" >> .env
+            fi
+          done
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+
+      - name: Generate code with build_runner
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows release runner
+        run: flutter build windows --release --dart-define-from-file=.env
+
+      - name: Remove environment file
+        if: always()
+        run: rm -f .env
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yata-windows-alpha-runner
+          path: build/windows/x64/runner/Release/**
