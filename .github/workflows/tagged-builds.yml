@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build-platforms:
+    if: ${{ !contains(github.ref_name, '-alpha') }}
     name: Build ${{ matrix.build-target }} bundle
     runs-on: ${{ matrix.os }}
     strategy:
